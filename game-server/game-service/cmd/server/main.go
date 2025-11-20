@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/config"
-	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
-	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/websocket"
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/game"
 	"github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
@@ -24,7 +22,6 @@ var (
 	// grpc
 	serviceName = "game"
 	grpcAddr    = commonhelpers.GetEnvString("GRPC_GAME_ADDR", "7004")
-	wsPort      = commonhelpers.GetEnvString("WS_PORT", "8080")
 	consulAddr  = commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
 
 	// rabbit mq
@@ -93,24 +90,14 @@ func main() {
 		ch.Close()
 	}()
 
-	// --- websocket setup ---
-	wsHub := websocket.NewHub()
-	go wsHub.Run()
-
-	// start websocket server in goroutine
-	go websocket.StartServer(wsPort, wsHub)
-
-	repo := game.NewRepository(db)
-	service := game.NewService(repo, ch, wsHub)
-	handler := game.NewHandler(service)
-	// consumer := game.NewConsumer(service, ch)
-	// start goroutine and listen to events from message broker
-	// consumer.Listen()
-
-	pb.RegisterGameServiceServer(grpcServer, handler)
+	// TODO: Initialize services and handlers
+	// This is where you'll add your game service implementation
+	// repo := game.NewRepository(db)
+	// service := game.NewService(repo, ch)
+	// handler := game.NewHandler(service)
+	// pb.RegisterGameServiceServer(grpcServer, handler)
 
 	log.Printf("grpc Game Server started on PORT: %s\n", grpcAddr)
-	log.Printf("WebSocket Server started on PORT: %s\n", wsPort)
 
 	if err := grpcServer.Serve(listener); err != nil {
 		log.Fatal("Can't connect to grpc server. Error:", err.Error())

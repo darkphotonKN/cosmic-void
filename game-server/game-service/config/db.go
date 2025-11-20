@@ -68,3 +68,4 @@ func runMigrations(db *sqlx.DB) error {
 	fmt.Printf("Successfully ran all migrations.\n\n")
 	return nil
 }
+
