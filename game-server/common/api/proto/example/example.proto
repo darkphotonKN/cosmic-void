@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package example;
+
+option go_package = "github.com/darkphotonKN/community-builds-microservice/common/api/proto/example";
+
+import "google/protobuf/timestamp.proto";
+
+// Example service definition
+service ExampleService {
+  // Create a new example
+  rpc CreateExample(CreateExampleRequest) returns (Example) {}
+  // Get an example by ID
+  rpc GetExample(GetExampleRequest) returns (Example) {}
+}
+
+// Example message represents the core entity
+message Example {
+  string id = 1;
+  string name = 2;
+  google.protobuf.Timestamp created_at = 3;
+  google.protobuf.Timestamp updated_at = 4;
+}
+
+// Request message for creating a new example
+message CreateExampleRequest {
+  string name = 1;
+}
+
+// Request message for getting an example by ID
+message GetExampleRequest {
+  string id = 1;
+} 

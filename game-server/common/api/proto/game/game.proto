@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+package game;
+
+option go_package = "github.com/darkphotonKN/cosmic-void-server/common/api/proto/game";
+
+service GameService {
+  rpc CreateRoom(CreateRoomRequest) returns (Room);
+  rpc GetRoom(GetRoomRequest) returns (Room);
+  rpc ListRooms(ListRoomsRequest) returns (ListRoomsResponse);
+  rpc JoinRoom(JoinRoomRequest) returns (JoinRoomResponse);
+  rpc LeaveRoom(LeaveRoomRequest) returns (LeaveRoomResponse);
+  rpc StartGame(StartGameRequest) returns (StartGameResponse);
+  rpc EndGame(EndGameRequest) returns (EndGameResponse);
+}
+
+message CreateRoomRequest {
+  string name = 1;
+  string creator_id = 2;
+  int32 max_players = 3;
+  string game_mode = 4;
+}
+
+message GetRoomRequest {
+  string id = 1;
+}
+
+message ListRoomsRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+  string game_mode = 3;
+}
+
+message JoinRoomRequest {
+  string room_id = 1;
+  string user_id = 2;
+}
+
+message LeaveRoomRequest {
+  string room_id = 1;
+  string user_id = 2;
+}
+
+message StartGameRequest {
+  string room_id = 1;
+}
+
+message EndGameRequest {
+  string room_id = 1;
+  string winner_id = 2;
+}
+
+message Room {
+  string id = 1;
+  string name = 2;
+  string creator_id = 3;
+  int32 max_players = 4;
+  int32 current_players = 5;
+  string game_mode = 6;
+  string status = 7;
+  string created_at = 8;
+  repeated Player players = 9;
+}
+
+message Player {
+  string id = 1;
+  string user_id = 2;
+  string room_id = 3;
+  double x = 4;
+  double y = 5;
+  double velocity_x = 6;
+  double velocity_y = 7;
+  int32 health = 8;
+  int32 score = 9;
+  bool is_alive = 10;
+  string joined_at = 11;
+}
+
+message ListRoomsResponse {
+  repeated Room rooms = 1;
+  int32 total = 2;
+}
+
+message JoinRoomResponse {
+  Room room = 1;
+  Player player = 2;
+}
+
+message LeaveRoomResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message StartGameResponse {
+  Room room = 1;
+  string started_at = 2;
+}
+
+message EndGameResponse {
+  Room room = 1;
+  string ended_at = 2;
+  string winner_id = 3;
+}

@@ -1,0 +1,35 @@
+version: "3.9"
+services:
+  community-builds-consul:
+    image: hashicorp/consul
+    container_name: community-builds-consul
+    command: agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0
+    ports:
+      - 8510:8500 # Changed from 8500 to avoid conflicts
+      - 8610:8600/udp # Changed from 8600 to avoid conflicts
+    volumes:
+      - community-builds-consul-data:/consul/data
+    networks:
+      - community-builds-network
+
+  community-builds-rabbitmq:
+    image: "rabbitmq:3-management"
+    container_name: community-builds-rabbitmq
+    ports:
+      - "15682:15672" # Changed from 15672 to avoid conflicts
+      - "5682:5672" # Changed from 5672 to avoid conflicts
+    environment:
+      - RABBITMQ_DEFAULT_USER=communitybuilds
+      - RABBITMQ_DEFAULT_PASS=communitybuilds
+    volumes:
+      - community-builds-rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - community-builds-network
+
+networks:
+  community-builds-network:
+    name: community-builds-network
+
+volumes:
+  community-builds-consul-data:
+  community-builds-rabbitmq-data:

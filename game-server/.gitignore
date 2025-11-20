@@ -1,0 +1,413 @@
+# =============================================================================
+# CLAUDE.md - Internal Development Guidelines
+# =============================================================================
+CLAUDE.md
+
+# =============================================================================
+# Operating System Files
+# =============================================================================
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+
+# =============================================================================
+# Go Projects
+# =============================================================================
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.txt
+coverage.html
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work.sum
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Air live reload
+tmp/
+.air.toml
+
+# Go module proxy cache
+GOPROXY
+GOSUMDB
+
+# =============================================================================
+# Node.js / React / Next.js Projects
+# =============================================================================
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Grunt intermediate storage
+.grunt
+
+# Bower dependency directory
+bower_components
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons
+build/Release
+
+# Dependency directories
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+.env.test
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# parcel-bundler cache
+.cache
+.parcel-cache
+
+# Next.js build output
+.next/
+out/
+
+# React build output
+build/
+dist/
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+public
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# Temporary folders
+tmp/
+temp/
+
+# Logs
+logs
+*.log
+
+# =============================================================================
+# Microservices & Docker
+# =============================================================================
+
+# Docker
+Dockerfile.prod
+docker-compose.override.yml
+.dockerignore
+
+# Kubernetes
+*.yaml.bak
+*.yml.bak
+k8s-secrets/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Helm
+*.tgz
+charts/*/charts/
+charts/*/requirements.lock
+
+# =============================================================================
+# Database & Infrastructure
+# =============================================================================
+
+# PostgreSQL
+*.sql.bak
+*.dump
+*.backup
+
+# Redis
+dump.rdb
+
+# SQLite
+*.db
+*.sqlite
+*.sqlite3
+
+# MongoDB
+*.bson
+
+# =============================================================================
+# Security & Secrets
+# =============================================================================
+
+# Private keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# JWT secrets
+jwt-secret*
+secrets/
+.secrets/
+
+# AWS credentials
+.aws/
+
+# SSL certificates
+ssl/
+certs/
+
+# =============================================================================
+# Logs & Monitoring
+# =============================================================================
+
+# Application logs
+logs/
+*.log
+*.log.*
+
+# Monitoring and metrics
+metrics/
+traces/
+
+# Prometheus
+prometheus_data/
+
+# =============================================================================
+# Development Tools
+# =============================================================================
+
+# Hot reload tools
+.air.toml
+nodemon.json
+
+# Testing
+test-results/
+jest-results/
+coverage/
+.coverage
+
+# Profiling
+*.prof
+*.pprof
+
+# Debug files
+debug
+*.debug
+
+# =============================================================================
+# Build Artifacts
+# =============================================================================
+
+# Go binaries
+auth-service
+game-service
+example-service
+api-gateway
+
+# Build directories
+build/
+dist/
+out/
+
+# Compiled assets
+public/build/
+public/dist/
+
+# =============================================================================
+# Temporary Files
+# =============================================================================
+
+# Temporary directories
+tmp/
+temp/
+.tmp/
+
+# Backup files
+*.bak
+*.backup
+*.old
+*~
+
+# Swap files
+*.swp
+*.swo
+
+# =============================================================================
+# Package Managers
+# =============================================================================
+
+# Go
+go.sum.bak
+
+# Node.js
+package-lock.json.bak
+yarn.lock.bak
+
+# =============================================================================
+# CI/CD
+# =============================================================================
+
+# GitHub Actions
+.github/workflows/*.yml.bak
+
+# CircleCI
+.circleci/config.yml.bak
+
+# Jenkins
+Jenkinsfile.bak
+
+# =============================================================================
+# Cloud & Deployment
+# =============================================================================
+
+# Vercel
+.vercel
+
+# Netlify
+.netlify
+
+# Heroku
+.env.heroku
+
+# Railway
+.railway
+
+# Digital Ocean
+.do
+
+# =============================================================================
+# Local Configuration
+# =============================================================================
+
+# Local development overrides
+local.yml
+local.yaml
+local.json
+config.local.*
+
+# Personal notes and documentation
+NOTES.md
+TODO.md
+SCRATCH.md
+
+# =============================================================================
+# Performance & Profiling
+# =============================================================================
+
+# Go profiling
+cpu.prof
+mem.prof
+block.prof
+mutex.prof
+
+# Node.js profiling
+*.heapsnapshot
+*.cpuprofile
+
+# =============================================================================
+# Vendor & Third Party
+# =============================================================================
+
+# Go vendor
+vendor/
+
+# Node modules
+node_modules/
+
+# Bower
+bower_components/
+
+# =============================================================================
+# Migration Files (if auto-generated)
+# =============================================================================
+
+# Exclude auto-generated migration files (keep manually created ones)
+# migrations/*_auto_*

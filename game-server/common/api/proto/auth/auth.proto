@@ -1,0 +1,93 @@
+// auth-service/proto/auth.proto
+syntax = "proto3";
+package auth;
+
+option go_package = "github.com/darkphotonKN/community-builds-microservice/auth-service/proto/auth";
+
+import "google/protobuf/timestamp.proto";
+
+// Auth service definition
+service AuthService {
+  // Login member
+  rpc LoginMember(LoginRequest) returns (LoginResponse) {}
+  // Get member by ID
+  rpc GetMember(GetMemberRequest) returns (Member) {}
+  // Create member (signup)
+  rpc CreateMember(CreateMemberRequest) returns (Member) {}
+  // Update member info
+  rpc UpdateMemberInfo(UpdateMemberInfoRequest) returns (Member) {}
+  // Update member password
+  rpc UpdateMemberPassword(UpdatePasswordRequest) returns (UpdatePasswordResponse) {}
+  // Validate token
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse) {}
+}
+
+// Member message represents a user in the system
+message Member {
+  string id = 1;
+  string name = 2;
+  string email = 3;
+  int32 status = 4;
+  float average_rating = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+// Login request
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+// Login response with tokens
+message LoginResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  int32 access_expires_in = 3;
+  int32 refresh_expires_in = 4;
+  Member member_info = 5;
+}
+
+// Get member request
+message GetMemberRequest {
+  string id = 1;
+}
+
+// Create member request
+message CreateMemberRequest {
+  string name = 1;
+  string email = 2;
+  string password = 3;
+}
+
+// Update member info request
+message UpdateMemberInfoRequest {
+  string id = 1;
+  string name = 2;
+  string status = 3;
+}
+
+// Update password request
+message UpdatePasswordRequest {
+  string id = 1;
+  string current_password = 2;
+  string new_password = 3;
+  string repeat_new_password = 4;
+}
+
+// Update password response
+message UpdatePasswordResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Validate token request
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+// Validate token response
+message ValidateTokenResponse {
+  bool valid = 1;
+  string member_id = 2;
+}

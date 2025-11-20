@@ -1,0 +1,22 @@
+syntax = "proto3";
+package common;
+
+option go_package = "github.com/darkphotonKN/community-builds-microservices/common/api/proto/common";
+
+// A simple response status
+message Status {
+  bool success = 1;
+  string message = 2;
+}
+
+// Pagination request structure
+message PaginationRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+}
+
+// Simple error response
+message Error {
+  string code = 1;
+  string message = 2;
+}
