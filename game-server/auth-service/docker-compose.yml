@@ -3,11 +3,11 @@ version: '3.9'
 services:
   db:
     image: postgres:latest
-    container_name: community_builds_auth_service_db
+    container_name: cosmic_void_auth_service_db
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: community_builds_auth_service_db
+      POSTGRES_DB: cosmic_void_auth_service_db
     ports:
       - '5003:5432'
     volumes:
@@ -15,11 +15,11 @@ services:
 
   test-db:
     image: postgres:latest
-    container_name: community_builds_auth_service_test_db
+    container_name: cosmic_void_auth_service_test_db
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: community_builds_auth_service_test_db
+      POSTGRES_DB: cosmic_void_auth_service_test_db
     ports:
       - '6003:5432'
     volumes:

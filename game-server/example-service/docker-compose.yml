@@ -3,11 +3,11 @@ version: "3.9"
 services:
   db:
     image: postgres:latest
-    container_name: community_builds_example_service_db
+    container_name: cosmic_void_example_service_db
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: community_builds_example_service_db
+      POSTGRES_DB: cosmic_void_example_service_db
     ports:
       - "5010:5432"
     volumes:
