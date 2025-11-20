@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:latest
+    container_name: cosmic_void_game_service_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cosmic_void_game_service_db
+    ports:
+      - "5004:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  test-db:
+    image: postgres:latest
+    container_name: cosmic_void_game_service_test_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cosmic_void_game_service_test_db
+    ports:
+      - "6004:5432"
+    volumes:
+      - test_pgdata:/var/lib/postgresql/data
+    restart: "no"
+
+volumes:
+  pgdata:
+  test_pgdata:

@@ -36,8 +36,6 @@ $RECYCLE.BIN/
 *.dll
 *.so
 *.dylib
-bin/
-dist/
 
 # Test binary, built with `go test -c`
 *.test
@@ -58,13 +56,6 @@ go.work.sum
 .env.local
 .env.production
 
-# IDE and editor files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
 # Air live reload
 tmp/
 .air.toml
@@ -72,6 +63,12 @@ tmp/
 # Go module proxy cache
 GOPROXY
 GOSUMDB
+
+# Build outputs (only in bin/ directories or with specific suffixes)
+bin/
+*/bin/
+*-bin
+*_bin
 
 # =============================================================================
 # Node.js / React / Next.js Projects
@@ -97,20 +94,8 @@ coverage/
 # nyc test coverage
 .nyc_output
 
-# Grunt intermediate storage
-.grunt
-
-# Bower dependency directory
-bower_components
-
-# node-waf configuration
-.lock-wscript
-
 # Compiled binary addons
 build/Release
-
-# Dependency directories
-jspm_packages/
 
 # TypeScript cache
 *.tsbuildinfo
@@ -158,11 +143,10 @@ dist/
 
 # Nuxt.js build / generate output
 .nuxt
-dist
 
 # Gatsby files
 .cache/
-public
+public/
 
 # Storybook build outputs
 .out
@@ -175,31 +159,6 @@ temp/
 # Logs
 logs
 *.log
-
-# =============================================================================
-# Microservices & Docker
-# =============================================================================
-
-# Docker
-Dockerfile.prod
-docker-compose.override.yml
-.dockerignore
-
-# Kubernetes
-*.yaml.bak
-*.yml.bak
-k8s-secrets/
-
-# Terraform
-*.tfstate
-*.tfstate.*
-.terraform/
-.terraform.lock.hcl
-
-# Helm
-*.tgz
-charts/*/charts/
-charts/*/requirements.lock
 
 # =============================================================================
 # Database & Infrastructure
@@ -245,24 +204,14 @@ ssl/
 certs/
 
 # =============================================================================
-# Logs & Monitoring
-# =============================================================================
-
-# Application logs
-logs/
-*.log
-*.log.*
-
-# Monitoring and metrics
-metrics/
-traces/
-
-# Prometheus
-prometheus_data/
-
-# =============================================================================
 # Development Tools
 # =============================================================================
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
 
 # Hot reload tools
 .air.toml
@@ -271,8 +220,6 @@ nodemon.json
 # Testing
 test-results/
 jest-results/
-coverage/
-.coverage
 
 # Profiling
 *.prof
@@ -283,27 +230,14 @@ debug
 *.debug
 
 # =============================================================================
-# Build Artifacts
+# Cloud & Deployment
 # =============================================================================
 
-# Go binaries (in bin/ or root level)
-bin/auth-service
-bin/game-service
-bin/example-service
-bin/api-gateway
-/auth-service-bin
-/game-service-bin
-/example-service-bin
-/api-gateway-bin
+# Vercel
+.vercel
 
-# Build directories
-build/
-dist/
-out/
-
-# Compiled assets
-public/build/
-public/dist/
+# Netlify
+.netlify
 
 # =============================================================================
 # Temporary Files
@@ -323,95 +257,3 @@ temp/
 # Swap files
 *.swp
 *.swo
-
-# =============================================================================
-# Package Managers
-# =============================================================================
-
-# Go
-go.sum.bak
-
-# Node.js
-package-lock.json.bak
-yarn.lock.bak
-
-# =============================================================================
-# CI/CD
-# =============================================================================
-
-# GitHub Actions
-.github/workflows/*.yml.bak
-
-# CircleCI
-.circleci/config.yml.bak
-
-# Jenkins
-Jenkinsfile.bak
-
-# =============================================================================
-# Cloud & Deployment
-# =============================================================================
-
-# Vercel
-.vercel
-
-# Netlify
-.netlify
-
-# Heroku
-.env.heroku
-
-# Railway
-.railway
-
-# Digital Ocean
-.do
-
-# =============================================================================
-# Local Configuration
-# =============================================================================
-
-# Local development overrides
-local.yml
-local.yaml
-local.json
-config.local.*
-
-# Personal notes and documentation
-NOTES.md
-TODO.md
-SCRATCH.md
-
-# =============================================================================
-# Performance & Profiling
-# =============================================================================
-
-# Go profiling
-cpu.prof
-mem.prof
-block.prof
-mutex.prof
-
-# Node.js profiling
-*.heapsnapshot
-*.cpuprofile
-
-# =============================================================================
-# Vendor & Third Party
-# =============================================================================
-
-# Go vendor
-vendor/
-
-# Node modules
-node_modules/
-
-# Bower
-bower_components/
-
-# =============================================================================
-# Migration Files (if auto-generated)
-# =============================================================================
-
-# Exclude auto-generated migration files (keep manually created ones)
-# migrations/*_auto_*
