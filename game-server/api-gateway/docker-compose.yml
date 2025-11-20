@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:latest
+    container_name: community_builds_api_gateway_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: community_builds_api_gateway_db
+    ports:
+      - "5001:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  test-db:
+    image: postgres:latest
+    container_name: community_builds_api_gateway_test_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: community_builds_api_gateway_test_db
+    ports:
+      - "6001:5432"
+    volumes:
+      - test_pgdata:/var/lib/postgresql/data
+    # set the restart policy to "no" to prevent automatic restart outside test sessions
+    restart: "no"
+
+volumes:
+  pgdata:
+  test_pgdata:

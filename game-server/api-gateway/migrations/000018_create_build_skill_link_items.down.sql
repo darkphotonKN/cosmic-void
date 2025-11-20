@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS build_skill_link_items; 

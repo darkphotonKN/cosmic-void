@@ -286,11 +286,15 @@ debug
 # Build Artifacts
 # =============================================================================
 
-# Go binaries
-auth-service
-game-service
-example-service
-api-gateway
+# Go binaries (in bin/ or root level)
+bin/auth-service
+bin/game-service
+bin/example-service
+bin/api-gateway
+/auth-service-bin
+/game-service-bin
+/example-service-bin
+/api-gateway-bin
 
 # Build directories
 build/

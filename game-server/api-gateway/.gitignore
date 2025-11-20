@@ -1,0 +1,44 @@
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go build artifacts
+/bin/
+/build/
+/dist/
+/*.out
+tmp/
+
+# Temporary files
+*.log
+*.tmp
+*.temp
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE-specific files
+.vscode/
+.idea/
+*.swp
+
+# Environment variables and credentials
+.env
+
+# Dependencies
+/vendor/
+
+# Go module files (if not using vendoring)
+go.sum
+
+# Docker
+.dockerignore
+
+# Test results
+*.test
+coverage.out
+
+
