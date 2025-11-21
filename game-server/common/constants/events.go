@@ -21,11 +21,6 @@ const (
 
 	// Item events
 	ItemCreatedItemEvent = "item.created" // when item is created
-
-	// Game events
-	RoomCreatedEvent = "room.created" // when game room is created
-	GameStartedEvent = "game.started" // when game starts
-	GameEndedEvent   = "game.ended"   // when game ends
 )
 
 /**
@@ -74,54 +69,4 @@ type ItemCreatedItemEventPayload struct {
 	Name   string `json:"name"`
 	// Email      string `json:"email"`
 	SignedUpAt string `json:"signedUpAt"`
-}
-
-/**
-* Game Event Payloads
-**/
-
-/**
-* RoomCreatedEventPayload
-*
-* Published by game-service.
-* Consumed by:
-* - notification-service
-* - analytics-service
-**/
-type RoomCreatedEventPayload struct {
-	RoomID    string `json:"roomId"`
-	Name      string `json:"name"`
-	CreatorID string `json:"creatorId"`
-	GameMode  string `json:"gameMode"`
-	CreatedAt string `json:"createdAt"`
-}
-
-/**
-* GameStartedEventPayload
-*
-* Published by game-service.
-* Consumed by:
-* - analytics-service
-* - notification-service
-**/
-type GameStartedEventPayload struct {
-	RoomID    string   `json:"roomId"`
-	GameMode  string   `json:"gameMode"`
-	PlayerIDs []string `json:"playerIds"`
-	StartedAt string   `json:"startedAt"`
-}
-
-/**
-* GameEndedEventPayload
-*
-* Published by game-service.
-* Consumed by:
-* - analytics-service
-* - notification-service
-**/
-type GameEndedEventPayload struct {
-	RoomID   string `json:"roomId"`
-	GameMode string `json:"gameMode"`
-	WinnerID string `json:"winnerId"`
-	EndedAt  string `json:"endedAt"`
 }

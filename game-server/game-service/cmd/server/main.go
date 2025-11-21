@@ -7,9 +7,8 @@ import (
 	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/config"
-	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/game"
+	// pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/game"
 	"github.com/darkphotonKN/cosmic-void-server/common/broker"
-	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
@@ -81,20 +80,18 @@ func main() {
 
 	// --- message broker - rabbit mq ---
 	ch, close := broker.Connect(amqpUser, amqpPassword, amqpHost, amqpPort)
-
-	broker.DeclareExchange(ch, commonconstants.RoomCreatedEvent, "fanout")
-	broker.DeclareExchange(ch, commonconstants.GameStartedEvent, "fanout")
-	broker.DeclareExchange(ch, commonconstants.GameEndedEvent, "fanout")
 	defer func() {
 		close()
 		ch.Close()
 	}()
 
-	// TODO: Initialize services and handlers
-	// This is where you'll add your game service implementation
-	// repo := game.NewRepository(db)
-	// service := game.NewService(repo, ch)
-	// handler := game.NewHandler(service)
+	// TODO: Declare your exchanges here
+	// broker.DeclareExchange(ch, "your.event.name", "fanout")
+
+	// TODO: Initialize your services and handlers
+	// repo := yourpackage.NewRepository(db)
+	// service := yourpackage.NewService(repo, ch)
+	// handler := yourpackage.NewHandler(service)
 	// pb.RegisterGameServiceServer(grpcServer, handler)
 
 	log.Printf("grpc Game Server started on PORT: %s\n", grpcAddr)
@@ -103,3 +100,4 @@ func main() {
 		log.Fatal("Can't connect to grpc server. Error:", err.Error())
 	}
 }
+

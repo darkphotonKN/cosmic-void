@@ -7,10 +7,7 @@
 package game
 
 import (
-	context "context"
 	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -18,27 +15,12 @@ import (
 // Requires gRPC-Go v1.64.0 or later.
 const _ = grpc.SupportPackageIsVersion9
 
-const (
-	GameService_CreateRoom_FullMethodName = "/game.GameService/CreateRoom"
-	GameService_GetRoom_FullMethodName    = "/game.GameService/GetRoom"
-	GameService_ListRooms_FullMethodName  = "/game.GameService/ListRooms"
-	GameService_JoinRoom_FullMethodName   = "/game.GameService/JoinRoom"
-	GameService_LeaveRoom_FullMethodName  = "/game.GameService/LeaveRoom"
-	GameService_StartGame_FullMethodName  = "/game.GameService/StartGame"
-	GameService_EndGame_FullMethodName    = "/game.GameService/EndGame"
-)
-
 // GameServiceClient is the client API for GameService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Empty service for now - to be implemented
 type GameServiceClient interface {
-	CreateRoom(ctx context.Context, in *CreateRoomRequest, opts ...grpc.CallOption) (*Room, error)
-	GetRoom(ctx context.Context, in *GetRoomRequest, opts ...grpc.CallOption) (*Room, error)
-	ListRooms(ctx context.Context, in *ListRoomsRequest, opts ...grpc.CallOption) (*ListRoomsResponse, error)
-	JoinRoom(ctx context.Context, in *JoinRoomRequest, opts ...grpc.CallOption) (*JoinRoomResponse, error)
-	LeaveRoom(ctx context.Context, in *LeaveRoomRequest, opts ...grpc.CallOption) (*LeaveRoomResponse, error)
-	StartGame(ctx context.Context, in *StartGameRequest, opts ...grpc.CallOption) (*StartGameResponse, error)
-	EndGame(ctx context.Context, in *EndGameRequest, opts ...grpc.CallOption) (*EndGameResponse, error)
 }
 
 type gameServiceClient struct {
@@ -49,87 +31,12 @@ func NewGameServiceClient(cc grpc.ClientConnInterface) GameServiceClient {
 	return &gameServiceClient{cc}
 }
 
-func (c *gameServiceClient) CreateRoom(ctx context.Context, in *CreateRoomRequest, opts ...grpc.CallOption) (*Room, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Room)
-	err := c.cc.Invoke(ctx, GameService_CreateRoom_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *gameServiceClient) GetRoom(ctx context.Context, in *GetRoomRequest, opts ...grpc.CallOption) (*Room, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Room)
-	err := c.cc.Invoke(ctx, GameService_GetRoom_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *gameServiceClient) ListRooms(ctx context.Context, in *ListRoomsRequest, opts ...grpc.CallOption) (*ListRoomsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListRoomsResponse)
-	err := c.cc.Invoke(ctx, GameService_ListRooms_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *gameServiceClient) JoinRoom(ctx context.Context, in *JoinRoomRequest, opts ...grpc.CallOption) (*JoinRoomResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(JoinRoomResponse)
-	err := c.cc.Invoke(ctx, GameService_JoinRoom_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *gameServiceClient) LeaveRoom(ctx context.Context, in *LeaveRoomRequest, opts ...grpc.CallOption) (*LeaveRoomResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(LeaveRoomResponse)
-	err := c.cc.Invoke(ctx, GameService_LeaveRoom_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *gameServiceClient) StartGame(ctx context.Context, in *StartGameRequest, opts ...grpc.CallOption) (*StartGameResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(StartGameResponse)
-	err := c.cc.Invoke(ctx, GameService_StartGame_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *gameServiceClient) EndGame(ctx context.Context, in *EndGameRequest, opts ...grpc.CallOption) (*EndGameResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(EndGameResponse)
-	err := c.cc.Invoke(ctx, GameService_EndGame_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // GameServiceServer is the server API for GameService service.
 // All implementations must embed UnimplementedGameServiceServer
 // for forward compatibility.
+//
+// Empty service for now - to be implemented
 type GameServiceServer interface {
-	CreateRoom(context.Context, *CreateRoomRequest) (*Room, error)
-	GetRoom(context.Context, *GetRoomRequest) (*Room, error)
-	ListRooms(context.Context, *ListRoomsRequest) (*ListRoomsResponse, error)
-	JoinRoom(context.Context, *JoinRoomRequest) (*JoinRoomResponse, error)
-	LeaveRoom(context.Context, *LeaveRoomRequest) (*LeaveRoomResponse, error)
-	StartGame(context.Context, *StartGameRequest) (*StartGameResponse, error)
-	EndGame(context.Context, *EndGameRequest) (*EndGameResponse, error)
 	mustEmbedUnimplementedGameServiceServer()
 }
 
@@ -140,27 +47,6 @@ type GameServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedGameServiceServer struct{}
 
-func (UnimplementedGameServiceServer) CreateRoom(context.Context, *CreateRoomRequest) (*Room, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateRoom not implemented")
-}
-func (UnimplementedGameServiceServer) GetRoom(context.Context, *GetRoomRequest) (*Room, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetRoom not implemented")
-}
-func (UnimplementedGameServiceServer) ListRooms(context.Context, *ListRoomsRequest) (*ListRoomsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListRooms not implemented")
-}
-func (UnimplementedGameServiceServer) JoinRoom(context.Context, *JoinRoomRequest) (*JoinRoomResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method JoinRoom not implemented")
-}
-func (UnimplementedGameServiceServer) LeaveRoom(context.Context, *LeaveRoomRequest) (*LeaveRoomResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method LeaveRoom not implemented")
-}
-func (UnimplementedGameServiceServer) StartGame(context.Context, *StartGameRequest) (*StartGameResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StartGame not implemented")
-}
-func (UnimplementedGameServiceServer) EndGame(context.Context, *EndGameRequest) (*EndGameResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method EndGame not implemented")
-}
 func (UnimplementedGameServiceServer) mustEmbedUnimplementedGameServiceServer() {}
 func (UnimplementedGameServiceServer) testEmbeddedByValue()                     {}
 
@@ -182,168 +68,13 @@ func RegisterGameServiceServer(s grpc.ServiceRegistrar, srv GameServiceServer) {
 	s.RegisterService(&GameService_ServiceDesc, srv)
 }
 
-func _GameService_CreateRoom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateRoomRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(GameServiceServer).CreateRoom(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: GameService_CreateRoom_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GameServiceServer).CreateRoom(ctx, req.(*CreateRoomRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _GameService_GetRoom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetRoomRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(GameServiceServer).GetRoom(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: GameService_GetRoom_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GameServiceServer).GetRoom(ctx, req.(*GetRoomRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _GameService_ListRooms_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListRoomsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(GameServiceServer).ListRooms(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: GameService_ListRooms_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GameServiceServer).ListRooms(ctx, req.(*ListRoomsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _GameService_JoinRoom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(JoinRoomRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(GameServiceServer).JoinRoom(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: GameService_JoinRoom_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GameServiceServer).JoinRoom(ctx, req.(*JoinRoomRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _GameService_LeaveRoom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LeaveRoomRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(GameServiceServer).LeaveRoom(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: GameService_LeaveRoom_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GameServiceServer).LeaveRoom(ctx, req.(*LeaveRoomRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _GameService_StartGame_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(StartGameRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(GameServiceServer).StartGame(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: GameService_StartGame_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GameServiceServer).StartGame(ctx, req.(*StartGameRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _GameService_EndGame_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(EndGameRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(GameServiceServer).EndGame(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: GameService_EndGame_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GameServiceServer).EndGame(ctx, req.(*EndGameRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // GameService_ServiceDesc is the grpc.ServiceDesc for GameService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var GameService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "game.GameService",
 	HandlerType: (*GameServiceServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "CreateRoom",
-			Handler:    _GameService_CreateRoom_Handler,
-		},
-		{
-			MethodName: "GetRoom",
-			Handler:    _GameService_GetRoom_Handler,
-		},
-		{
-			MethodName: "ListRooms",
-			Handler:    _GameService_ListRooms_Handler,
-		},
-		{
-			MethodName: "JoinRoom",
-			Handler:    _GameService_JoinRoom_Handler,
-		},
-		{
-			MethodName: "LeaveRoom",
-			Handler:    _GameService_LeaveRoom_Handler,
-		},
-		{
-			MethodName: "StartGame",
-			Handler:    _GameService_StartGame_Handler,
-		},
-		{
-			MethodName: "EndGame",
-			Handler:    _GameService_EndGame_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "api/proto/game/game.proto",
+	Methods:     []grpc.MethodDesc{},
+	Streams:     []grpc.StreamDesc{},
+	Metadata:    "api/proto/game/game.proto",
 }
