@@ -40,5 +40,3 @@ require (
 	golang.org/x/text v0.23.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250218202821-56aae31c358a // indirect
 )
-
-replace github.com/darkphotonKN/cosmic-void-server/common => ../common

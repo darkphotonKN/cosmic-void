@@ -14,6 +14,3 @@ require (
 	google.golang.org/grpc v1.72.0
 	google.golang.org/protobuf v1.36.5
 )
-
-replace github.com/darkphotonKN/cosmic-void-server/common => ../common
-
