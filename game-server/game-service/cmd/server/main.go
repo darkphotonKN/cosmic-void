@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/config"
-	// pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/game"
 	"github.com/darkphotonKN/cosmic-void-server/common/broker"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
@@ -89,6 +88,8 @@ func main() {
 	// broker.DeclareExchange(ch, "your.event.name", "fanout")
 
 	// TODO: Initialize your services and handlers
+	// When ready, import the proto package and uncomment:
+	// pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/game"
 	// repo := yourpackage.NewRepository(db)
 	// service := yourpackage.NewService(repo, ch)
 	// handler := yourpackage.NewHandler(service)
@@ -100,4 +101,3 @@ func main() {
 		log.Fatal("Can't connect to grpc server. Error:", err.Error())
 	}
 }
-

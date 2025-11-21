@@ -17,11 +17,9 @@ import (
 )
 
 var (
-	serviceName            = "api-gateway"
-	httpAddr               = commonhelpers.GetEnvString("PORT", "7001")
-	exampleServiceGrpcAddr = commonhelpers.GetEnvString("GRPC_EXAMPLE_ADDR", "7010")
-	itemServiceGrpcAddr    = commonhelpers.GetEnvString("GRPC_ITEM_SERVICE_ADDR", "7001")
-	consulAddr             = commonhelpers.GetEnvString("CONSUL_ADDR", "192.168.0.207:8510")
+	serviceName = "api-gateway"
+	httpAddr    = commonhelpers.GetEnvString("PORT", "7001")
+	consulAddr  = commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
 )
 
 /**
