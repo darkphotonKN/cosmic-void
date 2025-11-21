@@ -12,6 +12,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/auth-service/internal/models"
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
+	"github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"golang.org/x/crypto/bcrypt"
@@ -21,12 +22,14 @@ import (
 type service struct {
 	Repo      *Repository
 	publishCh *amqp.Channel
+	cache     cache.Cache
 }
 
-func NewService(repo *Repository, ch *amqp.Channel) *service {
+func NewService(repo *Repository, ch *amqp.Channel, cacheService cache.Cache) *service {
 	return &service{
 		Repo:      repo,
 		publishCh: ch,
+		cache:     cacheService,
 	}
 }
 

@@ -25,7 +25,16 @@ services:
     volumes:
       - test_pgdata:/var/lib/postgresql/data
     restart: 'no'
+  
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
 
 volumes:
   pgdata:
   test_pgdata:
+  redis_data:

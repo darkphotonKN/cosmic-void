@@ -74,7 +74,7 @@ func runMigrations(db *sqlx.DB) error {
 func SeedDefaults(db *sqlx.DB) {
 	// --- default members ---
 	memberRepo := member.NewRepository(db)
-	memberService := member.NewService(memberRepo, nil)
+	memberService := member.NewService(memberRepo, nil, nil)
 
 	err := memberService.CreateDefaultMembers(constants.DefaultMembers)
 
