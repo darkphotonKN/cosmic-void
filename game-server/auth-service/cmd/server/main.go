@@ -14,6 +14,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
+	"github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
@@ -37,6 +38,21 @@ func main() {
 
 	db := config.InitDB()
 	defer db.Close()
+
+	// --- redis setup ---
+	err := config.InitRedis(config.RedisConfig{
+		Mode:         commonhelpers.GetEnvString("REDIS_MODE", "standalone"),
+		Addrs:        []string{commonhelpers.GetEnvString("REDIS_ADDR", "localhost:6379")},
+		Password:     commonhelpers.GetEnvString("REDIS_PASSWORD", ""),
+		DB:           0,
+		PoolSize:     10,
+		MinIdleConns: 5,
+	})
+	if err != nil {
+		log.Fatalf("Failed to initialize Redis: %v", err)
+	}
+	defer config.CloseRedis()
+	cacheService := cache.NewRedisCache(config.GetClient())
 
 	// --- service discovery setup ---
 
@@ -90,7 +106,7 @@ func main() {
 	}()
 
 	repo := member.NewRepository(db)
-	service := member.NewService(repo, ch)
+	service := member.NewService(repo, ch, cacheService)
 	handler := member.NewHandler(service)
 	// consumer := member.NewConsumer(service, ch)
 	// start goroutine and listen to events from message broker
