@@ -2,8 +2,10 @@ package gameserver
 
 import (
 	"net/http"
+	"sync"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -14,21 +16,27 @@ import (
 **/
 
 type Server struct {
-
 	// config
-	ListenAddr string
-	upgrader   websocket.Upgrader
+	upgrader websocket.Upgrader
+
+	// messages
+	// main server channel
+	serverChan chan ClientPackage
+
+	// active game message channels
+	msgChan map[*websocket.Conn]chan Message
 
 	// active games
-	games []*game.Game
+	games map[uuid.UUID]*game.Game
 
 	// online players
-	players []*game.Player
+	players map[uuid.UUID]*game.Player
 
-	// injection
+	// other
+	mu sync.Mutex
 }
 
-func NewServer(listenAddr string) *Server {
+func NewServer() *Server {
 	upgrader := websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
 			// TODO: Allow all connections by default for simplicity; can add more logic here
@@ -36,17 +44,25 @@ func NewServer(listenAddr string) *Server {
 		},
 	}
 
-	return &Server{
-		upgrader:   upgrader,
-		ListenAddr: listenAddr,
+	server := &Server{
+		upgrader: upgrader,
 
-		games:   make([]*game.Game, 0),
-		players: make([]*game.Player, 0),
+		serverChan: make(chan ClientPackage, 0),
+		msgChan:    make(map[*websocket.Conn]chan Message, 10),
+
+		games:   make(map[uuid.UUID]*game.Game, 0),
+		players: make(map[uuid.UUID]*game.Player, 0),
 	}
+
+	// initialize default setup
+	server.InitServer()
+
+	return server
 }
 
-func InitServer() {
-	// start message hub concurrently
-	messageHub := NewMessageHub()
-	go messageHub.RunHub()
+func (s *Server) InitServer() {
+	// start message hub concurrently with the same server channel
+	// instance
+	messageHub := NewMessageHub(s.serverChan)
+	go messageHub.Run()
 }

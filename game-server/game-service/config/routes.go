@@ -3,8 +3,7 @@ package config
 import (
 	"fmt"
 
-	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
-	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/websocket"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/gameserver"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
@@ -13,7 +12,7 @@ import (
 /**
 * Sets up API prefix route and all routers.
 **/
-func SetupRouter(registry discovery.Registry, db *sqlx.DB) *gin.Engine {
+func SetupRouter(db *sqlx.DB) *gin.Engine {
 	router := gin.Default()
 
 	// NOTE: debugging middleware
@@ -34,13 +33,10 @@ func SetupRouter(registry discovery.Registry, db *sqlx.DB) *gin.Engine {
 	api := router.Group("/api")
 
 	// --- WEBSOCKET CONNECTION ---
-
-	// -- setup --
-	wsHandler := websocket.NewHandler()
+	server := gameserver.NewServer()
 
 	// -- routes --
-
-	router.GET("/game/ws", wsHandler.HandleWebSocketConnection)
+	router.GET("/game/ws", server.HandleWebSocketConnection)
 
 	// --- HEALTH CHECK ---
 	api.GET("/health", func(c *gin.Context) {

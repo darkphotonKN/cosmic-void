@@ -2,21 +2,25 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 	"time"
 
-	"github.com/darkphotonKN/cosmic-void-server/game-service/config"
 	"github.com/darkphotonKN/cosmic-void-server/common/broker"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/config"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
 )
 
 var (
+	// game
+	gamePort = fmt.Sprintf(":%s", commonhelpers.GetEnvString("GAME_PORT", "5555"))
+
 	// grpc
 	serviceName = "game"
 	grpcAddr    = commonhelpers.GetEnvString("GRPC_GAME_ADDR", "7004")
@@ -97,7 +101,22 @@ func main() {
 
 	log.Printf("grpc Game Server started on PORT: %s\n", grpcAddr)
 
+	// routes setup
+	routes := config.SetupRouter(db)
+
+	fmt.Printf("Server listening on port %s.\n", gamePort)
+
+	go func() {
+		err := routes.Run(gamePort)
+
+		if err != nil {
+			log.Fatal("Can't connect to game server. Error:", err.Error())
+		}
+
+	}()
+
 	if err := grpcServer.Serve(listener); err != nil {
 		log.Fatal("Can't connect to grpc server. Error:", err.Error())
 	}
 }
+
