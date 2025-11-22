@@ -27,6 +27,7 @@ type Server struct {
 	msgChan map[*websocket.Conn]chan Message
 
 	// active games
+	// [gameId] to active game
 	games map[uuid.UUID]*game.Game
 
 	// online players

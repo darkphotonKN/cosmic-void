@@ -25,6 +25,7 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 
 	// handle each connected client's messages concurrently
 	go s.ServeConnectedPlayer(conn)
+
 }
 
 /**

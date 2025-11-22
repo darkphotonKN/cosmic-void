@@ -7,12 +7,12 @@ import "fmt"
 **/
 
 type messageHub struct {
-	msgChan chan ClientPackage
+	serverChan chan ClientPackage
 }
 
-func NewMessageHub(msgChan chan ClientPackage) *messageHub {
+func NewMessageHub(serverChan chan ClientPackage) *messageHub {
 	return &messageHub{
-		msgChan: msgChan,
+		serverChan: serverChan,
 	}
 }
 
@@ -24,10 +24,13 @@ func (h *messageHub) Run() {
 	fmt.Printf("\nInitializing message hub...\n\n")
 	for {
 		select {
-		case clientPackage := <-h.msgChan:
+		case clientPackage := <-h.serverChan:
 			// handle message based on action
 
 			fmt.Printf("\nincoming message: %+v\n\n", clientPackage.Message)
+
+			clientPackage.Conn.WriteMessage(1, []byte("asdasd")]))
+
 		}
 	}
 }
