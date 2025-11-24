@@ -1,6 +1,8 @@
 package gameserver
 
-import "fmt"
+import (
+	"fmt"
+)
 
 /**
 * Core concurrent message orchestrator.
@@ -29,7 +31,11 @@ func (h *messageHub) Run() {
 
 			fmt.Printf("\nincoming message: %+v\n\n", clientPackage.Message)
 
-			clientPackage.Conn.WriteMessage(1, []byte("asdasd")]))
+			// TODO: Nick here
+			// get player's game
+			// game := getPlayerGame(clientPackage.payload.ID)
+
+			// action == start game
 
 		}
 	}
