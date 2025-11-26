@@ -11,10 +11,6 @@ import (
 *
 * extra team info: think of entities like a container that holds components.
 *
-	- AddComponent(component Component)
-  - GetComponent(componentType string) (Component, bool)
-  - HasComponent(componentType string) bool
-  - RemoveComponent(componentType string)
 **/
 
 type ComponentType string
@@ -37,7 +33,6 @@ func NewEntity() *Entity {
 		ID:         uuid.New(),
 		components: make(map[ComponentType]Component, 0),
 	}
-
 }
 
 func (e *Entity) AddComponent(component Component) {
