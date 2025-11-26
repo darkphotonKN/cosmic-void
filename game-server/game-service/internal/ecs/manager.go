@@ -18,14 +18,6 @@ type EntityManager struct {
 	mu       sync.RWMutex
 }
 
-/*
-  - NewEntityManager() *EntityManager
-  - CreateEntity() *Entity
-  - GetEntity(id uuid.UUID) (*Entity, bool)
-  - RemoveEntity(id uuid.UUID)
-  - GetAllEntities() []*Entity
-*/
-
 func NewEntityManager() *EntityManager {
 	return &EntityManager{
 		entities: make(map[uuid.UUID]*Entity),
