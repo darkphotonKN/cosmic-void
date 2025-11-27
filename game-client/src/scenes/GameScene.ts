@@ -1,7 +1,17 @@
 import { createStarfield } from "@/utils/Background";
 import { Player } from "@/utils/class/Player";
 import Phaser from "phaser";
-import { io, Socket } from "socket.io-client";
+
+// {
+//   action: "move" | "attack" | "pickup" | "use" | ...,
+//   payload: { ... },
+//   seq: 123
+// }
+
+// // 範例
+// { action: "move", payload: { x: 300, y: 200 }, seq: 1 }
+// { action: "attack", payload: { targetId: "enemy_1" }, seq: 2 }
+// { action: "pickup", payload: { itemId: "chest_5" }, seq: 3 }
 
 export class GameScene extends Phaser.Scene {
   private score: number = 0;
@@ -15,12 +25,14 @@ export class GameScene extends Phaser.Scene {
   private keyA!: Phaser.Input.Keyboard.Key;
   private keyS!: Phaser.Input.Keyboard.Key;
   private keyD!: Phaser.Input.Keyboard.Key;
-  private socket!: Socket;
+  private socket!: WebSocket;
   private isWaitingForServer!: boolean;
   // fog of war
   private fogOfWar!: Phaser.GameObjects.Graphics;
   private visionCircle!: Phaser.GameObjects.Graphics;
 
+  // latest socket number
+  private seq!: number;
   constructor() {
     super({ key: "GameScene" });
   }
@@ -35,23 +47,33 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
-    // connect websoket
-    this.socket = io("http://localhost:3001", {
-      transports: ["websocket"], // 強制使用 WebSocket
-      reconnection: true, // 自動重連
-      reconnectionDelay: 1000,
-    });
+    // connect websocket (原生 WebSocket)
+    this.socket = new WebSocket("ws://localhost:5555/game/ws");
 
+    this.socket.onopen = () => {
+      console.log("WebSocket 連線成功");
+    };
+
+    this.socket.onerror = (error) => {
+      console.error("WebSocket 錯誤:", error);
+    };
+
+    this.socket.onclose = () => {
+      console.log("WebSocket 連線關閉");
+    };
+
+    // 星空背景
+    createStarfield(this);
     // 迷霧 start
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    // 建立視野圓圈（用於遮罩）
+    // 建立視野圓圈 用於遮罩
     this.visionCircle = this.add.graphics();
-    this.visionCircle.fillStyle(0xffffff);
-    this.visionCircle.fillCircle(400, 300, 100);
+    // this.visionCircle.fillStyle(0xffffff);
+    // this.visionCircle.fillCircle(400, 300, 100);
 
-    // 建立黑色迷霧層（半透明）
+    // 建立黑色迷霧層
     this.fogOfWar = this.add.graphics();
     this.fogOfWar.fillStyle(0x000000, 0.85); // 第二個參數是透明度，0-1
     this.fogOfWar.fillRect(0, 0, width, height);
@@ -63,9 +85,6 @@ export class GameScene extends Phaser.Scene {
     this.fogOfWar.setMask(mask);
     // 迷霧 end
 
-    // 星空背景
-    createStarfield(this);
-
     // Score display
     this.scoreText = this.add.text(16, 16, "Score: 0", {
       fontSize: "18px",
@@ -73,7 +92,14 @@ export class GameScene extends Phaser.Scene {
     });
 
     // this.physics.add.sprite(400, 300, "dude");
-    this.me = new Player(this, 400, 300, "dude", "dsfgsdarfgsd", "Nick");
+    this.me = new Player(
+      this,
+      400,
+      300,
+      "dude",
+      "dsfgsdarfgsd",
+      "Nick",
+    ).setDepth(20);
     this.me.setCollideWorldBounds(true);
     this.physics.add.existing(this.me);
 
@@ -134,28 +160,33 @@ export class GameScene extends Phaser.Scene {
       this.scene.start("MainMenuScene");
     });
 
-    // websocket
-    this.socket = io("port", {
-      transports: ["websocket"], // 強制使用 WebSocket
-      reconnection: true, // 自動重連
-      reconnectionDelay: 1000,
-    });
-    // self
-    this.socket.on("moveConfirmed", (data: { x: number; y: number }) => {
-      // 伺服器確認後才移動
-      this.me.setVelocity(data.x, data.y);
-      this.isWaitingForServer = false;
-    });
-    // other plays
-    this.socket.on("playerMoved", (data) => {
-      console.log("收到玩家移動:", data.id, data.x, data.y);
-      // 每次只會收到「一個玩家」的位置
+    // websocket message handler
+    this.socket.onmessage = (event) => {
+      try {
+        // const data: ServerMessage = JSON.parse(event.data);
+        const data = JSON.parse(event.data);
+        console.log("收到伺服器訊息:", data);
 
-      // const targetPlayer = this.players.get(data.id);
-      // if (otherPlayer) {
-      //   otherPlayer.setPosition(data.x, data.y);
-      // }
-    });
+        if (data.action === "moveConfirmed") {
+          // 伺服器確認後才移動
+          this.me.setVelocity(data.payload.x, data.payload.y);
+          this.isWaitingForServer = false;
+        } else if (data.action === "playerMoved") {
+          console.log(
+            "收到玩家移動:",
+            data.payload.id,
+            data.payload.x,
+            data.payload.y,
+          );
+          // const targetPlayer = this.players.get(data.payload.id);
+          // if (targetPlayer) {
+          //   targetPlayer.setPosition(data.payload.x, data.payload.y);
+          // }
+        }
+      } catch (e) {
+        console.error("解析訊息失敗:", e);
+      }
+    };
   }
 
   update() {
@@ -180,17 +211,11 @@ export class GameScene extends Phaser.Scene {
     if (this.cursors.left.isDown || this.keyA.isDown) {
       this.me.setVelocityX(-this.speed);
       this.me.anims.play("left", true);
-      this.socket.emit("Move", {
-        x: -this.speed,
-        y: 0,
-      });
+      this.sendMessage(ActionType.Move, { x: -this.speed, y: 0 });
     } else if (this.cursors.right.isDown || this.keyD.isDown) {
       this.me.setVelocityX(this.speed);
       this.me.anims.play("right", true);
-      this.socket.emit("Move", {
-        x: this.speed,
-        y: 0,
-      });
+      this.sendMessage(ActionType.Move, { x: this.speed, y: 0 });
     } else {
       this.me.setVelocityX(0);
       this.me.anims.play("turn");
@@ -198,16 +223,10 @@ export class GameScene extends Phaser.Scene {
 
     if (this.cursors.up.isDown || this.keyW.isDown) {
       this.me.setVelocityY(-this.speed);
-      this.socket.emit("Move", {
-        x: 0,
-        y: this.speed,
-      });
+      this.sendMessage(ActionType.Move, { x: 0, y: -this.speed });
     } else if (this.cursors.down.isDown || this.keyS.isDown) {
       this.me.setVelocityY(this.speed);
-      this.socket.emit("Move", {
-        x: 0,
-        y: -this.speed,
-      });
+      this.sendMessage(ActionType.Move, { x: 0, y: this.speed });
     }
 
     const distance = Phaser.Math.Distance.Between(
@@ -227,6 +246,23 @@ export class GameScene extends Phaser.Scene {
         // 安全距離,邊框變綠
         container.className = "safe";
       }
+    }
+  }
+  // 發送訊息 通用模組
+  sendMessage<T extends keyof ActionMap>(
+    action: T,
+    payload: ActionMap[T],
+  ): void {
+    console.log("this.socket.readyState", this.socket.readyState);
+    if (this.socket.readyState === WebSocket.OPEN) {
+      console.log("socket action", action);
+      console.log("socket payload", payload);
+      const message: ClientMessage<T> = {
+        action,
+        payload,
+        seq: ++this.seq,
+      };
+      this.socket.send(JSON.stringify(message));
     }
   }
 

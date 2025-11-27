@@ -2,6 +2,8 @@ package gameserver
 
 import (
 	"fmt"
+
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
 )
 
 /**
@@ -36,6 +38,10 @@ func (h *messageHub) Run() {
 			// game := getPlayerGame(clientPackage.payload.ID)
 
 			// action == start game
+			go func() {
+				test := game.NewSession("room-1")
+				fmt.Println("Created new game session: ", test)
+			}()
 
 		}
 	}
