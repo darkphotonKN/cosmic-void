@@ -26,9 +26,9 @@ type Server struct {
 	// active game message channels
 	msgChan map[*websocket.Conn]chan Message
 
-	// active games
-	// [gameId] to active game
-	games map[uuid.UUID]*game.Game
+	// active sessions
+	// [sessionId] to active sessions
+	sessions map[uuid.UUID]*game.Session
 
 	// online players
 	players map[uuid.UUID]*game.Player
@@ -51,8 +51,8 @@ func NewServer() *Server {
 		serverChan: make(chan ClientPackage, 0),
 		msgChan:    make(map[*websocket.Conn]chan Message, 10),
 
-		games:   make(map[uuid.UUID]*game.Game, 0),
-		players: make(map[uuid.UUID]*game.Player, 0),
+		sessions: make(map[uuid.UUID]*game.Session, 0),
+		players:  make(map[uuid.UUID]*game.Player, 0),
 	}
 
 	// initialize default setup
