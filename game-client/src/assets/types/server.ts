@@ -1,5 +1,7 @@
 // ====== 玩家自己的狀態 ======
 
+import { ActionType } from "./client";
+
 interface PlayerState {
   id: string;
   x: number;
@@ -54,7 +56,7 @@ type GameEvent =
   | { type: "player_entered"; playerId: string; name: string }
   | { type: "player_left"; playerId: string };
 
-// ====== Server → Client 完整回應 ======
+// ====== Server 到 Client 完整回應 ======
 
 interface ServerMessage {
   seq: number;

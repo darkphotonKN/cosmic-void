@@ -1,28 +1,28 @@
-interface MovePayload {
+export interface MovePayload {
   x: number;
   y: number;
 }
 
-interface AttackPayload {
+export interface AttackPayload {
   targetId: string;
 }
 
-interface PickupPayload {
+export interface PickupPayload {
   itemId: string;
 }
 
-interface UsePayload {
+export interface UsePayload {
   itemId: string;
   targetId?: string; // 可選：對誰使用
 }
 
-interface ChatPayload {
+export interface ChatPayload {
   message: string;
 }
 
 // ====== 動作類型對應 Payload ======
 
-interface ActionMap {
+export interface ActionMap {
   move: MovePayload;
   attack: AttackPayload;
   pickup: PickupPayload;
@@ -30,7 +30,7 @@ interface ActionMap {
   chat: ChatPayload;
 }
 
-const ActionType = {
+export const ActionType = {
   Move: "move",
   Attack: "attack",
   Pickup: "pickup",
@@ -38,11 +38,11 @@ const ActionType = {
   Chat: "chat",
 } as const;
 
-type ActionType = (typeof ActionType)[keyof typeof ActionType];
+export type ActionType = (typeof ActionType)[keyof typeof ActionType];
 
 // ====== Client → Server 訊息（泛型版）======
 
-interface ClientMessage<T extends keyof ActionMap> {
+export interface ClientMessage<T extends keyof ActionMap> {
   action: T;
   payload: ActionMap[T];
   seq: number;
@@ -50,7 +50,7 @@ interface ClientMessage<T extends keyof ActionMap> {
 
 // ====== 或是用 Union Type（更直接）======
 
-type ClientAction =
+export type ClientAction =
   | { action: "move"; payload: MovePayload; seq: number }
   | { action: "attack"; payload: AttackPayload; seq: number }
   | { action: "pickup"; payload: PickupPayload; seq: number }
