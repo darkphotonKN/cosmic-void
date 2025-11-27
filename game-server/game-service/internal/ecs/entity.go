@@ -16,10 +16,28 @@ import (
 type ComponentType string
 
 const (
-	ComponentTypePlayer    ComponentType = "Player"
+	ComponentTypePlayer ComponentType = "Player"
+	ComponentTypeNPC    ComponentType = "NPC"
+	ComponentTypeEnemy  ComponentType = "Enemy"
+
 	ComponentTypeItem      ComponentType = "Item"
 	ComponentTypeTransform ComponentType = "Transform"
 	ComponentTypeVelocity  ComponentType = "Velocity"
+
+	ComponentTypeHealth ComponentType = "Health"
+	ComponentTypeAttack ComponentType = "Attack"
+	ComponentTypeBuff   ComponentType = "Buff"
+	ComponentTypeDebuff ComponentType = "Debuff"
+	ComponentTypeSkill  ComponentType = "Skill"
+
+	ComponentTypeStats      ComponentType = "Stats"
+	ComponentTypeLevel      ComponentType = "Level"
+	ComponentTypeExperience ComponentType = "Experience"
+	ComponentTypeInventory  ComponentType = "Inventory"
+	ComponentTypeEquipment  ComponentType = "Equipment"
+
+	ComponentTypeInteractable ComponentType = "Interactable"
+	ComponentTypeDialogue     ComponentType = "Dialogue"
 )
 
 type Entity struct {
