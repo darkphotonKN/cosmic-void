@@ -28,7 +28,24 @@ func (s *Session) AddPlayer(userID, username string) uuid.UUID {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	entity := CreatePlayerEntity(s.EntityManager, userID, username, 0, 0)
+	PlayerConfig := PlayerConfig{
+		UserID:        userID,
+		Username:      username,
+		X:             0,
+		Y:             0,
+		SkillName:     "Basic Attack",
+		SkillLevel:    1,
+		CurrentHealth: 100,
+		MaxHealth:     100,
+		Strength:      10,
+		ItemName:      "Health Potion",
+		ItemQuantity:  3,
+		Vx:            0,
+		Vy:            0,
+		SpeedV0:       5,
+	}
+
+	entity := CreatePlayerEntity(s.EntityManager, PlayerConfig)
 	s.playerEntities[userID] = entity.ID
 	return entity.ID
 }
