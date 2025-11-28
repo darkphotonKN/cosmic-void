@@ -33,6 +33,9 @@ type Server struct {
 	// online players
 	players map[uuid.UUID]*game.Player
 
+	// active connections to player maps
+	connToPlayer map[*websocket.Conn]*game.Player
+
 	// other
 	mu sync.Mutex
 }
@@ -51,19 +54,47 @@ func NewServer() *Server {
 		serverChan: make(chan ClientPackage, 0),
 		msgChan:    make(map[*websocket.Conn]chan Message, 10),
 
-		sessions: make(map[uuid.UUID]*game.Session, 0),
-		players:  make(map[uuid.UUID]*game.Player, 0),
+		sessions:     make(map[uuid.UUID]*game.Session, 0),
+		players:      make(map[uuid.UUID]*game.Player, 0),
+		connToPlayer: make(map[*websocket.Conn]*game.Player, 0),
 	}
 
 	// initialize default setup
-	server.InitServer()
+	server.InitServerSetup()
 
 	return server
 }
 
-func (s *Server) InitServer() {
+/**
+* default pre-server setup tasks
+**/
+func (s *Server) InitServerSetup() {
 	// start message hub concurrently with the same server channel
 	// instance
 	messageHub := NewMessageHub(s.serverChan)
 	go messageHub.Run()
+}
+
+/**
+* maps a connected client to its player information
+**/
+func (s *Server) MapConnToPlayer(conn *websocket.Conn, player game.Player) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.connToPlayer[conn] = &player
+}
+
+/**
+* grabs player information from connected client's websocket connection
+* information.
+**/
+
+func (s *Server) GetPlayerFromConn(conn *websocket.Conn) (*game.Player, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	player, exists := s.connToPlayer[conn]
+
+	return player, exists
 }

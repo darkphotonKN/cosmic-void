@@ -8,7 +8,6 @@ import (
 )
 
 // the session represents one game room with its own ECS world
-
 type Session struct {
 	ID             string
 	EntityManager  *ecs.EntityManager
@@ -40,9 +39,10 @@ func (s *Session) AddPlayer(userID, username string) uuid.UUID {
 		Strength:      10,
 		ItemName:      "Health Potion",
 		ItemQuantity:  3,
-		Vx:            0,
-		Vy:            0,
-		SpeedV0:       5,
+
+		Vx:    0,
+		Vy:    0,
+		Speed: 5,
 	}
 
 	entity := CreatePlayerEntity(s.EntityManager, PlayerConfig)

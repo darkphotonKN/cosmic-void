@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import Phaser from "phaser";
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   private speed: number = 200;

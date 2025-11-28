@@ -1,6 +1,8 @@
 package gameserver
 
-import "github.com/gorilla/websocket"
+import (
+	"github.com/gorilla/websocket"
+)
 
 /**
 * Provides the abstraction for clients to interface with the websocket connections.

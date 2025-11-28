@@ -37,12 +37,16 @@ func (h *messageHub) Run() {
 			// get player's game
 			// game := getPlayerGame(clientPackage.payload.ID)
 
-			// action == start game
-			go func() {
-				test := game.NewSession("room-1")
-				fmt.Println("Created new game session: ", test)
-			}()
+			// queue
+			// action == queue
 
+			// start game
+			// action == startgame
+			go GameSession()
 		}
 	}
+}
+
+func (h *messageHub) GameSession(player game.Player, message Message) {
+
 }
