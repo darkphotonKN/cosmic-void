@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/systems"
+	"github.com/google/uuid"
 )
 
 /**
@@ -40,13 +42,34 @@ func (h *messageHub) Run() {
 			// queue
 			// action == queue
 
-			// start game
+			// NOTE: starts a new game
+			// once enough players have joined.
 			// action == startgame
-			go GameSession()
+
+			// test player
+			testId := uuid.MustParse("0000-0000-0000-0000")
+			playerOne := game.Player{
+				ID:       testId,
+				Username: "testPlayerOne",
+			}
+
+			go h.GameSession(&playerOne, clientPackage.Message)
 		}
 	}
 }
 
-func (h *messageHub) GameSession(player game.Player, message Message) {
+/**
+* Handles all workings inside a single game session.
+* NOTE: this method runs in a goroutine.
+**/
+func (h *messageHub) GameSession(player *game.Player, message Message) {
+	game := game.NewSession("123")
 
+	game.AddPlayer(player.ID, player.Username)
+
+	// update game loop
+	// TODO: add once per second ticket
+	entities := game.EntityManager.GetAllEntities()
+	movementSys := systems.MovementSystem{}
+	movementSys.Update(float64(1), entities)
 }

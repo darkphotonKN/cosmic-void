@@ -11,7 +11,7 @@ import (
 type Session struct {
 	ID             string
 	EntityManager  *ecs.EntityManager
-	playerEntities map[string]uuid.UUID
+	playerEntities map[uuid.UUID]uuid.UUID
 	mu             sync.RWMutex
 }
 
@@ -19,11 +19,10 @@ func NewSession(roomID string) *Session {
 	return &Session{
 		ID:             roomID,
 		EntityManager:  ecs.NewEntityManager(),
-		playerEntities: make(map[string]uuid.UUID),
+		playerEntities: make(map[uuid.UUID]uuid.UUID),
 	}
 }
-
-func (s *Session) AddPlayer(userID, username string) uuid.UUID {
+func (s *Session) AddPlayer(userID uuid.UUID, username string) uuid.UUID {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
