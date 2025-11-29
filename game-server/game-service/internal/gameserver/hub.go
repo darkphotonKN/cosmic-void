@@ -1,6 +1,7 @@
 package gameserver
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
@@ -32,28 +33,38 @@ func (h *messageHub) Run() {
 		select {
 		case clientPackage := <-h.serverChan:
 			// handle message based on action
-
 			fmt.Printf("\nincoming message: %+v\n\n", clientPackage.Message)
 
 			// TODO: Nick here
 			// get player's game
 			// game := getPlayerGame(clientPackage.payload.ID)
 
-			// queue
-			// action == queue
+			switch clientPackage.Message.Action {
 
-			// NOTE: starts a new game
-			// once enough players have joined.
-			// action == startgame
+			// NOTE: queues a player for a game
+			case "queue":
 
-			// test player
-			testId := uuid.MustParse("0000-0000-0000-0000")
-			playerOne := game.Player{
-				ID:       testId,
-				Username: "testPlayerOne",
+				// NOTE: starts a new game
+				// once enough players have joined.
+
+			case "start_game":
+				// test players
+				testId := uuid.MustParse("0000-0000-0000-0001")
+				playerOne := game.Player{
+					ID:       testId,
+					Username: "testPlayerOne",
+				}
+
+				testIdTwo := uuid.MustParse("0000-0000-0000-0002")
+				playerTwo := game.Player{
+					ID:       testIdTwo,
+					Username: "testPlayerTwo",
+				}
+
+				testPlayerSlice := []*game.Player{&playerOne, &playerTwo}
+
+				go h.startGameSession(testPlayerSlice, clientPackage.Message)
 			}
-
-			go h.GameSession(&playerOne, clientPackage.Message)
 		}
 	}
 }
@@ -62,10 +73,12 @@ func (h *messageHub) Run() {
 * Handles all workings inside a single game session.
 * NOTE: this method runs in a goroutine.
 **/
-func (h *messageHub) GameSession(player *game.Player, message Message) {
+func (h *messageHub) startGameSession(players []*game.Player, message Message) {
 	game := game.NewSession("123")
 
-	game.AddPlayer(player.ID, player.Username)
+	for _, player := range players {
+		game.AddPlayer(player.ID, player.Username)
+	}
 
 	// update game loop
 	// TODO: add once per second ticket
