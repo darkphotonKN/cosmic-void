@@ -1,5 +1,6 @@
 import { createStarfield } from "@/utils/Background";
 import { Player } from "@/utils/class/Player";
+import { ActionMap, ActionType, ClientMessage } from "@/assets/types/client";
 import Phaser from "phaser";
 
 // {
