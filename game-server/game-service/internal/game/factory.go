@@ -14,7 +14,6 @@ type PlayerConfig struct {
 	SkillLevel    int
 	CurrentHealth int
 	MaxHealth     int
-	Strength      int
 	ItemName      string
 	ItemQuantity  int
 	Vx, Vy        float64
@@ -30,6 +29,9 @@ func CreatePlayerEntity(em *ecs.EntityManager, config PlayerConfig) *ecs.Entity 
 	entity.AddComponent(components.NewVelocityComponent(config.Vx, config.Vy, config.Speed))
 
 	entity.AddComponent(components.NewHealthComponent(config.CurrentHealth, config.MaxHealth))
+	entity.AddComponent(components.NewSkillComponent(config.SkillName, config.SkillLevel))
+
+	entity.AddComponent(components.NewStatsComponent())
 
 	return entity
 }

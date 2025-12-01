@@ -1,8 +1,8 @@
 package gameserver
 
 import (
-	"encoding/json"
 	"fmt"
+	"sync"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/systems"
@@ -15,11 +15,14 @@ import (
 
 type messageHub struct {
 	serverChan chan ClientPackage
+	sessions   map[string]*game.Session
+	mu         sync.RWMutex
 }
 
 func NewMessageHub(serverChan chan ClientPackage) *messageHub {
 	return &messageHub{
 		serverChan: serverChan,
+		sessions:   make(map[string]*game.Session),
 	}
 }
 
@@ -35,11 +38,10 @@ func (h *messageHub) Run() {
 			// handle message based on action
 			fmt.Printf("\nincoming message: %+v\n\n", clientPackage.Message)
 
-			// TODO: Nick here
-			// get player's game
-			// game := getPlayerGame(clientPackage.payload.ID)
-
 			switch clientPackage.Message.Action {
+			// action == start game
+			case "kiki_join":
+				go h.handlePlayerJoin(clientPackage)
 
 			// NOTE: queues a player for a game
 			case "queue":
@@ -85,4 +87,22 @@ func (h *messageHub) startGameSession(players []*game.Player, message Message) {
 	entities := game.EntityManager.GetAllEntities()
 	movementSys := systems.MovementSystem{}
 	movementSys.Update(float64(1), entities)
+}
+
+func (h *messageHub) handlePlayerJoin(clientPackage ClientPackage) {
+	roomID := "room-1"
+	testIdTwo := uuid.MustParse("0000-0000-0000-0002")
+	h.mu.RLock()
+	newGame, exists := h.sessions[roomID]
+	h.mu.RUnlock()
+
+	h.mu.Lock()
+	if !exists {
+		newGame = game.NewSession(roomID)
+		h.sessions[roomID] = newGame
+		fmt.Println("Created new game session: ", newGame)
+	}
+	h.mu.Unlock()
+
+	newGame.AddPlayer(testIdTwo, "player1")
 }
