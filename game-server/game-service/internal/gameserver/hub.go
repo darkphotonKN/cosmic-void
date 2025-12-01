@@ -13,18 +13,18 @@ import (
 **/
 
 type messageHub struct {
-	serverChan     chan ClientPackage
 	sessionManager SessionManager
 }
 
 type SessionManager interface {
 	CreateGameSession(players []*game.Player) *game.Session
-	GetGameSession(id uuid.UUID) *game.Session
+	GetGameSession(id uuid.UUID) (*game.Session, bool)
+	GetServerChan() chan ClientPackage
 }
 
-func NewMessageHub(serverChan chan ClientPackage) *messageHub {
+func NewMessageHub(sessionManager SessionManager) *messageHub {
 	return &messageHub{
-		serverChan: serverChan,
+		sessionManager: sessionManager,
 	}
 }
 
@@ -36,7 +36,7 @@ func (h *messageHub) Run() {
 	fmt.Printf("\nInitializing message hub...\n\n")
 	for {
 		select {
-		case clientPackage := <-h.serverChan:
+		case clientPackage := <-h.sessionManager.GetServerChan():
 			// handle message based on action
 			fmt.Printf("\nincoming message: %+v\n\n", clientPackage.Message)
 

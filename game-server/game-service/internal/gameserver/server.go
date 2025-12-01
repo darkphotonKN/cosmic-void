@@ -38,7 +38,7 @@ type Server struct {
 	connToPlayer map[*websocket.Conn]*game.Player
 
 	// other
-	mu sync.Mutex
+	mu sync.RWMutex
 }
 
 func NewServer() *Server {
@@ -61,19 +61,17 @@ func NewServer() *Server {
 	}
 
 	// initialize default setup
-	server.InitServerSetup()
+	messageHub := NewMessageHub(server)
+	go messageHub.Run()
 
 	return server
 }
 
 /**
-* default pre-server setup tasks
+* exposes server chan for communication between server and client
 **/
-func (s *Server) InitServerSetup() {
-	// start message hub concurrently with the same server channel
-	// instance
-	messageHub := NewMessageHub(s.serverChan)
-	go messageHub.Run()
+func (s *Server) GetServerChan() chan ClientPackage {
+	return s.serverChan
 }
 
 /**
@@ -118,4 +116,14 @@ func (s *Server) CreateGameSession(players []*game.Player) *game.Session {
 	fmt.Printf("New game session initiated, id: %s\n", newSessionId)
 
 	return newGameSession
+}
+
+/**
+* allows the retrieval of an existing session.
+**/
+func (s *Server) GetGameSession(id uuid.UUID) (*game.Session, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	session, exists := s.sessions[id]
+	return session, exists
 }
