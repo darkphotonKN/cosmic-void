@@ -58,7 +58,7 @@ type GameEvent =
 
 // ====== Server 到 Client 完整回應 ======
 
-interface ServerMessage {
+export interface ServerMessage {
   seq: number;
   timestamp: number;
   player: PlayerState;

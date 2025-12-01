@@ -18,7 +18,6 @@ export class GameScene extends Phaser.Scene {
   private score: number = 0;
   private scoreText!: Phaser.GameObjects.Text;
   private me!: Player;
-  private players!: Player[];
   private enemy!: Player;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private speed: number = 300;
@@ -27,7 +26,6 @@ export class GameScene extends Phaser.Scene {
   private keyS!: Phaser.Input.Keyboard.Key;
   private keyD!: Phaser.Input.Keyboard.Key;
   private socket!: WebSocket;
-  private isWaitingForServer!: boolean;
   // fog of war
   private fogOfWar!: Phaser.GameObjects.Graphics;
   private visionCircle!: Phaser.GameObjects.Graphics;
@@ -171,7 +169,6 @@ export class GameScene extends Phaser.Scene {
         if (data.action === "moveConfirmed") {
           // 伺服器確認後才移動
           this.me.setVelocity(data.payload.x, data.payload.y);
-          this.isWaitingForServer = false;
         } else if (data.action === "playerMoved") {
           console.log(
             "收到玩家移動:",
@@ -268,8 +265,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   handlePlayerEnemyCollision(
-    player: Phaser.Physics.Arcade.Sprite,
-    enemy: Phaser.Physics.Arcade.Sprite,
+    _player: Phaser.Physics.Arcade.Sprite,
+    _enemy: Phaser.Physics.Arcade.Sprite,
   ): void {
     console.log("Player-Enemy collision!");
     // this.gameOver();
