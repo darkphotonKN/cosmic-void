@@ -1,6 +1,7 @@
 package gameserver
 
 import (
+	"fmt"
 	"net/http"
 	"sync"
 
@@ -97,4 +98,24 @@ func (s *Server) GetPlayerFromConn(conn *websocket.Conn) (*game.Player, bool) {
 	player, exists := s.connToPlayer[conn]
 
 	return player, exists
+}
+
+/**
+* allows the creation of a new game session.
+**/
+func (s *Server) CreateGameSession(players []*game.Player) *game.Session {
+	newSessionId := uuid.New()
+	newGameSession := game.NewSession(newSessionId.String())
+
+	for _, player := range players {
+		newGameSession.AddPlayer(player.ID, player.Username)
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.sessions[newSessionId] = newGameSession
+	fmt.Printf("New game session initiated, id: %s\n", newSessionId)
+
+	return newGameSession
 }

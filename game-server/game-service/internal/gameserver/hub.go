@@ -1,7 +1,6 @@
 package gameserver
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
@@ -14,7 +13,13 @@ import (
 **/
 
 type messageHub struct {
-	serverChan chan ClientPackage
+	serverChan     chan ClientPackage
+	sessionManager SessionManager
+}
+
+type SessionManager interface {
+	CreateGameSession(players []*game.Player) *game.Session
+	GetGameSession(id uuid.UUID) *game.Session
 }
 
 func NewMessageHub(serverChan chan ClientPackage) *messageHub {
@@ -74,15 +79,11 @@ func (h *messageHub) Run() {
 * NOTE: this method runs in a goroutine.
 **/
 func (h *messageHub) startGameSession(players []*game.Player, message Message) {
-	game := game.NewSession("123")
-
-	for _, player := range players {
-		game.AddPlayer(player.ID, player.Username)
-	}
+	newGameSession := h.sessionManager.CreateGameSession(players)
 
 	// update game loop
 	// TODO: add once per second ticket
-	entities := game.EntityManager.GetAllEntities()
+	entities := newGameSession.EntityManager.GetAllEntities()
 	movementSys := systems.MovementSystem{}
 	movementSys.Update(float64(1), entities)
 }
