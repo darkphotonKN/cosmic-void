@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	// game
+	// game service
 	gamePort = fmt.Sprintf(":%s", commonhelpers.GetEnvString("GAME_PORT", "5555"))
 
 	// grpc
@@ -119,4 +119,3 @@ func main() {
 		log.Fatal("Can't connect to grpc server. Error:", err.Error())
 	}
 }
-

@@ -30,6 +30,8 @@ func InitDB() *sqlx.DB {
 		os.Getenv("DB_NAME"),
 	)
 
+	fmt.Printf("Attempting to connect to database with dsn: %s\n", dsn)
+
 	// pass the db connection string to connect to our database
 	db, err := sqlx.Connect("postgres", dsn)
 	if err != nil {
@@ -68,4 +70,3 @@ func runMigrations(db *sqlx.DB) error {
 	fmt.Printf("Successfully ran all migrations.\n\n")
 	return nil
 }
-

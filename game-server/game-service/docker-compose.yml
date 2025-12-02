@@ -1,4 +1,4 @@
-version: '3.9'
+version: "3.9"
 
 services:
   db:
@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: cosmic_void_game_service_db
     ports:
-      - '5030:5432'
+      - "5030:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -21,10 +21,10 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: cosmic_void_game_service_test_db
     ports:
-      - '6004:5432'
+      - "6004:5432"
     volumes:
       - test_pgdata:/var/lib/postgresql/data
-    restart: 'no'
+    restart: "no"
 
 volumes:
   pgdata:

@@ -96,6 +96,7 @@ func (s *Server) GetPlayerFromConn(conn *websocket.Conn) (*game.Player, bool) {
 	player, exists := s.connToPlayer[conn]
 
 	return player, exists
+
 }
 
 /**

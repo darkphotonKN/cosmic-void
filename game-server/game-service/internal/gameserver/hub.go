@@ -2,6 +2,7 @@ package gameserver
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/systems"
@@ -14,6 +15,7 @@ import (
 
 type messageHub struct {
 	sessionManager SessionManager
+	gameSessionCh chan Message
 }
 
 type SessionManager interface {
@@ -34,6 +36,7 @@ func NewMessageHub(sessionManager SessionManager) *messageHub {
 **/
 func (h *messageHub) Run() {
 	fmt.Printf("\nInitializing message hub...\n\n")
+
 	for {
 		select {
 		case clientPackage := <-h.sessionManager.GetServerChan():
@@ -46,11 +49,27 @@ func (h *messageHub) Run() {
 
 			switch clientPackage.Message.Action {
 
+			// --- MENU RELATED ACTIONS ---
+
 			// NOTE: queues a player for a game
-			case "queue":
+			case "find_game":
 
 				// NOTE: starts a new game
 				// once enough players have joined.
+
+			// TODO: NICK
+			// Matchmaking system
+			// for example player queue system ["nick", "kiki", "trump"]
+			// goroutine to check ^ for 5 players
+
+			// NICK log "game started" if game found
+			// TODO: add start game session (Kranti)
+
+			// give client message "game found!"
+			// loop through found game player's id's, send them "game found"
+
+
+			// --- GAME RELATED ACTIONS ---
 
 			case "start_game":
 				// test players
@@ -74,6 +93,8 @@ func (h *messageHub) Run() {
 	}
 }
 
+const framerate = 1
+
 /**
 * Handles all workings inside a single game session.
 * NOTE: this method runs in a goroutine.
@@ -81,9 +102,22 @@ func (h *messageHub) Run() {
 func (h *messageHub) startGameSession(players []*game.Player, message Message) {
 	newGameSession := h.sessionManager.CreateGameSession(players)
 
+	// --- client actions ---
+	clientAction := <- 
+
 	// update game loop
-	// TODO: add once per second ticket
-	entities := newGameSession.EntityManager.GetAllEntities()
-	movementSys := systems.MovementSystem{}
-	movementSys.Update(float64(1), entities)
+	ticker := time.NewTicker((1 * time.Second) / framerate)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+
+			// --- update game loop ---
+			fmt.Println("update game loop")
+			entities := newGameSession.EntityManager.GetAllEntities()
+			movementSys := systems.MovementSystem{}
+			movementSys.Update(float64(1), entities)
+		}
+	}
 }
