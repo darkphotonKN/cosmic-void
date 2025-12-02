@@ -63,31 +63,35 @@ func (h *messageHub) Run() {
 			// goroutine to check ^ for 5 players
 
 			// NICK log "game started" if game found
-			// TODO: add start game session (Kranti)
+			// TODO: add real conditional to start game session (Kranti)
+				start := true 
+				if start {
+						// test players
+						testId := uuid.MustParse("0000-0000-0000-0001")
+						playerOne := game.Player{
+							ID:       testId,
+							Username: "testPlayerOne",
+						}
+
+						testIdTwo := uuid.MustParse("0000-0000-0000-0002")
+						playerTwo := game.Player{
+							ID:       testIdTwo,
+							Username: "testPlayerTwo",
+						}
+
+						testPlayerSlice := []*game.Player{&playerOne, &playerTwo}
+
+						go h.startGameSession(testPlayerSlice, clientPackage.Message)
+				}
 
 			// give client message "game found!"
 			// loop through found game player's id's, send them "game found"
 
-
 			// --- GAME RELATED ACTIONS ---
+			case "attack": 
+				/// propogate to corresponding game
+				<- clientPackage.Message
 
-			case "start_game":
-				// test players
-				testId := uuid.MustParse("0000-0000-0000-0001")
-				playerOne := game.Player{
-					ID:       testId,
-					Username: "testPlayerOne",
-				}
-
-				testIdTwo := uuid.MustParse("0000-0000-0000-0002")
-				playerTwo := game.Player{
-					ID:       testIdTwo,
-					Username: "testPlayerTwo",
-				}
-
-				testPlayerSlice := []*game.Player{&playerOne, &playerTwo}
-
-				go h.startGameSession(testPlayerSlice, clientPackage.Message)
 			}
 		}
 	}
@@ -103,7 +107,7 @@ func (h *messageHub) startGameSession(players []*game.Player, message Message) {
 	newGameSession := h.sessionManager.CreateGameSession(players)
 
 	// --- client actions ---
-	clientAction := <- 
+	clientAction := <-
 
 	// update game loop
 	ticker := time.NewTicker((1 * time.Second) / framerate)

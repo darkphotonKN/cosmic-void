@@ -12,6 +12,7 @@ type Session struct {
 	ID             string
 	EntityManager  *ecs.EntityManager
 	playerEntities map[uuid.UUID]uuid.UUID
+	messageCh      chan types.Message
 	mu             sync.RWMutex
 }
 
