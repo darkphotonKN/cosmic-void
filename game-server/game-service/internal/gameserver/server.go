@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -22,10 +23,10 @@ type Server struct {
 
 	// messages
 	// main server channel
-	serverChan chan ClientPackage
+	serverChan chan types.ClientPackage
 
 	// active game message channels
-	msgChan map[*websocket.Conn]chan Message
+	msgChan map[*websocket.Conn]chan types.Message
 
 	// active sessions
 	// [sessionId] to active sessions
@@ -52,8 +53,8 @@ func NewServer() *Server {
 	server := &Server{
 		upgrader: upgrader,
 
-		serverChan: make(chan ClientPackage, 0),
-		msgChan:    make(map[*websocket.Conn]chan Message, 10),
+		serverChan: make(chan types.ClientPackage, 0),
+		msgChan:    make(map[*websocket.Conn]chan types.Message, 10),
 
 		sessions:     make(map[uuid.UUID]*game.Session, 0),
 		players:      make(map[uuid.UUID]*game.Player, 0),
@@ -70,7 +71,7 @@ func NewServer() *Server {
 /**
 * exposes server chan for communication between server and client
 **/
-func (s *Server) GetServerChan() chan ClientPackage {
+func (s *Server) GetServerChan() chan types.ClientPackage {
 	return s.serverChan
 }
 

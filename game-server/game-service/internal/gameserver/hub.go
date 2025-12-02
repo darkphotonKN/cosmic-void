@@ -6,6 +6,7 @@ import (
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/systems"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 )
 
@@ -15,13 +16,13 @@ import (
 
 type messageHub struct {
 	sessionManager SessionManager
-	gameSessionCh chan Message
+	gameSessionCh chan types.Message
 }
 
 type SessionManager interface {
 	CreateGameSession(players []*game.Player) *game.Session
 	GetGameSession(id uuid.UUID) (*game.Session, bool)
-	GetServerChan() chan ClientPackage
+	GetServerChan() chan types.ClientPackage
 }
 
 func NewMessageHub(sessionManager SessionManager) *messageHub {
@@ -78,7 +79,6 @@ func (h *messageHub) Run() {
 							ID:       testIdTwo,
 							Username: "testPlayerTwo",
 						}
-
 						testPlayerSlice := []*game.Player{&playerOne, &playerTwo}
 
 						go h.startGameSession(testPlayerSlice, clientPackage.Message)
@@ -89,9 +89,9 @@ func (h *messageHub) Run() {
 
 			// --- GAME RELATED ACTIONS ---
 			case "attack": 
-				/// propogate to corresponding game
-				<- clientPackage.Message
-
+				// get correct game session
+				// propogate message to corresponding game
+				 <- clientPackage.Message
 			}
 		}
 	}
@@ -103,7 +103,7 @@ const framerate = 1
 * Handles all workings inside a single game session.
 * NOTE: this method runs in a goroutine.
 **/
-func (h *messageHub) startGameSession(players []*game.Player, message Message) {
+func (h *messageHub) startGameSession(players []*game.Player, message types.Message) {
 	newGameSession := h.sessionManager.CreateGameSession(players)
 
 	// --- client actions ---

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
@@ -71,20 +72,20 @@ func (s *Server) ServeConnectedPlayer(conn *websocket.Conn) {
 		// Decodes Incoming client message and serves their unique connection its own goroutine
 
 		// decode message to pre-defined json structure "GameMessage"
-		var decodedMsg Message
+		var decodedMsg types.Message
 
 		err = json.Unmarshal(message, &decodedMsg)
 
 		if err != nil {
 			fmt.Println("Error when decoding payload.")
-			conn.WriteJSON(Message{Action: "Error", Payload: "Your message to server was the incorrect format and could not be decoded as JSON."})
+			conn.WriteJSON(types.Message{Action: "Error", Payload: "Your message to server was the incorrect format and could not be decoded as JSON."})
 			continue
 		}
 
 		// handle concurrent writes back to clients
 		s.setupClientWriter(conn)
 
-		clientPackage := ClientPackage{Message: decodedMsg, Conn: conn}
+		clientPackage := types.ClientPackage{Message: decodedMsg, Conn: conn}
 
 		fmt.Println("Sending clientPackage to message hub.")
 
@@ -143,14 +144,14 @@ func (s *Server) createMsgChan(conn *websocket.Conn) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.msgChan[conn] = make(chan Message)
+	s.msgChan[conn] = make(chan types.Message)
 }
 
 /**
 * Gets the unique game message channel for a specific connection for writing back
 * from server to client, validating that it exists.
 **/
-func (s *Server) getGameMsgChan(conn *websocket.Conn) (chan Message, error) {
+func (s *Server) getGameMsgChan(conn *websocket.Conn) (chan types.Message, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
