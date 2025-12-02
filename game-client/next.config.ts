@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  reactStrictMode: true,
+  reactStrictMode: false, // 關閉以避免 Phaser 場景重複初始化
   // 保留 Webpack 設定以支援 Phaser
   webpack: (config) => {
     config.resolve.alias = {
