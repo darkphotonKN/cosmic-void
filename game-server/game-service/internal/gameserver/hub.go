@@ -16,7 +16,7 @@ import (
 
 type messageHub struct {
 	sessionManager SessionManager
-	gameSessionCh chan types.Message
+	gameSessionCh  chan types.Message
 }
 
 type SessionManager interface {
@@ -58,40 +58,50 @@ func (h *messageHub) Run() {
 				// NOTE: starts a new game
 				// once enough players have joined.
 
-			// TODO: NICK
-			// Matchmaking system
-			// for example player queue system ["nick", "kiki", "trump"]
-			// goroutine to check ^ for 5 players
+				// TODO: NICK
+				// Matchmaking system
+				// for example player queue system ["nick", "kiki", "trump"]
+				// goroutine to check ^ for 5 players
 
-			// NICK log "game started" if game found
-			// TODO: add real conditional to start game session (Kranti)
-				start := true 
+				// NICK log "game started" if game found
+				// TODO: add real conditional to start game session (Kranti)
+				start := true
 				if start {
-						// test players
-						testId := uuid.MustParse("0000-0000-0000-0001")
-						playerOne := game.Player{
-							ID:       testId,
-							Username: "testPlayerOne",
-						}
+					// test players
+					testId := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+					playerOne := game.Player{
+						ID:       testId,
+						Username: "testPlayerOne",
+					}
 
-						testIdTwo := uuid.MustParse("0000-0000-0000-0002")
-						playerTwo := game.Player{
-							ID:       testIdTwo,
-							Username: "testPlayerTwo",
-						}
-						testPlayerSlice := []*game.Player{&playerOne, &playerTwo}
+					testIdTwo := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+					playerTwo := game.Player{
+						ID:       testIdTwo,
+						Username: "testPlayerTwo",
+					}
+					testPlayerSlice := []*game.Player{&playerOne, &playerTwo}
 
-						go h.startGameSession(testPlayerSlice, clientPackage.Message)
+					go h.startGameSession(testPlayerSlice, clientPackage.Message)
 				}
 
 			// give client message "game found!"
 			// loop through found game player's id's, send them "game found"
 
 			// --- GAME RELATED ACTIONS ---
-			case "attack": 
-				// get correct game session
+			case "attack":
+				// get correct game session from payload
+				testPlayerGameSession := uuid.MustParse("10000000-0000-0000-0000-000000000000")
+
+				session, exists := h.sessionManager.GetGameSession(testPlayerGameSession)
+
+				if !exists {
+					// TODO: return to client game doesn't exist
+
+					continue
+				}
+
 				// propogate message to corresponding game
-				 <- clientPackage.Message
+				session.MessageCh <- clientPackage.Message
 			}
 		}
 	}
@@ -106,22 +116,30 @@ const framerate = 1
 func (h *messageHub) startGameSession(players []*game.Player, message types.Message) {
 	newGameSession := h.sessionManager.CreateGameSession(players)
 
-	// --- client actions ---
-	clientAction := <-
+	// game session manager
+	go func() {
+		for {
+			select {
+			// TODO: add reading from specific game session channel
+			}
+		}
+	}()
 
 	// update game loop
 	ticker := time.NewTicker((1 * time.Second) / framerate)
 	defer ticker.Stop()
 
-	for {
-		select {
-		case <-ticker.C:
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
 
-			// --- update game loop ---
-			fmt.Println("update game loop")
-			entities := newGameSession.EntityManager.GetAllEntities()
-			movementSys := systems.MovementSystem{}
-			movementSys.Update(float64(1), entities)
+				// --- update game loop ---
+				fmt.Println("update game loop")
+				entities := newGameSession.EntityManager.GetAllEntities()
+				movementSys := systems.MovementSystem{}
+				movementSys.Update(float64(1), entities)
+			}
 		}
-	}
+	}()
 }
