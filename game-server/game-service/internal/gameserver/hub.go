@@ -3,10 +3,8 @@ package gameserver
 import (
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
-	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/systems"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 )
@@ -49,8 +47,6 @@ func (h *messageHub) Run() {
 			fmt.Printf("\nincoming message: %+v\n\n", clientPackage.Message)
 
 			switch clientPackage.Message.Action {
-			case "kiki_join":
-				go h.handlePlayerJoin(clientPackage)
 
 			// --- MENU RELATED ACTIONS ---
 
@@ -83,7 +79,7 @@ func (h *messageHub) Run() {
 					}
 					testPlayerSlice := []*game.Player{&playerOne, &playerTwo}
 
-					go h.startGameSession(testPlayerSlice, clientPackage.Message)
+					go h.sessionManager.CreateGameSession(testPlayerSlice)
 				}
 
 			// give client message "game found!"
@@ -106,59 +102,4 @@ func (h *messageHub) Run() {
 			}
 		}
 	}
-}
-
-const framerate = 1
-
-/**
-* Handles all workings inside a single game session.
-* NOTE: this method runs in a goroutine.
-**/
-func (h *messageHub) startGameSession(players []*game.Player, message types.Message) {
-	newGameSession := h.sessionManager.CreateGameSession(players)
-
-	// game session manager
-	go func() {
-		for {
-			select {
-			// TODO: add reading from specific game session channel
-			}
-		}
-	}()
-
-	// update game loop
-	ticker := time.NewTicker((1 * time.Second) / framerate)
-	defer ticker.Stop()
-
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-
-				// --- update game loop ---
-				fmt.Println("update game loop")
-				entities := newGameSession.EntityManager.GetAllEntities()
-				movementSys := systems.MovementSystem{}
-				movementSys.Update(float64(1), entities)
-			}
-		}
-	}()
-}
-
-func (h *messageHub) handlePlayerJoin(clientPackage types.ClientPackage) {
-	roomID := "room-1"
-	testIdTwo := uuid.MustParse("0000-0000-0000-0002")
-	h.mu.RLock()
-	newGame, exists := h.sessions[roomID]
-	h.mu.RUnlock()
-
-	h.mu.Lock()
-	if !exists {
-		newGame = game.NewSession(roomID)
-		h.sessions[roomID] = newGame
-		fmt.Println("Created new game session: ", newGame)
-	}
-	h.mu.Unlock()
-
-	newGame.AddPlayer(testIdTwo, "player1")
 }

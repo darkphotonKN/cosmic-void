@@ -13,7 +13,7 @@ import (
 
 // the session represents one game room with its own ECS world
 type Session struct {
-	ID             string
+	ID             uuid.UUID
 	EntityManager  *ecs.EntityManager
 	MessageCh      chan types.Message
 	playerEntities map[uuid.UUID]uuid.UUID
@@ -27,9 +27,11 @@ type Session struct {
 	isRunning bool
 }
 
-func NewSession(roomID string) *Session {
+func NewSession() *Session {
+	sessionId := uuid.New()
+
 	s := &Session{
-		ID:             roomID,
+		ID:             sessionId,
 		EntityManager:  ecs.NewEntityManager(),
 		playerEntities: make(map[uuid.UUID]uuid.UUID),
 
@@ -43,8 +45,43 @@ func NewSession(roomID string) *Session {
 	go s.Start()
 
 	return s
-
 }
+
+const framerate = 1
+
+/**
+* Handles all inner workings inside a single game session.
+* NOTE: this method should be run inside a goroutine.
+**/
+func (s *Session) Start() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.isRunning {
+		return
+	}
+
+	s.isRunning = true
+
+	// update game loop
+	ticker := time.NewTicker((1 * time.Second) / framerate)
+	defer ticker.Stop()
+
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+
+				// --- update game loop ---
+				fmt.Println("update game loop")
+				entities := s.EntityManager.GetAllEntities()
+				movementSys := systems.MovementSystem{}
+				movementSys.Update(float64(1), entities)
+			}
+		}
+	}()
+}
+
 func (s *Session) AddPlayer(userID uuid.UUID, username string) uuid.UUID {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -74,32 +111,6 @@ func (s *Session) AddPlayer(userID uuid.UUID, username string) uuid.UUID {
 func (s *Session) RemovePlayer(userID string) {
 	// 選項 1: 直接移除
 	// 選項 2: 標記為死亡，等待復活
-}
-
-func (s *Session) Start() {
-	s.mu.Lock()
-	if s.isRunning {
-		s.mu.Unlock()
-		return
-	}
-	s.isRunning = true
-	s.mu.Unlock()
-
-	ticker := time.NewTicker(16 * time.Millisecond) // 60 FPS
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			s.Update(0.016)
-		case <-s.stopChan:
-			fmt.Printf("Session %s stopping...\n", s.ID)
-			s.mu.Lock()
-			s.isRunning = false
-			s.mu.Unlock()
-			return
-		}
-	}
 }
 
 func (s *Session) Update(deltaTime float64) {

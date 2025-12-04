@@ -104,8 +104,7 @@ func (s *Server) GetPlayerFromConn(conn *websocket.Conn) (*game.Player, bool) {
 * allows the creation of a new game session.
 **/
 func (s *Server) CreateGameSession(players []*game.Player) *game.Session {
-	newSessionId := uuid.New()
-	newGameSession := game.NewSession(newSessionId.String())
+	newGameSession := game.NewSession()
 
 	for _, player := range players {
 		newGameSession.AddPlayer(player.ID, player.Username)
@@ -114,8 +113,8 @@ func (s *Server) CreateGameSession(players []*game.Player) *game.Session {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.sessions[newSessionId] = newGameSession
-	fmt.Printf("New game session initiated, id: %s\n", newSessionId)
+	s.sessions[newGameSession.ID] = newGameSession
+	fmt.Printf("New game session initiated, id: %s\n", newGameSession.ID)
 
 	return newGameSession
 }
