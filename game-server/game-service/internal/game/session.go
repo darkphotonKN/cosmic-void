@@ -47,8 +47,6 @@ func NewSession() *Session {
 	return s
 }
 
-const framerate = 1
-
 /**
 * Handles all inner workings inside a single game session.
 * NOTE: this method should be run inside a goroutine.
@@ -63,23 +61,50 @@ func (s *Session) Start() {
 
 	s.isRunning = true
 
-	// update game loop
+	// managing incoming client messages
+	go s.manageClientMessages()
+
+	// start update game loop
+	go s.manageGameLoop()
+
+}
+
+/**
+* Manages all incoming messages between client and game session via the
+* message hub.
+**/
+func (s *Session) manageClientMessages() {
+	for {
+		select {
+		case message := <-s.MessageCh:
+			fmt.Printf("\nincoming message to game session %s:\n%v\n\n", s.ID, message)
+
+		}
+	}
+}
+
+const framerate = 1
+
+/**
+* manages all the game update loops.
+* runs system code to update state of game x times every second.
+**/
+func (s *Session) manageGameLoop() {
+	// TODO: update from once per second to 30 times a second
 	ticker := time.NewTicker((1 * time.Second) / framerate)
 	defer ticker.Stop()
 
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
+	for {
+		select {
+		case <-ticker.C:
 
-				// --- update game loop ---
-				fmt.Println("update game loop")
-				entities := s.EntityManager.GetAllEntities()
-				movementSys := systems.MovementSystem{}
-				movementSys.Update(float64(1), entities)
-			}
+			// --- update game loop ---
+
+			entities := s.EntityManager.GetAllEntities()
+			movementSys := systems.MovementSystem{}
+			movementSys.Update(float64(1), entities)
 		}
-	}()
+	}
 }
 
 func (s *Session) AddPlayer(userID uuid.UUID, username string) uuid.UUID {
