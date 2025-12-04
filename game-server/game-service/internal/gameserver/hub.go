@@ -75,6 +75,7 @@ func (h *messageHub) Run() {
 			}
 
 			// --- MENU RELATED ACTIONS ---
+			// These actions will be actions for before game initialization happens.
 			switch messageAction {
 
 			// NOTE: queues a player for a game

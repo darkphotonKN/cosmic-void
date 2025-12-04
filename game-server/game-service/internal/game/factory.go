@@ -35,3 +35,15 @@ func CreatePlayerEntity(em *ecs.EntityManager, config PlayerConfig) *ecs.Entity 
 
 	return entity
 }
+
+type DoorConfig struct {
+	X, Y float64
+}
+
+func CreateDoorEntity(em *ecs.EntityManager, config DoorConfig) *ecs.Entity {
+	entity := em.CreateEntity()
+	entity.AddComponent(components.NewTransformComponent(config.X, config.Y))
+	entity.AddComponent(components.NewOpenableComponent(false)) // default false
+
+	return entity
+}
