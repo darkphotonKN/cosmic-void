@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
@@ -46,12 +47,38 @@ func (h *messageHub) Run() {
 			// handle message based on action
 			fmt.Printf("\nincoming message: %+v\n\n", clientPackage.Message)
 
-			switch clientPackage.Message.Action {
+			var gameActions map[constants.Action]bool = map[constants.Action]bool{
+				constants.ActionMove:   true,
+				constants.ActionAttack: true,
+			}
+
+			messageAction := constants.Action(clientPackage.Message.Action)
+
+			// --- GAME RELATED ACTIONS ---
+			// any message sent from the client after a game session is initialized
+			// will be propogated from the messsage hub to corresponding server.
+
+			if gameActions[messageAction] {
+
+				// get correct game session from payload
+				testPlayerGameSession := uuid.MustParse("10000000-0000-0000-0000-000000000000")
+
+				session, exists := h.sessionManager.GetGameSession(testPlayerGameSession)
+
+				if !exists {
+					// TODO: return to client game doesn't exist
+					continue
+				}
+
+				// propogate message to corresponding game
+				session.MessageCh <- clientPackage.Message
+			}
 
 			// --- MENU RELATED ACTIONS ---
+			switch messageAction {
 
 			// NOTE: queues a player for a game
-			case "find_game":
+			case constants.ActionFindGame:
 
 				// NOTE: starts a new game
 				// once enough players have joined.
@@ -82,23 +109,13 @@ func (h *messageHub) Run() {
 					go h.sessionManager.CreateGameSession(testPlayerSlice)
 				}
 
-			// give client message "game found!"
-			// loop through found game player's id's, send them "game found"
+				// give client message "game found!"
+				// loop through found game player's id's, send them "game found"
 
-			// --- GAME RELATED ACTIONS ---
-			case "attack":
-				// get correct game session from payload
-				testPlayerGameSession := uuid.MustParse("10000000-0000-0000-0000-000000000000")
+			case constants.ActionLeaveQueue:
+				// TODO: add client leaving queue
+				fmt.Println("Leave game...")
 
-				session, exists := h.sessionManager.GetGameSession(testPlayerGameSession)
-
-				if !exists {
-					// TODO: return to client game doesn't exist
-					continue
-				}
-
-				// propogate message to corresponding game
-				session.MessageCh <- clientPackage.Message
 			}
 		}
 	}
