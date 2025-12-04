@@ -22,7 +22,7 @@ type messageHub struct {
 }
 
 type SessionManager interface {
-	CreateGameSession(players []*game.Player) *game.Session
+	CreateGameSession(players []*types.Player) *game.Session
 	GetGameSession(id uuid.UUID) (*game.Session, bool)
 	GetServerChan() chan types.ClientPackage
 }
@@ -95,17 +95,17 @@ func (h *messageHub) Run() {
 				if start {
 					// test players
 					testId := uuid.MustParse("00000000-0000-0000-0000-000000000001")
-					playerOne := game.Player{
+					playerOne := types.Player{
 						ID:       testId,
 						Username: "testPlayerOne",
 					}
 
 					testIdTwo := uuid.MustParse("00000000-0000-0000-0000-000000000002")
-					playerTwo := game.Player{
+					playerTwo := types.Player{
 						ID:       testIdTwo,
 						Username: "testPlayerTwo",
 					}
-					testPlayerSlice := []*game.Player{&playerOne, &playerTwo}
+					testPlayerSlice := []*types.Player{&playerOne, &playerTwo}
 
 					go h.sessionManager.CreateGameSession(testPlayerSlice)
 				}

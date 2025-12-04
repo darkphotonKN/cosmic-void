@@ -33,11 +33,10 @@ type Server struct {
 	sessions map[uuid.UUID]*game.Session
 
 	// online players
-	players map[uuid.UUID]*game.Player
+	players map[uuid.UUID]*types.Player
 
 	// active connections to player maps
-	connToPlayer map[*websocket.Conn]*game.Player
-
+	connToPlayer map[*websocket.Conn]*types.Player
 	// other
 	mu sync.RWMutex
 }
@@ -57,8 +56,8 @@ func NewServer() *Server {
 		msgChan:    make(map[*websocket.Conn]chan types.Message, 10),
 
 		sessions:     make(map[uuid.UUID]*game.Session, 0),
-		players:      make(map[uuid.UUID]*game.Player, 0),
-		connToPlayer: make(map[*websocket.Conn]*game.Player, 0),
+		players:      make(map[uuid.UUID]*types.Player, 0),
+		connToPlayer: make(map[*websocket.Conn]*types.Player, 0),
 	}
 
 	// initialize default setup
@@ -78,7 +77,7 @@ func (s *Server) GetServerChan() chan types.ClientPackage {
 /**
 * maps a connected client to its player information
 **/
-func (s *Server) MapConnToPlayer(conn *websocket.Conn, player game.Player) {
+func (s *Server) MapConnToPlayer(conn *websocket.Conn, player types.Player) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -90,7 +89,7 @@ func (s *Server) MapConnToPlayer(conn *websocket.Conn, player game.Player) {
 * information.
 **/
 
-func (s *Server) GetPlayerFromConn(conn *websocket.Conn) (*game.Player, bool) {
+func (s *Server) GetPlayerFromConn(conn *websocket.Conn) (*types.Player, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -103,7 +102,7 @@ func (s *Server) GetPlayerFromConn(conn *websocket.Conn) (*game.Player, bool) {
 /**
 * allows the creation of a new game session.
 **/
-func (s *Server) CreateGameSession(players []*game.Player) *game.Session {
+func (s *Server) CreateGameSession(players []*types.Player) *game.Session {
 	newGameSession := game.NewSession()
 
 	for _, player := range players {
