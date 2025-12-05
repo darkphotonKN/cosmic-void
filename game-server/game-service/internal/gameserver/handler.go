@@ -7,6 +7,7 @@ import (
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -15,6 +16,26 @@ import (
 **/
 
 func (s *Server) HandleWebSocketConnection(c *gin.Context) {
+	// get token
+	token := c.Query("token")
+	name := c.Query("name")
+	// if token == "" {
+	// 	c.JSON(http.StatusUnauthorized, gin.H{"error": "missing token"})
+	// }
+	// DOTO: get user from db
+	// 暫時帶入token當user id
+	uuid := uuid.MustParse(token)
+	player := &types.Player{
+		ID:       uuid,
+		Username: name,
+	}
+	// TODO verify JWT，get player
+	// player, err := s.validateJWT(token)
+	// if err != nil {
+	// 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+	// 		return
+	// }
+
 	// TODO: call game server's channel
 	conn, err := s.upgrader.Upgrade(c.Writer, c.Request, nil)
 
@@ -24,6 +45,7 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 		return
 	}
 
+	s.MapConnToPlayer(conn, *player)
 	// handle each connected client's messages concurrently
 	go s.ServeConnectedPlayer(conn)
 

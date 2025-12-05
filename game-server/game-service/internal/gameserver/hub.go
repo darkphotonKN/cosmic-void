@@ -8,6 +8,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 )
 
 /**
@@ -22,9 +23,12 @@ type messageHub struct {
 }
 
 type SessionManager interface {
-	CreateGameSession(players []*game.Player) *game.Session
+	CreateGameSession(players []*types.Player) *game.Session
 	GetGameSession(id uuid.UUID) (*game.Session, bool)
 	GetServerChan() chan types.ClientPackage
+	AddPlayerToQueue(*types.Player)
+	GetPlayerFromConn(conn *websocket.Conn) (*types.Player, bool)
+	GetQueueChan() chan []*types.Player
 }
 
 func NewMessageHub(sessionManager SessionManager) *messageHub {
@@ -87,28 +91,48 @@ func (h *messageHub) Run() {
 				// TODO: NICK
 				// Matchmaking system
 				// for example player queue system ["nick", "kiki", "trump"]
+				player, exists := h.sessionManager.GetPlayerFromConn(clientPackage.Conn)
+
+				if !exists {
+					fmt.Println("player is exist")
+					continue
+				}
+
+				go h.sessionManager.AddPlayerToQueue(player)
 				// goroutine to check ^ for 5 players
 
+				// for {
+				// 	select {
+				// 	case queueResult := <-h.sessionManager.GetQueueChan():
+				// 		for _, player := range queueResult {
+				// 			fmt.Println("queue player", player.Username)
+				// 		}
+				// 		if len(queueResult) == 2 {
+				// 			go h.sessionManager.CreateGameSession(queueResult)
+				// 		}
+				// 	}
+				// }
 				// NICK log "game started" if game found
 				// TODO: add real conditional to start game session (Kranti)
-				start := true
-				if start {
-					// test players
-					testId := uuid.MustParse("00000000-0000-0000-0000-000000000001")
-					playerOne := game.Player{
-						ID:       testId,
-						Username: "testPlayerOne",
-					}
+				// start := true
+				// select 等goroutin人數滿或時間到開始遊戲
+				// if ok {
+				// test players
+				// testId := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+				// playerOne := types.Player{
+				// 	ID:       testId,
+				// 	Username: "testPlayerOne",
+				// }
 
-					testIdTwo := uuid.MustParse("00000000-0000-0000-0000-000000000002")
-					playerTwo := game.Player{
-						ID:       testIdTwo,
-						Username: "testPlayerTwo",
-					}
-					testPlayerSlice := []*game.Player{&playerOne, &playerTwo}
+				// testIdTwo := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+				// playerTwo := types.Player{
+				// 	ID:       testIdTwo,
+				// 	Username: "testPlayerTwo",
+				// }
+				// testPlayerSlice := []*types.Player{&playerOne, &playerTwo}
 
-					go h.sessionManager.CreateGameSession(testPlayerSlice)
-				}
+				// 	go h.sessionManager.CreateGameSession(fullQueue)
+				// }
 
 				// give client message "game found!"
 				// loop through found game player's id's, send them "game found"
@@ -118,6 +142,14 @@ func (h *messageHub) Run() {
 				fmt.Println("Leave game...")
 
 			}
+		case queueResult := <-h.sessionManager.GetQueueChan():
+			for _, player := range queueResult {
+				fmt.Println("queue player", player.Username)
+			}
+			// if len(queueResult) == 2 {
+			fmt.Println("create game")
+			go h.sessionManager.CreateGameSession(queueResult)
+			// }
 		}
 	}
 }

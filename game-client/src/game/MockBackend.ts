@@ -103,14 +103,8 @@ export interface AttackResult {
   targetHp?: number;
 }
 
-interface BuildingConfig {
-  type: 'house' | 'tower' | 'ruins' | 'shrine';
-  width: number;
-  height: number;
-  doorSide: 'top' | 'bottom' | 'left' | 'right' | 'none';
-  hasPartition: boolean;
-  hasRoof?: boolean;
-}
+// TODO: 建築系統暫時移除
+// interface BuildingConfig { ... }
 
 export class MockBackend {
   private worldObjects: WorldObjects;
@@ -128,48 +122,36 @@ export class MockBackend {
       players: new Map(),
     };
 
-    this.mapWidth = 3000;
-    this.mapHeight = 3000;
-    this.viewRadius = 250;
+    this.mapWidth = 900;
+    this.mapHeight = 600;
+    this.viewRadius = 300; // 大於地圖，簡化後可看到全部
 
     this.initializeWorld();
   }
 
   private initializeWorld(): void {
-    this.generateBuildings();
+    // 簡化版本：不生成建築
 
-    // 生成戶外寶箱
-    for (let i = 0; i < 20; i++) {
-      let x: number,
-        y: number,
-        attempts = 0;
-      do {
-        x = 100 + Math.random() * (this.mapWidth - 200);
-        y = 100 + Math.random() * (this.mapHeight - 200);
-        attempts++;
-      } while (this.isInsideAnyBuilding(x, y) && attempts < 50);
+    // 生成少量寶箱
+    for (let i = 0; i < 5; i++) {
+      const x = 50 + Math.random() * (this.mapWidth - 100);
+      const y = 50 + Math.random() * (this.mapHeight - 100);
 
       this.worldObjects.treasures.push({
         id: `treasure_${i}`,
         x,
         y,
-        type: Math.random() > 0.7 ? 'gold' : 'silver',
-        value: Math.random() > 0.7 ? 100 : 50,
+        type: Math.random() > 0.5 ? 'gold' : 'silver',
+        value: Math.random() > 0.5 ? 100 : 50,
         collected: false,
         isIndoor: false,
       });
     }
 
-    // 生成戶外敵人
-    for (let i = 0; i < 10; i++) {
-      let x: number,
-        y: number,
-        attempts = 0;
-      do {
-        x = 100 + Math.random() * (this.mapWidth - 200);
-        y = 100 + Math.random() * (this.mapHeight - 200);
-        attempts++;
-      } while (this.isInsideAnyBuilding(x, y) && attempts < 50);
+    // 生成少量敵人
+    for (let i = 0; i < 3; i++) {
+      const x = 50 + Math.random() * (this.mapWidth - 100);
+      const y = 50 + Math.random() * (this.mapHeight - 100);
 
       this.worldObjects.enemies.push({
         id: `enemy_${i}`,
@@ -183,304 +165,9 @@ export class MockBackend {
     }
   }
 
-  private generateBuildings(): void {
-    const buildingConfigs: BuildingConfig[] = [
-      { type: 'house', width: 280, height: 220, doorSide: 'bottom', hasPartition: true },
-      { type: 'house', width: 320, height: 240, doorSide: 'left', hasPartition: true },
-      { type: 'house', width: 260, height: 200, doorSide: 'right', hasPartition: true },
-      { type: 'house', width: 300, height: 260, doorSide: 'top', hasPartition: true },
-      { type: 'house', width: 200, height: 160, doorSide: 'bottom', hasPartition: false },
-      { type: 'house', width: 180, height: 180, doorSide: 'left', hasPartition: false },
-      { type: 'tower', width: 140, height: 140, doorSide: 'bottom', hasPartition: false },
-      { type: 'tower', width: 160, height: 160, doorSide: 'right', hasPartition: true },
-      { type: 'ruins', width: 200, height: 160, doorSide: 'none', hasPartition: false, hasRoof: false },
-      { type: 'ruins', width: 180, height: 140, doorSide: 'none', hasPartition: false, hasRoof: false },
-      { type: 'shrine', width: 220, height: 180, doorSide: 'bottom', hasPartition: true },
-      { type: 'shrine', width: 200, height: 200, doorSide: 'top', hasPartition: false },
-    ];
-
-    const gridSize = 450;
-    const positions: { x: number; y: number }[] = [];
-
-    for (let gx = 1; gx < this.mapWidth / gridSize - 1; gx++) {
-      for (let gy = 1; gy < this.mapHeight / gridSize - 1; gy++) {
-        positions.push({
-          x: gx * gridSize + (Math.random() - 0.5) * 80,
-          y: gy * gridSize + (Math.random() - 0.5) * 80,
-        });
-      }
-    }
-
-    positions.sort(() => Math.random() - 0.5);
-
-    const numBuildings = Math.min(buildingConfigs.length, positions.length);
-
-    for (let i = 0; i < numBuildings; i++) {
-      const config = buildingConfigs[i];
-      const pos = positions[i];
-
-      const building: Building = {
-        id: `building_${i}`,
-        x: pos.x,
-        y: pos.y,
-        width: config.width,
-        height: config.height,
-        type: config.type,
-        doorSide: config.doorSide,
-        hasRoof: config.hasRoof !== false,
-        hasPartition: config.hasPartition || false,
-        walls: [],
-        door: null,
-      };
-
-      this.generateWallsForBuilding(building);
-      this.worldObjects.buildings.push(building);
-
-      // 在建築內部放置物品
-      if (config.hasRoof !== false && Math.random() > 0.3) {
-        const numTreasures = config.hasPartition ? 2 : 1;
-        for (let t = 0; t < numTreasures; t++) {
-          const treasurePos = this.getRandomInteriorPosition(building);
-          this.worldObjects.treasures.push({
-            id: `indoor_treasure_${i}_${t}`,
-            x: treasurePos.x,
-            y: treasurePos.y,
-            type: 'gold',
-            value: 150 + Math.floor(Math.random() * 100),
-            collected: false,
-            isIndoor: true,
-            buildingId: building.id,
-          });
-        }
-      }
-
-      // 室內敵人
-      if (config.hasRoof !== false && Math.random() > 0.5) {
-        const enemyPos = this.getRandomInteriorPosition(building);
-        this.worldObjects.enemies.push({
-          id: `indoor_enemy_${i}`,
-          x: enemyPos.x,
-          y: enemyPos.y,
-          type: Math.random() > 0.5 ? 'skeleton' : 'goblin',
-          hp: 100,
-          alive: true,
-          isIndoor: true,
-          buildingId: building.id,
-        });
-      }
-    }
-  }
-
-  private getRandomInteriorPosition(building: Building): { x: number; y: number } {
-    const margin = 40;
-    return {
-      x: building.x + (Math.random() - 0.5) * (building.width - margin * 2),
-      y: building.y + (Math.random() - 0.5) * (building.height - margin * 2),
-    };
-  }
-
-  private generateWallsForBuilding(building: Building): void {
-    const { x, y, width, height, doorSide, type, hasPartition } = building;
-    const wallThickness = 14;
-    const doorWidth = 60;
-
-    const halfW = width / 2;
-    const halfH = height / 2;
-
-    // 廢墟只有部分牆壁
-    if (type === 'ruins') {
-      building.walls.push({
-        x: x - halfW,
-        y: y - halfH,
-        width: wallThickness,
-        height: height * 0.6,
-      });
-      building.walls.push({
-        x: x + halfW - wallThickness,
-        y: y,
-        width: wallThickness,
-        height: height * 0.5,
-      });
-      building.walls.push({
-        x: x - halfW,
-        y: y + halfH - wallThickness,
-        width: width * 0.4,
-        height: wallThickness,
-      });
-      return;
-    }
-
-    let doorX = 0,
-      doorY = 0,
-      doorRotation = 0;
-
-    // 上牆
-    if (doorSide !== 'top') {
-      building.walls.push({
-        x: x - halfW,
-        y: y - halfH,
-        width: width,
-        height: wallThickness,
-      });
-    } else {
-      const sideWidth = (width - doorWidth) / 2;
-      building.walls.push({
-        x: x - halfW,
-        y: y - halfH,
-        width: sideWidth,
-        height: wallThickness,
-      });
-      building.walls.push({
-        x: x + doorWidth / 2,
-        y: y - halfH,
-        width: sideWidth,
-        height: wallThickness,
-      });
-      doorX = x;
-      doorY = y - halfH;
-      doorRotation = 0;
-    }
-
-    // 下牆
-    if (doorSide !== 'bottom') {
-      building.walls.push({
-        x: x - halfW,
-        y: y + halfH - wallThickness,
-        width: width,
-        height: wallThickness,
-      });
-    } else {
-      const sideWidth = (width - doorWidth) / 2;
-      building.walls.push({
-        x: x - halfW,
-        y: y + halfH - wallThickness,
-        width: sideWidth,
-        height: wallThickness,
-      });
-      building.walls.push({
-        x: x + doorWidth / 2,
-        y: y + halfH - wallThickness,
-        width: sideWidth,
-        height: wallThickness,
-      });
-      doorX = x;
-      doorY = y + halfH;
-      doorRotation = 180;
-    }
-
-    // 左牆
-    if (doorSide !== 'left') {
-      building.walls.push({
-        x: x - halfW,
-        y: y - halfH,
-        width: wallThickness,
-        height: height,
-      });
-    } else {
-      const sideHeight = (height - doorWidth) / 2;
-      building.walls.push({
-        x: x - halfW,
-        y: y - halfH,
-        width: wallThickness,
-        height: sideHeight,
-      });
-      building.walls.push({
-        x: x - halfW,
-        y: y + doorWidth / 2,
-        width: wallThickness,
-        height: sideHeight,
-      });
-      doorX = x - halfW;
-      doorY = y;
-      doorRotation = 270;
-    }
-
-    // 右牆
-    if (doorSide !== 'right') {
-      building.walls.push({
-        x: x + halfW - wallThickness,
-        y: y - halfH,
-        width: wallThickness,
-        height: height,
-      });
-    } else {
-      const sideHeight = (height - doorWidth) / 2;
-      building.walls.push({
-        x: x + halfW - wallThickness,
-        y: y - halfH,
-        width: wallThickness,
-        height: sideHeight,
-      });
-      building.walls.push({
-        x: x + halfW - wallThickness,
-        y: y + doorWidth / 2,
-        width: wallThickness,
-        height: sideHeight,
-      });
-      doorX = x + halfW;
-      doorY = y;
-      doorRotation = 90;
-    }
-
-    building.door = {
-      x: doorX,
-      y: doorY,
-      width: doorWidth,
-      rotation: doorRotation,
-      side: doorSide,
-    };
-
-    if (hasPartition) {
-      this.addPartitions(building);
-    }
-  }
-
-  private addPartitions(building: Building): void {
-    const { x, y, width, height } = building;
-    const wallThickness = 10;
-    const partitionDoorWidth = 45;
-
-    const halfW = width / 2;
-    const halfH = height / 2;
-
-    if (width > height) {
-      const partitionX = x + (Math.random() - 0.5) * (width * 0.3);
-
-      building.walls.push({
-        x: partitionX - wallThickness / 2,
-        y: y - halfH + 14,
-        width: wallThickness,
-        height: (height - partitionDoorWidth) / 2 - 14,
-      });
-
-      building.walls.push({
-        x: partitionX - wallThickness / 2,
-        y: y + partitionDoorWidth / 2,
-        width: wallThickness,
-        height: (height - partitionDoorWidth) / 2 - 14,
-      });
-    } else {
-      const partitionY = y + (Math.random() - 0.5) * (height * 0.3);
-
-      building.walls.push({
-        x: x - halfW + 14,
-        y: partitionY - wallThickness / 2,
-        width: (width - partitionDoorWidth) / 2 - 14,
-        height: wallThickness,
-      });
-
-      building.walls.push({
-        x: x + partitionDoorWidth / 2,
-        y: partitionY - wallThickness / 2,
-        width: (width - partitionDoorWidth) / 2 - 14,
-        height: wallThickness,
-      });
-    }
-  }
-
-  private isInsideAnyBuilding(x: number, y: number): boolean {
-    return this.worldObjects.buildings.some((b) => this.isInsideBuilding(x, y, b));
-  }
+  // TODO: 建築系統暫時移除，未來加入後端後再啟用
+  // generateBuildings, getRandomInteriorPosition, generateWallsForBuilding, addPartitions, isInsideAnyBuilding
+  // 已暫時移除，保留在 git 歷史記錄中
 
   isInsideBuilding(x: number, y: number, building: Building): boolean {
     const halfW = building.width / 2;

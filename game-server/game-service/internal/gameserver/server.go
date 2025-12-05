@@ -33,13 +33,24 @@ type Server struct {
 	sessions map[uuid.UUID]*game.Session
 
 	// online players
-	players map[uuid.UUID]*game.Player
+	players map[uuid.UUID]*types.Player
 
 	// active connections to player maps
-	connToPlayer map[*websocket.Conn]*game.Player
+	connToPlayer map[*websocket.Conn]*types.Player
 
 	// other
 	mu sync.RWMutex
+
+	// queues for players waiting to join a game
+	queuePeopleLimit int
+	queues           map[uuid.UUID][]*types.Player
+	queueChan        chan []*types.Player
+}
+
+type Queue struct {
+	ID      uuid.UUID
+	Players []*types.Player
+	Done    chan []*types.Player // 每個 queue 自己的 channel
 }
 
 func NewServer() *Server {
@@ -57,8 +68,12 @@ func NewServer() *Server {
 		msgChan:    make(map[*websocket.Conn]chan types.Message, 10),
 
 		sessions:     make(map[uuid.UUID]*game.Session, 0),
-		players:      make(map[uuid.UUID]*game.Player, 0),
-		connToPlayer: make(map[*websocket.Conn]*game.Player, 0),
+		players:      make(map[uuid.UUID]*types.Player, 0),
+		connToPlayer: make(map[*websocket.Conn]*types.Player, 0),
+
+		queuePeopleLimit: 2,
+		queues:           make(map[uuid.UUID][]*types.Player),
+		queueChan:        make(chan []*types.Player, 10),
 	}
 
 	// initialize default setup
@@ -78,7 +93,7 @@ func (s *Server) GetServerChan() chan types.ClientPackage {
 /**
 * maps a connected client to its player information
 **/
-func (s *Server) MapConnToPlayer(conn *websocket.Conn, player game.Player) {
+func (s *Server) MapConnToPlayer(conn *websocket.Conn, player types.Player) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -90,7 +105,7 @@ func (s *Server) MapConnToPlayer(conn *websocket.Conn, player game.Player) {
 * information.
 **/
 
-func (s *Server) GetPlayerFromConn(conn *websocket.Conn) (*game.Player, bool) {
+func (s *Server) GetPlayerFromConn(conn *websocket.Conn) (*types.Player, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -103,7 +118,7 @@ func (s *Server) GetPlayerFromConn(conn *websocket.Conn) (*game.Player, bool) {
 /**
 * allows the creation of a new game session.
 **/
-func (s *Server) CreateGameSession(players []*game.Player) *game.Session {
+func (s *Server) CreateGameSession(players []*types.Player) *game.Session {
 	newGameSession := game.NewSession()
 
 	for _, player := range players {
@@ -127,4 +142,57 @@ func (s *Server) GetGameSession(id uuid.UUID) (*game.Session, bool) {
 	defer s.mu.RUnlock()
 	session, exists := s.sessions[id]
 	return session, exists
+}
+
+/**
+* add player to vacant space
+**/
+func (s *Server) AddPlayerToQueue(player *types.Player) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// check if player in queue
+	for _, queue := range s.queues {
+		for _, p := range queue {
+			if p.ID == player.ID {
+				fmt.Println("player already exists", player.ID)
+				return
+			}
+		}
+	}
+
+	// find queue
+	for queueId, queue := range s.queues {
+		if len(queue) < s.queuePeopleLimit {
+			s.queues[queueId] = append(s.queues[queueId], player)
+
+			// full people
+			if len(s.queues[queueId]) == s.queuePeopleLimit {
+				go s.setPlayerToQueueChan(s.queues[queueId], queueId)
+			}
+			return
+		}
+	}
+
+	// create new queue
+	newQueueId := uuid.New()
+	s.queues[newQueueId] = []*types.Player{player}
+}
+
+/**
+* exposes server chan for communication between server and client
+**/
+func (s *Server) GetQueueChan() chan []*types.Player {
+	return s.queueChan
+}
+
+/**
+* set player to queue chan
+**/
+func (s *Server) setPlayerToQueueChan(players []*types.Player, queueId uuid.UUID) {
+	s.queueChan <- players
+	// delete finished queue
+	s.mu.Lock()
+	delete(s.queues, queueId)
+	s.mu.Unlock()
 }

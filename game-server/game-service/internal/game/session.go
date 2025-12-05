@@ -22,6 +22,7 @@ type Session struct {
 	movementSystem *systems.MovementSystem
 	combatSystem   *systems.CombatSystem
 	skillSystem    *systems.SkillSystem
+	queueSystem    *systems.QueueSystem
 
 	stopChan  chan struct{}
 	isRunning bool
@@ -38,6 +39,7 @@ func NewSession() *Session {
 		movementSystem: systems.NewMovementSystem(),
 		combatSystem:   systems.NewCombatSystem(),
 		skillSystem:    systems.NewSkillSystem(),
+		queueSystem:    systems.NewQueueSystem(),
 		stopChan:       make(chan struct{}),
 		isRunning:      false,
 	}
@@ -78,7 +80,7 @@ func (s *Session) manageClientMessages() {
 		select {
 		case message := <-s.MessageCh:
 			fmt.Printf("\nincoming message to game session %s:\n%v\n\n", s.ID, message)
-
+			// 寫遊戲內ａｃｔｉｏｎ ｃａｓｅ
 		}
 	}
 }
@@ -139,21 +141,10 @@ func (s *Session) RemovePlayer(userID string) {
 }
 
 func (s *Session) Update(deltaTime float64) {
-	fmt.Printf("Session %s updating...\n", s.ID)
+	// fmt.Printf("Session %s updating...\n", s.ID)
 	// entities := s.EntityManager.GetAllEntities()
 
 	// s.movementSystem.Update(deltaTime, entities)
 	// s.combatSystem.Update(deltaTime, entities)
 	// s.skillSystem.Update(deltaTime, entities)
-}
-
-func (s *Session) Shutdown() {
-	s.mu.Lock()
-	if !s.isRunning {
-		s.mu.Unlock()
-		return
-	}
-	s.mu.Unlock()
-	fmt.Printf("Shutting down session %s\n", s.ID)
-	close(s.stopChan)
 }

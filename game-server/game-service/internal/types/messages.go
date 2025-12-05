@@ -14,6 +14,13 @@ type Message struct {
 }
 
 // TODO: NICK add payload parse logic here.
+func (m *Message) verifyPayload(action string) {
+	switch action {
+	case "move":
+
+	}
+
+}
 
 /**
 * Provides the abstraction for clients to interface with the websocket connections.
