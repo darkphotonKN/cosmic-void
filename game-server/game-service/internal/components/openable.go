@@ -5,13 +5,13 @@ import (
 )
 
 type OpenableComponent struct {
-	isOpen bool
+	IsOpen bool
 }
 
-func (p *OpenableComponent) Type() ecs.ComponentType {
-	return ecs.ComponentTypePlayer
+func (o *OpenableComponent) Type() ecs.ComponentType {
+	return ecs.ComponentTypeOpenable
 }
 
 func NewOpenableComponent(isOpen bool) *OpenableComponent {
-	return &OpenableComponent{isOpen: isOpen}
+	return &OpenableComponent{IsOpen: isOpen}
 }
