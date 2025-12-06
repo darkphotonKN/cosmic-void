@@ -59,7 +59,6 @@ func (h *messageHub) Run() {
 			// will be propogated from the messsage hub to corresponding server.
 
 			if gameActions[messageAction] {
-
 				// get correct game session from payload
 				testPlayerGameSession := uuid.MustParse("10000000-0000-0000-0000-000000000000")
 

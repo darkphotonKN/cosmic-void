@@ -14,9 +14,7 @@ func NewInterationSystem() *InteractionSystem {
 }
 
 func (s *InteractionSystem) Update(entities []*ecs.Entity) {
-
 	for _, entity := range entities {
-
 		// validation for player
 		_, hasPlayer := entity.GetComponent(ecs.ComponentTypePlayer)
 		transformComp, hasTransform := entity.GetComponent(ecs.ComponentTypeTransform)
@@ -44,7 +42,6 @@ func (s *InteractionSystem) Update(entities []*ecs.Entity) {
 
 			// area in a circle around point from main entity (player)
 
-			// -- player --
 			// calculate range via range provided by interactable
 			xDiff := math.Pow(transform.X-doorTransform.X, 2)
 			yDiff := math.Pow(transform.Y-doorTransform.Y, 2)

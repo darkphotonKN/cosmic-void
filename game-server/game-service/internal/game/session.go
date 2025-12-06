@@ -34,6 +34,7 @@ func NewSession() *Session {
 		ID:             sessionId,
 		EntityManager:  ecs.NewEntityManager(),
 		playerEntities: make(map[uuid.UUID]uuid.UUID),
+		MessageCh:      make(chan types.Message),
 
 		movementSystem: systems.NewMovementSystem(),
 		combatSystem:   systems.NewCombatSystem(),
@@ -154,6 +155,7 @@ func (s *Session) Shutdown() {
 		return
 	}
 	s.mu.Unlock()
-	fmt.Printf("Shutting down session %s\n", s.ID)
+	fmt.Printf("Shutting down game session id %s\n", s.ID)
 	close(s.stopChan)
+	close(s.MessageCh)
 }
