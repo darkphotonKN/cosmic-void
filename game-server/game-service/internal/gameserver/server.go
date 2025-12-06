@@ -18,11 +18,7 @@ import (
 **/
 
 type Server struct {
-	// config
-	upgrader websocket.Upgrader
-
-	// messages
-	// main server channel
+	upgrader   websocket.Upgrader
 	serverChan chan types.ClientPackage
 
 	// active game message channels
@@ -33,11 +29,13 @@ type Server struct {
 	sessions map[uuid.UUID]*game.Session
 
 	// online players
+	// [playerId] to player
 	players map[uuid.UUID]*types.Player
 
-	// active connections to player maps
+	// websocket conn to player mapping
+	// [active connections] to player
 	connToPlayer map[*websocket.Conn]*types.Player
-	// other
+
 	mu sync.RWMutex
 }
 

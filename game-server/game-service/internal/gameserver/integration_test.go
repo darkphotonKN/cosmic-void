@@ -35,6 +35,7 @@ func TestServerHubSessionIntegration(t *testing.T) {
 
 	// create game session through server
 	session := server.CreateGameSession(testPlayers)
+	session.TestMessageSpy = make(chan types.Message)
 
 	require.NotNil(t, session, "Session should be created")
 

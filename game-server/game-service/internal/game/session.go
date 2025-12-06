@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/systems"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
@@ -25,6 +26,9 @@ type Session struct {
 
 	stopChan  chan struct{}
 	isRunning bool
+
+	// TEST: testing only
+	TestMessageSpy chan types.Message
 }
 
 func NewSession() *Session {
@@ -75,10 +79,31 @@ func (s *Session) Start() {
 * message hub.
 **/
 func (s *Session) manageClientMessages() {
+	// TEST: testing only
+	if s.TestMessageSpy != nil {
+		for {
+			select {
+			case message := <-s.MessageCh:
+				fmt.Printf("\nTest message received, %+v\n\n", message)
+
+				// propogate to test
+				s.TestMessageSpy <- message
+			default:
+			}
+		}
+	}
+	// TEST: end testing
+
 	for {
 		select {
 		case message := <-s.MessageCh:
 			fmt.Printf("\nincoming message to game session %s:\n%v\n\n", s.ID, message)
+
+			switch constants.Action(message.Action) {
+			case constants.ActionMove:
+				fmt.Printf("Action from client was move\n")
+
+			}
 
 		}
 	}
