@@ -58,6 +58,12 @@ func (h *messageHub) Run() {
 			// any message sent from the client after a game session is initialized
 			// will be propogated from the messsage hub to corresponding server.
 
+			_, err := clientPackage.Message.ParsePayload()
+			if err != nil {
+				fmt.Printf("client message could not be parsed, err: %v\n", err)
+				// TODO: add error handling to client
+			}
+
 			if gameActions[messageAction] {
 				// get correct game session from payload
 				testPlayerGameSession := uuid.MustParse("10000000-0000-0000-0000-000000000000")
@@ -66,6 +72,8 @@ func (h *messageHub) Run() {
 
 				if !exists {
 					// TODO: return to client game doesn't exist
+
+					fmt.Printf("\ngame doesn't exist for this player, message: %+v\n\n", clientPackage.Message)
 					continue
 				}
 
