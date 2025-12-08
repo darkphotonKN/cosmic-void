@@ -67,7 +67,7 @@ func (h *messageHub) Run() {
 					continue
 				}
 
-				session, exists := h.sessionManager.GetGameSession(*sessionID)
+				session, exists := h.sessionManager.GetGameSession(sessionID)
 
 				if !exists {
 					// TODO: return to client game doesn't exist

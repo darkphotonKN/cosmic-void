@@ -14,7 +14,7 @@ import (
 
 type Message struct {
 	Action  string                 `json:"action"`
-	Payload map[string]interface{} `json:"package"`
+	Payload map[string]interface{} `json:"payload"`
 }
 
 func (m *Message) ParsePayload() (interface{}, error) {
@@ -44,22 +44,22 @@ func (m *Message) ParsePayload() (interface{}, error) {
 /**
 * helper to extract sessionID.
 **/
-func (m *Message) GetSessionID() (*uuid.UUID, error) {
+func (m *Message) GetSessionID() (uuid.UUID, error) {
 	sessionIDStr, ok := m.Payload["session_id"].(string)
 
 	if !ok {
 		fmt.Printf("SessionID does not exist in the payload.")
-		return nil, fmt.Errorf("SessionID does not exist in the payload.")
+		return uuid.Nil, fmt.Errorf("SessionID does not exist in the payload.")
 	}
 
 	sessionID, err := uuid.Parse(sessionIDStr)
 
 	if err != nil {
 		fmt.Printf("SessionID in payload is not a UUID.")
-		return nil, fmt.Errorf("SessionID in payload is not a UUID.")
+		return uuid.Nil, fmt.Errorf("SessionID in payload is not a UUID.")
 	}
 
-	return &sessionID, nil
+	return sessionID, nil
 }
 
 /**
