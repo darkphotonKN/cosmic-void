@@ -59,7 +59,6 @@ func (h *messageHub) Run() {
 			// will be propogated from the messsage hub to corresponding server.
 
 			if gameActions[messageAction] {
-
 				sessionID, err := clientPackage.Message.GetSessionID()
 
 				if err != nil {

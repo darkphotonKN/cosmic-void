@@ -21,7 +21,6 @@ func (m *Message) ParsePayload() (interface{}, error) {
 
 	switch constants.Action(m.Action) {
 	case constants.ActionMove:
-		// assert for the correct payload type when action == move
 		parsedPayload := PlayerSessionMovePayload{
 			PlayerSessionPayload: PlayerSessionPayload{
 				SessionID: m.Payload["session_id"].(string),

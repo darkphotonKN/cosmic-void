@@ -78,7 +78,8 @@ func (s *Server) ServeConnectedPlayer(conn *websocket.Conn) {
 
 		if err != nil {
 			fmt.Println("Error when decoding payload.")
-			conn.WriteJSON(types.Message{Action: "Error", Payload: "Your message to server was the incorrect format and could not be decoded as JSON."})
+
+			conn.WriteJSON(types.Message{Action: "Error", Payload: map[string]interface{}{"error": "Your message to server was the incorrect format and could not be decoded as JSON."}})
 			continue
 		}
 
