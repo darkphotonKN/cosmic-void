@@ -49,7 +49,7 @@ func (q *QueueSystem) JoinQueue() {
 	for {
 		select {
 		case player := <-q.playerChan:
-			q.handlePlayerJoinQueue(player)
+			q.PlayerJoinQueue(player)
 		}
 	}
 }
@@ -87,7 +87,7 @@ func (q *QueueSystem) matchQueue() {
 }
 
 // handlePlayerJoinQueue 處理玩家加入 queue 的邏輯
-func (q *QueueSystem) handlePlayerJoinQueue(player *types.Player) {
+func (q *QueueSystem) PlayerJoinQueue(player *types.Player) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
@@ -98,9 +98,17 @@ func (q *QueueSystem) handlePlayerJoinQueue(player *types.Player) {
 			return
 		}
 	}
-	// TODO: 改成多queue
-	// find queue
-	if len(q.queue) < q.matchSize {
-		q.queue = append(q.queue, player)
+
+}
+
+// TODO: discconnect remove player
+func (q *QueueSystem) PlayerRemoveQueue(player *types.Player) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	for i, queue := range q.queue {
+		if queue.ID == player.ID {
+			q.queue = append(q.queue[:i], q.queue[i+1:]...)
+			return
+		}
 	}
 }
