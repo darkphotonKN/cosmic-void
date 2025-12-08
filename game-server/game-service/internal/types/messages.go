@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -12,27 +13,22 @@ import (
 **/
 
 type Message struct {
-	Action  string      `json:"action"`
-	Payload interface{} `json:"package"`
+	Action  string                 `json:"action"`
+	Payload map[string]interface{} `json:"package"`
 }
 
 func (m *Message) ParsePayload() (interface{}, error) {
-
-	payload, ok := m.Payload.(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("payload base type was incorrect.")
-	}
 
 	switch constants.Action(m.Action) {
 	case constants.ActionMove:
 		// assert for the correct payload type when action == move
 		parsedPayload := PlayerSessionMovePayload{
 			PlayerSessionPayload: PlayerSessionPayload{
-				SessionID: payload["sessionId"].(string),
-				PlayerID:  payload["playerId"].(string),
+				SessionID: m.Payload["session_id"].(string),
+				PlayerID:  m.Payload["player_id"].(string),
 			},
-			Vx: payload["vx"].(float64),
-			Vy: payload["vy"].(float64),
+			Vx: m.Payload["vx"].(float64),
+			Vy: m.Payload["vy"].(float64),
 		}
 
 		fmt.Printf("\n\npayload of action move was: %+v\n", parsedPayload)
@@ -46,11 +42,32 @@ func (m *Message) ParsePayload() (interface{}, error) {
 }
 
 /**
+* helper to extract sessionID.
+**/
+func (m *Message) GetSessionID() (*uuid.UUID, error) {
+	sessionIDStr, ok := m.Payload["session_id"].(string)
+
+	if !ok {
+		fmt.Printf("SessionID does not exist in the payload.")
+		return nil, fmt.Errorf("SessionID does not exist in the payload.")
+	}
+
+	sessionID, err := uuid.Parse(sessionIDStr)
+
+	if err != nil {
+		fmt.Printf("SessionID in payload is not a UUID.")
+		return nil, fmt.Errorf("SessionID in payload is not a UUID.")
+	}
+
+	return &sessionID, nil
+}
+
+/**
 * Payloads for players in ongoing games
 **/
 type PlayerSessionPayload struct {
-	SessionID string `json:"sessionId"`
-	PlayerID  string `json:"PlayerId"`
+	SessionID string `json:"session_id"`
+	PlayerID  string `json:"player_id"`
 }
 
 type PlayerSessionMovePayload struct {
