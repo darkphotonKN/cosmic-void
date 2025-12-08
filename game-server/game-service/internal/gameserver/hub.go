@@ -28,7 +28,7 @@ type SessionManager interface {
 	GetServerChan() chan types.ClientPackage
 	AddPlayerToQueue(*types.Player)
 	GetPlayerFromConn(conn *websocket.Conn) (*types.Player, bool)
-	GetQueueChan() chan []*types.Player
+	GetMatchedChan() chan []*types.Player
 }
 
 func NewMessageHub(sessionManager SessionManager) *messageHub {
@@ -62,15 +62,25 @@ func (h *messageHub) Run() {
 			// any message sent from the client after a game session is initialized
 			// will be propogated from the messsage hub to corresponding server.
 
+			messageParsedPayload, err := clientPackage.Message.ParsePayload()
+			if err != nil {
+				fmt.Printf("client message could not be parsed, err: %v\n", err)
+				// TODO: add error handling to client
+			}
+
 			if gameActions[messageAction] {
-
 				// get correct game session from payload
-				testPlayerGameSession := uuid.MustParse("10000000-0000-0000-0000-000000000000")
+				// TODO: mismatching types
+				sessionIDStr := messageParsedPayload.(types.PlayerSessionPayload).SessionID
+				sessionID := uuid.MustParse(sessionIDStr)
 
-				session, exists := h.sessionManager.GetGameSession(testPlayerGameSession)
+				fmt.Printf("\nSessionID parsed was: %s\n\n", sessionIDStr)
+				session, exists := h.sessionManager.GetGameSession(sessionID)
 
 				if !exists {
 					// TODO: return to client game doesn't exist
+
+					fmt.Printf("\ngame doesn't exist for this player, message: %+v\n\n", clientPackage.Message)
 					continue
 				}
 
@@ -84,72 +94,27 @@ func (h *messageHub) Run() {
 
 			// NOTE: queues a player for a game
 			case constants.ActionFindGame:
-
-				// NOTE: starts a new game
-				// once enough players have joined.
-
-				// TODO: NICK
-				// Matchmaking system
-				// for example player queue system ["nick", "kiki", "trump"]
 				player, exists := h.sessionManager.GetPlayerFromConn(clientPackage.Conn)
-
 				if !exists {
-					fmt.Println("player is exist")
+					fmt.Println("Player not found for connection")
 					continue
 				}
 
-				go h.sessionManager.AddPlayerToQueue(player)
-				// goroutine to check ^ for 5 players
-
-				// for {
-				// 	select {
-				// 	case queueResult := <-h.sessionManager.GetQueueChan():
-				// 		for _, player := range queueResult {
-				// 			fmt.Println("queue player", player.Username)
-				// 		}
-				// 		if len(queueResult) == 2 {
-				// 			go h.sessionManager.CreateGameSession(queueResult)
-				// 		}
-				// 	}
-				// }
-				// NICK log "game started" if game found
-				// TODO: add real conditional to start game session (Kranti)
-				// start := true
-				// select 等goroutin人數滿或時間到開始遊戲
-				// if ok {
-				// test players
-				// testId := uuid.MustParse("00000000-0000-0000-0000-000000000001")
-				// playerOne := types.Player{
-				// 	ID:       testId,
-				// 	Username: "testPlayerOne",
-				// }
-
-				// testIdTwo := uuid.MustParse("00000000-0000-0000-0000-000000000002")
-				// playerTwo := types.Player{
-				// 	ID:       testIdTwo,
-				// 	Username: "testPlayerTwo",
-				// }
-				// testPlayerSlice := []*types.Player{&playerOne, &playerTwo}
-
-				// 	go h.sessionManager.CreateGameSession(fullQueue)
-				// }
-
-				// give client message "game found!"
-				// loop through found game player's id's, send them "game found"
+				// 將 player 加入 queue，QueueSystem 會透過 channel 處理
+				// 配對成功後會自動呼叫 Server.onMatchFound callback
+				h.sessionManager.AddPlayerToQueue(player)
+				fmt.Printf("Player %s added to matchmaking queue\n", player.Username)
 
 			case constants.ActionLeaveQueue:
 				// TODO: add client leaving queue
 				fmt.Println("Leave game...")
 
 			}
-		case queueResult := <-h.sessionManager.GetQueueChan():
-			for _, player := range queueResult {
-				fmt.Println("queue player", player.Username)
-			}
-			// if len(queueResult) == 2 {
-			fmt.Println("create game")
-			go h.sessionManager.CreateGameSession(queueResult)
-			// }
+
+		// 監聽配對成功的 channel
+		case matchedPlayers := <-h.sessionManager.GetMatchedChan():
+			fmt.Printf("Received matched players, creating game session...\n")
+			go h.sessionManager.CreateGameSession(matchedPlayers)
 		}
 	}
 }

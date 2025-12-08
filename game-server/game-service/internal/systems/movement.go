@@ -14,7 +14,6 @@ func NewMovementSystem() *MovementSystem {
 // NOTE: this runs every game tick
 func (s *MovementSystem) Update(deltaTime float64, entities []*ecs.Entity) {
 	for _, entity := range entities {
-
 		transformComp, hasTransform := entity.GetComponent(ecs.ComponentTypeTransform)
 		velocityComp, hasVelocity := entity.GetComponent(ecs.ComponentTypeVelocity)
 

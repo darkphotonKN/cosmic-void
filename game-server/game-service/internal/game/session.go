@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/systems"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
@@ -22,10 +23,12 @@ type Session struct {
 	movementSystem *systems.MovementSystem
 	combatSystem   *systems.CombatSystem
 	skillSystem    *systems.SkillSystem
-	queueSystem    *systems.QueueSystem
 
 	stopChan  chan struct{}
 	isRunning bool
+
+	// TEST: testing only
+	TestMessageSpy chan types.Message
 }
 
 func NewSession() *Session {
@@ -35,11 +38,11 @@ func NewSession() *Session {
 		ID:             sessionId,
 		EntityManager:  ecs.NewEntityManager(),
 		playerEntities: make(map[uuid.UUID]uuid.UUID),
+		MessageCh:      make(chan types.Message),
 
 		movementSystem: systems.NewMovementSystem(),
 		combatSystem:   systems.NewCombatSystem(),
 		skillSystem:    systems.NewSkillSystem(),
-		queueSystem:    systems.NewQueueSystem(),
 		stopChan:       make(chan struct{}),
 		isRunning:      false,
 	}
@@ -76,11 +79,32 @@ func (s *Session) Start() {
 * message hub.
 **/
 func (s *Session) manageClientMessages() {
+	// TEST: testing only
+	if s.TestMessageSpy != nil {
+		for {
+			select {
+			case message := <-s.MessageCh:
+				fmt.Printf("\nTest message received, %+v\n\n", message)
+
+				// propogate to test
+				s.TestMessageSpy <- message
+			default:
+			}
+		}
+	}
+	// TEST: end testing
+
 	for {
 		select {
 		case message := <-s.MessageCh:
 			fmt.Printf("\nincoming message to game session %s:\n%v\n\n", s.ID, message)
-			// 寫遊戲內ａｃｔｉｏｎ ｃａｓｅ
+
+			switch constants.Action(message.Action) {
+			case constants.ActionMove:
+				fmt.Printf("Action from client was move\n")
+
+			}
+
 		}
 	}
 }
@@ -147,4 +171,16 @@ func (s *Session) Update(deltaTime float64) {
 	// s.movementSystem.Update(deltaTime, entities)
 	// s.combatSystem.Update(deltaTime, entities)
 	// s.skillSystem.Update(deltaTime, entities)
+}
+
+func (s *Session) Shutdown() {
+	s.mu.Lock()
+	if !s.isRunning {
+		s.mu.Unlock()
+		return
+	}
+	s.mu.Unlock()
+	fmt.Printf("Shutting down game session id %s\n", s.ID)
+	close(s.stopChan)
+	close(s.MessageCh)
 }

@@ -15,7 +15,7 @@ export class BootScene extends Phaser.Scene {
     // const uuid = uuidv4();
     // TODO: replace login token
     socketManager.connect(
-      `ws://localhost:5555/game/ws?token=00000000-0000-0000-0000-000000000017&name=Kranti`,
+      `ws://localhost:5555/game/ws?token=00000000-0000-0000-0000-000000000018&name=Nick`,
     );
     this.scene.start("PreloadScene");
   }

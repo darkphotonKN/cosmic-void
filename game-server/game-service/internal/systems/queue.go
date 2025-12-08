@@ -1,19 +1,106 @@
 package systems
 
 import (
+	"fmt"
+	"sync"
+	"time"
+
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 )
 
 /*
-	player queue system
+Player queue system - 使用 channel 監聽玩家加入配對
 */
 
-type QueueSystem struct{}
+type QueueSystem struct {
+	// 接收要加入配對的玩家
+	playerChan chan *types.Player
+	queue      []*types.Player
+	// 需要多少人才能開始遊戲
+	matchSize int
 
-func NewQueueSystem() *QueueSystem {
-	return &QueueSystem{}
+	mu sync.RWMutex
+
+	MatchedChan chan []*types.Player
 }
 
-func (q *QueueSystem) AddPlayerToQueue(player *types.Player) {
+func NewQueueSystem(matchSize int) *QueueSystem {
+	return &QueueSystem{
+		playerChan:  make(chan *types.Player),
+		matchSize:   matchSize,
+		queue:       make([]*types.Player, 0),
+		MatchedChan: make(chan []*types.Player, 0),
+	}
+}
 
+// Start 啟動 queue 監聽
+func (q *QueueSystem) Start() {
+	go q.matchQueue()
+	go q.JoinQueue()
+	fmt.Println("QueueSystem started, listening for players...")
+}
+
+// AddPlayer 將玩家加入配對 queue（透過 channel）
+func (q *QueueSystem) AddPlayerChan(player *types.Player) {
+	q.playerChan <- player
+}
+
+func (q *QueueSystem) JoinQueue() {
+	for {
+		select {
+		case player := <-q.playerChan:
+			q.handlePlayerJoinQueue(player)
+		}
+	}
+}
+
+// matchQueue 每秒檢查一次 queue
+func (q *QueueSystem) matchQueue() {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		// 每秒從chan送一次值
+		case <-ticker.C:
+			q.mu.Lock()
+			// 人數滿了
+			if len(q.queue) >= q.matchSize {
+				matched := make([]*types.Player, q.matchSize)
+				// 取前兩個
+				copy(matched, q.queue[:q.matchSize])
+				// 移除前兩個
+				q.queue = q.queue[q.matchSize:]
+				q.mu.Unlock()
+
+				fmt.Println("Match found!")
+				q.MatchedChan <- matched
+				continue
+			}
+			// 人數不足，通知玩家目前排隊人數
+			if len(q.queue) > 0 {
+				fmt.Printf("Waiting: %d/%d\n", len(q.queue), q.matchSize)
+			}
+			q.mu.Unlock()
+		}
+	}
+}
+
+// handlePlayerJoinQueue 處理玩家加入 queue 的邏輯
+func (q *QueueSystem) handlePlayerJoinQueue(player *types.Player) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	// check if player in queue
+	for _, queue := range q.queue {
+		if queue.ID == player.ID {
+			fmt.Println("player already exists", player.ID)
+			return
+		}
+	}
+	// TODO: 改成多queue
+	// find queue
+	if len(q.queue) < q.matchSize {
+		q.queue = append(q.queue, player)
+	}
 }

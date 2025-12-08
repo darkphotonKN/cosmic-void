@@ -39,6 +39,7 @@ const (
 	ComponentTypeEquipment  ComponentType = "Equipment"
 
 	ComponentTypeInteractable ComponentType = "Interactable"
+	ComponentTypeOpenable     ComponentType = "Openable"
 	ComponentTypeDialogue     ComponentType = "Dialogue"
 )
 
