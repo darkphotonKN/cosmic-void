@@ -49,10 +49,10 @@ func TestServerHubSessionIntegration(t *testing.T) {
 	clientMsg := types.Message{
 		Action: string(constants.ActionMove),
 		Payload: map[string]interface{}{
-			"sessionId": session.ID.String(),
-			"playerId":  player1.ID.String(),
-			"vx":        1.0,
-			"vy":        0.0,
+			"session_id": session.ID.String(),
+			"player_id":  player1.ID.String(),
+			"vx":         1.0,
+			"vy":         0.0,
 		},
 	}
 
@@ -71,7 +71,7 @@ func TestServerHubSessionIntegration(t *testing.T) {
 		assert.Equal(t, string(constants.ActionMove), receivedMsg.Action, "Action should match")
 		payload := receivedMsg.Payload
 
-		fmt.Printf("\npayload was: %+v\n\n", payload)
+		fmt.Printf("\nclient package payload in test was: %+v\n\n", payload)
 
 	case <-time.After(2 * time.Second):
 		t.Fatal("Message was not routed to session within timeout")
