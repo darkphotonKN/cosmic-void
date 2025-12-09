@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/systems"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -37,6 +38,9 @@ type Server struct {
 	connToPlayer map[*websocket.Conn]*types.Player
 
 	mu sync.RWMutex
+
+	// queue system
+	queueSystem *systems.QueueSystem
 }
 
 func NewServer() *Server {
@@ -58,7 +62,11 @@ func NewServer() *Server {
 		connToPlayer: make(map[*websocket.Conn]*types.Player, 0),
 	}
 
-	// initialize default setup
+	// initialize queue system
+	server.queueSystem = systems.NewQueueSystem(2)
+	server.queueSystem.Start()
+
+	// initialize message hub
 	messageHub := NewMessageHub(server)
 	go messageHub.Run()
 
@@ -124,4 +132,18 @@ func (s *Server) GetGameSession(id uuid.UUID) (*game.Session, bool) {
 	defer s.mu.RUnlock()
 	session, exists := s.sessions[id]
 	return session, exists
+}
+
+/**
+* add player to queue (delegates to QueueSystem)
+**/
+func (s *Server) AddPlayerToQueue(player *types.Player) {
+	s.queueSystem.AddPlayerChan(player)
+}
+
+/**
+* get matched channel for listening to matched players
+**/
+func (s *Server) GetMatchedChan() chan []*types.Player {
+	return s.queueSystem.MatchedChan
 }

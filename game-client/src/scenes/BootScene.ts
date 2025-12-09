@@ -1,8 +1,10 @@
-import Phaser from 'phaser';
+import { socketManager } from "@/utils/class/SocketManager";
+import { v4 as uuidv4 } from "uuid";
+import Phaser from "phaser";
 
 export class BootScene extends Phaser.Scene {
   constructor() {
-    super({ key: 'BootScene' });
+    super({ key: "BootScene" });
   }
 
   preload(): void {
@@ -10,6 +12,11 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.scene.start('PreloadScene');
+    // const uuid = uuidv4();
+    // TODO: replace login token
+    socketManager.connect(
+      `ws://localhost:5555/game/ws?token=00000000-0000-0000-0000-000000000018&name=Nick`,
+    );
+    this.scene.start("PreloadScene");
   }
 }

@@ -45,6 +45,7 @@ interface ActionResultData {
   pickup: { itemId: string; value: number };
   use: { effect: string };
   chat: null;
+  find_game: null;
 }
 
 // ====== 事件 ======

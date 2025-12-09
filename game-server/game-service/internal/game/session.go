@@ -165,7 +165,7 @@ func (s *Session) RemovePlayer(userID string) {
 }
 
 func (s *Session) Update(deltaTime float64) {
-	fmt.Printf("Session %s updating...\n", s.ID)
+	// fmt.Printf("Session %s updating...\n", s.ID)
 	// entities := s.EntityManager.GetAllEntities()
 
 	// s.movementSystem.Update(deltaTime, entities)

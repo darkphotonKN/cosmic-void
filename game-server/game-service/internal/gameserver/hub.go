@@ -8,6 +8,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 )
 
 /**
@@ -25,6 +26,9 @@ type SessionManager interface {
 	CreateGameSession(players []*types.Player) *game.Session
 	GetGameSession(id uuid.UUID) (*game.Session, bool)
 	GetServerChan() chan types.ClientPackage
+	AddPlayerToQueue(*types.Player)
+	GetPlayerFromConn(conn *websocket.Conn) (*types.Player, bool)
+	GetMatchedChan() chan []*types.Player
 }
 
 func NewMessageHub(sessionManager SessionManager) *messageHub {
@@ -85,44 +89,27 @@ func (h *messageHub) Run() {
 
 			// NOTE: queues a player for a game
 			case constants.ActionFindGame:
-
-				// NOTE: starts a new game
-				// once enough players have joined.
-
-				// TODO: NICK
-				// Matchmaking system
-				// for example player queue system ["nick", "kiki", "trump"]
-				// goroutine to check ^ for 5 players
-
-				// NICK log "game started" if game found
-				// TODO: add real conditional to start game session (Kranti)
-				start := true
-				if start {
-					// test players
-					testId := uuid.MustParse("00000000-0000-0000-0000-000000000001")
-					playerOne := types.Player{
-						ID:       testId,
-						Username: "testPlayerOne",
-					}
-
-					testIdTwo := uuid.MustParse("00000000-0000-0000-0000-000000000002")
-					playerTwo := types.Player{
-						ID:       testIdTwo,
-						Username: "testPlayerTwo",
-					}
-					testPlayerSlice := []*types.Player{&playerOne, &playerTwo}
-
-					go h.sessionManager.CreateGameSession(testPlayerSlice)
+				player, exists := h.sessionManager.GetPlayerFromConn(clientPackage.Conn)
+				if !exists {
+					fmt.Println("Player not found for connection")
+					continue
 				}
 
-				// give client message "game found!"
-				// loop through found game player's id's, send them "game found"
+				// 將 player 加入 queue，QueueSystem 會透過 channel 處理
+				// 配對成功後會自動呼叫 Server.onMatchFound callback
+				h.sessionManager.AddPlayerToQueue(player)
+				fmt.Printf("Player %s added to matchmaking queue\n", player.Username)
 
 			case constants.ActionLeaveQueue:
 				// TODO: add client leaving queue
 				fmt.Println("Leave game...")
 
 			}
+
+		// 監聽配對成功的 channel
+		case matchedPlayers := <-h.sessionManager.GetMatchedChan():
+			fmt.Printf("Received matched players, creating game session...\n")
+			go h.sessionManager.CreateGameSession(matchedPlayers)
 		}
 	}
 }

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Phaser from "phaser";
 import { MainMenuScene } from "@/scenes/MainMenuScene";
 import { TreasureHuntScene } from "@/scenes/TreasureHuntScene";
+import { PreloadScene } from "@/scenes/PreloadScene";
+import { BootScene } from "@/scenes/BootScene";
 
 export default function PhaserGame() {
   const gameRef = useRef<Phaser.Game | null>(null);
@@ -26,7 +28,7 @@ export default function PhaserGame() {
           debug: false,
         },
       },
-      scene: [MainMenuScene, TreasureHuntScene],
+      scene: [BootScene, PreloadScene, MainMenuScene, TreasureHuntScene],
     };
 
     gameRef.current = new Phaser.Game(config);
@@ -39,13 +41,15 @@ export default function PhaserGame() {
       // 監聽 TreasureHuntScene 啟動
       game.scene.getScene("TreasureHuntScene")?.events.on("create", () => {
         setIsInGame(true);
-        const scene = game.scene.getScene("TreasureHuntScene") as TreasureHuntScene;
+        const scene = game.scene.getScene(
+          "TreasureHuntScene",
+        ) as TreasureHuntScene;
         scene.setStatusCallback((text, color) => {
           setStatus({ text, color });
         });
       });
 
-      // 監聽回到主選單
+      // 監聯回到主選單
       game.scene.getScene("MainMenuScene")?.events.on("create", () => {
         setIsInGame(false);
         setStatus({ text: "", color: "#4ecca3" });
@@ -68,20 +72,12 @@ export default function PhaserGame() {
         <>
           <div className="treasure-hunt-controls">
             <div className="treasure-hunt-control-group">
-              <h3>🎮 移動</h3>
-              <p>WASD 或 方向鍵</p>
+              <h3>🎮 Move</h3>
+              <p>WASD or Arrow Keys</p>
             </div>
             <div className="treasure-hunt-control-group">
-              <h3>⚔️ 攻擊</h3>
-              <p>空白鍵</p>
-            </div>
-            <div className="treasure-hunt-control-group">
-              <h3>📦 撿取</h3>
-              <p>E 鍵（靠近物品時）</p>
-            </div>
-            <div className="treasure-hunt-control-group">
-              <h3>🚪 返回</h3>
-              <p>ESC 鍵</p>
+              <h3>🚪 Back</h3>
+              <p>ESC Key</p>
             </div>
           </div>
 
