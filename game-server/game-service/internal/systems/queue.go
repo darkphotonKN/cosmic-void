@@ -56,6 +56,7 @@ func (q *QueueSystem) JoinQueue() {
 
 // matchQueue 每秒檢查一次 queue
 func (q *QueueSystem) matchQueue() {
+	fmt.Println("Listening for queue...")
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
@@ -92,13 +93,16 @@ func (q *QueueSystem) PlayerJoinQueue(player *types.Player) {
 	defer q.mu.Unlock()
 
 	// check if player in queue
-	for _, queue := range q.queue {
-		if queue.ID == player.ID {
+	for _, p := range q.queue {
+		if p.ID == player.ID {
 			fmt.Println("player already exists", player.ID)
 			return
 		}
 	}
 
+	// 加入 queue
+	q.queue = append(q.queue, player)
+	fmt.Printf("Player %s joined queue. Waiting: %d/%d\n", player.Username, len(q.queue), q.matchSize)
 }
 
 // TODO: discconnect remove player
