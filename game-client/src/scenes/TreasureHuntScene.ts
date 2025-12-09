@@ -5,6 +5,7 @@
 
 import Phaser from "phaser";
 import { ActionMap, ActionType, ClientMessage } from "@/assets/types/client";
+import { socketManager } from "@/utils/class/SocketManager";
 
 interface Building {
   id: string;
@@ -73,7 +74,7 @@ export class TreasureHuntScene extends Phaser.Scene {
 
   create(): void {
     // 連接 WebSocket
-    this.connectWebSocket();
+    // this.connectWebSocket();
 
     // 設置世界邊界
     this.physics.world.setBounds(0, 0, this.mapWidth, this.mapHeight);
@@ -513,52 +514,52 @@ export class TreasureHuntScene extends Phaser.Scene {
 
     // 發送 WebSocket 訊息（包含八個方位）
     if (vx !== 0 || vy !== 0) {
-      this.sendMessage(ActionType.Move, { x: vx, y: vy });
+      socketManager.sendMessage(ActionType.Move, { x: vx, y: vy });
     }
 
     // 檢查是否進入/離開建築
     this.checkBuildingStatus();
   }
 
-  private connectWebSocket(): void {
-    this.socket = new WebSocket("ws://localhost:5555/game/ws");
+  // private connectWebSocket(): void {
+  //   this.socket = new WebSocket("ws://localhost:5555/game/ws");
 
-    this.socket.onopen = () => {
-      console.log("WebSocket connected");
-      this.updateStatus("WebSocket Connected", "#4ecca3");
-    };
+  //   this.socket.onopen = () => {
+  //     console.log("WebSocket connected");
+  //     this.updateStatus("WebSocket Connected", "#4ecca3");
+  //   };
 
-    this.socket.onerror = (error) => {
-      console.error("WebSocket error:", error);
-      this.updateStatus("WebSocket Error", "#ff4444");
-    };
+  //   this.socket.onerror = (error) => {
+  //     console.error("WebSocket error:", error);
+  //     this.updateStatus("WebSocket Error", "#ff4444");
+  //   };
 
-    this.socket.onclose = () => {
-      console.log("WebSocket disconnected");
-      this.updateStatus("WebSocket Disconnected", "#ffcc00");
-    };
+  //   this.socket.onclose = () => {
+  //     console.log("WebSocket disconnected");
+  //     this.updateStatus("WebSocket Disconnected", "#ffcc00");
+  //   };
 
-    this.socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log("Received server message:", data);
-      } catch (e) {
-        console.error("Failed to parse message:", e);
-      }
-    };
-  }
+  //   this.socket.onmessage = (event) => {
+  //     try {
+  //       const data = JSON.parse(event.data);
+  //       console.log("Received server message:", data);
+  //     } catch (e) {
+  //       console.error("Failed to parse message:", e);
+  //     }
+  //   };
+  // }
   // websocket send message
-  sendMessage<T extends keyof ActionMap>(
-    action: T,
-    payload: ActionMap[T],
-  ): void {
-    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-      const message: ClientMessage<T> = {
-        action,
-        payload,
-        seq: ++this.seq,
-      };
-      this.socket.send(JSON.stringify(message));
-    }
-  }
+  // sendMessage<T extends keyof ActionMap>(
+  //   action: T,
+  //   payload: ActionMap[T],
+  // ): void {
+  //   if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+  //     const message: ClientMessage<T> = {
+  //       action,
+  //       payload,
+  //       seq: ++this.seq,
+  //     };
+  //     this.socket.send(JSON.stringify(message));
+  //   }
+  // }
 }
