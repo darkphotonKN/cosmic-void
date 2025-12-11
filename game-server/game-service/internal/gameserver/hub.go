@@ -51,6 +51,8 @@ func (h *messageHub) Run() {
 			// handle message based on action
 			fmt.Printf("\nincoming message: %+v\n\n", clientPackage.Message)
 
+			response := types.NewResponseBuilder(clientPackage.Conn)
+
 			var gameActions map[constants.Action]bool = map[constants.Action]bool{
 				constants.ActionMove:   true,
 				constants.ActionAttack: true,
@@ -66,15 +68,22 @@ func (h *messageHub) Run() {
 				sessionID, err := clientPackage.Message.GetSessionID()
 
 				if err != nil {
-					// TODO: send back to client the error
+					response.Error(
+						clientPackage.Message.Action,
+						constants.ErrorInvalidSessionID,
+						"Invalid or missing session ID in payload",
+					)
 					continue
 				}
 
 				session, exists := h.sessionManager.GetGameSession(sessionID)
 
 				if !exists {
-					// TODO: return to client game doesn't exist
-
+					response.Error(
+						clientPackage.Message.Action,
+						constants.ErrorSessionNotFound,
+						fmt.Sprintf("Game session not found for session ID: %s", sessionID),
+					)
 					fmt.Printf("\ngame doesn't exist for this player, message: %+v\n\n", clientPackage.Message)
 					continue
 				}
@@ -91,6 +100,11 @@ func (h *messageHub) Run() {
 			case constants.ActionFindGame:
 				player, exists := h.sessionManager.GetPlayerFromConn(clientPackage.Conn)
 				if !exists {
+					response.Error(
+						clientPackage.Message.Action,
+						constants.ErrorPlayerNotFound,
+						"Player not found for connection",
+					)
 					fmt.Println("Player not found for connection")
 					continue
 				}
@@ -100,10 +114,38 @@ func (h *messageHub) Run() {
 				h.sessionManager.AddPlayerToQueue(player)
 				fmt.Printf("Player %s added to matchmaking queue\n", player.Username)
 
+				response.Success(clientPackage.Message.Action, map[string]interface{}{
+					"message":   "Successfully joined matchmaking queue",
+					"player_id": player.ID.String(),
+					"username":  player.Username,
+				})
+
 			case constants.ActionLeaveQueue:
-				// TODO: add client leaving queue
+				player, exists := h.sessionManager.GetPlayerFromConn(clientPackage.Conn)
+				if !exists {
+					response.Error(
+						clientPackage.Message.Action,
+						constants.ErrorPlayerNotFound,
+						"Player not found for connection",
+					)
+					continue
+				}
+
+				// TODO: 實現離開隊列邏輯
+				// h.sessionManager.RemovePlayerFromQueue(player)
 				fmt.Println("Leave game...")
 
+				response.Success(clientPackage.Message.Action, map[string]interface{}{
+					"message":   "Successfully left the queue",
+					"player_id": player.ID.String(),
+				})
+
+			default:
+				response.Error(
+					clientPackage.Message.Action,
+					constants.ErrorInvalidPayload,
+					fmt.Sprintf("Unknown action: %s", messageAction),
+				)
 			}
 
 		// 監聽配對成功的 channel
@@ -111,5 +153,6 @@ func (h *messageHub) Run() {
 			fmt.Printf("Received matched players, creating game session...\n")
 			go h.sessionManager.CreateGameSession(matchedPlayers)
 		}
+
 	}
 }

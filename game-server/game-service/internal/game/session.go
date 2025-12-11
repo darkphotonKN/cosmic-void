@@ -38,7 +38,7 @@ func NewSession() *Session {
 		ID:             sessionId,
 		EntityManager:  ecs.NewEntityManager(),
 		playerEntities: make(map[uuid.UUID]uuid.UUID),
-		MessageCh:      make(chan types.Message),
+		MessageCh:      make(chan types.Message, 100),
 
 		movementSystem: systems.NewMovementSystem(),
 		combatSystem:   systems.NewCombatSystem(),

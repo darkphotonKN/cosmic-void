@@ -1,6 +1,7 @@
 package constants
 
 type Action string
+type ErrorCode string
 
 const (
 	// menu actions
@@ -15,4 +16,16 @@ const (
 	ActionUseItem  Action = "use_item"
 	ActionDropItem Action = "drop_item"
 	ActionChat     Action = "chat"
+
+	// system actions
+	ActionError   Action = "error"
+	ActionSuccess Action = "success"
+)
+
+const (
+	ErrorSessionNotFound     ErrorCode = "session_not_found"
+	ErrorInvalidSessionID    ErrorCode = "invalid_session_id"
+	ErrorPlayerNotFound      ErrorCode = "player_not_found"
+	ErrorInvalidPayload      ErrorCode = "invalid_payload"
+	ErrorInternalServerError ErrorCode = "internal_server_error"
 )
