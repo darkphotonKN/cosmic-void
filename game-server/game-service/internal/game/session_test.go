@@ -1,8 +1,9 @@
-package game_test
+package game
 
 import (
 	"testing"
 
+	"github.com/Microsoft/go-winio/wim"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -80,4 +81,15 @@ func TestSessionAddMultiplePlayers(t *testing.T) {
 	_, exists2 := session.EntityManager.GetEntity(entity2ID)
 	assert.True(t, exists1, "Player 1 entity should exist")
 	assert.True(t, exists2, "Player 2 entity should exist")
+}
+
+// NOTE: note to team, also white box test here, testing internals
+func TestVelocityUpdatePlayerPosition(t *testing.T) {
+	session := NewSession()
+
+	player1ID := uuid.New()
+
+	entity1ID := session.AddPlayer(player1ID, "Player1")
+	session.AddPlayer(entity1ID)
+
 }

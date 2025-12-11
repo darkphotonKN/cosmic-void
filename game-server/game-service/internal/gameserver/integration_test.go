@@ -47,12 +47,10 @@ func TestServerHubSessionIntegration(t *testing.T) {
 
 	// send a game action message that should be routed to session
 	clientMsg := types.Message{
-		Action: string(constants.ActionMove),
+		Action: string(constants.ActionFindGame),
 		Payload: map[string]interface{}{
 			"session_id": session.ID.String(),
 			"player_id":  player1.ID.String(),
-			"vx":         1.0,
-			"vy":         0.0,
 		},
 	}
 

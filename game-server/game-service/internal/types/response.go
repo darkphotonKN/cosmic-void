@@ -29,7 +29,7 @@ func (rb *ResponseBuilder) Success(action string, payload map[string]interface{}
 
 func (rb *ResponseBuilder) Error(action string, errCode constants.ErrorCode, message string) error {
 	errorResponse := ServerResponse{
-		Action:  action,
+		Action:  string(action),
 		Success: false,
 		Error: &ErrorResponse{
 			Code:    string(errCode),

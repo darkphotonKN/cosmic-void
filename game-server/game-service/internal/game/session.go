@@ -79,6 +79,7 @@ func (s *Session) Start() {
 * message hub.
 **/
 func (s *Session) manageClientMessages() {
+
 	// TEST: testing only
 	if s.TestMessageSpy != nil {
 		for {
@@ -104,7 +105,6 @@ func (s *Session) manageClientMessages() {
 				fmt.Printf("Action from client was move\n")
 
 			}
-
 		}
 	}
 }
@@ -116,19 +116,22 @@ const framerate = 1
 * runs system code to update state of game x times every second.
 **/
 func (s *Session) manageGameLoop() {
-	// TODO: update from once per second to 30 times a second
+	// TODO: update from once per second to 30 / 60 times a second
 	ticker := time.NewTicker((1 * time.Second) / framerate)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-
-			// --- update game loop ---
-
 			entities := s.EntityManager.GetAllEntities()
+
+			// movement
 			movementSys := systems.MovementSystem{}
 			movementSys.Update(float64(1), entities)
+
+			// interaction
+			interactionSys := systems.InteractionSystem{}
+			interactionSys.Update(entities)
 		}
 	}
 }
@@ -183,4 +186,15 @@ func (s *Session) Shutdown() {
 	fmt.Printf("Shutting down game session id %s\n", s.ID)
 	close(s.stopChan)
 	close(s.MessageCh)
+}
+
+/**
+* updates the movement based component transform based on the input
+* from the client.
+**/
+func (s *Session) handleMove(playerID uuid.UUID, x, y float64) error {
+	// get specific player entity
+
+	player := s.EntityManager.GetEntity(playerID)
+
 }
