@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/google/uuid"
@@ -17,7 +18,6 @@ type PlayerConfig struct {
 	ItemName      string
 	ItemQuantity  int
 	Vx, Vy        float64
-	Speed         float64
 }
 
 func CreatePlayerEntity(em *ecs.EntityManager, config PlayerConfig) *ecs.Entity {
@@ -26,7 +26,7 @@ func CreatePlayerEntity(em *ecs.EntityManager, config PlayerConfig) *ecs.Entity 
 
 	entity.AddComponent(components.NewTransformComponent(config.X, config.Y))
 
-	entity.AddComponent(components.NewVelocityComponent(config.Vx, config.Vy, config.Speed))
+	entity.AddComponent(components.NewVelocityComponent(config.Vx, config.Vy, constants.DefaultSpeed))
 
 	entity.AddComponent(components.NewHealthComponent(config.CurrentHealth, config.MaxHealth))
 	entity.AddComponent(components.NewSkillComponent(config.SkillName, config.SkillLevel))

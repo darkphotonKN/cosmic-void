@@ -29,3 +29,5 @@ const (
 	ErrorInvalidPayload      ErrorCode = "invalid_payload"
 	ErrorInternalServerError ErrorCode = "internal_server_error"
 )
+
+const DefaultSpeed float64 = 1

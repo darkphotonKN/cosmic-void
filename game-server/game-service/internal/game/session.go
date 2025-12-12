@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/systems"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
@@ -35,8 +36,9 @@ func NewSession() *Session {
 	sessionId := uuid.New()
 
 	s := &Session{
-		ID:             sessionId,
-		EntityManager:  ecs.NewEntityManager(),
+		ID:            sessionId,
+		EntityManager: ecs.NewEntityManager(),
+		// map [playerID] to entityID
 		playerEntities: make(map[uuid.UUID]uuid.UUID),
 		MessageCh:      make(chan types.Message, 100),
 
@@ -152,9 +154,8 @@ func (s *Session) AddPlayer(userID uuid.UUID, username string) uuid.UUID {
 		ItemName:      "Health Potion",
 		ItemQuantity:  3,
 
-		Vx:    0,
-		Vy:    0,
-		Speed: 5,
+		Vx: 0,
+		Vy: 0,
 	}
 
 	entity := CreatePlayerEntity(s.EntityManager, PlayerConfig)
@@ -189,12 +190,41 @@ func (s *Session) Shutdown() {
 }
 
 /**
-* updates the movement based component transform based on the input
-* from the client.
+* --- State Updates Handlers ---
 **/
-func (s *Session) handleMove(playerID uuid.UUID, x, y float64) error {
+
+/**
+* updates the movement component transform based on the input provided
+* by the client.
+**/
+func (s *Session) handleMove(playerID uuid.UUID, vx, vy float64) error {
 	// get specific player entity
+	playerEntityID, ok := s.playerEntities[playerID]
 
-	player := s.EntityManager.GetEntity(playerID)
+	if !ok {
+		fmt.Printf("\nPlayerEntityID doens't exist for playerID: %s\n\n", playerID)
+		return fmt.Errorf("\nPlayerEntityID doens't exist for playerID: %s\n\n", playerID)
+	}
 
+	playerEntity, ok := s.EntityManager.GetEntity(playerEntityID)
+
+	if !ok {
+		fmt.Printf("\nPlayerEntity doesn't exist for player playerEntityID %s\n\n", playerID)
+		return fmt.Errorf("\nPlayer entity doens't exist for id %s\n\n", playerID)
+	}
+
+	playerVelocityComponent, ok := playerEntity.GetComponent(ecs.ComponentTypeVelocity)
+
+	if !ok {
+		fmt.Printf("\nPlayers Velocity Component doesn't exist for enntity ID: %s\n\n", playerEntity.ID)
+		return fmt.Errorf("\nPlayers Velocity Component doesn't exist for enntity ID: %s\n\n", playerEntity.ID)
+	}
+
+	component := playerVelocityComponent.(*components.VelocityComponent)
+
+	// update velocity values
+	component.VX = vx
+	component.VY = vy
+
+	return nil
 }
