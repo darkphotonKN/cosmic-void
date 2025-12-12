@@ -149,7 +149,32 @@ export class MainMenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    // 監聽排隊狀態更新
+    socketManager.on("queue_status", (payload: { current: number; total: number }) => {
+      peopleCountText.setText(`People in queue: ${payload.current} / ${payload.total}`);
+    });
+
+    // 監聽配對成功
+    socketManager.on("game_found", (payload: { sessionID: string }) => {
+      console.log("Game found! Session ID:", payload.sessionID);
+      title.setText("Game Found!");
+      peopleCountText.setText("Starting game...");
+
+      // 1.5 秒後進入遊戲場景
+      this.time.delayedCall(1500, () => {
+        socketManager.off("queue_status");
+        socketManager.off("game_found");
+        overlay.destroy();
+        popup.destroy();
+        this.scene.start("TreasureHuntScene", { sessionID: payload.sessionID });
+      });
+    });
+
     closeBtn.on("pointerdown", () => {
+      // 取消監聽
+      socketManager.off("queue_status");
+      socketManager.off("game_found");
+      // TODO: 發送離開排隊的訊息給後端
       overlay.destroy();
       popup.destroy();
     });

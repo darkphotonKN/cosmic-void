@@ -12,6 +12,13 @@ import (
 Player queue system - 使用 channel 監聽玩家加入配對
 */
 
+// QueueStatus 用於通知排隊狀態
+type QueueStatus struct {
+	Players []*types.Player
+	Current int
+	Total   int
+}
+
 type QueueSystem struct {
 	// 接收要加入配對的玩家
 	playerChan chan *types.Player
@@ -21,15 +28,17 @@ type QueueSystem struct {
 
 	mu sync.RWMutex
 
-	MatchedChan chan []*types.Player
+	MatchedChan     chan []*types.Player
+	QueueStatusChan chan QueueStatus
 }
 
 func NewQueueSystem(matchSize int) *QueueSystem {
 	return &QueueSystem{
-		playerChan:  make(chan *types.Player),
-		matchSize:   matchSize,
-		queue:       make([]*types.Player, 0),
-		MatchedChan: make(chan []*types.Player, 0),
+		playerChan:      make(chan *types.Player),
+		matchSize:       matchSize,
+		queue:           make([]*types.Player, 0),
+		MatchedChan:     make(chan []*types.Player),
+		QueueStatusChan: make(chan QueueStatus),
 	}
 }
 
@@ -61,19 +70,23 @@ func (q *QueueSystem) matchQueue() {
 	defer ticker.Stop()
 
 	for {
+		fmt.Println("match queue")
 		select {
 		// 每秒從chan送一次值
 		case <-ticker.C:
 			q.mu.Lock()
+			sizeLen := len(q.queue) >= q.matchSize
+			q.mu.Unlock()
+			defer q.mu.Unlock()
 			// 人數滿了
-			if len(q.queue) >= q.matchSize {
+			if sizeLen {
 				matched := make([]*types.Player, q.matchSize)
+				q.mu.Lock()
 				// 取前兩個
 				copy(matched, q.queue[:q.matchSize])
 				// 移除前兩個
 				q.queue = q.queue[q.matchSize:]
 				q.mu.Unlock()
-
 				fmt.Println("Match found!")
 				q.MatchedChan <- matched
 				continue
@@ -81,8 +94,23 @@ func (q *QueueSystem) matchQueue() {
 			// 人數不足，通知玩家目前排隊人數
 			if len(q.queue) > 0 {
 				fmt.Printf("Waiting: %d/%d\n", len(q.queue), q.matchSize)
+				// 複製一份 queue 發送狀態
+				q.mu.Lock()
+				playersCopy := make([]*types.Player, len(q.queue))
+				copy(playersCopy, q.queue)
+				q.mu.Unlock()
+
+				// 發送到 QueueStatusChan（用 goroutine 避免阻塞）
+				go func() {
+					q.QueueStatusChan <- QueueStatus{
+						Players: playersCopy,
+						Current: len(playersCopy),
+						Total:   q.matchSize,
+					}
+				}()
+				continue
 			}
-			q.mu.Unlock()
+
 		}
 	}
 }

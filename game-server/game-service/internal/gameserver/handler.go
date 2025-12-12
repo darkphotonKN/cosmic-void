@@ -46,6 +46,7 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 	}
 
 	s.MapConnToPlayer(conn, *player)
+
 	// handle each connected client's messages concurrently
 	go s.ServeConnectedPlayer(conn)
 
@@ -127,8 +128,11 @@ func (s *Server) ServeConnectedPlayer(conn *websocket.Conn) {
 * where multiple writes to the same connection.
 **/
 func (s *Server) setupClientWriter(conn *websocket.Conn) {
-	// sets up this connection's personal game message channel
-	s.createMsgChan(conn)
+	// 只在 channel 不存在時才創建並啟動 goroutine
+	isNew := s.createMsgChan(conn)
+	if !isNew {
+		return // channel 已存在，不需要重複設置
+	}
 
 	// in the case the channel exists
 	msgChan, err := s.getGameMsgChan(conn)
@@ -144,8 +148,6 @@ func (s *Server) setupClientWriter(conn *websocket.Conn) {
 	// concurrently listen to all incoming messages over the channel to write game actions
 	// back to the client
 	go func() {
-		// reading from unbuffered channel to prevent more than one write
-		// a time from ANY single connection
 		for msg := range msgChan {
 			err := conn.WriteJSON(msg)
 
@@ -161,13 +163,19 @@ func (s *Server) setupClientWriter(conn *websocket.Conn) {
 
 /**
 * Creates the unique game message channel for a specific connection for writing back
-* from server to client.
+* from server to client. Only creates if it doesn't already exist.
 **/
-func (s *Server) createMsgChan(conn *websocket.Conn) {
+func (s *Server) createMsgChan(conn *websocket.Conn) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.msgChan[conn] = make(chan types.Message)
+	// 如果已經存在，不要重複創建
+	if _, exists := s.msgChan[conn]; exists {
+		return false
+	}
+
+	s.msgChan[conn] = make(chan types.Message, 10) // 加入緩衝避免阻塞
+	return true
 }
 
 /**

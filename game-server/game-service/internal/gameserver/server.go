@@ -54,14 +54,13 @@ func NewServer() *Server {
 	server := &Server{
 		upgrader: upgrader,
 
-		serverChan: make(chan types.ClientPackage, 0),
+		serverChan: make(chan types.ClientPackage, 10),
 		msgChan:    make(map[*websocket.Conn]chan types.Message, 10),
 
-		sessions:     make(map[uuid.UUID]*game.Session, 0),
-		players:      make(map[uuid.UUID]*types.Player, 0),
-		connToPlayer: make(map[*websocket.Conn]*types.Player, 0),
+		sessions:     make(map[uuid.UUID]*game.Session, 10),
+		players:      make(map[uuid.UUID]*types.Player, 10),
+		connToPlayer: make(map[*websocket.Conn]*types.Player, 10),
 	}
-
 	// initialize queue system
 	server.queueSystem = systems.NewQueueSystem(2)
 	server.queueSystem.Start()
@@ -146,4 +145,45 @@ func (s *Server) AddPlayerToQueue(player *types.Player) {
 **/
 func (s *Server) GetMatchedChan() chan []*types.Player {
 	return s.queueSystem.MatchedChan
+}
+
+/**
+* get queue status channel for listening to queue updates
+**/
+func (s *Server) GetQueueStatusChan() chan systems.QueueStatus {
+	return s.queueSystem.QueueStatusChan
+}
+
+/**
+* get conn from player ID
+**/
+func (s *Server) GetConnFromPlayer(playerID uuid.UUID) (*websocket.Conn, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	for conn, player := range s.connToPlayer {
+		if player.ID == playerID {
+			return conn, true
+		}
+	}
+	return nil, false
+}
+
+/**
+* send message to specific player
+**/
+func (s *Server) SendToPlayer(playerID uuid.UUID, msg types.Message) {
+	conn, exists := s.GetConnFromPlayer(playerID)
+	if !exists {
+		fmt.Printf("Player %s not found\n", playerID)
+		return
+	}
+
+	s.mu.RLock()
+	ch, ok := s.msgChan[conn]
+	s.mu.RUnlock()
+
+	if ok {
+		ch <- msg
+	}
 }
