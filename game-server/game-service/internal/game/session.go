@@ -198,6 +198,9 @@ func (s *Session) Shutdown() {
 * by the client.
 **/
 func (s *Session) handleMove(playerID uuid.UUID, vx, vy float64) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	// get specific player entity
 	playerEntityID, ok := s.playerEntities[playerID]
 
