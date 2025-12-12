@@ -6,6 +6,7 @@ import (
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/systems"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -29,6 +30,8 @@ type SessionManager interface {
 	AddPlayerToQueue(*types.Player)
 	GetPlayerFromConn(conn *websocket.Conn) (*types.Player, bool)
 	GetMatchedChan() chan []*types.Player
+	GetQueueStatusChan() chan systems.QueueStatus
+	SendToPlayer(playerID uuid.UUID, msg types.Message)
 }
 
 func NewMessageHub(sessionManager SessionManager) *messageHub {
@@ -44,8 +47,11 @@ func NewMessageHub(sessionManager SessionManager) *messageHub {
 **/
 func (h *messageHub) Run() {
 	fmt.Printf("\nInitializing message hub...\n\n")
-
+	defer fmt.Printf("EXIST HUB")
 	for {
+
+		// time.Sleep(time.Second * 2)
+		fmt.Println("\n123gg")
 		select {
 		case clientPackage := <-h.sessionManager.GetServerChan():
 			// handle message based on action
@@ -98,6 +104,7 @@ func (h *messageHub) Run() {
 
 			// NOTE: queues a player for a game
 			case constants.ActionFindGame:
+				fmt.Println("ActionFindGame")
 				player, exists := h.sessionManager.GetPlayerFromConn(clientPackage.Conn)
 
 				if !exists {
@@ -149,10 +156,32 @@ func (h *messageHub) Run() {
 				)
 			}
 
-		// 監聽配對成功的 channel
+		// 監聯配對成功的 channel
 		case matchedPlayers := <-h.sessionManager.GetMatchedChan():
 			fmt.Printf("Received matched players, creating game session...\n")
-			go h.sessionManager.CreateGameSession(matchedPlayers)
+			fmt.Println(matchedPlayers)
+			session := h.sessionManager.CreateGameSession(matchedPlayers)
+			for _, player := range matchedPlayers {
+				h.sessionManager.SendToPlayer(player.ID, types.Message{
+					Action: "game_found",
+					Payload: map[string]interface{}{
+						"sessionID": session.ID.String(),
+					},
+				})
+			}
+
+		// 監聽排隊狀態更新
+		case status := <-h.sessionManager.GetQueueStatusChan():
+			fmt.Printf("Queue status update: %d/%d\n", status.Current, status.Total)
+			for _, player := range status.Players {
+				h.sessionManager.SendToPlayer(player.ID, types.Message{
+					Action: "queue_status",
+					Payload: map[string]interface{}{
+						"current": status.Current,
+						"total":   status.Total,
+					},
+				})
+			}
 		}
 
 	}

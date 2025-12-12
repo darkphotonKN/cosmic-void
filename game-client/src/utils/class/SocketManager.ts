@@ -45,6 +45,11 @@ class SocketManager {
       try {
         const data = JSON.parse(event.data);
         console.log("Received server message:", data);
+
+        // 通知監聽者 (後端用 "package" 作為 payload 的 key)
+        if (data.action && this.listeners.has(data.action)) {
+          this.listeners.get(data.action)?.(data.package);
+        }
       } catch (e) {
         console.error("Failed to parse message:", e);
       }
@@ -72,13 +77,15 @@ class SocketManager {
     }
   }
 
-  //   on(type: string, callback) {
-  //     this.listeners.set(type, callback);
-  //   }
+  // 監聽特定 action
+  on(action: string, callback: (payload: any) => void): void {
+    this.listeners.set(action, callback);
+  }
 
-  //   off(type) {
-  //     this.listeners.delete(type);
-  //   }
+  // 取消監聽
+  off(action: string): void {
+    this.listeners.delete(action);
+  }
 }
 
 export const socketManager = new SocketManager();
