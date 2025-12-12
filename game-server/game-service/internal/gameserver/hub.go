@@ -99,6 +99,7 @@ func (h *messageHub) Run() {
 			// NOTE: queues a player for a game
 			case constants.ActionFindGame:
 				player, exists := h.sessionManager.GetPlayerFromConn(clientPackage.Conn)
+
 				if !exists {
 					response.Error(
 						clientPackage.Message.Action,
