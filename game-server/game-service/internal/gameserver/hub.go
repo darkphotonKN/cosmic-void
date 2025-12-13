@@ -42,7 +42,7 @@ func NewMessageHub(sessionManager SessionManager) *messageHub {
 }
 
 /**
-* core goroutine hub to handle all incoming messages and orchestrate them
+* Core goroutine hub to handle all incoming messages and orchestrate them
 * to other parts of game.
 **/
 func (h *messageHub) Run() {
@@ -95,7 +95,7 @@ func (h *messageHub) Run() {
 				}
 
 				// propogate message to corresponding game
-				session.MessageCh <- clientPackage.Message
+				session.MessageCh <- clientPackage
 			}
 
 			// --- MENU RELATED ACTIONS ---

@@ -17,7 +17,7 @@ import (
 type Session struct {
 	ID             uuid.UUID
 	EntityManager  *ecs.EntityManager
-	MessageCh      chan types.Message
+	MessageCh      chan types.ClientPackage
 	playerEntities map[uuid.UUID]uuid.UUID
 	mu             sync.RWMutex
 
@@ -40,7 +40,7 @@ func NewSession() *Session {
 		EntityManager: ecs.NewEntityManager(),
 		// map [playerID] to entityID
 		playerEntities: make(map[uuid.UUID]uuid.UUID),
-		MessageCh:      make(chan types.Message, 100),
+		MessageCh:      make(chan types.ClientPackage, 100),
 
 		movementSystem: systems.NewMovementSystem(),
 		combatSystem:   systems.NewCombatSystem(),
@@ -81,7 +81,6 @@ func (s *Session) Start() {
 * message hub.
 **/
 func (s *Session) manageClientMessages() {
-
 	// TEST: testing only
 	if s.TestMessageSpy != nil {
 		for {
@@ -90,7 +89,7 @@ func (s *Session) manageClientMessages() {
 				fmt.Printf("\nTest message received, %+v\n\n", message)
 
 				// propogate to test
-				s.TestMessageSpy <- message
+				s.TestMessageSpy <- message.Message
 			default:
 			}
 		}
@@ -99,13 +98,24 @@ func (s *Session) manageClientMessages() {
 
 	for {
 		select {
-		case message := <-s.MessageCh:
-			fmt.Printf("\nincoming message to game session %s:\n%v\n\n", s.ID, message)
+		case msg := <-s.MessageCh:
+			fmt.Printf("\nincoming message to game session %s:\n%v\n\n", s.ID, msg)
 
-			switch constants.Action(message.Action) {
+			switch constants.Action(msg.Message.Action) {
 			case constants.ActionMove:
-				fmt.Printf("Action from client was move\n")
+				// parse payload based on message action
+				parsedMovePayload, err := msg.Message.ParsePayload()
+				if err != nil {
+					// TODO: respond to client error
+				}
 
+				movePayload := parsedMovePayload.(types.PlayerSessionMovePayload)
+
+				fmt.Printf("\nParsed move payload:\n%+v\n\n", movePayload)
+
+				// update based on action payload
+				playerID := uuid.MustParse(movePayload.PlayerID)
+				s.handleMove(playerID, movePayload.Vx, movePayload.Vy)
 			}
 		}
 	}
@@ -198,15 +208,14 @@ func (s *Session) Shutdown() {
 * by the client.
 **/
 func (s *Session) handleMove(playerID uuid.UUID, vx, vy float64) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
+	s.mu.RLock()
 	// get specific player entity
 	playerEntityID, ok := s.playerEntities[playerID]
+	s.mu.RUnlock()
 
 	if !ok {
-		fmt.Printf("\nPlayerEntityID doens't exist for playerID: %s\n\n", playerID)
-		return fmt.Errorf("\nPlayerEntityID doens't exist for playerID: %s\n\n", playerID)
+		fmt.Printf("\nPlayerEntityID doesn't exist for playerID: %s\n\n", playerID)
+		return fmt.Errorf("\nPlayerEntityID doesn't exist for playerID: %s\n\n", playerID)
 	}
 
 	playerEntity, ok := s.EntityManager.GetEntity(playerEntityID)

@@ -3,7 +3,6 @@ package game
 import (
 	"testing"
 
-	"github.com/Microsoft/go-winio/wim"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -88,8 +87,9 @@ func TestVelocityUpdatePlayerPosition(t *testing.T) {
 	session := NewSession()
 
 	player1ID := uuid.New()
+	username := "Player1"
+	player1EntityID := session.AddPlayer(player1ID, username)
 
-	entity1ID := session.AddPlayer(player1ID, "Player1")
-	session.AddPlayer(entity1ID)
-
+	// check player initial position
+	session.EntityManager.GetEntity(player1EntityID)
 }

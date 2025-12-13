@@ -17,6 +17,15 @@ type Message struct {
 	Payload map[string]interface{} `json:"payload"`
 }
 
+/**
+* Provides the abstraction for clients to interface with the websocket connections.
+**/
+
+type ClientPackage struct {
+	Message Message
+	Conn    *websocket.Conn
+}
+
 type ServerResponse struct {
 	Action  string                 `json:"action"`
 	Payload map[string]interface{} `json:"payload"`
@@ -85,13 +94,4 @@ type PlayerSessionMovePayload struct {
 	PlayerSessionPayload
 	Vx float64 `json:"vx"`
 	Vy float64 `json:"vy"`
-}
-
-/**
-* Provides the abstraction for clients to interface with the websocket connections.
-**/
-
-type ClientPackage struct {
-	Message Message
-	Conn    *websocket.Conn
 }

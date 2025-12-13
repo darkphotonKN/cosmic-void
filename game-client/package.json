@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "A Phaser 3 game with Next.js",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3838",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
