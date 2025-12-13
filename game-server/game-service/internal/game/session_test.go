@@ -1,8 +1,10 @@
 package game
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -88,8 +90,24 @@ func TestVelocityUpdatePlayerPosition(t *testing.T) {
 
 	player1ID := uuid.New()
 	username := "Player1"
-	player1EntityID := session.AddPlayer(player1ID, username)
+	playerEntityID := session.AddPlayer(player1ID, username)
 
 	// check player initial position
-	session.EntityManager.GetEntity(player1EntityID)
+	playerEntity, ok := session.EntityManager.GetEntity(playerEntityID)
+
+	if !ok {
+		fmt.Printf("\nPlayerEntity doesn't exist for player playerEntityID %s\n\n", playerEntityID)
+	}
+
+	playerTransformComponent, ok := playerEntity.GetComponent(ecs.ComponentTypeTransform)
+
+	if !ok {
+		fmt.Printf("\nPlayers Velocity Component doesn't exist for enntity ID: %s\n\n", playerEntity.ID)
+	}
+
+	component := playerTransformComponent.(*components.TransformComponent)
+	fmt.Printf("\nplayerTransformCoords Initial: %+v\n\n", component)
+
+	assert.Equal(t, 0, component.X)
+	assert.Equal(t, 0, component.Y)
 }
