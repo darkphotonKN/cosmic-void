@@ -68,8 +68,8 @@ func TestServerHubSessionIntegration(t *testing.T) {
 	// the game Session should receive the message after hub reroutes it
 	select {
 	case receivedMsg := <-session.MessageCh:
-		assert.Equal(t, string(constants.ActionMove), receivedMsg.Action, "Action should match")
-		payload := receivedMsg.Payload
+		assert.Equal(t, string(constants.ActionMove), receivedMsg.Message.Action, "Action should match")
+		payload := receivedMsg.Message.Payload
 
 		fmt.Printf("\nclient package payload in test was: %+v\n\n", payload)
 
