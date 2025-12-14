@@ -103,6 +103,7 @@ func (s *Session) manageClientMessages() {
 
 			switch constants.Action(msg.Message.Action) {
 			case constants.ActionMove:
+				fmt.Printf("Action from client was move\n")
 				// parse payload based on message action
 				parsedMovePayload, err := msg.Message.ParsePayload()
 				if err != nil {

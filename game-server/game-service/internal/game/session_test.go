@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
@@ -85,6 +86,7 @@ func TestSessionAddMultiplePlayers(t *testing.T) {
 }
 
 // NOTE: note to team, also white box test here, testing internals
+// test velocity updates with transform of player entity changing
 func TestVelocityUpdatePlayerPosition(t *testing.T) {
 	session := NewSession()
 
@@ -108,6 +110,16 @@ func TestVelocityUpdatePlayerPosition(t *testing.T) {
 	component := playerTransformComponent.(*components.TransformComponent)
 	fmt.Printf("\nplayerTransformCoords Initial: %+v\n\n", component)
 
-	assert.Equal(t, 0, component.X)
-	assert.Equal(t, 0, component.Y)
+	assert.Equal(t, float64(0), component.X)
+	assert.Equal(t, float64(0), component.Y)
+
+	// update player transform
+	session.handleMove(player1ID, 0.81, 0.81)
+
+	// account for system game loop refresh rate, but only time for 1 move
+	time.Sleep(time.Millisecond * 1200)
+
+	fmt.Printf("\nplayerTransformCoords after update: %+v\n\n", component)
+	assert.Equal(t, float64(0.81), component.X)
+	assert.Equal(t, float64(0.81), component.Y)
 }
