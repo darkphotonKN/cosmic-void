@@ -47,7 +47,6 @@ func NewMessageHub(sessionManager SessionManager) *messageHub {
 **/
 func (h *messageHub) Run() {
 	fmt.Printf("\nInitializing message hub...\n\n")
-	defer fmt.Printf("EXIST HUB")
 	for {
 
 		// time.Sleep(time.Second * 2)
