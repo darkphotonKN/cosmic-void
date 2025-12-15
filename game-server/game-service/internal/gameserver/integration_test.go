@@ -107,8 +107,11 @@ func TestQueueFindGameFlow(t *testing.T) {
 
 			server.serverChan <- types.ClientPackage{
 				Message: types.Message{
-					Action:  string(constants.ActionFindGame),
-					Payload: player,
+					Action: string(constants.ActionFindGame),
+					Payload: map[string]interface{}{
+						"ID":       player.ID,
+						"Username": player.Username,
+					},
 				},
 				Conn: fakeConn,
 			}

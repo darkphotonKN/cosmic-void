@@ -85,7 +85,7 @@ func TestSessionAddMultiplePlayers(t *testing.T) {
 }
 
 // NOTE: note to team, also white box test here, testing internals
-// test initial coordinates are correctly set by add player
+// test initial coordinates are correctly set by addPlayer
 func TestAddPlayerSetsInitialPosition(t *testing.T) {
 	session := NewSession()
 

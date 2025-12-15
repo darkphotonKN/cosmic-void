@@ -39,8 +39,10 @@ func TestHandleMoveUpdatesPositionIntegration(t *testing.T) {
 	assert.Equal(t, float64(0), component.X)
 	assert.Equal(t, float64(0), component.Y)
 
-	// update player transform
-	session.handleMove(player1ID, 0.81, 0.81)
+	// player speed moves with speed speedX and speedY
+	speedX := 0.81
+	speedY := 0.81
+	session.handleMove(player1ID, speedX, speedY)
 
 	// account for system game loop refresh rate, but only time for 1 move
 	time.Sleep(time.Millisecond * 1200)
