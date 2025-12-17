@@ -241,3 +241,9 @@ func (s *Session) handleMove(playerID uuid.UUID, vx, vy float64) error {
 
 	return nil
 }
+
+/**
+* player interacting with x object with id.
+**/
+func (s *Session) handleInteract(playerID uuid.UUID) {
+}

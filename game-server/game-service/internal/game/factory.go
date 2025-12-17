@@ -42,6 +42,7 @@ type DoorConfig struct {
 
 func CreateDoorEntity(em *ecs.EntityManager, config DoorConfig) *ecs.Entity {
 	entity := em.CreateEntity()
+	entity.AddComponent(components.NewDoorComponent())
 	entity.AddComponent(components.NewTransformComponent(config.X, config.Y))
 	entity.AddComponent(components.NewOpenableComponent(false)) // default false
 
