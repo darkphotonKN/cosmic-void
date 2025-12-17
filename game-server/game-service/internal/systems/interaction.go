@@ -2,7 +2,6 @@ package systems
 
 import (
 	"math"
-	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
