@@ -6,6 +6,7 @@ import (
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,16 +17,26 @@ import (
 * session manipulation.
 **/
 
+// mock sender for testing
+func createMockSender() *types.MessageSender {
+	return types.NewMessageSender(func(playerID uuid.UUID, msg types.Message) error {
+		// mock: do nothing
+		return nil
+	})
+}
+
 // TestSessionCreation tests that a session initializes correctly with players
 // white box test, we need to verify internal state like playerEntities
 func TestSessionCreation(t *testing.T) {
-	session := NewSession()
+	sender := createMockSender()
+	session := NewSession(sender)
 
 	// verify session initialized
 	require.NotNil(t, session, "Session should not be nil")
 	require.NotEqual(t, uuid.Nil, session.ID, "Session should have valid ID")
 	require.NotNil(t, session.EntityManager, "EntityManager should be initialized")
 	require.NotNil(t, session.MessageCh, "MessageCh should be initialized")
+	require.NotNil(t, session.sender, "Sender should be initialized")
 
 	// initial state checks
 	assert.Equal(t, 0, len(session.playerEntities), "Should have no players initially")
@@ -36,7 +47,8 @@ func TestSessionCreation(t *testing.T) {
 
 // test adding a single player to an existing session
 func TestSessionAddPlayer(t *testing.T) {
-	session := NewSession()
+	sender := createMockSender()
+	session := NewSession(sender)
 	defer session.Shutdown()
 
 	playerID := uuid.New()
@@ -66,7 +78,8 @@ func TestSessionAddPlayer(t *testing.T) {
 // test focused on validating multiplayer players can be added to an
 // existing session
 func TestSessionAddMultiplePlayers(t *testing.T) {
-	session := NewSession()
+	sender := createMockSender()
+	session := NewSession(sender)
 	defer session.Shutdown()
 
 	player1ID := uuid.New()
@@ -87,7 +100,8 @@ func TestSessionAddMultiplePlayers(t *testing.T) {
 // NOTE: note to team, also white box test here, testing internals
 // test initial coordinates are correctly set by addPlayer
 func TestAddPlayerSetsInitialPosition(t *testing.T) {
-	session := NewSession()
+	sender := createMockSender()
+	session := NewSession(sender)
 
 	player1ID := uuid.New()
 	username := "Player1"

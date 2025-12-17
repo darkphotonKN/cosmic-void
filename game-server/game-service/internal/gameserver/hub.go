@@ -21,6 +21,7 @@ type messageHub struct {
 	gameSessionCh  chan types.Message
 	sessions       map[string]*game.Session
 	mu             sync.RWMutex
+	sender         *types.MessageSender
 }
 
 type SessionManager interface {
@@ -31,13 +32,13 @@ type SessionManager interface {
 	GetPlayerFromConn(conn *websocket.Conn) (*types.Player, bool)
 	GetMatchedChan() chan []*types.Player
 	GetQueueStatusChan() chan systems.QueueStatus
-	SendToPlayer(playerID uuid.UUID, msg types.Message)
 }
 
-func NewMessageHub(sessionManager SessionManager) *messageHub {
+func NewMessageHub(sessionManager SessionManager, sender *types.MessageSender) *messageHub {
 	return &messageHub{
 		sessionManager: sessionManager,
 		sessions:       make(map[string]*game.Session),
+		sender:         sender,
 	}
 }
 
@@ -47,16 +48,15 @@ func NewMessageHub(sessionManager SessionManager) *messageHub {
 **/
 func (h *messageHub) Run() {
 	fmt.Printf("\nInitializing message hub...\n\n")
-	for {
 
-		// time.Sleep(time.Second * 2)
-		fmt.Println("\n123gg")
+	// create response builder for error/success messages
+	response := types.NewResponseBuilder()
+
+	for {
 		select {
 		case clientPackage := <-h.sessionManager.GetServerChan():
 			// handle message based on action
 			fmt.Printf("\nincoming message: %+v\n\n", clientPackage.Message)
-
-			response := types.NewResponseBuilder(clientPackage.Conn)
 
 			var gameActions map[constants.Action]bool = map[constants.Action]bool{
 				constants.ActionMove:   true,
@@ -73,7 +73,9 @@ func (h *messageHub) Run() {
 				sessionID, err := clientPackage.Message.GetSessionID()
 
 				if err != nil {
+					// 傳入 conn 作為參數
 					response.Error(
+						clientPackage.Conn,
 						clientPackage.Message.Action,
 						constants.ErrorInvalidSessionID,
 						"Invalid or missing session ID in payload",
@@ -84,7 +86,9 @@ func (h *messageHub) Run() {
 				session, exists := h.sessionManager.GetGameSession(sessionID)
 
 				if !exists {
+					// 傳入 conn 作為參數
 					response.Error(
+						clientPackage.Conn,
 						clientPackage.Message.Action,
 						constants.ErrorSessionNotFound,
 						fmt.Sprintf("Game session not found for session ID: %s", sessionID),
@@ -95,6 +99,7 @@ func (h *messageHub) Run() {
 
 				// propogate message to corresponding game
 				session.MessageCh <- clientPackage
+				continue
 			}
 
 			// --- MENU RELATED ACTIONS ---
@@ -107,7 +112,9 @@ func (h *messageHub) Run() {
 				player, exists := h.sessionManager.GetPlayerFromConn(clientPackage.Conn)
 
 				if !exists {
+					// 傳入 conn 作為參數
 					response.Error(
+						clientPackage.Conn,
 						clientPackage.Message.Action,
 						constants.ErrorPlayerNotFound,
 						"Player not found for connection",
@@ -121,7 +128,8 @@ func (h *messageHub) Run() {
 				h.sessionManager.AddPlayerToQueue(player)
 				fmt.Printf("Player %s added to matchmaking queue\n", player.Username)
 
-				response.Success(clientPackage.Message.Action, map[string]interface{}{
+				// 傳入 conn 作為參數
+				response.Success(clientPackage.Conn, clientPackage.Message.Action, map[string]interface{}{
 					"message":   "Successfully joined matchmaking queue",
 					"player_id": player.ID.String(),
 					"username":  player.Username,
@@ -130,7 +138,9 @@ func (h *messageHub) Run() {
 			case constants.ActionLeaveQueue:
 				player, exists := h.sessionManager.GetPlayerFromConn(clientPackage.Conn)
 				if !exists {
+					// 傳入 conn 作為參數
 					response.Error(
+						clientPackage.Conn,
 						clientPackage.Message.Action,
 						constants.ErrorPlayerNotFound,
 						"Player not found for connection",
@@ -142,13 +152,16 @@ func (h *messageHub) Run() {
 				// h.sessionManager.RemovePlayerFromQueue(player)
 				fmt.Println("Leave game...")
 
-				response.Success(clientPackage.Message.Action, map[string]interface{}{
+				// 傳入 conn 作為參數
+				response.Success(clientPackage.Conn, clientPackage.Message.Action, map[string]interface{}{
 					"message":   "Successfully left the queue",
 					"player_id": player.ID.String(),
 				})
 
 			default:
+				// 傳入 conn 作為參數
 				response.Error(
+					clientPackage.Conn,
 					clientPackage.Message.Action,
 					constants.ErrorInvalidPayload,
 					fmt.Sprintf("Unknown action: %s", messageAction),
@@ -161,11 +174,8 @@ func (h *messageHub) Run() {
 			fmt.Println(matchedPlayers)
 			session := h.sessionManager.CreateGameSession(matchedPlayers)
 			for _, player := range matchedPlayers {
-				h.sessionManager.SendToPlayer(player.ID, types.Message{
-					Action: "game_found",
-					Payload: map[string]interface{}{
-						"sessionID": session.ID.String(),
-					},
+				h.sender.SendToPlayer(player.ID, "game_found", map[string]any{
+					"session_id": session.ID.String(),
 				})
 			}
 
@@ -173,12 +183,9 @@ func (h *messageHub) Run() {
 		case status := <-h.sessionManager.GetQueueStatusChan():
 			fmt.Printf("Queue status update: %d/%d\n", status.Current, status.Total)
 			for _, player := range status.Players {
-				h.sessionManager.SendToPlayer(player.ID, types.Message{
-					Action: "queue_status",
-					Payload: map[string]interface{}{
-						"current": status.Current,
-						"total":   status.Total,
-					},
+				h.sender.SendToPlayer(player.ID, "queue_status", map[string]any{
+					"current": status.Current,
+					"total":   status.Total,
 				})
 			}
 		}

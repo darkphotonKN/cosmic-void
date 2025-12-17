@@ -41,6 +41,9 @@ type Server struct {
 
 	// queue system
 	queueSystem *systems.QueueSystem
+
+	// unified message sender
+	sender *types.MessageSender
 }
 
 func NewServer() *Server {
@@ -61,12 +64,16 @@ func NewServer() *Server {
 		players:      make(map[uuid.UUID]*types.Player, 10),
 		connToPlayer: make(map[*websocket.Conn]*types.Player, 10),
 	}
+
+	// initialize message sender (inject send function)
+	server.sender = types.NewMessageSender(server.sendMessageInternal)
+
 	// initialize queue system
 	server.queueSystem = systems.NewQueueSystem(2)
 	server.queueSystem.Start()
 
 	// initialize message hub
-	messageHub := NewMessageHub(server)
+	messageHub := NewMessageHub(server, server.sender)
 	go messageHub.Run()
 
 	return server
@@ -108,7 +115,8 @@ func (s *Server) GetPlayerFromConn(conn *websocket.Conn) (*types.Player, bool) {
 * allows the creation of a new game session.
 **/
 func (s *Server) CreateGameSession(players []*types.Player) *game.Session {
-	newGameSession := game.NewSession()
+	// create session with message sender
+	newGameSession := game.NewSession(s.sender)
 
 	for _, player := range players {
 		newGameSession.AddPlayer(player.ID, player.Username)
@@ -170,20 +178,29 @@ func (s *Server) GetConnFromPlayer(playerID uuid.UUID) (*websocket.Conn, bool) {
 }
 
 /**
-* send message to specific player
+* --- Internal Message Sending (used by MessageSender) ---
 **/
-func (s *Server) SendToPlayer(playerID uuid.UUID, msg types.Message) {
+
+// sendMessageInternal is the core function injected into MessageSender
+func (s *Server) sendMessageInternal(playerID uuid.UUID, msg types.Message) error {
 	conn, exists := s.GetConnFromPlayer(playerID)
 	if !exists {
-		fmt.Printf("Player %s not found\n", playerID)
-		return
+		return fmt.Errorf("player %s not found", playerID)
 	}
 
 	s.mu.RLock()
 	ch, ok := s.msgChan[conn]
 	s.mu.RUnlock()
 
-	if ok {
-		ch <- msg
+	if !ok {
+		return fmt.Errorf("message channel not found for player %s", playerID)
+	}
+
+	// non-blocking send to prevent slow clients from blocking
+	select {
+	case ch <- msg:
+		return nil
+	default:
+		return fmt.Errorf("message channel full for player %s", playerID)
 	}
 }

@@ -30,9 +30,11 @@ type Session struct {
 
 	// TEST: testing only
 	TestMessageSpy chan types.Message
+
+	sender *types.MessageSender
 }
 
-func NewSession() *Session {
+func NewSession(sender *types.MessageSender) *Session {
 	sessionId := uuid.New()
 
 	s := &Session{
@@ -47,6 +49,8 @@ func NewSession() *Session {
 		skillSystem:    systems.NewSkillSystem(),
 		stopChan:       make(chan struct{}),
 		isRunning:      false,
+
+		sender: sender,
 	}
 
 	go s.Start()
@@ -198,6 +202,20 @@ func (s *Session) Shutdown() {
 	fmt.Printf("Shutting down game session id %s\n", s.ID)
 	close(s.stopChan)
 	close(s.MessageCh)
+}
+
+/**
+* GetPlayerIDs returns all player IDs in this session
+**/
+func (s *Session) GetPlayerIDs() []uuid.UUID {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	playerIDs := make([]uuid.UUID, 0, len(s.playerEntities))
+	for playerID := range s.playerEntities {
+		playerIDs = append(playerIDs, playerID)
+	}
+	return playerIDs
 }
 
 /**

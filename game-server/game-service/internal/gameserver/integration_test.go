@@ -147,3 +147,61 @@ func TestQueueFindGameFlow(t *testing.T) {
 	assert.Equal(t, expectedSessions, sessionCount)
 	fmt.Println("總共創建遊戲數量", expectedSessions)
 }
+func TestResponseBuilderIntegration(t *testing.T) {
+	server := NewServer()
+	// create test players
+	player1 := &types.Player{
+		ID:       uuid.New(),
+		Username: "TestPlayer1",
+	}
+	player2 := &types.Player{
+		ID:       uuid.New(),
+		Username: "TestPlayer2",
+	}
+
+	testPlayers := []*types.Player{player1, player2}
+
+	// create game session through server
+	session := server.CreateGameSession(testPlayers)
+
+	clientMsg := types.Message{
+		Action: string(constants.ActionMove),
+		Payload: map[string]interface{}{
+			"session_id": session.ID.String(),
+			"player_id":  player1.ID.String(),
+			"vx":         1.0,
+			"vy":         0.0,
+		},
+	}
+	clientPackage := types.ClientPackage{
+		Message: clientMsg,
+		Conn:    nil, // no real connection needed for this test
+	}
+
+	response := types.NewResponseBuilder()
+
+	testConn := &Conn{}
+	responseSuccess := response.Success(
+		testConn,
+		clientPackage.Message.Action,
+		map[string]interface{}{"status": "ok"},
+	)
+
+	responseErr := response.Error(
+		testConn,
+		clientPackage.Message.Action,
+		constants.ErrorInvalidSessionID,
+		"Invalid session ID",
+	)
+
+	assert.Nil(t, responseSuccess, "Response Error method should not return error")
+	assert.Nil(t, responseErr, "Response Error method should not return error")
+
+}
+
+type Conn struct{}
+
+func (c *Conn) WriteJSON(v interface{}) error {
+	fmt.Println("error")
+	return nil
+}

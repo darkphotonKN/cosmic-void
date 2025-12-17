@@ -108,6 +108,7 @@ func main() {
 	repo := member.NewRepository(db)
 	service := member.NewService(repo, ch, cacheService)
 	handler := member.NewHandler(service)
+
 	// consumer := member.NewConsumer(service, ch)
 	// start goroutine and listen to events from message broker
 	// consumer.Listen()
