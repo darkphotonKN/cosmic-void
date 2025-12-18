@@ -107,8 +107,10 @@ func (s *Session) manageClientMessages() {
 				fmt.Printf("Action from client was move\n")
 				// parse payload based on message action
 				parsedPayload, err := msg.Message.ParsePayload()
+
 				if err != nil {
 					// TODO: respond to client error
+					fmt.Printf("\n attempting to parse payload from %+v from unsuccesfull as types don't match.\n\n", parsedPayload)
 				}
 
 				movePayload := parsedPayload.(types.PlayerSessionMovePayload)
@@ -116,7 +118,11 @@ func (s *Session) manageClientMessages() {
 				fmt.Printf("\nParsed move payload:\n%+v\n\n", movePayload)
 
 				// update based on action payload
-				playerID := uuid.MustParse(movePayload.PlayerID)
+				playerID, err := uuid.Parse(movePayload.PlayerID)
+				if err != nil {
+					fmt.Printf("\nPlayerID %s from session payload was invalid.\n\n", movePayload.PlayerID)
+					// TODO: respond to client error
+				}
 				s.handleMove(playerID, movePayload.Vx, movePayload.Vy)
 
 			case constants.ActionInteract:
@@ -129,8 +135,23 @@ func (s *Session) manageClientMessages() {
 				}
 
 				interactPayload := parsedPayload.(types.PlayerSessionInteractPayload)
-
 				fmt.Printf("\nParsed interact payload:\n%+v\n\n", interactPayload)
+
+				playerID, err := uuid.Parse(interactPayload.PlayerID)
+
+				if err != nil {
+					fmt.Printf("\nPlayerID %s from session payload was invalid.\n\n", interactPayload.PlayerID)
+					// TODO: respond to client error
+				}
+
+				entityIDUUID, err := uuid.Parse(interactPayload.EntityID)
+
+				if err != nil {
+					fmt.Printf("\nEntityID %s from session payload was invalid.\n\n", interactPayload.EntityID)
+					// TODO: respond to client error
+				}
+
+				s.handleInteract(playerID, entityIDUUID)
 			}
 		}
 	}
@@ -259,8 +280,53 @@ func (s *Session) handleMove(playerID uuid.UUID, vx, vy float64) error {
 /**
 * handles player interacting with x object with target entity id.
 **/
-func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) {
+func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) error {
+	targetEntity, hasEntity := s.EntityManager.GetEntity(targetEntityID)
 
+	if !hasEntity {
+		fmt.Printf("Error when attempting to retrieve target entity with entityID %s\n", targetEntityID)
+		return fmt.Errorf("Error when attempting to retrieve target entity with entityID %s", targetEntityID)
+	}
+
+	// get that entity's type and decide on the effect
+	_, isDoorEntity := targetEntity.GetComponent(ecs.ComponentTypeDoor)
+	_, isContainerEntity := targetEntity.GetComponent(ecs.ComponentTypeContainer)
+
+	if !isDoorEntity && !isContainerEntity {
+		fmt.Printf("entity type did not match any interactable entity.\n")
+		return fmt.Errorf("entity type did not match any interactable entity.\n")
+	}
+
+	// --- player entity ---
+
+	// establish player's position
+
+	playerEntityID := s.playerEntities[playerID]
+	playerEntity, hasPlayerEntity := s.EntityManager.GetEntity(playerEntityID)
+
+	if !hasPlayerEntity {
+		fmt.Printf("Error when attempting to retrieve target player entity with entityID %s\n", playerEntityID)
+
+		return fmt.Errorf("Error when attempting to retrieve target player entity with entityID %s\n", targetEntityID)
+	}
+
+	playerTransform, hasTransform := playerEntity.GetComponent(ecs.ComponentTypeTransform)
+
+	if !hasTransform {
+		fmt.Printf("Error when attempting to retrieve player entity transform component with entityID %s\n", playerEntityID)
+		return fmt.Errorf("Error when attempting to retrieve player entity transform component with entityID %s", playerEntityID)
+	}
+
+	playerTransformValues := playerTransform.(*components.TransformComponent)
+
+	// --- door entity ---
+	if isDoorEntity {
+		// get location
+
+		// validate is within distance from player
+	}
+
+	return nil
 }
 
 /**
