@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"math"
 	"sync"
 	"time"
 
@@ -105,18 +106,31 @@ func (s *Session) manageClientMessages() {
 			case constants.ActionMove:
 				fmt.Printf("Action from client was move\n")
 				// parse payload based on message action
-				parsedMovePayload, err := msg.Message.ParsePayload()
+				parsedPayload, err := msg.Message.ParsePayload()
 				if err != nil {
 					// TODO: respond to client error
 				}
 
-				movePayload := parsedMovePayload.(types.PlayerSessionMovePayload)
+				movePayload := parsedPayload.(types.PlayerSessionMovePayload)
 
 				fmt.Printf("\nParsed move payload:\n%+v\n\n", movePayload)
 
 				// update based on action payload
 				playerID := uuid.MustParse(movePayload.PlayerID)
 				s.handleMove(playerID, movePayload.Vx, movePayload.Vy)
+
+			case constants.ActionInteract:
+				fmt.Printf("Action from client was interact")
+
+				parsedPayload, err := msg.Message.ParsePayload()
+
+				if err != nil {
+					// TODO respond to client error
+				}
+
+				interactPayload := parsedPayload.(types.PlayerSessionInteractPayload)
+
+				fmt.Printf("\nParsed interact payload:\n%+v\n\n", interactPayload)
 			}
 		}
 	}
@@ -243,7 +257,25 @@ func (s *Session) handleMove(playerID uuid.UUID, vx, vy float64) error {
 }
 
 /**
-* player interacting with x object with id.
+* handles player interacting with x object with target entity id.
 **/
-func (s *Session) handleInteract(playerID uuid.UUID) {
+func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) {
+
+}
+
+/**
+* checks if a target is within 2d cartesian coordinates range of another.
+**/
+func (s *Session) calcWithinDistance(x, y, xTarget, yTarget, interactableRange float64) bool {
+	// calculate range via range provided by interactable
+	xDiff := math.Pow(x-xTarget, 2)
+	yDiff := math.Pow(y-yTarget, 2)
+	distanceBetween := math.Sqrt(xDiff + yDiff)
+
+	// too far
+	if distanceBetween > interactableRange {
+		return false
+	}
+
+	return true
 }

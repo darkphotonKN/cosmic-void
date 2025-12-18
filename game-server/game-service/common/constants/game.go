@@ -11,6 +11,7 @@ const (
 
 	// active game actions
 	ActionMove     Action = "move"
+	ActionInteract Action = "interact"
 	ActionAttack   Action = "attack"
 	ActionPickup   Action = "pickup"
 	ActionUseItem  Action = "use_item"

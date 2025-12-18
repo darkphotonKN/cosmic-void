@@ -47,17 +47,18 @@ func NewMessageHub(sessionManager SessionManager) *messageHub {
 **/
 func (h *messageHub) Run() {
 	fmt.Printf("\nInitializing message hub...\n\n")
+
 	for {
 
 		// time.Sleep(time.Second * 2)
 		fmt.Println("\n123gg")
 		select {
 		case clientPackage := <-h.sessionManager.GetServerChan():
-			// handle message based on action
 			fmt.Printf("\nincoming message: %+v\n\n", clientPackage.Message)
 
 			response := types.NewResponseBuilder(clientPackage.Conn)
 
+			// handle message based on action
 			var gameActions map[constants.Action]bool = map[constants.Action]bool{
 				constants.ActionMove:   true,
 				constants.ActionAttack: true,

@@ -55,6 +55,18 @@ func (m *Message) ParsePayload() (interface{}, error) {
 
 		return parsedPayload, nil
 
+	case constants.ActionInteract:
+		parsedPayload := PlayerSessionInteractPayload{
+			PlayerSessionPayload: PlayerSessionPayload{
+				SessionID: m.Payload["session_id"].(string),
+				PlayerID:  m.Payload["player_id"].(string),
+			},
+			EntityID: m.Payload["entity_id"].(string),
+		}
+
+		fmt.Printf("\n\npayload of action interact was: %+v\n", parsedPayload)
+
+		return parsedPayload, nil
 	default:
 		return nil, fmt.Errorf("No matching actions.")
 	}
@@ -94,4 +106,9 @@ type PlayerSessionMovePayload struct {
 	PlayerSessionPayload
 	Vx float64 `json:"vx"`
 	Vy float64 `json:"vy"`
+}
+
+type PlayerSessionInteractPayload struct {
+	PlayerSessionPayload
+	EntityID string `json:"entity_id"`
 }
