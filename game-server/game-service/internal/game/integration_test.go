@@ -3,18 +3,21 @@ package game
 import (
 	"fmt"
 	"testing"
-
 	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
 // test velocity updates transform of player entity after handle move and system update cycle
 func TestHandleMoveUpdatesPositionIntegration(t *testing.T) {
-	session := NewSession()
+	sender := types.NewMessageSender(func(playerID uuid.UUID, msg types.Message) error {
+		return nil
+	})
+	session := NewSession(sender)
 
 	player1ID := uuid.New()
 	username := "Player1"

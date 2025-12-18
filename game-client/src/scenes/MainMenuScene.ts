@@ -150,12 +150,20 @@ export class MainMenuScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     // 監聽排隊狀態更新
-    socketManager.on("queue_status", (payload: { current: number; total: number }) => {
-      peopleCountText.setText(`People in queue: ${payload.current} / ${payload.total}`);
-    });
+    socketManager.on(
+      "queue_status",
+      (payload: { current: number; total: number }) => {
+        console.log("payload", payload);
+        if (!payload) return;
+        peopleCountText.setText(
+          `People in queue: ${payload.current} / ${payload.total}`,
+        );
+      },
+    );
 
     // 監聽配對成功
     socketManager.on("game_found", (payload: { sessionID: string }) => {
+      if (!payload) return;
       console.log("Game found! Session ID:", payload.sessionID);
       title.setText("Game Found!");
       peopleCountText.setText("Starting game...");

@@ -46,9 +46,8 @@ class SocketManager {
         const data = JSON.parse(event.data);
         console.log("Received server message:", data);
 
-        // 通知監聽者 (後端用 "package" 作為 payload 的 key)
         if (data.action && this.listeners.has(data.action)) {
-          this.listeners.get(data.action)?.(data.package);
+          this.listeners.get(data.action)?.(data.payload);
         }
       } catch (e) {
         console.error("Failed to parse message:", e);
