@@ -310,20 +310,48 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		return fmt.Errorf("Error when attempting to retrieve target player entity with entityID %s\n", targetEntityID)
 	}
 
-	playerTransform, hasTransform := playerEntity.GetComponent(ecs.ComponentTypeTransform)
+	playerTransformComponent, hasTransform := playerEntity.GetComponent(ecs.ComponentTypeTransform)
 
 	if !hasTransform {
 		fmt.Printf("Error when attempting to retrieve player entity transform component with entityID %s\n", playerEntityID)
 		return fmt.Errorf("Error when attempting to retrieve player entity transform component with entityID %s", playerEntityID)
 	}
 
-	playerTransformValues := playerTransform.(*components.TransformComponent)
+	playerTransformValues := playerTransformComponent.(*components.TransformComponent)
 
 	// --- door entity ---
 	if isDoorEntity {
 		// get location
+		doorTransformComponent, hasTransform := targetEntity.GetComponent(ecs.ComponentTypeTransform)
+
+		if !hasTransform {
+			fmt.Printf("Error when attempting to retrieve door entity transform component with entityID %s\n", targetEntityID)
+			return fmt.Errorf("Error when attempting to retrieve door entity transform component with entityID %s", targetEntityID)
+		}
+
+		doorTransform := doorTransformComponent.(*components.TransformComponent)
 
 		// validate is within distance from player
+		isWithinDistance := s.calcWithinDistance(playerTransformValues.X, playerTransformValues.Y, doorTransform.X, doorTransform.Y)
+
+		if !isWithinDistance {
+			// TODO: add return message to client
+			fmt.Printf("Error when attempting to interact with door entity as it was out of range. targetID: %s, playerID: %s. \n", targetEntityID, playerID)
+			return fmt.Errorf("Error when attempting to retrieve door entity transform component with entityID %s", targetEntityID)
+		}
+
+		// trigger door's swap
+		doorOpenableComponent, hasOpenable := targetEntity.GetComponent(ecs.ComponentTypeOpenable)
+
+		if !hasOpenable {
+			fmt.Printf("Error when attempting to retrieve door entity openable component with entityID %s\n", targetEntityID)
+			return fmt.Errorf("Error when attempting to retrieve door entity openable component with entityID %s", targetEntityID)
+		}
+
+		doorOpenable := doorOpenableComponent.(*components.OpenableComponent)
+
+		// update state
+		doorOpenable.IsOpen = !doorOpenable.IsOpen
 	}
 
 	return nil
@@ -332,14 +360,14 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 /**
 * checks if a target is within 2d cartesian coordinates range of another.
 **/
-func (s *Session) calcWithinDistance(x, y, xTarget, yTarget, interactableRange float64) bool {
+func (s *Session) calcWithinDistance(x, y, xTarget, yTarget float64) bool {
 	// calculate range via range provided by interactable
 	xDiff := math.Pow(x-xTarget, 2)
 	yDiff := math.Pow(y-yTarget, 2)
 	distanceBetween := math.Sqrt(xDiff + yDiff)
 
 	// too far
-	if distanceBetween > interactableRange {
+	if distanceBetween > constants.DefaultInteractableRange {
 		return false
 	}
 
