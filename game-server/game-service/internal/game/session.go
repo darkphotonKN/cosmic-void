@@ -29,6 +29,10 @@ type Session struct {
 	stopChan  chan struct{}
 	isRunning bool
 
+	// caching
+	// [playerID] - interacted
+	playerInteractedCache map[uuid.UUID]bool
+
 	// TEST: testing only
 	TestMessageSpy chan types.Message
 
@@ -51,7 +55,8 @@ func NewSession(sender *types.MessageSender) *Session {
 		stopChan:       make(chan struct{}),
 		isRunning:      false,
 
-		sender: sender,
+		playerInteractedCache: make(map[uuid.UUID]bool),
+		sender:                sender,
 	}
 
 	go s.Start()
@@ -318,8 +323,19 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 	// --- player entity ---
 
 	// establish player's position
-
+	s.mu.RLock()
 	playerEntityID := s.playerEntities[playerID]
+	s.mu.RUnlock()
+
+	s.mu.RLock()
+	// exit early if cached
+	_, exists := s.playerInteractedCache[playerEntityID]
+	s.mu.RUnlock()
+
+	if exists {
+		fmt.Printf("player interacted too soon with with playerEntityID %s\n", playerEntityID)
+		return fmt.Errorf("player interacted too soon with with playerEntityID %s\n", playerEntityID)
+	}
 	playerEntity, hasPlayerEntity := s.EntityManager.GetEntity(playerEntityID)
 
 	if !hasPlayerEntity {
@@ -335,9 +351,10 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		return fmt.Errorf("Error when attempting to retrieve player entity transform component with entityID %s", playerEntityID)
 	}
 
-	playerTransformValues := playerTransformComponent.(*components.TransformComponent)
+	playerTransform := playerTransformComponent.(*components.TransformComponent)
 
 	// --- door entity ---
+
 	if isDoorEntity {
 		// get location
 		doorTransformComponent, hasTransform := targetEntity.GetComponent(ecs.ComponentTypeTransform)
@@ -350,7 +367,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		doorTransform := doorTransformComponent.(*components.TransformComponent)
 
 		// validate is within distance from player
-		isWithinDistance := s.calcWithinDistance(playerTransformValues.X, playerTransformValues.Y, doorTransform.X, doorTransform.Y)
+		isWithinDistance := s.calcWithinDistance(playerTransform.X, playerTransform.Y, doorTransform.X, doorTransform.Y)
 
 		if !isWithinDistance {
 			// TODO: add return message to client
@@ -358,7 +375,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 			return fmt.Errorf("Error when attempting to retrieve door entity transform component with entityID %s", targetEntityID)
 		}
 
-		// trigger door's swap
+		// trigger doors swap in openable state via its OpenableComponent
 		doorOpenableComponent, hasOpenable := targetEntity.GetComponent(ecs.ComponentTypeOpenable)
 
 		if !hasOpenable {
@@ -370,6 +387,19 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 
 		// update state
 		doorOpenable.IsOpen = !doorOpenable.IsOpen
+
+		// add player to interacted cache
+		s.mu.Lock()
+		s.playerInteractedCache[playerEntityID] = true
+		s.mu.Unlock()
+
+		// remove them from cache after a short while
+		go func() {
+			time.Sleep(time.Second * 1)
+			s.mu.Lock()
+			delete(s.playerInteractedCache, playerEntityID)
+			s.mu.Unlock()
+		}()
 	}
 
 	return nil
