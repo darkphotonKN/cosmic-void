@@ -22,9 +22,10 @@ var (
 	gamePort = fmt.Sprintf(":%s", commonhelpers.GetEnvString("GAME_PORT", "5555"))
 
 	// grpc
-	serviceName = "game"
-	grpcAddr    = commonhelpers.GetEnvString("GRPC_GAME_ADDR", "7004")
-	consulAddr  = commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
+	serviceName  = "game"
+	grpcAuthAddr = commonhelpers.GetEnvString("GRPC_AUTH_ADDR", "7003")
+	grpcAddr     = commonhelpers.GetEnvString("GRPC_GAME_ADDR", "7004")
+	consulAddr   = commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
 
 	// rabbit mq
 	amqpUser     = commonhelpers.GetEnvString("RABBITMQ_USER", "guest")
@@ -102,7 +103,7 @@ func main() {
 	log.Printf("grpc Game Server started on PORT: %s\n", grpcAddr)
 
 	// routes setup
-	routes := config.SetupRouter(db)
+	routes := config.SetupRouter(db, registry)
 
 	fmt.Printf("Server listening on port %s.\n", gamePort)
 

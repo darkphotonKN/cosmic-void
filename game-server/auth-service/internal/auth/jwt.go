@@ -58,7 +58,34 @@ func RefreshToken(refreshToken string, user models.Member) (string, int, error) 
 	return newAccessToken, int(15 * 60), nil
 }
 
-// TODO: placeholder for jwt validation
-func ValidateJWT(token string) (jwt.RegisteredClaims, error) {
-	return jwt.RegisteredClaims{}, nil
+// ValidateJWT validates a JWT token and returns the claims
+func ValidateJWT(tokenString string) (jwt.RegisteredClaims, error) {
+	JWTSecret := []byte(os.Getenv("JWT_SECRET"))
+
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return JWTSecret, nil
+	})
+
+	if err != nil {
+		return jwt.RegisteredClaims{}, err
+	}
+
+	if !token.Valid {
+		return jwt.RegisteredClaims{}, errors.New("invalid token")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return jwt.RegisteredClaims{}, errors.New("invalid claims")
+	}
+
+	// Extract sub (user ID) from MapClaims
+	sub, _ := claims["sub"].(string)
+
+	return jwt.RegisteredClaims{
+		ID: sub,
+	}, nil
 }

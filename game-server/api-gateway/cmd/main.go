@@ -7,12 +7,9 @@ import (
 	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/api-gateway/config"
-	"github.com/darkphotonKN/cosmic-void-server/api-gateway/internal/validation"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
-	"github.com/gin-gonic/gin/binding"
-	"github.com/go-playground/validator/v10"
 	_ "github.com/joho/godotenv/autoload"
 )
 
@@ -62,11 +59,6 @@ func main() {
 
 	// --- router setup ---
 	router := config.SetupRouter(registry, db)
-
-	// -- custom validators --
-	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		validation.RegisterValidators(v)
-	}
 
 	// -- start server --
 	if err := router.Run(fmt.Sprintf(":%s", httpAddr)); err != nil {

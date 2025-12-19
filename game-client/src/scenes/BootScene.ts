@@ -1,5 +1,4 @@
 import { socketManager } from "@/utils/class/SocketManager";
-import { v4 as uuidv4 } from "uuid";
 import Phaser from "phaser";
 
 export class BootScene extends Phaser.Scene {
@@ -12,19 +11,38 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    // const uuid = uuidv4();
-    // TODO: replace login token
-    const uuid = uuidv4();
-    const name = [...Array(Math.floor(Math.random() * 5) + 4)]
-      .map(() => {
-        const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        return chars[Math.floor(Math.random() * chars.length)];
-      })
-      .join("");
-    console.log("uuid: ", uuid);
+    // 直接從 localStorage 讀取 auth 資料
+    let token = "";
+    let name = "Guest";
+
+    try {
+      const authStorage = localStorage.getItem("auth-storage");
+      if (authStorage) {
+        const parsed = JSON.parse(authStorage);
+        token = parsed.state?.accessToken || "";
+        name = parsed.state?.memberInfo?.name || "Guest";
+      }
+    } catch (e) {
+      console.error("Failed to parse auth storage:", e);
+    }
+
+    // 沒有 token 直接跳轉到登入頁面
+    if (!token) {
+      window.location.href = "/login";
+      return;
+    }
+
+    // 設定驗證失敗時跳轉到登入頁面
+    socketManager.setOnAuthError(() => {
+      // 清除 localStorage 中的 auth 資料
+      localStorage.removeItem("auth-storage");
+      window.location.href = "/login";
+    });
+
+    console.log("token: ", token);
     console.log("name: ", name);
     socketManager.connect(
-      `ws://localhost:5555/game/ws?token=${uuid}&name=${name}`,
+      `ws://localhost:5555/game/ws?token=${token}&name=${name}`,
     );
     this.scene.start("PreloadScene");
   }

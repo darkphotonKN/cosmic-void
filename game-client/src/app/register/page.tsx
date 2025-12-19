@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/stores/authStore";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:7001";
 
@@ -22,9 +21,10 @@ const ParticleAnimation = () => {
     />
   );
 };
-export default function LoginPage() {
+
+export default function RegisterPage() {
   const router = useRouter();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -34,43 +34,40 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
 
+    if (!name.trim()) {
+      setError("Please enter your name");
+      return;
+    }
+
     if (!email.trim()) {
       setError("Please enter email");
       return;
     }
 
-    if (!password.trim()) {
-      setError("Please enter password");
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/member/signin`, {
+      const response = await fetch(`${API_BASE_URL}/api/member/signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ name, email, password }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.message || "Login failed");
+        setError(data.message || "Registration failed");
         return;
       }
 
-      // Store auth data in zustand
-      const result = data.result;
-      setAuth({
-        accessToken: result.access_token,
-        refreshToken: result.refresh_token,
-        memberInfo: result.member_info,
-      });
-
-      router.push("/game");
+      router.push("/login");
     } catch (err) {
       setError("Connection error. Please try again.");
     } finally {
@@ -84,23 +81,37 @@ export default function LoginPage() {
       <div className="login-grid-bg" />
 
       {/* 浮動粒子效果 */}
-
       <div className="login-particles">
         {[...Array(20)].map((_, i) => (
           <ParticleAnimation key={i} />
         ))}
       </div>
 
-      {/* 登入框 */}
+      {/* 註冊框 */}
       <div className="login-box">
         {/* 標題 */}
         <div className="login-header">
           <h1 className="login-title">COSMIC VOID</h1>
-          <p className="login-subtitle">Multiplayer Treasure Hunt</p>
+          <p className="login-subtitle">Create Your Account</p>
         </div>
 
         {/* 表單 */}
         <form onSubmit={handleSubmit} className="login-form">
+          <div className="login-input-group">
+            <label htmlFor="name" className="login-label">
+              Name
+            </label>
+            <input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="login-input"
+              placeholder="Enter your name..."
+              autoComplete="name"
+            />
+          </div>
+
           <div className="login-input-group">
             <label htmlFor="email" className="login-label">
               Email
@@ -126,8 +137,8 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="login-input"
-              placeholder="Enter password..."
-              autoComplete="current-password"
+              placeholder="At least 6 characters..."
+              autoComplete="new-password"
             />
           </div>
 
@@ -141,10 +152,10 @@ export default function LoginPage() {
             {isLoading ? (
               <span className="login-loading">
                 <span className="login-spinner" />
-                Connecting...
+                Creating Account...
               </span>
             ) : (
-              "Enter Game"
+              "Register"
             )}
           </button>
         </form>
@@ -152,9 +163,9 @@ export default function LoginPage() {
         {/* 底部連結 */}
         <div className="login-footer">
           <p>
-            Don&apos;t have an account?{" "}
-            <a href="/register" className="login-link">
-              Register
+            Already have an account?{" "}
+            <a href="/login" className="login-link">
+              Login
             </a>
           </p>
         </div>
