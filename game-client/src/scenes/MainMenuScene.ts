@@ -1,8 +1,16 @@
 import { ActionType } from "@/assets/types/client";
-import { socketManager } from "@/utils/class/SocketManager";
+import { socketManager, ConnectionStatus } from "@/utils/class/SocketManager";
 import Phaser from "phaser";
 
 export class MainMenuScene extends Phaser.Scene {
+  private unsubscribeConnectionStatus?: () => void;
+  private buttonBg?: Phaser.GameObjects.Rectangle;
+  private startButtonText?: Phaser.GameObjects.Text;
+  private connectionStatusText?: Phaser.GameObjects.Text;
+  private isConnected: boolean = false;
+  private dotAnimation?: Phaser.Time.TimerEvent;
+  private dotCount: number = 0;
+
   constructor() {
     super({ key: "MainMenuScene" });
   }
@@ -57,41 +65,58 @@ export class MainMenuScene extends Phaser.Scene {
     );
     desc.setOrigin(0.5);
 
-    // Start button
-    const buttonBg = this.add.rectangle(
+    // Start button - 初始為禁用狀態
+    this.buttonBg = this.add.rectangle(
       width / 2,
       height / 2 + 60,
       200,
       50,
-      0x4ecca3,
+      0x666666, // 灰色表示禁用
     );
-    buttonBg.setInteractive({ useHandCursor: true });
 
-    const startButtonText = this.add.text(
+    this.startButtonText = this.add.text(
       width / 2,
       height / 2 + 60,
-      "Start Game",
+      "Connecting...",
       {
         fontSize: "24px",
         color: "#1a1a2e",
         fontStyle: "bold",
       },
     );
-    startButtonText.setOrigin(0.5);
+    this.startButtonText.setOrigin(0.5);
 
-    buttonBg.on("pointerover", () => {
-      buttonBg.setFillStyle(0x3dbb92);
+    // 連線狀態文字
+    this.connectionStatusText = this.add.text(
+      width / 2,
+      height / 2 + 100,
+      "Connecting to server...",
+      {
+        fontSize: "14px",
+        color: "#ffcc00",
+      },
+    );
+    this.connectionStatusText.setOrigin(0.5);
+
+    // 點點動畫
+    this.dotAnimation = this.time.addEvent({
+      delay: 500,
+      callback: () => {
+        if (!this.isConnected && this.connectionStatusText) {
+          this.dotCount = (this.dotCount + 1) % 4;
+          const dots = ".".repeat(this.dotCount);
+          this.connectionStatusText.setText(`Connecting to server${dots}`);
+        }
+      },
+      loop: true,
     });
 
-    buttonBg.on("pointerout", () => {
-      buttonBg.setFillStyle(0x4ecca3);
-    });
-
-    buttonBg.on("pointerdown", () => {
-      // this.scene.start("TreasureHuntScene");
-      socketManager.sendMessage(ActionType.Find_Game, { playerId: "1" });
-      this.queuePopup();
-    });
+    // 監聽連線狀態
+    this.unsubscribeConnectionStatus = socketManager.onConnectionStatusChange(
+      (status: ConnectionStatus) => {
+        this.handleConnectionStatusChange(status);
+      },
+    );
 
     // Controls info
     const controlsText = this.add.text(
@@ -104,6 +129,95 @@ export class MainMenuScene extends Phaser.Scene {
       },
     );
     controlsText.setOrigin(0.5);
+  }
+
+  private handleConnectionStatusChange(status: ConnectionStatus): void {
+    if (!this.buttonBg || !this.startButtonText || !this.connectionStatusText) {
+      return;
+    }
+
+    switch (status) {
+      case "connected":
+        this.isConnected = true;
+        // 停止點點動畫
+        if (this.dotAnimation) {
+          this.dotAnimation.destroy();
+        }
+        // 啟用按鈕
+        this.buttonBg.setFillStyle(0x4ecca3);
+        this.buttonBg.setInteractive({ useHandCursor: true });
+        this.startButtonText.setText("Start Game");
+        this.connectionStatusText.setText("Connected!");
+        this.connectionStatusText.setColor("#4ecca3");
+        // 設置按鈕交互
+        this.setupButtonInteraction();
+        break;
+
+      case "connecting":
+        this.isConnected = false;
+        this.buttonBg.setFillStyle(0x666666);
+        this.buttonBg.disableInteractive();
+        this.startButtonText.setText("Connecting...");
+        this.connectionStatusText.setColor("#ffcc00");
+        break;
+
+      case "error":
+        this.isConnected = false;
+        if (this.dotAnimation) {
+          this.dotAnimation.destroy();
+        }
+        this.buttonBg.setFillStyle(0xff4444);
+        this.buttonBg.disableInteractive();
+        this.startButtonText.setText("Error");
+        this.connectionStatusText.setText("Connection failed. Please refresh.");
+        this.connectionStatusText.setColor("#ff4444");
+        break;
+
+      case "disconnected":
+        this.isConnected = false;
+        if (this.dotAnimation) {
+          this.dotAnimation.destroy();
+        }
+        this.buttonBg.setFillStyle(0x666666);
+        this.buttonBg.disableInteractive();
+        this.startButtonText.setText("Disconnected");
+        this.connectionStatusText.setText("Connection lost. Please refresh.");
+        this.connectionStatusText.setColor("#ffcc00");
+        break;
+    }
+  }
+
+  private setupButtonInteraction(): void {
+    if (!this.buttonBg) return;
+
+    this.buttonBg.on("pointerover", () => {
+      if (this.isConnected) {
+        this.buttonBg?.setFillStyle(0x3dbb92);
+      }
+    });
+
+    this.buttonBg.on("pointerout", () => {
+      if (this.isConnected) {
+        this.buttonBg?.setFillStyle(0x4ecca3);
+      }
+    });
+
+    this.buttonBg.on("pointerdown", () => {
+      if (this.isConnected) {
+        socketManager.sendMessage(ActionType.Find_Game, { playerId: "1" });
+        this.queuePopup();
+      }
+    });
+  }
+
+  shutdown(): void {
+    // 場景銷毀時取消訂閱
+    if (this.unsubscribeConnectionStatus) {
+      this.unsubscribeConnectionStatus();
+    }
+    if (this.dotAnimation) {
+      this.dotAnimation.destroy();
+    }
   }
 
   queuePopup() {

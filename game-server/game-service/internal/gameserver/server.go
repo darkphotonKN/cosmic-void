@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sync"
 
+	grpcauth "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/auth"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/systems"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
@@ -44,9 +45,12 @@ type Server struct {
 
 	// unified message sender
 	sender *types.MessageSender
+
+	// auth client for gRPC calls
+	authClient grpcauth.AuthClient
 }
 
-func NewServer() *Server {
+func NewServer(authClient grpcauth.AuthClient) *Server {
 	upgrader := websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
 			// TODO: Allow all connections by default for simplicity; can add more logic here
@@ -63,6 +67,8 @@ func NewServer() *Server {
 		sessions:     make(map[uuid.UUID]*game.Session, 10),
 		players:      make(map[uuid.UUID]*types.Player, 10),
 		connToPlayer: make(map[*websocket.Conn]*types.Player, 10),
+
+		authClient: authClient,
 	}
 
 	// initialize message sender (inject send function)
@@ -88,10 +94,26 @@ func (s *Server) GetServerChan() chan types.ClientPackage {
 
 /**
 * maps a connected client to its player information
+* 如果同一個 player 有舊的連線，會先清除舊連線的映射和 msgChan
 **/
 func (s *Server) MapConnToPlayer(conn *websocket.Conn, player types.Player) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	// 檢查是否有相同 player ID 的舊連線，如果有則清除
+	for oldConn, existingPlayer := range s.connToPlayer {
+		if existingPlayer.ID == player.ID && oldConn != conn {
+			fmt.Printf("Player %s reconnected, cleaning up old connection\n", player.Username)
+			// 關閉舊的 msgChan
+			if ch, exists := s.msgChan[oldConn]; exists {
+				close(ch)
+				delete(s.msgChan, oldConn)
+			}
+			// 移除舊的 conn -> player 映射
+			delete(s.connToPlayer, oldConn)
+			break
+		}
+	}
 
 	s.connToPlayer[conn] = &player
 }
@@ -149,6 +171,13 @@ func (s *Server) AddPlayerToQueue(player *types.Player) {
 }
 
 /**
+* remove player from queue (delegates to QueueSystem)
+**/
+func (s *Server) RemovePlayerFromQueue(player *types.Player) {
+	s.queueSystem.PlayerRemoveQueue(player)
+}
+
+/**
 * get matched channel for listening to matched players
 **/
 func (s *Server) GetMatchedChan() chan []*types.Player {
@@ -203,4 +232,11 @@ func (s *Server) sendMessageInternal(playerID uuid.UUID, msg types.Message) erro
 	default:
 		return fmt.Errorf("message channel full for player %s", playerID)
 	}
+}
+
+/**
+* returns the auth client for gRPC calls
+**/
+func (s *Server) GetAuthClient() grpcauth.AuthClient {
+	return s.authClient
 }

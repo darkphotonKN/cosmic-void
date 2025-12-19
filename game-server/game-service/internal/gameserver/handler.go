@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	authPb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -16,27 +17,36 @@ import (
 **/
 
 func (s *Server) HandleWebSocketConnection(c *gin.Context) {
-	// get token
-	token := c.Query("token")
-	name := c.Query("name")
-	// if token == "" {
-	// 	c.JSON(http.StatusUnauthorized, gin.H{"error": "missing token"})
-	// }
-	// DOTO: get user from db
-	// 暫時帶入token當user id
-	uuid := uuid.MustParse(token)
-	player := &types.Player{
-		ID:       uuid,
-		Username: name,
-	}
-	// TODO verify JWT，get player
-	// player, err := s.validateJWT(token)
-	// if err != nil {
-	// 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
-	// 		return
-	// }
 
-	// TODO: call game server's channel
+	userIdStr, ok := c.Get("userIdStr")
+	fmt.Printf("User ID: %s\n", userIdStr)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"statusCode": http.StatusUnauthorized, "message": "Unauthorized"})
+		return
+	}
+	// verifay member
+	grpcPayload := &authPb.GetMemberRequest{
+		Id: userIdStr.(string),
+	}
+	// 取得 auth client
+	authClient := s.GetAuthClient()
+
+	// 調用 GetMember
+	data, err := authClient.GetMember(c.Request.Context(), grpcPayload)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user is not exist"})
+	}
+
+	memberId, err := uuid.Parse(data.Id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "memberId is not uuid"})
+	}
+	player := &types.Player{
+		ID:       memberId,
+		Username: data.Name,
+	}
+	fmt.Println("player:", player)
+
 	conn, err := s.upgrader.Upgrade(c.Writer, c.Request, nil)
 
 	if err != nil {
@@ -46,6 +56,9 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 	}
 
 	s.MapConnToPlayer(conn, *player)
+
+	// 立即建立 msgChan，確保重連後能收到 server 訊息
+	s.setupClientWriter(conn)
 
 	// handle each connected client's messages concurrently
 	go s.ServeConnectedPlayer(conn)
@@ -58,9 +71,8 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 func (s *Server) ServeConnectedPlayer(conn *websocket.Conn) {
 	// removes client and closes connection
 	defer func() {
-		fmt.Println("Connection closed due to end of function.")
-		// TODO: clean up player / client
-		// s.cleanUpClient(conn)
+		fmt.Println("Connection closed, cleaning up client...")
+		s.cleanUpClient(conn)
 	}()
 
 	for {
@@ -193,4 +205,33 @@ func (s *Server) getGameMsgChan(conn *websocket.Conn) (chan types.Message, error
 	}
 
 	return channel, nil
+}
+
+/**
+* Cleans up all resources associated with a client connection.
+* Called when connection is closed or errors out.
+**/
+func (s *Server) cleanUpClient(conn *websocket.Conn) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// 獲取玩家資訊
+	player, exists := s.connToPlayer[conn]
+	if exists {
+		fmt.Printf("Cleaning up client: %s\n", player.Username)
+		// 從 queue 中移除玩家
+		s.queueSystem.PlayerRemoveQueue(player)
+	}
+
+	// 關閉並刪除 msgChan
+	if ch, exists := s.msgChan[conn]; exists {
+		close(ch)
+		delete(s.msgChan, conn)
+	}
+
+	// 刪除 conn -> player 映射
+	delete(s.connToPlayer, conn)
+
+	// 關閉 WebSocket 連線
+	conn.Close()
 }

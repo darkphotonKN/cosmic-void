@@ -1,11 +1,13 @@
 package gameserver
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"testing"
 	"time"
 
+	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
@@ -14,6 +16,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// MockAuthClient for testing
+type MockAuthClient struct{}
+
+func (m *MockAuthClient) GetMember(ctx context.Context, req *pb.GetMemberRequest) (*pb.Member, error) {
+	return &pb.Member{
+		Id:    req.Id,
+		Name:  "TestUser",
+		Email: "test@test.com",
+	}, nil
+}
+
+func (m *MockAuthClient) ValidateToken(ctx context.Context, req *pb.ValidateTokenRequest) (*pb.ValidateTokenResponse, error) {
+	return &pb.ValidateTokenResponse{
+		Valid:    true,
+		MemberId: uuid.New().String(),
+	}, nil
+}
+
 /**
 * testing cross module functionality and behaviors.
 **/
@@ -21,7 +41,8 @@ import (
 // TestServerHubSessionIntegration tests the full flow
 // message sent to client sends to Server →  Hub routes →  Session receives
 func TestServerHubSessionIntegration(t *testing.T) {
-	server := NewServer()
+	mockAuthClient := &MockAuthClient{}
+	server := NewServer(mockAuthClient)
 
 	// create test players
 	player1 := &types.Player{
@@ -90,7 +111,8 @@ func registerTestConn(s *Server, conn *websocket.Conn, player *types.Player) cha
 }
 
 func TestQueueFindGameFlow(t *testing.T) {
-	server := NewServer()
+	mockAuthClient := &MockAuthClient{}
+	server := NewServer(mockAuthClient)
 
 	playerCount := 10
 	var wg sync.WaitGroup
@@ -148,7 +170,8 @@ func TestQueueFindGameFlow(t *testing.T) {
 	fmt.Println("總共創建遊戲數量", expectedSessions)
 }
 func TestResponseBuilderIntegration(t *testing.T) {
-	server := NewServer()
+	mockAuthClient := &MockAuthClient{}
+	server := NewServer(mockAuthClient)
 	// create test players
 	player1 := &types.Player{
 		ID:       uuid.New(),

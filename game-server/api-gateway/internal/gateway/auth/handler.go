@@ -20,7 +20,14 @@ func NewHandler(client AuthClient) *Handler {
 	}
 }
 
+type Signup struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 func (h *Handler) CreateMemberHandler(c *gin.Context) {
+
 	var req pb.CreateMemberRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
