@@ -70,7 +70,8 @@ func (q *QueueSystem) matchQueue() {
 	defer ticker.Stop()
 
 	for {
-		fmt.Println("match queue")
+		// fmt.Println("match queue")
+
 		select {
 		// 每秒從chan送一次值
 		case <-ticker.C:

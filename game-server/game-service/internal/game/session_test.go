@@ -1,6 +1,7 @@
 package game
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -125,4 +126,27 @@ func TestAddPlayerSetsInitialPosition(t *testing.T) {
 
 	assert.Equal(t, float64(0), component.X)
 	assert.Equal(t, float64(0), component.Y)
+}
+
+// ----- Testing Session Handles -----
+
+func TestHandleInteract(t *testing.T) {
+	sender := createMockSender()
+	session := NewSession(sender)
+
+	player1ID := uuid.New()
+	username := "Player1"
+
+	// default location 0, 0
+	playerEntityID := session.AddPlayer(player1ID, username)
+
+	// door one, door thats out of range
+	doorOneEntityID := session.AddDoor(1.1, 1.1)
+
+	err := session.handleInteract(playerEntityID, doorOneEntityID)
+	isOutOfRange := errors.Is(err, ErrOutOfRange)
+	assert.Equal(t, true, isOutOfRange)
+
+	// door two, door thats within range
+	// doorTwoEntityID := session.AddDoor(0.1, 0.1)
 }
