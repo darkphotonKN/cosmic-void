@@ -217,7 +217,11 @@ func (s *Session) AddPlayer(userID uuid.UUID, username string) uuid.UUID {
 	}
 
 	entity := CreatePlayerEntity(s.EntityManager, PlayerConfig)
+
+	fmt.Printf("\nupdating playerEntities map at KEY playerID:\n%s\n\n", userID)
+	fmt.Printf("\nupdating playerEntities map with player entity id VALUE \n\n", entity.ID)
 	s.playerEntities[userID] = entity.ID
+
 	return entity.ID
 }
 
@@ -349,6 +353,9 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 
 	// establish player's position
 	s.mu.RLock()
+	// TEST: pulling out all entities for debugging
+	fmt.Printf("\nALL player entities stored in game session: %+v\n\n", s.playerEntities)
+	fmt.Printf("\nattempting to key in playerEntities map with playerID: %s\n\n", playerID)
 	playerEntityID := s.playerEntities[playerID]
 	s.mu.RUnlock()
 

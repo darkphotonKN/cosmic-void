@@ -31,10 +31,10 @@ clean:
 
 # Database migrations
 migrate-up:
-	migrate -path migrations -database "postgres://user:password@localhost:5003/cosmic_void_auth_service_db?sslmode=disable" up
+	migrate -path migrations -database "postgres://user:password@localhost:5103/cosmic_void_auth_service_db?sslmode=disable" up
 
 migrate-down:
-	migrate -path migrations -database "postgres://user:password@localhost:5003/cosmic_void_auth_service_db?sslmode=disable" down
+	migrate -path migrations -database "postgres://user:password@localhost:5103/cosmic_void_auth_service_db?sslmode=disable" down
 
 # Docker commands
 docker-up:

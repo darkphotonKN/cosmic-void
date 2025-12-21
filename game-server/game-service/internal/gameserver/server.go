@@ -94,7 +94,6 @@ func (s *Server) GetServerChan() chan types.ClientPackage {
 
 /**
 * maps a connected client to its player information
-* 如果同一個 player 有舊的連線，會先清除舊連線的映射和 msgChan
 **/
 func (s *Server) MapConnToPlayer(conn *websocket.Conn, player types.Player) {
 	s.mu.Lock()

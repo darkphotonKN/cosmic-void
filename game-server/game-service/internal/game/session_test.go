@@ -148,5 +148,7 @@ func TestHandleInteract(t *testing.T) {
 	assert.Equal(t, true, isOutOfRange)
 
 	// door two, door thats within range
-	// doorTwoEntityID := session.AddDoor(0.1, 0.1)
+	doorTwoEntityID := session.AddDoor(0.1, 0.1)
+	err = session.handleInteract(playerEntityID, doorTwoEntityID)
+	assert.Nil(t, err)
 }

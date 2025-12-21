@@ -9,9 +9,9 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: cosmic_void_auth_service_db
     ports:
-      - '5003:5432'
+      - '5103:5432'
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - cosmic_void_auth_service_pgdata:/var/lib/postgresql/data
 
   test-db:
     image: postgres:latest
@@ -21,9 +21,9 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: cosmic_void_auth_service_test_db
     ports:
-      - '6003:5432'
+      - '6103:5432'
     volumes:
-      - test_pgdata:/var/lib/postgresql/data
+      - cosmic_void_auth_service_test_pgdata:/var/lib/postgresql/data
     restart: 'no'
   
   redis:
@@ -35,6 +35,6 @@ services:
     command: redis-server --appendonly yes
 
 volumes:
-  pgdata:
-  test_pgdata:
+  cosmic_void_auth_service_pgdata:
+  cosmic_void_auth_service_test_pgdata:
   redis_data:

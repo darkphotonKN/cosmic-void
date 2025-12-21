@@ -9,9 +9,9 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: cosmic_void_api_gateway_db
     ports:
-      - "5001:5432"
+      - "5101:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - cosmic_void_api_gateway_pgdata:/var/lib/postgresql/data
 
   test-db:
     image: postgres:latest
@@ -21,12 +21,12 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: cosmic_void_api_gateway_test_db
     ports:
-      - "6001:5432"
+      - "6101:5432"
     volumes:
-      - test_pgdata:/var/lib/postgresql/data
+      - cosmic_void_api_gateway_test_pgdata:/var/lib/postgresql/data
     # set the restart policy to "no" to prevent automatic restart outside test sessions
     restart: "no"
 
 volumes:
-  pgdata:
-  test_pgdata:
+  cosmic_void_api_gateway_pgdata:
+  cosmic_void_api_gateway_test_pgdata:

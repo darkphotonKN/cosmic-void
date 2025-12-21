@@ -9,10 +9,10 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: cosmic_void_example_service_db
     ports:
-      - "5010:5432"
+      - "5110:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - cosmic_void_example_service_pgdata:/var/lib/postgresql/data
 
 volumes:
-  pgdata:
-  test_pgdata:
+  cosmic_void_example_service_pgdata:
+  cosmic_void_example_service_test_pgdata:
