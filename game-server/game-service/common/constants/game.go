@@ -33,3 +33,4 @@ const (
 
 const DefaultSpeed float64 = 1
 const DefaultInteractableRange float64 = 1
+const DefautMaxSessionPlayers = 2

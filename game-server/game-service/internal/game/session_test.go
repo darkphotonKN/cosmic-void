@@ -138,17 +138,17 @@ func TestHandleInteract(t *testing.T) {
 	username := "Player1"
 
 	// default location 0, 0
-	playerEntityID := session.AddPlayer(player1ID, username)
+	session.AddPlayer(player1ID, username)
 
 	// door one, door thats out of range
 	doorOneEntityID := session.AddDoor(1.1, 1.1)
 
-	err := session.handleInteract(playerEntityID, doorOneEntityID)
+	err := session.handleInteract(player1ID, doorOneEntityID)
 	isOutOfRange := errors.Is(err, ErrOutOfRange)
 	assert.Equal(t, true, isOutOfRange)
 
 	// door two, door thats within range
 	doorTwoEntityID := session.AddDoor(0.1, 0.1)
-	err = session.handleInteract(playerEntityID, doorTwoEntityID)
+	err = session.handleInteract(player1ID, doorTwoEntityID)
 	assert.Nil(t, err)
 }
