@@ -435,7 +435,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 
 		// remove them from cache after a short while
 		go func() {
-			time.Sleep(time.Second * 1)
+			time.Sleep(time.Millisecond * 100)
 			s.mu.Lock()
 			delete(s.playerInteractedCache, playerEntityID)
 			s.mu.Unlock()

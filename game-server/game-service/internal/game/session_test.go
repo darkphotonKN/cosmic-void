@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
@@ -130,7 +131,27 @@ func TestAddPlayerSetsInitialPosition(t *testing.T) {
 
 // ----- Testing Session Handles -----
 
+type handleInteractTable []struct {
+	doorX              float64
+	doorY              float64
+	expectedOutOfRange bool
+}
+
 func TestHandleInteract(t *testing.T) {
+
+	tableTests := handleInteractTable{
+		{
+			doorX:              0.1,
+			doorY:              0.1,
+			expectedOutOfRange: false,
+		},
+		{
+			doorX:              1.5,
+			doorY:              1.5,
+			expectedOutOfRange: true,
+		},
+	}
+
 	sender := createMockSender()
 	session := NewSession(sender)
 
@@ -140,15 +161,20 @@ func TestHandleInteract(t *testing.T) {
 	// default location 0, 0
 	session.AddPlayer(player1ID, username)
 
-	// door one, door thats out of range
-	doorOneEntityID := session.AddDoor(1.1, 1.1)
+	for _, tableTest := range tableTests {
+		// door one, door thats out of range
+		doorOneEntityID := session.AddDoor(tableTest.doorX, tableTest.doorY)
 
-	err := session.handleInteract(player1ID, doorOneEntityID)
-	isOutOfRange := errors.Is(err, ErrOutOfRange)
-	assert.Equal(t, true, isOutOfRange)
+		time.Sleep(time.Millisecond * 150) // delay to account for rate limiting
+		err := session.handleInteract(player1ID, doorOneEntityID)
 
-	// door two, door thats within range
-	doorTwoEntityID := session.AddDoor(0.1, 0.1)
-	err = session.handleInteract(player1ID, doorTwoEntityID)
-	assert.Nil(t, err)
+		// expect out of range
+		if tableTest.expectedOutOfRange {
+			isOutOfRange := errors.Is(err, ErrOutOfRange)
+			assert.Equal(t, true, isOutOfRange)
+			continue
+		}
+
+		assert.Nil(t, err)
+	}
 }
