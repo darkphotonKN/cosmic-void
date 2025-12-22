@@ -22,7 +22,7 @@ type ClientGameState struct {
 	Doors     []*types.DoorState
 }
 
-func (s *StateSerializer) Serialize(sessionID uuid.UUID, entities map[uuid.UUID]ecs.Entity) (*ClientGameState, error) {
+func (s *StateSerializer) Serialize(sessionID uuid.UUID, entities map[uuid.UUID]*ecs.Entity) (*ClientGameState, error) {
 	state := &ClientGameState{
 		SessionID: sessionID,
 		Players:   make([]*types.PlayerState, 0),

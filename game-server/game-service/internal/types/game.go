@@ -8,11 +8,11 @@ type Player struct {
 }
 
 type PlayerState struct {
-	ID        uuid.UUID `json:"id"`
-	EntityID  uuid.UUID `json:"entity_id"`
-	Username  string    `json:"username"`
-	Position  *Position
-	Direction *PlayerDirection
+	ID        uuid.UUID        `json:"id"`
+	EntityID  uuid.UUID        `json:"entity_id"`
+	Username  string           `json:"username"`
+	Position  *Position        `json:"position"`
+	Direction *PlayerDirection `json:"direction"`
 }
 
 type Position struct {
