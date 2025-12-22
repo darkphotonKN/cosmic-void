@@ -90,3 +90,16 @@ func (e *Entity) GetComponent(componentType ComponentType) (Component, bool) {
 
 	return component, exists
 }
+
+func (e *Entity) GetComponents() []*Component {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	components := make([]*Component, 0)
+
+	for _, component := range e.components {
+		components = append(components, &component)
+	}
+
+	return components
+}
