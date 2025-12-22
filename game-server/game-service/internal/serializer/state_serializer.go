@@ -63,4 +63,6 @@ func (s *StateSerializer) Serialize(sessionID uuid.UUID, entities map[uuid.UUID]
 		// --- Items ---
 		// TODO: add this
 	}
+
+	return state, nil
 }
