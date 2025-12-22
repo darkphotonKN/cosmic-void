@@ -16,9 +16,10 @@ import (
 
 // the session represents one game room with its own ECS world
 type Session struct {
-	ID             uuid.UUID
-	EntityManager  *ecs.EntityManager
-	MessageCh      chan types.ClientPackage
+	ID            uuid.UUID
+	EntityManager *ecs.EntityManager
+	MessageCh     chan types.ClientPackage
+	// [playerID] playerEntityID
 	playerEntities map[uuid.UUID]uuid.UUID
 	mu             sync.RWMutex
 

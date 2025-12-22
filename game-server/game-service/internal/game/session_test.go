@@ -150,6 +150,16 @@ func TestHandleInteract(t *testing.T) {
 			doorY:              1.5,
 			expectedOutOfRange: true,
 		},
+		{
+			doorX:              100.0,
+			doorY:              100.0,
+			expectedOutOfRange: true,
+		},
+		{
+			doorX:              0.2,
+			doorY:              0.1,
+			expectedOutOfRange: false,
+		},
 	}
 
 	sender := createMockSender()
@@ -164,8 +174,11 @@ func TestHandleInteract(t *testing.T) {
 	for _, tableTest := range tableTests {
 		// door one, door thats out of range
 		doorOneEntityID := session.AddDoor(tableTest.doorX, tableTest.doorY)
+		doorEntity, _ := session.EntityManager.GetEntity(doorOneEntityID)
+		doorEntity.GetComponent(ecs.ComponentTypeOpenable)
 
 		time.Sleep(time.Millisecond * 150) // delay to account for rate limiting
+
 		err := session.handleInteract(player1ID, doorOneEntityID)
 
 		// expect out of range
@@ -176,5 +189,7 @@ func TestHandleInteract(t *testing.T) {
 		}
 
 		assert.Nil(t, err)
+
+		// check its opposite
 	}
 }
