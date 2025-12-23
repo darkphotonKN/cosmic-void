@@ -13,10 +13,17 @@ import (
 )
 
 // test velocity updates transform of player entity after handle move and system update cycle
+type MessageSender struct{}
+
+func (m MessageSender) SendMessageInternal(
+	playerID uuid.UUID,
+	msg types.Message,
+) error {
+	return nil
+}
 func TestHandleMoveUpdatesPositionIntegration(t *testing.T) {
-	sender := types.NewMessageSender(func(playerID uuid.UUID, msg types.Message) error {
-		return nil
-	})
+	mockMessageSender := MessageSender{}
+	sender := types.NewMessageSender(mockMessageSender)
 	session := NewSession(sender)
 
 	player1ID := uuid.New()

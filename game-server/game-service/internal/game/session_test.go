@@ -8,6 +8,8 @@ import (
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
+
+	// "github.com/darkphotonKN/cosmic-void-server/game-service/internal/gameserver"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -19,12 +21,19 @@ import (
 * session manipulation.
 **/
 
+type mockMessageSender struct{}
+
+func (m *mockMessageSender) SendMessageInternal(
+	playerID uuid.UUID,
+	msg types.Message,
+) error {
+	return nil
+}
+
 // mock sender for testing
 func createMockSender() *types.MessageSender {
-	return types.NewMessageSender(func(playerID uuid.UUID, msg types.Message) error {
-		// mock: do nothing
-		return nil
-	})
+	mockMessageSender := &mockMessageSender{}
+	return types.NewMessageSender(mockMessageSender)
 }
 
 // TestSessionCreation tests that a session initializes correctly with players
