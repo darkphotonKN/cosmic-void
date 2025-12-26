@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   db:
-    image: postgres:latest
+    image: postgres:17
     container_name: cosmic_void_example_service_db
     environment:
       POSTGRES_USER: user

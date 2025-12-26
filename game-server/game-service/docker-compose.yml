@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   db:
-    image: postgres:latest
+    image: postgres:17
     container_name: cosmic_void_game_service_db
     environment:
       POSTGRES_USER: user
@@ -14,7 +14,7 @@ services:
       - pgdata:/var/lib/postgresql/data
 
   test-db:
-    image: postgres:latest
+    image: postgres:17
     container_name: cosmic_void_game_service_test_db
     environment:
       POSTGRES_USER: user

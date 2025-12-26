@@ -17,7 +17,6 @@ import (
 **/
 
 func (s *Server) HandleWebSocketConnection(c *gin.Context) {
-
 	userIdStr, ok := c.Get("userIdStr")
 	fmt.Printf("User ID: %s\n", userIdStr)
 	if !ok {
@@ -62,7 +61,6 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 
 	// handle each connected client's messages concurrently
 	go s.ServeConnectedPlayer(conn)
-
 }
 
 /**
