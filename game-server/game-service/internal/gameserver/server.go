@@ -41,11 +41,7 @@ type Server struct {
 
 	mu sync.RWMutex
 
-	// queue system
 	queueSystem *systems.QueueSystem
-
-	// unified message sender
-	sender *types.MessageSender
 
 	// auth client for gRPC calls
 	authClient grpcauth.AuthClient
@@ -73,14 +69,14 @@ func NewServer(authClient grpcauth.AuthClient) *Server {
 	}
 
 	// initialize message sender (inject send function)
-	server.sender = types.NewMessageSender(server.sendMessageInternal)
+	newSender := types.NewMessageSender(server)
 
 	// initialize queue system
 	server.queueSystem = systems.NewQueueSystem(2)
 	server.queueSystem.Start()
 
 	// initialize message hub
-	messageHub := NewMessageHub(server, server.sender)
+	messageHub := NewMessageHub(server, newSender)
 	go messageHub.Run()
 
 	return server
@@ -139,7 +135,7 @@ func (s *Server) GetPlayerFromConn(conn *websocket.Conn) (*types.Player, bool) {
 func (s *Server) CreateGameSession(players []*types.Player) *game.Session {
 	stateSerializer := serializer.NewStateSerializer()
 	// create session with message sender
-	newGameSession := game.NewSession(s.sender, stateSerializer)
+	newGameSession := game.NewSession(types.NewMessageSender(s), stateSerializer)
 
 	for _, player := range players {
 		newGameSession.AddPlayer(player.ID, player.Username)
@@ -212,7 +208,7 @@ func (s *Server) GetConnFromPlayer(playerID uuid.UUID) (*websocket.Conn, bool) {
 **/
 
 // sendMessageInternal is the core function injected into MessageSender
-func (s *Server) sendMessageInternal(playerID uuid.UUID, msg types.Message) error {
+func (s *Server) SendMessageInternal(playerID uuid.UUID, msg types.Message) error {
 	conn, exists := s.GetConnFromPlayer(playerID)
 	if !exists {
 		return fmt.Errorf("player %s not found", playerID)

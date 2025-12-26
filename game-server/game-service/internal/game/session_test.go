@@ -20,12 +20,19 @@ import (
 * session manipulation.
 **/
 
+type mockMessageSender struct{}
+
+func (m *mockMessageSender) SendMessageInternal(
+	playerID uuid.UUID,
+	msg types.Message,
+) error {
+	return nil
+}
+
 // mock sender for testing
 func createMockSender() *types.MessageSender {
-	return types.NewMessageSender(func(playerID uuid.UUID, msg types.Message) error {
-		// mock: do nothing
-		return nil
-	})
+	mockMessageSender := &mockMessageSender{}
+	return types.NewMessageSender(mockMessageSender)
 }
 
 // TestSessionCreation tests that a session initializes correctly with players

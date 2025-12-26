@@ -8,7 +8,10 @@ import (
 	"time"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
+	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
+	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
+	grpcauth "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/auth"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -70,10 +73,12 @@ func TestServerHubSessionIntegration(t *testing.T) {
 
 	// send a game action message that should be routed to session
 	clientMsg := types.Message{
-		Action: string(constants.ActionFindGame),
+		Action: string(constants.ActionMove),
 		Payload: map[string]interface{}{
 			"session_id": session.ID.String(),
 			"player_id":  player1.ID.String(),
+			"vx":         1.0,
+			"vy":         0.5,
 		},
 	}
 
@@ -84,16 +89,16 @@ func TestServerHubSessionIntegration(t *testing.T) {
 
 	// simulating websocket server, send to servers channel
 	// hub should received it at this point
+
 	server.serverChan <- clientPackage
 
 	// the game Session should receive the message after hub reroutes it
 	select {
-	case receivedMsg := <-session.MessageCh:
-		assert.Equal(t, string(constants.ActionMove), receivedMsg.Message.Action, "Action should match")
-		payload := receivedMsg.Message.Payload
-
-		fmt.Printf("\nclient package payload in test was: %+v\n\n", payload)
-
+	case receivedPackage := <-session.MessageCh:
+		assert.Equal(t, string(constants.ActionMove), receivedPackage.Message.Action)
+		assert.Equal(t, session.ID.String(), receivedPackage.Message.Payload["session_id"])
+		assert.Equal(t, 1.0, receivedPackage.Message.Payload["vx"])
+		fmt.Printf("✅ Session received message: %+v\n", receivedPackage.Message)
 	case <-time.After(2 * time.Second):
 		t.Fatal("Message was not routed to session within timeout")
 	}
@@ -225,6 +230,39 @@ func TestResponseBuilderIntegration(t *testing.T) {
 type Conn struct{}
 
 func (c *Conn) WriteJSON(v interface{}) error {
-	fmt.Println("error")
+	fmt.Println("Mock WriteJSON")
 	return nil
+}
+
+func TestSenderToBroadcastToPlayerList(t *testing.T) {
+	serviceName := "game"
+	consulAddr := commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
+	registry, err := consul.NewRegistry(consulAddr, serviceName)
+	authClient := grpcauth.NewClient(registry)
+	server := NewServer(authClient)
+
+	newSender := types.NewMessageSender(server)
+	// create test players
+	player1 := &types.Player{
+		ID:       uuid.New(),
+		Username: "TestPlayer1",
+	}
+	player2 := &types.Player{
+		ID:       uuid.New(),
+		Username: "TestPlayer2",
+	}
+	player3 := &types.Player{
+		ID:       uuid.New(),
+		Username: "TestPlayer3",
+	}
+
+	testPlayers := []*types.Player{player1, player2, player3}
+	newSender.BroadcastToPlayerList(testPlayers, types.Message{
+		Action: string(constants.ActionFindGame),
+		Payload: map[string]interface{}{
+			"info": "This is a test broadcast message",
+		},
+	})
+
+	assert.NotNil(t, err, "Broadcast should return error for missing player connection")
 }

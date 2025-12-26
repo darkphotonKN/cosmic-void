@@ -10,33 +10,41 @@ import (
 * MessageSender 提供統一的消息發送接口
 * 所有組件（Hub, Session）都通過它發送消息
 **/
-type MessageSender struct {
-	sendFunc func(playerID uuid.UUID, msg Message) error
+
+type SenderInterface interface {
+	SendMessageInternal(playerID uuid.UUID, msg Message) error
 }
 
-func NewMessageSender(sendFunc func(uuid.UUID, Message) error) *MessageSender {
-	return &MessageSender{sendFunc: sendFunc}
+type MessageSender struct {
+	sender SenderInterface
+}
+
+func NewMessageSender(server SenderInterface) *MessageSender {
+	return &MessageSender{
+		sender: server,
+	}
 }
 
 // SendToPlayer 發送給單一玩家
-func (s *MessageSender) SendToPlayer(playerID uuid.UUID, action string, payload map[string]any) error {
+func (s *MessageSender) SendToPlayer(playerID uuid.UUID, message Message) error {
+	fmt.Println("Sending message to player:", playerID)
 	msg := Message{
-		Action:  action,
-		Payload: payload,
+		Action:  message.Action,
+		Payload: message.Payload,
 	}
-	return s.sendFunc(playerID, msg)
+	return s.sender.SendMessageInternal(playerID, msg)
 }
 
 // SendMessage 直接發送 Message（給 Hub 使用）
 func (s *MessageSender) SendMessage(playerID uuid.UUID, msg Message) error {
-	return s.sendFunc(playerID, msg)
+	return s.sender.SendMessageInternal(playerID, msg)
 }
 
-// BroadcastToPlayers 廣播給多個玩家
-func (s *MessageSender) BroadcastToPlayers(playerIDs []uuid.UUID, action string, payload map[string]any) error {
+// BroadcastToPlayerList 廣播給多個玩家（直接使用 Player list）
+func (s *MessageSender) BroadcastToPlayerList(players []*Player, msg Message) error {
 	var errs []error
-	for _, pid := range playerIDs {
-		if err := s.SendToPlayer(pid, action, payload); err != nil {
+	for _, player := range players {
+		if err := s.SendToPlayer(player.ID, msg); err != nil {
 			errs = append(errs, err)
 		}
 	}

@@ -112,12 +112,14 @@ func (h *messageHub) Run() {
 
 				if !exists {
 					// 傳入 conn 作為參數
-					response.Error(
-						clientPackage.Conn,
-						clientPackage.Message.Action,
-						constants.ErrorPlayerNotFound,
-						"Player not found for connection",
-					)
+					h.sender.SendToPlayer(player.ID, types.Message{
+						Action: string(constants.ActionFindGame),
+						Payload: map[string]interface{}{
+							"message":   "Successfully joined matchmaking queue",
+							"player_id": player.ID.String(),
+							"username":  player.Username,
+						},
+					})
 					fmt.Println("Player not found for connection")
 					continue
 				}
@@ -172,22 +174,25 @@ func (h *messageHub) Run() {
 			fmt.Printf("Received matched players, creating game session...\n")
 			fmt.Println(matchedPlayers)
 			session := h.sessionManager.CreateGameSession(matchedPlayers)
-			for _, player := range matchedPlayers {
-				h.sender.SendToPlayer(player.ID, "game_found", map[string]any{
-					"session_id": session.ID.String(),
+			h.sender.BroadcastToPlayerList(matchedPlayers,
+				types.Message{
+					Action: "game_found",
+					Payload: map[string]any{
+						"session_id": session.ID.String(),
+					},
 				})
-			}
 
 		// 監聽排隊狀態更新
 		case status := <-h.sessionManager.GetQueueStatusChan():
 			fmt.Printf("Queue status update: %d/%d\n", status.Current, status.Total)
-			for _, player := range status.Players {
-				h.sender.SendToPlayer(player.ID, "queue_status", map[string]any{
-					"current": status.Current,
-					"total":   status.Total,
+			h.sender.BroadcastToPlayerList(status.Players,
+				types.Message{
+					Action: "queue_status",
+					Payload: map[string]any{
+						"current": status.Current,
+						"total":   status.Total,
+					},
 				})
-			}
 		}
-
 	}
 }
