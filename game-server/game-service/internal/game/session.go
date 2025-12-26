@@ -92,7 +92,6 @@ func (s *Session) Start() {
 
 	// start update game loop
 	go s.manageGameLoop()
-
 }
 
 /**
