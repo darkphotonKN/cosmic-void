@@ -7,6 +7,7 @@ import (
 
 	grpcauth "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/auth"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/serializer"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/systems"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
@@ -136,8 +137,9 @@ func (s *Server) GetPlayerFromConn(conn *websocket.Conn) (*types.Player, bool) {
 * allows the creation of a new game session.
 **/
 func (s *Server) CreateGameSession(players []*types.Player) *game.Session {
+	stateSerializer := serializer.NewStateSerializer()
 	// create session with message sender
-	newGameSession := game.NewSession(s.sender)
+	newGameSession := game.NewSession(s.sender, stateSerializer)
 
 	for _, player := range players {
 		newGameSession.AddPlayer(player.ID, player.Username)

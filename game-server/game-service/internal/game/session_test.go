@@ -8,6 +8,7 @@ import (
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/serializer"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -31,7 +32,8 @@ func createMockSender() *types.MessageSender {
 // white box test, we need to verify internal state like playerEntities
 func TestSessionCreation(t *testing.T) {
 	sender := createMockSender()
-	session := NewSession(sender)
+	stateSerializer := serializer.NewStateSerializer()
+	session := NewSession(sender, stateSerializer)
 
 	// verify session initialized
 	require.NotNil(t, session, "Session should not be nil")
@@ -50,7 +52,8 @@ func TestSessionCreation(t *testing.T) {
 // test adding a single player to an existing session
 func TestSessionAddPlayer(t *testing.T) {
 	sender := createMockSender()
-	session := NewSession(sender)
+	stateSerializer := serializer.NewStateSerializer()
+	session := NewSession(sender, stateSerializer)
 	defer session.Shutdown()
 
 	playerID := uuid.New()
@@ -81,7 +84,8 @@ func TestSessionAddPlayer(t *testing.T) {
 // existing session
 func TestSessionAddMultiplePlayers(t *testing.T) {
 	sender := createMockSender()
-	session := NewSession(sender)
+	stateSerializer := serializer.NewStateSerializer()
+	session := NewSession(sender, stateSerializer)
 	defer session.Shutdown()
 
 	player1ID := uuid.New()
@@ -103,7 +107,8 @@ func TestSessionAddMultiplePlayers(t *testing.T) {
 // test initial coordinates are correctly set by addPlayer
 func TestAddPlayerSetsInitialPosition(t *testing.T) {
 	sender := createMockSender()
-	session := NewSession(sender)
+	stateSerializer := serializer.NewStateSerializer()
+	session := NewSession(sender, stateSerializer)
 
 	player1ID := uuid.New()
 	username := "Player1"
@@ -163,7 +168,8 @@ func TestHandleInteract(t *testing.T) {
 	}
 
 	sender := createMockSender()
-	session := NewSession(sender)
+	stateSerializer := serializer.NewStateSerializer()
+	session := NewSession(sender, stateSerializer)
 
 	player1ID := uuid.New()
 	username := "Player1"

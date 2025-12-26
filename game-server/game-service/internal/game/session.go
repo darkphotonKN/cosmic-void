@@ -1,7 +1,6 @@
 package game
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"sync"
@@ -10,6 +9,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/serializer"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/systems"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
@@ -41,10 +41,12 @@ type Session struct {
 	// TEST: testing only
 	TestMessageSpy chan types.Message
 
-	sender *types.MessageSender
+	// dependency injections
+	sender          *types.MessageSender
+	stateSerializer *serializer.StateSerializer
 }
 
-func NewSession(sender *types.MessageSender) *Session {
+func NewSession(sender *types.MessageSender, serializer *serializer.StateSerializer) *Session {
 	sessionId := uuid.New()
 
 	s := &Session{
@@ -63,6 +65,7 @@ func NewSession(sender *types.MessageSender) *Session {
 		playerInteractedCache:    make(map[uuid.UUID]bool, constants.DefautMaxSessionPlayers),
 		containerInteractedCache: make(map[uuid.UUID]bool),
 		sender:                   sender,
+		stateSerializer:          serializer,
 	}
 
 	go s.Start()

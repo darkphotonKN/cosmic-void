@@ -14,6 +14,10 @@ import (
 type StateSerializer struct {
 }
 
+func NewStateSerializer() *StateSerializer {
+	return &StateSerializer{}
+}
+
 func (s *StateSerializer) Serialize(sessionID uuid.UUID, entities map[uuid.UUID]*ecs.Entity) (*types.ClientGameState, error) {
 	state := &types.ClientGameState{
 		SessionID: sessionID,
@@ -50,10 +54,14 @@ func (s *StateSerializer) Serialize(sessionID uuid.UUID, entities map[uuid.UUID]
 			})
 		}
 
-		// --- Doors ---
+		// --- Interactables ---
+
+		// -- Doors --
+
+		// -- Containers --
 
 		// --- Items ---
-		// TODO: add this
+		// TODO: add this after item entity is added
 	}
 
 	return state, nil

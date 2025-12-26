@@ -7,6 +7,7 @@ import (
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/serializer"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -17,7 +18,8 @@ func TestHandleMoveUpdatesPositionIntegration(t *testing.T) {
 	sender := types.NewMessageSender(func(playerID uuid.UUID, msg types.Message) error {
 		return nil
 	})
-	session := NewSession(sender)
+	stateSerializer := serializer.NewStateSerializer()
+	session := NewSession(sender, stateSerializer)
 
 	player1ID := uuid.New()
 	username := "Player1"
