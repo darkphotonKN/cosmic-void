@@ -98,6 +98,7 @@ func (s *Server) ServeConnectedPlayer(conn *websocket.Conn) {
 
 			// General Error
 			fmt.Printf("General error occured during connection: %s\n", err)
+
 			break
 		}
 

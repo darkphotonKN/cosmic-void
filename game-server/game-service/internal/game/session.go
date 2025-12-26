@@ -1,6 +1,7 @@
 package game
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"sync"
@@ -118,6 +119,7 @@ func (s *Session) manageClientMessages() {
 
 			switch constants.Action(msg.Message.Action) {
 			case constants.ActionMove:
+
 				fmt.Printf("Action from client was move\n")
 				// parse payload based on message action
 				parsedPayload, err := msg.Message.ParsePayload()
@@ -365,6 +367,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		fmt.Printf("player interacted too soon with with playerEntityID %s\n", playerEntityID)
 		return fmt.Errorf("player interacted too soon with with playerEntityID %s\n", playerEntityID)
 	}
+
 	playerEntity, hasPlayerEntity := s.EntityManager.GetEntity(playerEntityID)
 
 	if !hasPlayerEntity {

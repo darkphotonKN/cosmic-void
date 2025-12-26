@@ -14,16 +14,8 @@ import (
 type StateSerializer struct {
 }
 
-// represents the state that client receives
-type ClientGameState struct {
-	SessionID uuid.UUID `json:"session_id"`
-	Players   []*types.PlayerState
-	Items     []string // TODO: update with item entity converted into struct format
-	Doors     []*types.DoorState
-}
-
-func (s *StateSerializer) Serialize(sessionID uuid.UUID, entities map[uuid.UUID]*ecs.Entity) (*ClientGameState, error) {
-	state := &ClientGameState{
+func (s *StateSerializer) Serialize(sessionID uuid.UUID, entities map[uuid.UUID]*ecs.Entity) (*types.ClientGameState, error) {
+	state := &types.ClientGameState{
 		SessionID: sessionID,
 		Players:   make([]*types.PlayerState, 0),
 		Items:     make([]string, 0),
@@ -31,31 +23,31 @@ func (s *StateSerializer) Serialize(sessionID uuid.UUID, entities map[uuid.UUID]
 	}
 
 	for entityID, entity := range entities {
+
 		// --- Player ---
 		pc, isPlayer := entity.GetComponent(ecs.ComponentTypePlayer)
 		if isPlayer {
 			// -- get all player components --
-			playerComponent := pc.(*components.PlayerComponent)
+			player := pc.(*components.PlayerComponent)
 			tc, _ := entity.GetComponent(ecs.ComponentTypeTransform)
-			transformComponent := tc.(*components.TransformComponent)
+			transform := tc.(*components.TransformComponent)
 			vc, _ := entity.GetComponent(ecs.ComponentTypeVelocity)
-			velocityComponent := vc.(*components.VelocityComponent)
+			velocity := vc.(*components.VelocityComponent)
 
 			state.Players = append(state.Players, &types.PlayerState{
-				ID:       playerComponent.UserID,
+				ID:       player.UserID,
 				EntityID: entityID,
-				Username: playerComponent.Username,
+				Username: player.Username,
 				Position: &types.Position{
-					X: transformComponent.X,
-					Y: transformComponent.Y,
+					X: transform.X,
+					Y: transform.Y,
 				},
 				Direction: &types.PlayerDirection{
-					VX:    velocityComponent.VX,
-					VY:    velocityComponent.VY,
-					Speed: velocityComponent.Speed,
+					VX:    velocity.VX,
+					VY:    velocity.VY,
+					Speed: velocity.Speed,
 				},
 			})
-
 		}
 
 		// --- Doors ---
