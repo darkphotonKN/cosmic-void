@@ -9,6 +9,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/serializer"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/systems"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
@@ -42,11 +43,11 @@ type Session struct {
 	TestMessageSpy chan types.Message
 
 	// dependency injections
-	sender          *types.MessageSender
+	sender          *messaging.MessageSender
 	stateSerializer *serializer.StateSerializer
 }
 
-func NewSession(sender *types.MessageSender, serializer *serializer.StateSerializer) *Session {
+func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSerializer) *Session {
 	sessionId := uuid.New()
 
 	s := &Session{
@@ -169,7 +170,11 @@ func (s *Session) manageClientMessages() {
 					// TODO: respond to client error
 				}
 
-				s.handleInteract(playerID, entityIDUUID)
+				err = s.handleInteract(playerID, entityIDUUID)
+
+				if err != nil {
+					s.sender.SendToPlayer(playerID, types.Message{})
+				}
 			}
 		}
 	}

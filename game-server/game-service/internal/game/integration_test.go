@@ -7,6 +7,7 @@ import (
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/serializer"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
@@ -16,7 +17,7 @@ import (
 // test velocity updates transform of player entity after handle move and system update cycle
 type MessageSender struct{}
 
-func (m MessageSender) SendMessageInternal(
+func (m MessageSender) PushMessageToChannelQueue(
 	playerID uuid.UUID,
 	msg types.Message,
 ) error {
@@ -24,7 +25,7 @@ func (m MessageSender) SendMessageInternal(
 }
 func TestHandleMoveUpdatesPositionIntegration(t *testing.T) {
 	mockMessageSender := MessageSender{}
-	sender := types.NewMessageSender(mockMessageSender)
+	sender := messaging.NewMessageSender(mockMessageSender)
 	stateSerializer := serializer.NewStateSerializer()
 	session := NewSession(sender, stateSerializer)
 

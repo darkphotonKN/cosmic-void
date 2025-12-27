@@ -6,6 +6,7 @@ import (
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/systems"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
@@ -21,7 +22,7 @@ type messageHub struct {
 	gameSessionCh  chan types.Message
 	sessions       map[string]*game.Session
 	mu             sync.RWMutex
-	sender         *types.MessageSender
+	sender         *messaging.MessageSender
 }
 
 type SessionManager interface {
@@ -34,7 +35,7 @@ type SessionManager interface {
 	GetQueueStatusChan() chan systems.QueueStatus
 }
 
-func NewMessageHub(sessionManager SessionManager, sender *types.MessageSender) *messageHub {
+func NewMessageHub(sessionManager SessionManager, sender *messaging.MessageSender) *messageHub {
 	return &messageHub{
 		sessionManager: sessionManager,
 		sessions:       make(map[string]*game.Session),

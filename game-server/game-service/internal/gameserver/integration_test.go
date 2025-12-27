@@ -12,6 +12,7 @@ import (
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	grpcauth "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/auth"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -241,7 +242,7 @@ func TestSenderToBroadcastToPlayerList(t *testing.T) {
 	authClient := grpcauth.NewClient(registry)
 	server := NewServer(authClient)
 
-	newSender := types.NewMessageSender(server)
+	newSender := messaging.NewMessageSender(server)
 	// create test players
 	player1 := &types.Player{
 		ID:       uuid.New(),
