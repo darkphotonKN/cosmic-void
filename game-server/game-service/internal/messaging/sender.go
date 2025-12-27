@@ -9,8 +9,8 @@ import (
 )
 
 /**
-* MessageSender 提供統一的消息發送接口
-* 所有組件（Hub, Session）都通過它發送消息
+* MessageSender
+* Responsible for all message formatting and message dispatching back to the client.
 **/
 
 type MessageSender struct {
@@ -24,9 +24,14 @@ func NewMessageSender(dispatcher MessageDispatcher) *MessageSender {
 	}
 }
 
-// SendToPlayer 發送給單一玩家
+/**
+* Sends to a single player after serializing the entire game state and formatting to
+* the appropriate response format.
+**/
 func (s *MessageSender) SendToPlayer(playerID uuid.UUID, message types.Message) error {
 	fmt.Println("Sending message to player:", playerID)
+
+	// format to single shared state for client consumption
 	msg := types.Message{
 		Action:  message.Action,
 		Payload: message.Payload,
