@@ -51,13 +51,14 @@ func (m *EntityManager) RemoveEntity(id uuid.UUID) {
 }
 
 /**
-* here we want to return a slice copy to prevent direct access to the map
+* GetAllEntities returns a slice copy to prevent direct access to the map
 * which would allow the caller to use update or delete without locks
 **/
 func (m *EntityManager) GetAllEntities() []*Entity {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	entityList := make([]*Entity, len(m.entities))
+	entityCopy := make(map[uuid.UUID]*Entity)
 
 	index := 0
 	for _, entity := range m.entities {

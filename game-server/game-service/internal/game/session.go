@@ -291,7 +291,19 @@ func (s *Session) GetPlayerIDs() []uuid.UUID {
 * Broadcasts the current game state, after serialization, to all the players in the
 * session.
 **/
-func (s *Session) broadcastFullState() {
+func (s *Session) broadcastFullState() error {
+	entities := s.EntityManager.GetAllEntities()
+
+	clientState, err := s.stateSerializer.Serialize(s.ID, entities)
+	if err != nil {
+		fmt.Printf("Error when attempting to serialize state before sending to client: %+v\n", err)
+		return err
+	}
+
+	// TODO: update to match types
+	s.sender.BroadcastToPlayerList(s.playerEntities, clientState)
+
+	return nil
 }
 
 /**

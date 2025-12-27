@@ -36,6 +36,13 @@ func (s *MessageSender) SendToPlayer(playerID uuid.UUID, message types.Message) 
 	return s.dispatcher.PushMessageToChannelQueue(playerID, msg)
 }
 
+func (s *MessageSender) SendStateToPlayer(playerID uuid.UUID, clientState *types.ClientGameState) error {
+	fmt.Println("Sending message to player:", playerID)
+
+	// TOOD: have push message custom channel
+	return s.dispatcher.PushMessageToChannelQueue(playerID, msg)
+}
+
 // SendMessage 直接發送 Message（給 Hub 使用）
 func (s *MessageSender) SendMessage(playerID uuid.UUID, msg types.Message) error {
 	return s.dispatcher.PushMessageToChannelQueue(playerID, msg)
@@ -54,4 +61,19 @@ func (s *MessageSender) BroadcastToPlayerList(players []*types.Player, msg types
 		return fmt.Errorf("broadcast failed for %d players", len(errs))
 	}
 	return nil
+}
+
+func (s *MessageSender) BroadcastStateToPlayerList(players []*types.Player, state *types.ClientGameState) error {
+	var errs []error
+	for _, player := range players {
+		if err := s.SendToPlayer(player.ID, msg); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("broadcast failed for %d players", len(errs))
+	}
+	return nil
+
 }

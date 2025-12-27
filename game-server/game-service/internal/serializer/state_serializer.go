@@ -18,7 +18,7 @@ func NewStateSerializer() *StateSerializer {
 	return &StateSerializer{}
 }
 
-func (s *StateSerializer) Serialize(sessionID uuid.UUID, entities map[uuid.UUID]*ecs.Entity) (*types.ClientGameState, error) {
+func (s *StateSerializer) Serialize(sessionID uuid.UUID, entities []*ecs.Entity) (*types.ClientGameState, error) {
 	state := &types.ClientGameState{
 		SessionID: sessionID,
 		Players:   make([]*types.PlayerState, 0),
