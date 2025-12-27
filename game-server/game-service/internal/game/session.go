@@ -288,6 +288,13 @@ func (s *Session) GetPlayerIDs() []uuid.UUID {
 }
 
 /**
+* Broadcasts the current game state, after serialization, to all the players in the
+* session.
+**/
+func (s *Session) broadcastFullState() {
+}
+
+/**
 * --- State Updates Handlers ---
 **/
 

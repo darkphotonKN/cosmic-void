@@ -3,7 +3,6 @@ package messaging
 import (
 	"fmt"
 
-	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/serializer"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 )
@@ -15,7 +14,6 @@ import (
 
 type MessageSender struct {
 	dispatcher MessageDispatcher
-	serializer serializer.StateSerializer
 }
 
 func NewMessageSender(dispatcher MessageDispatcher) *MessageSender {
@@ -25,13 +23,12 @@ func NewMessageSender(dispatcher MessageDispatcher) *MessageSender {
 }
 
 /**
-* Sends to a single player after serializing the entire game state and formatting to
-* the appropriate response format.
+* Sends to a single player after packaging the state and formatting the response to
+* a consistent format.
 **/
 func (s *MessageSender) SendToPlayer(playerID uuid.UUID, message types.Message) error {
 	fmt.Println("Sending message to player:", playerID)
 
-	// format to single shared state for client consumption
 	msg := types.Message{
 		Action:  message.Action,
 		Payload: message.Payload,
