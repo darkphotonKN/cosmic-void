@@ -26,7 +26,7 @@ func (s *StateSerializer) Serialize(sessionID uuid.UUID, entities []*ecs.Entity)
 		Doors:     make([]*types.DoorState, 0),
 	}
 
-	for entityID, entity := range entities {
+	for _, entity := range entities {
 
 		// --- Player ---
 		pc, isPlayer := entity.GetComponent(ecs.ComponentTypePlayer)
@@ -40,7 +40,7 @@ func (s *StateSerializer) Serialize(sessionID uuid.UUID, entities []*ecs.Entity)
 
 			state.Players = append(state.Players, &types.PlayerState{
 				ID:       player.UserID,
-				EntityID: entityID,
+				EntityID: entity.ID,
 				Username: player.Username,
 				Position: &types.Position{
 					X: transform.X,

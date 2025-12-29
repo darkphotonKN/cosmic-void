@@ -185,7 +185,7 @@ func (s *Server) createMsgChan(conn *websocket.Conn) bool {
 		return false
 	}
 
-	s.msgChan[conn] = make(chan types.Message, 10) // 加入緩衝避免阻塞
+	s.msgChan[conn] = make(chan interface{}, 10) // 加入緩衝避免阻塞
 	return true
 }
 
@@ -193,7 +193,7 @@ func (s *Server) createMsgChan(conn *websocket.Conn) bool {
 * Gets the unique game message channel for a specific connection for writing back
 * from server to client, validating that it exists.
 **/
-func (s *Server) getGameMsgChan(conn *websocket.Conn) (chan types.Message, error) {
+func (s *Server) getGameMsgChan(conn *websocket.Conn) (chan interface{}, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

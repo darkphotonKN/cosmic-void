@@ -10,7 +10,6 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/serializer"
-	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,7 +24,7 @@ type mockMessageSender struct{}
 
 func (m *mockMessageSender) PushMessageToChannelQueue(
 	playerID uuid.UUID,
-	msg types.Message,
+	msg interface{},
 ) error {
 	return nil
 }

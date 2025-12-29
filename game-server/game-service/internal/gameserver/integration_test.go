@@ -105,13 +105,13 @@ func TestServerHubSessionIntegration(t *testing.T) {
 	}
 }
 
-func registerTestConn(s *Server, conn *websocket.Conn, player *types.Player) chan types.Message {
+func registerTestConn(s *Server, conn *websocket.Conn, player *types.Player) chan interface{} {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.connToPlayer[conn] = player
 	s.players[player.ID] = player
 
-	msgCh := make(chan types.Message, 10)
+	msgCh := make(chan interface{}, 10)
 	s.msgChan[conn] = msgCh
 	return msgCh
 }
@@ -148,7 +148,11 @@ func TestQueueFindGameFlow(t *testing.T) {
 			for {
 				select {
 				case msg := <-msgCh:
-					if msg.Action == "game_found" {
+					msgMessage, ok := msg.(types.Message)
+					if !ok {
+						continue
+					}
+					if msgMessage.Action == "game_found" {
 						server.mu.RLock()
 						currentSessions := len(server.sessions)
 						server.mu.RUnlock()

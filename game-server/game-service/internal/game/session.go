@@ -18,13 +18,12 @@ import (
 
 // the session represents one game room with its own ECS world
 type Session struct {
-	ID            uuid.UUID
-	EntityManager *ecs.EntityManager
-	MessageCh     chan types.ClientPackage
-	// [playerID] playerEntityID
-	playerIDToEntitiesID map[uuid.UUID]uuid.UUID
-	players              map[uuid.UUID]*types.Player
-	mu                   sync.RWMutex
+	ID                       uuid.UUID
+	EntityManager            *ecs.EntityManager
+	MessageCh                chan types.ClientPackage
+	playerIDToEntitiesID     map[uuid.UUID]uuid.UUID
+	playerEntityIDToPlayerID map[uuid.UUID]uuid.UUID
+	mu                       sync.RWMutex
 
 	movementSystem *systems.MovementSystem
 	combatSystem   *systems.CombatSystem
@@ -52,7 +51,7 @@ type SessionSender interface {
 	SendToPlayer(playerID uuid.UUID, message types.Message) error
 	BroadcastToPlayerList(players []*types.Player, msg types.Message) error
 	SendStateToPlayer(playerID uuid.UUID, clientState *types.ClientGameState) error
-	BroadcastStateToPlayerList(players []*types.Player, state *types.ClientGameState) error
+	BroadcastStateToPlayerList(players []uuid.UUID, state *types.ClientGameState) error
 }
 
 func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSerializer) *Session {
@@ -62,9 +61,9 @@ func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSer
 		ID:            sessionId,
 		EntityManager: ecs.NewEntityManager(),
 		// map [playerID] to entityID
-		playerIDToEntitiesID: make(map[uuid.UUID]uuid.UUID),
-		players:              make(map[uuid.UUID]*types.Player, constants.DefautMaxSessionPlayers),
-		MessageCh:            make(chan types.ClientPackage, 100),
+		playerIDToEntitiesID:     make(map[uuid.UUID]uuid.UUID),
+		playerEntityIDToPlayerID: make(map[uuid.UUID]uuid.UUID, constants.DefautMaxSessionPlayers),
+		MessageCh:                make(chan types.ClientPackage, 100),
 
 		movementSystem: systems.NewMovementSystem(),
 		combatSystem:   systems.NewCombatSystem(),
@@ -242,11 +241,7 @@ func (s *Session) AddPlayer(playerID uuid.UUID, username string) uuid.UUID {
 	// update player id to entity id map
 	s.playerIDToEntitiesID[playerID] = entity.ID
 	// update players map
-	s.players[entity.ID] = &types.Player{
-		ID:       playerID,
-		Username: username,
-	}
-
+	s.playerEntityIDToPlayerID[entity.ID] = playerID
 	return entity.ID
 }
 
@@ -316,13 +311,13 @@ func (s *Session) broadcastFullState() error {
 		return err
 	}
 
-	players := make([]*types.Player, constants.DefautMaxSessionPlayers)
+	playerIds := make([]uuid.UUID, constants.DefautMaxSessionPlayers)
 
-	for _, player := range s.players {
-		players = append(players, player)
+	for _, playerID := range s.playerEntityIDToPlayerID {
+		playerIds = append(playerIds, playerID)
 	}
 
-	s.sender.BroadcastStateToPlayerList(players, clientState)
+	s.sender.BroadcastStateToPlayerList(playerIds, clientState)
 
 	return nil
 }

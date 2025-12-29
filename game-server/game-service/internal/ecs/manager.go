@@ -57,8 +57,8 @@ func (m *EntityManager) RemoveEntity(id uuid.UUID) {
 func (m *EntityManager) GetAllEntities() []*Entity {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+	// TODO: determine if necessary
 	entityList := make([]*Entity, len(m.entities))
-	entityCopy := make(map[uuid.UUID]*Entity)
 
 	index := 0
 	for _, entity := range m.entities {

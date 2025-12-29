@@ -26,7 +26,7 @@ type Server struct {
 	serverChan chan types.ClientPackage
 
 	// active game message channels
-	msgChan map[*websocket.Conn]chan types.Message
+	msgChan map[*websocket.Conn]chan interface{}
 
 	// active sessions
 	// [sessionId] to active sessions
@@ -60,7 +60,7 @@ func NewServer(authClient grpcauth.AuthClient) *Server {
 		upgrader: upgrader,
 
 		serverChan: make(chan types.ClientPackage, 10),
-		msgChan:    make(map[*websocket.Conn]chan types.Message, 10),
+		msgChan:    make(map[*websocket.Conn]chan interface{}, 10),
 
 		sessions:     make(map[uuid.UUID]*game.Session, 10),
 		players:      make(map[uuid.UUID]*types.Player, 10),
@@ -208,7 +208,7 @@ func (s *Server) GetConnFromPlayer(playerID uuid.UUID) (*websocket.Conn, bool) {
 **/
 
 // sendMessageInternal is the core function injected into MessageSender
-func (s *Server) PushMessageToChannelQueue(playerID uuid.UUID, msg types.Message) error {
+func (s *Server) PushMessageToChannelQueue(playerID uuid.UUID, msg interface{}) error {
 	conn, exists := s.GetConnFromPlayer(playerID)
 	if !exists {
 		return fmt.Errorf("player %s not found", playerID)

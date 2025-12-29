@@ -61,14 +61,13 @@ func (s *MessageSender) BroadcastToPlayerList(players []*types.Player, msg types
 func (s *MessageSender) SendStateToPlayer(playerID uuid.UUID, clientState *types.ClientGameState) error {
 	fmt.Println("Sending message to player:", playerID)
 
-	// TOOD: have push message custom channel
 	return s.dispatcher.PushMessageToChannelQueue(playerID, clientState)
 }
 
-func (s *MessageSender) BroadcastStateToPlayerList(players []*types.Player, state *types.ClientGameState) error {
+func (s *MessageSender) BroadcastStateToPlayerList(playerIds []uuid.UUID, state *types.ClientGameState) error {
 	var errs []error
-	for _, player := range players {
-		if err := s.SendStateToPlayer(player.ID, state); err != nil {
+	for _, playerId := range playerIds {
+		if err := s.SendStateToPlayer(playerId, state); err != nil {
 			errs = append(errs, err)
 		}
 	}
