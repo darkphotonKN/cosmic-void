@@ -22,8 +22,9 @@ type Session struct {
 	EntityManager *ecs.EntityManager
 	MessageCh     chan types.ClientPackage
 	// [playerID] playerEntityID
-	playerEntities map[uuid.UUID]uuid.UUID
-	mu             sync.RWMutex
+	playerIDToEntitiesID map[uuid.UUID]uuid.UUID
+	players              map[uuid.UUID]*types.Player
+	mu                   sync.RWMutex
 
 	movementSystem *systems.MovementSystem
 	combatSystem   *systems.CombatSystem
@@ -43,8 +44,15 @@ type Session struct {
 	TestMessageSpy chan types.Message
 
 	// dependency injections
-	sender          *messaging.MessageSender
+	sender          SessionSender
 	stateSerializer *serializer.StateSerializer
+}
+
+type SessionSender interface {
+	SendToPlayer(playerID uuid.UUID, message types.Message) error
+	BroadcastToPlayerList(players []*types.Player, msg types.Message) error
+	SendStateToPlayer(playerID uuid.UUID, clientState *types.ClientGameState) error
+	BroadcastStateToPlayerList(players []*types.Player, state *types.ClientGameState) error
 }
 
 func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSerializer) *Session {
@@ -54,8 +62,9 @@ func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSer
 		ID:            sessionId,
 		EntityManager: ecs.NewEntityManager(),
 		// map [playerID] to entityID
-		playerEntities: make(map[uuid.UUID]uuid.UUID),
-		MessageCh:      make(chan types.ClientPackage, 100),
+		playerIDToEntitiesID: make(map[uuid.UUID]uuid.UUID),
+		players:              make(map[uuid.UUID]*types.Player, constants.DefautMaxSessionPlayers),
+		MessageCh:            make(chan types.ClientPackage, 100),
 
 		movementSystem: systems.NewMovementSystem(),
 		combatSystem:   systems.NewCombatSystem(),
@@ -207,12 +216,12 @@ func (s *Session) manageGameLoop() {
 	}
 }
 
-func (s *Session) AddPlayer(userID uuid.UUID, username string) uuid.UUID {
+func (s *Session) AddPlayer(playerID uuid.UUID, username string) uuid.UUID {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	PlayerConfig := PlayerConfig{
-		UserID:        userID,
+		UserID:        playerID,
 		Username:      username,
 		X:             0,
 		Y:             0,
@@ -227,9 +236,16 @@ func (s *Session) AddPlayer(userID uuid.UUID, username string) uuid.UUID {
 		Vy: 0,
 	}
 
+	// create player state entity
 	entity := CreatePlayerEntity(s.EntityManager, PlayerConfig)
 
-	s.playerEntities[userID] = entity.ID
+	// update player id to entity id map
+	s.playerIDToEntitiesID[playerID] = entity.ID
+	// update players map
+	s.players[entity.ID] = &types.Player{
+		ID:       playerID,
+		Username: username,
+	}
 
 	return entity.ID
 }
@@ -280,8 +296,8 @@ func (s *Session) GetPlayerIDs() []uuid.UUID {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	playerIDs := make([]uuid.UUID, 0, len(s.playerEntities))
-	for playerID := range s.playerEntities {
+	playerIDs := make([]uuid.UUID, 0, len(s.playerIDToEntitiesID))
+	for playerID := range s.playerIDToEntitiesID {
 		playerIDs = append(playerIDs, playerID)
 	}
 	return playerIDs
@@ -300,8 +316,13 @@ func (s *Session) broadcastFullState() error {
 		return err
 	}
 
-	// TODO: update to match types
-	s.sender.BroadcastToPlayerList(s.playerEntities, clientState)
+	players := make([]*types.Player, constants.DefautMaxSessionPlayers)
+
+	for _, player := range s.players {
+		players = append(players, player)
+	}
+
+	s.sender.BroadcastStateToPlayerList(players, clientState)
 
 	return nil
 }
@@ -317,7 +338,7 @@ func (s *Session) broadcastFullState() error {
 func (s *Session) handleMove(playerID uuid.UUID, vx, vy float64) error {
 	s.mu.RLock()
 	// get specific player entity
-	playerEntityID, ok := s.playerEntities[playerID]
+	playerEntityID, ok := s.playerIDToEntitiesID[playerID]
 	s.mu.RUnlock()
 
 	if !ok {
@@ -381,7 +402,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 
 	// establish player's position
 	s.mu.RLock()
-	playerEntityID := s.playerEntities[playerID]
+	playerEntityID := s.playerIDToEntitiesID[playerID]
 	s.mu.RUnlock()
 
 	s.mu.RLock()
@@ -491,3 +512,7 @@ func (s *Session) calcWithinDistance(x, y, xTarget, yTarget float64) bool {
 
 	return true
 }
+
+/**
+* returns a slice of current players
+**/

@@ -51,7 +51,7 @@ func TestSessionCreation(t *testing.T) {
 	require.NotNil(t, session.sender, "Sender should be initialized")
 
 	// initial state checks
-	assert.Equal(t, 0, len(session.playerEntities), "Should have no players initially")
+	assert.Equal(t, 0, len(session.playerIDToEntitiesID), "Should have no players initially")
 
 	// clean up goroutines
 	defer session.Shutdown()
@@ -71,8 +71,8 @@ func TestSessionAddPlayer(t *testing.T) {
 
 	assert.NotEqual(t, uuid.Nil, entityID, "Should return valid entity ID")
 
-	assert.Equal(t, 1, len(session.playerEntities), "Should have 1 player")
-	storedEntityID, exists := session.playerEntities[playerID]
+	assert.Equal(t, 1, len(session.playerIDToEntitiesID), "Should have 1 player")
+	storedEntityID, exists := session.playerIDToEntitiesID[playerID]
 	assert.True(t, exists, "Player should be in playerEntities map")
 	assert.Equal(t, entityID, storedEntityID, "Entity IDs should match")
 
@@ -103,7 +103,7 @@ func TestSessionAddMultiplePlayers(t *testing.T) {
 	entity2ID := session.AddPlayer(player2ID, "Player2")
 
 	assert.NotEqual(t, entity1ID, entity2ID, "Entity IDs should be unique")
-	assert.Equal(t, 2, len(session.playerEntities), "Should have 2 players")
+	assert.Equal(t, 2, len(session.playerIDToEntitiesID), "Should have 2 players")
 
 	_, exists1 := session.EntityManager.GetEntity(entity1ID)
 	_, exists2 := session.EntityManager.GetEntity(entity2ID)
