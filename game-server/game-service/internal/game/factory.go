@@ -48,3 +48,29 @@ func CreateDoorEntity(em *ecs.EntityManager, config DoorConfig) *ecs.Entity {
 
 	return entity
 }
+
+type ContainerConfig struct {
+	X, Y float64
+}
+
+func CreateContainerEntity(em *ecs.EntityManager, containerconfig ContainerConfig, itemIDList []uuid.UUID) *ecs.Entity {
+	entity := em.CreateEntity()
+	entity.AddComponent(components.NewContainerComponent())
+	entity.AddComponent(components.NewTransformComponent(containerconfig.X, containerconfig.Y))
+	entity.AddComponent(components.NewOpenableComponent(false)) // default false
+	entity.AddComponent(components.NewItemIDListComponent(itemIDList))
+
+	return entity
+}
+
+type ItemConfig struct {
+	Name     string
+	Quantity int
+}
+
+func CreateItemEntity(em *ecs.EntityManager, itemconfig ItemConfig) *ecs.Entity {
+	entity := em.CreateEntity()
+	entity.AddComponent(components.NewItemComponent(itemconfig.Name, itemconfig.Quantity))
+
+	return entity
+}

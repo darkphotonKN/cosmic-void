@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 	"math"
+	"math/rand/v2"
 	"sync"
 	"time"
 
@@ -45,6 +46,19 @@ type Session struct {
 	// dependency injections
 	sender          SessionSender
 	stateSerializer *serializer.StateSerializer
+}
+
+var ItemPool = []ItemConfig{
+	{Name: "Health Potion", Quantity: 0},
+	{Name: "Mana Potion", Quantity: 0},
+	{Name: "Gold Coin", Quantity: 0},
+	{Name: "Silver Coin", Quantity: 0},
+	{Name: "Iron Sword", Quantity: 0},
+	{Name: "Wooden Shield", Quantity: 0},
+	{Name: "Magic Scroll", Quantity: 0},
+	{Name: "Ancient Key", Quantity: 0},
+	{Name: "Gemstone", Quantity: 0},
+	{Name: "Mystery Aex", Quantity: 0},
 }
 
 type SessionSender interface {
@@ -267,6 +281,19 @@ func (s *Session) AddDoor(x, y float64) uuid.UUID {
 	}
 
 	entity := CreateDoorEntity(s.EntityManager, doorConfig)
+	return entity.ID
+}
+
+func (s *Session) AddContainer(x, y float64) uuid.UUID {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	ContainerConfig := ContainerConfig{
+		X: x,
+		Y: y,
+	}
+	itemIDList := make([]uuid.UUID, 0)
+	entity := CreateContainerEntity(s.EntityManager, ContainerConfig, itemIDList)
 	return entity.ID
 }
 
@@ -495,6 +522,82 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		}()
 	}
 
+	if isContainerEntity {
+		// get location
+		containerTransformComponent, hasTransform := targetEntity.GetComponent(ecs.ComponentTypeTransform)
+
+		if !hasTransform {
+			fmt.Printf("Error when attempting to retrieve container entity transform component with entityID %s\n", targetEntityID)
+			return fmt.Errorf("Error when attempting to retrieve container entity transform component with entityID %s", targetEntityID)
+		}
+		containerTransform := containerTransformComponent.(*components.TransformComponent)
+		// validate is within distance from player
+		isWithinDistance := s.calcWithinDistance(playerTransform.X, playerTransform.Y, containerTransform.X, containerTransform.Y)
+		if !isWithinDistance {
+			// TODO: add return message to client
+			fmt.Printf("Error when attempting to interact with container entity as it was out of range. targetID: %s, playerID: %s. \n", targetEntityID, playerID)
+			return ErrOutOfRange
+		}
+		// trigger containers swap in openable state via its OpenableComponent
+		containerOpenableComponent, hasOpenable := targetEntity.GetComponent(ecs.ComponentTypeOpenable)
+
+		if !hasOpenable {
+			fmt.Printf("Error when attempting to retrieve container entity openable component with entityID %s\n", targetEntityID)
+			return fmt.Errorf("Error when attempting to retrieve container entity openable component with entityID %s", targetEntityID)
+		}
+
+		containerOpenable := containerOpenableComponent.(*components.OpenableComponent)
+
+		// update state
+		containerOpenable.IsOpen = !containerOpenable.IsOpen
+
+		// create items
+		if containerOpenable.HasBeenOpened == false {
+			containerOpenable.HasBeenOpened = true
+			itemIDs := make([]uuid.UUID, 0)
+			count := rand.IntN(4) + 1
+			for i := 0; i < count; i++ {
+				itemID := s.createRandomItem()
+				itemIDs = append(itemIDs, itemID)
+			}
+			itemIDsComponent, hasItemIDs := targetEntity.GetComponent(ecs.ComponentTypeItemIDList)
+			if !hasItemIDs {
+				fmt.Printf("Error when attempting to retrieve container entity itemIDs component with entityID %s\n", targetEntityID)
+				return fmt.Errorf("Error when attempting to retrieve container entity itemIDs component with entityID %s", targetEntityID)
+
+			}
+
+			containerItemIDs := itemIDsComponent.(*components.ItemIDListComponent)
+			containerItemIDs.ItemIDs = itemIDs
+		}
+
+		// add container to interacted to cache
+		s.mu.Lock()
+		s.containerInteractedCache[targetEntityID] = true
+		s.mu.Unlock()
+
+		// release cache in 100 milliseconds
+		go func() {
+			time.Sleep(time.Millisecond * 100)
+			s.mu.Lock()
+			delete(s.containerInteractedCache, targetEntityID)
+			s.mu.Unlock()
+		}()
+
+		// add player to interacted cache
+		s.mu.Lock()
+		s.playerInteractedCache[playerEntityID] = true
+		s.mu.Unlock()
+
+		// remove them from cache after a short while
+		go func() {
+			time.Sleep(time.Millisecond * 100)
+			s.mu.Lock()
+			delete(s.playerInteractedCache, playerEntityID)
+			s.mu.Unlock()
+		}()
+	}
+
 	return nil
 }
 
@@ -516,5 +619,27 @@ func (s *Session) calcWithinDistance(x, y, xTarget, yTarget float64) bool {
 }
 
 /**
-* returns a slice of current players
+* createRandomItem creates a random item entity and returns its ID
 **/
+func (s *Session) createRandomItem() uuid.UUID {
+	rendomIndex := rand.IntN(10)
+	itemOfPool := ItemPool[rendomIndex]
+	quantity := rand.IntN(10) + 1
+	item := ItemConfig{
+		Name:     itemOfPool.Name,
+		Quantity: quantity,
+	}
+	itemId := s.addItem(item)
+	return itemId
+}
+
+/**
+* addItem creates an item entity from config and returns its ID
+**/
+func (s *Session) addItem(itemConfig ItemConfig) uuid.UUID {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	entity := CreateItemEntity(s.EntityManager, itemConfig)
+	return entity.ID
+}

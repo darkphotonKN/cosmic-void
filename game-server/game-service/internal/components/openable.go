@@ -5,7 +5,8 @@ import (
 )
 
 type OpenableComponent struct {
-	IsOpen bool
+	IsOpen        bool
+	HasBeenOpened bool
 }
 
 func (o *OpenableComponent) Type() ecs.ComponentType {
@@ -13,5 +14,5 @@ func (o *OpenableComponent) Type() ecs.ComponentType {
 }
 
 func NewOpenableComponent(isOpen bool) *OpenableComponent {
-	return &OpenableComponent{IsOpen: isOpen}
+	return &OpenableComponent{IsOpen: isOpen, HasBeenOpened: false}
 }

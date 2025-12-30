@@ -206,3 +206,92 @@ func TestHandleInteract(t *testing.T) {
 		// check its opposite
 	}
 }
+
+type handleInteractContainerTable []struct {
+	containerX         float64
+	containerY         float64
+	expectedOutOfRange bool
+}
+
+func TestHandleInteractContainer(t *testing.T) {
+
+	tableTests := handleInteractContainerTable{
+		{
+			containerX:         0.1,
+			containerY:         0.1,
+			expectedOutOfRange: false,
+		},
+		{
+			containerX:         1.5,
+			containerY:         1.5,
+			expectedOutOfRange: true,
+		},
+		{
+			containerX:         100.0,
+			containerY:         100.0,
+			expectedOutOfRange: true,
+		},
+		{
+			containerX:         0.2,
+			containerY:         0.1,
+			expectedOutOfRange: false,
+		},
+	}
+
+	sender := createMockSender()
+	stateSerializer := serializer.NewStateSerializer()
+	session := NewSession(sender, stateSerializer)
+
+	player1ID := uuid.New()
+	username := "Player1"
+
+	// default location 0, 0
+	session.AddPlayer(player1ID, username)
+
+	for _, tableTest := range tableTests {
+		// container one, container thats out of range
+		containerOneEntityID := session.AddContainer(tableTest.containerX, tableTest.containerY)
+		containerEntity, _ := session.EntityManager.GetEntity(containerOneEntityID)
+
+		// first open
+		containerOpenableComponent, _ := containerEntity.GetComponent(ecs.ComponentTypeOpenable)
+
+		containerOpenable := containerOpenableComponent.(*components.OpenableComponent)
+
+		containerItemIDListComponent, _ := containerEntity.GetComponent(ecs.ComponentTypeItemIDList)
+		containerItemIDList := containerItemIDListComponent.(*components.ItemIDListComponent)
+
+		assert.False(t, containerOpenable.HasBeenOpened)
+		assert.Equal(t, 0, len(containerItemIDList.ItemIDs))
+
+		time.Sleep(time.Millisecond * 150) // delay to account for rate limiting
+		// first time open
+		err := session.handleInteract(player1ID, containerOneEntityID)
+
+		// expect out of range
+		if tableTest.expectedOutOfRange {
+			isOutOfRange := errors.Is(err, ErrOutOfRange)
+			assert.Equal(t, true, isOutOfRange)
+			continue
+		}
+
+		assert.Nil(t, err)
+		// verify 1-4 items
+		assert.Equal(t, true, containerOpenable.HasBeenOpened)
+		assert.GreaterOrEqual(t, len(containerItemIDList.ItemIDs), 1, "At least 1 item")
+		assert.LessOrEqual(t, len(containerItemIDList.ItemIDs), 4, "At most 4 item")
+
+		firstOpenItemIDs := make([]uuid.UUID, len(containerItemIDList.ItemIDs))
+		copy(firstOpenItemIDs, containerItemIDList.ItemIDs)
+
+		// second time open
+		// verify items are same
+		time.Sleep(time.Millisecond * 150)
+		err = session.handleInteract(player1ID, containerOneEntityID)
+		assert.Nil(t, err)
+
+		containerItemIDListComponent2, _ := containerEntity.GetComponent(ecs.ComponentTypeItemIDList)
+		containerItemIDList2 := containerItemIDListComponent2.(*components.ItemIDListComponent)
+		assert.Equal(t, firstOpenItemIDs, containerItemIDList2.ItemIDs)
+	}
+}

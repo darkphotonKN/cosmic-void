@@ -20,9 +20,10 @@ const (
 	ComponentTypeNPC    ComponentType = "NPC"
 	ComponentTypeEnemy  ComponentType = "Enemy"
 
-	ComponentTypeItem      ComponentType = "Item"
-	ComponentTypeDoor      ComponentType = "Door"
-	ComponentTypeContainer ComponentType = "Container"
+	ComponentTypeItem       ComponentType = "Item"
+	ComponentTypeDoor       ComponentType = "Door"
+	ComponentTypeContainer  ComponentType = "Container"
+	ComponentTypeItemIDList ComponentType = "ItemIDList"
 
 	ComponentTypeTransform ComponentType = "Transform"
 	ComponentTypeVelocity  ComponentType = "Velocity"
