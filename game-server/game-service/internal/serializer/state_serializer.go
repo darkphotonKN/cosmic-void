@@ -18,12 +18,13 @@ func NewStateSerializer() *StateSerializer {
 	return &StateSerializer{}
 }
 
-func (s *StateSerializer) Serialize(sessionID uuid.UUID, entities []*ecs.Entity) (*types.ClientGameState, error) {
+func (s *StateSerializer) Serialize(sessionID uuid.UUID, recipientPlayerID uuid.UUID, entities []*ecs.Entity) (*types.ClientGameState, error) {
 	state := &types.ClientGameState{
-		SessionID: sessionID,
-		Players:   make([]*types.PlayerState, 0),
-		Items:     make([]string, 0),
-		Doors:     make([]*types.DoorState, 0),
+		SessionID:     sessionID,
+		CurrentPlayer: nil,
+		OtherPlayers:  make([]*types.PlayerState, 0),
+		Items:         make([]string, 0),
+		Doors:         make([]*types.DoorState, 0),
 	}
 
 	for _, entity := range entities {
@@ -38,7 +39,7 @@ func (s *StateSerializer) Serialize(sessionID uuid.UUID, entities []*ecs.Entity)
 			vc, _ := entity.GetComponent(ecs.ComponentTypeVelocity)
 			velocity := vc.(*components.VelocityComponent)
 
-			state.Players = append(state.Players, &types.PlayerState{
+			playerState := &types.PlayerState{
 				ID:       player.UserID,
 				EntityID: entity.ID,
 				Username: player.Username,
@@ -51,7 +52,14 @@ func (s *StateSerializer) Serialize(sessionID uuid.UUID, entities []*ecs.Entity)
 					VY:    velocity.VY,
 					Speed: velocity.Speed,
 				},
-			})
+			}
+
+			// Check if this is the recipient player
+			if player.UserID == recipientPlayerID {
+				state.CurrentPlayer = playerState
+			} else {
+				state.OtherPlayers = append(state.OtherPlayers, playerState)
+			}
 		}
 
 		// --- Interactables ---

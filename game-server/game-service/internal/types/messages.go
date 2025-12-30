@@ -40,10 +40,11 @@ type ErrorResponse struct {
 
 // represents entire game state that client receives
 type ClientGameState struct {
-	SessionID uuid.UUID `json:"session_id"`
-	Players   []*PlayerState
-	Items     []string // TODO: update with item entity converted into struct format
-	Doors     []*DoorState
+	SessionID     uuid.UUID      `json:"session_id"`
+	CurrentPlayer *PlayerState   `json:"current_player"` // The recipient's player state
+	OtherPlayers  []*PlayerState `json:"other_players"`   // All other players
+	Items         []string       `json:"items"`           // TODO: update with item entity converted into struct format
+	Doors         []*DoorState   `json:"doors"`
 }
 
 func (m *Message) ParsePayload() (interface{}, error) {

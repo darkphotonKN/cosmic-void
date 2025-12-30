@@ -4,8 +4,10 @@
  */
 
 import Phaser from "phaser";
-import { ActionMap, ActionType, ClientMessage } from "@/assets/types/client";
+import { ActionType } from "@/assets/types/client";
 import { socketManager } from "@/utils/class/SocketManager";
+import { ClientGameState } from "@/types/gameState";
+import { GameStateLogger } from "@/utils/gameStateLogger";
 
 interface Building {
   id: string;
@@ -35,9 +37,9 @@ export class TreasureHuntScene extends Phaser.Scene {
   // Status callback
   private onStatusChange?: (status: string, color: string) => void;
 
-  // WebSocket
-  private socket!: WebSocket;
-  private seq: number = 0;
+  // Game state
+  private currentGameState?: ClientGameState; // Will be used for rendering players in next phase
+  private gameStateUnsubscribe?: () => void;
 
   // 地圖大小
   private mapWidth = 1200;
@@ -73,8 +75,8 @@ export class TreasureHuntScene extends Phaser.Scene {
   }
 
   create(): void {
-    // 連接 WebSocket
-    // this.connectWebSocket();
+    // Connect via SocketManager instead of direct WebSocket
+    this.connectToServer();
 
     // 設置世界邊界
     this.physics.world.setBounds(0, 0, this.mapWidth, this.mapHeight);
@@ -124,8 +126,71 @@ export class TreasureHuntScene extends Phaser.Scene {
 
     // 顯示座標 UI
     this.createUI();
+  }
 
-    this.updateStatus("Connected", "#4ecca3");
+  private connectToServer(): void {
+    // Connect if not already connected
+    if (!socketManager.isConnected()) {
+      socketManager.connect('ws://localhost:5555/game/ws');
+      GameStateLogger.logConnectionStatus('Connecting to game server...', '#ffcc00');
+    } else {
+      GameStateLogger.logConnectionStatus('Already connected to server', '#4ecca3');
+    }
+
+    // Subscribe to connection status changes
+    socketManager.onConnectionStatusChange((status) => {
+      switch (status) {
+        case 'connected':
+          this.updateStatus('Connected', '#4ecca3');
+          GameStateLogger.logConnectionStatus('Connected successfully!', '#4ecca3');
+          break;
+        case 'connecting':
+          this.updateStatus('Connecting...', '#ffcc00');
+          break;
+        case 'disconnected':
+          this.updateStatus('Disconnected', '#ff4444');
+          GameStateLogger.logConnectionStatus('Disconnected from server', '#ff4444');
+          break;
+        case 'error':
+          this.updateStatus('Connection Error', '#ff4444');
+          GameStateLogger.logError('WebSocket connection error');
+          break;
+      }
+    });
+
+    // Subscribe to game state updates
+    this.gameStateUnsubscribe = socketManager.onGameStateUpdate(
+      (state: ClientGameState) => {
+        this.handleGameStateUpdate(state);
+      }
+    );
+
+    // Reset the logger for new session
+    GameStateLogger.reset();
+  }
+
+  private handleGameStateUpdate(state: ClientGameState): void {
+    this.currentGameState = state;
+
+    // Log state assignment for debugging (remove when implementing rendering)
+    if (this.currentGameState) {
+      // State stored for future rendering implementation
+    }
+
+    // Update status display with current player position
+    if (state.current_player) {
+      const pos = state.current_player.position;
+      const playerCount = (state.other_players?.length || 0) + 1;
+      this.updateStatus(
+        `Players: ${playerCount} | You: (${pos.x.toFixed(0)}, ${pos.y.toFixed(0)})`,
+        '#4ecca3'
+      );
+
+      // TODO: Update player sprite position based on state
+      // This will be implemented in the next phase
+    } else {
+      this.updateStatus('Waiting for player data...', '#ffcc00');
+    }
   }
 
   private createMapBackground(): void {
@@ -486,6 +551,14 @@ export class TreasureHuntScene extends Phaser.Scene {
   private updateStatus(status: string, color: string): void {
     if (this.onStatusChange) {
       this.onStatusChange(status, color);
+    }
+  }
+
+  destroy(): void {
+    // Clean up subscriptions when scene is destroyed
+    if (this.gameStateUnsubscribe) {
+      this.gameStateUnsubscribe();
+      GameStateLogger.logConnectionStatus('Scene shutting down', '#808080');
     }
   }
 

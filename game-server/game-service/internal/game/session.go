@@ -307,24 +307,25 @@ func (s *Session) GetPlayerIDs() []uuid.UUID {
 
 /**
 * Broadcasts the current game state, after serialization, to all the players in the
-* session.
+* session. Each player receives a personalized view with their player state separated.
 **/
 func (s *Session) broadcastFullState() error {
 	entities := s.EntityManager.GetAllEntities()
 
-	clientState, err := s.stateSerializer.Serialize(s.ID, entities)
-	if err != nil {
-		fmt.Printf("Error when attempting to serialize state before sending to client: %+v\n", err)
-		return err
-	}
-
-	playerIds := make([]uuid.UUID, constants.DefautMaxSessionPlayers)
-
+	// create and send personalized state for each player
 	for _, playerID := range s.playerEntityIDToPlayerID {
-		playerIds = append(playerIds, playerID)
+		clientState, err := s.stateSerializer.Serialize(s.ID, playerID, entities)
+		if err != nil {
+			fmt.Printf("Error when attempting to serialize state for player %s: %+v\n", playerID, err)
+			continue
+		}
+
+		err = s.sender.SendStateToPlayer(playerID, clientState)
+		if err != nil {
+			fmt.Printf("Error sending state to player %s: %+v\n", playerID, err)
+		}
 	}
 
-	s.sender.BroadcastStateToPlayerList(playerIds, clientState)
 	return nil
 }
 

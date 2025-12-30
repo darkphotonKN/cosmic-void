@@ -1,4 +1,6 @@
 import { ActionMap, ClientMessage } from "@/assets/types/client";
+import { ClientGameState, isGameState } from "@/types/gameState";
+import { GameStateLogger } from "@/utils/gameStateLogger";
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
@@ -14,6 +16,8 @@ class SocketManager {
   private connectionStatus: ConnectionStatus = "disconnected";
   private connectionStatusListeners: Set<(status: ConnectionStatus) => void> = new Set();
   private seq: number = 0;
+  // Game state listeners
+  private gameStateListeners: Set<(state: ClientGameState) => void> = new Set();
 
   constructor() {
     this.socket = null;
@@ -79,13 +83,21 @@ class SocketManager {
     this.socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log("Received server message:", data);
 
-        if (data.action && this.listeners.has(data.action)) {
+        // Check if it's a game state update
+        if (isGameState(data)) {
+          this.handleGameStateUpdate(data);
+        } else if (data.action && this.listeners.has(data.action)) {
+          // Handle action-based messages
+          console.log("Received action message:", data.action);
           this.listeners.get(data.action)?.(data.payload);
+        } else {
+          // Log unhandled messages for debugging
+          console.log("Received unhandled message:", data);
         }
       } catch (e) {
         console.error("Failed to parse message:", e);
+        GameStateLogger.logError("Failed to parse WebSocket message", e);
       }
     };
   }
@@ -119,6 +131,30 @@ class SocketManager {
   // 取消監聽
   off(action: string): void {
     this.listeners.delete(action);
+  }
+
+  // Subscribe to game state updates
+  onGameStateUpdate(callback: (state: ClientGameState) => void): () => void {
+    this.gameStateListeners.add(callback);
+    // Return unsubscribe function
+    return () => {
+      this.gameStateListeners.delete(callback);
+    };
+  }
+
+  // Handle game state updates
+  private handleGameStateUpdate(state: ClientGameState): void {
+    // Log the state with formatted output
+    GameStateLogger.logGameState(state);
+
+    // Notify all game state listeners
+    this.gameStateListeners.forEach(listener => {
+      try {
+        listener(state);
+      } catch (error) {
+        console.error("Error in game state listener:", error);
+      }
+    });
   }
 }
 
