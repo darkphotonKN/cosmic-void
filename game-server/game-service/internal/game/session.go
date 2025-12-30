@@ -211,6 +211,13 @@ func (s *Session) manageGameLoop() {
 			// interaction
 			interactionSys := systems.InteractionSystem{}
 			interactionSys.Update(entities)
+
+			// broadcast state update to all players
+			err := s.broadcastFullState()
+			if err != nil {
+				fmt.Printf("Error occured when broadcasting state: %+v\n", err)
+				continue
+			}
 		}
 	}
 }
@@ -318,7 +325,6 @@ func (s *Session) broadcastFullState() error {
 	}
 
 	s.sender.BroadcastStateToPlayerList(playerIds, clientState)
-
 	return nil
 }
 

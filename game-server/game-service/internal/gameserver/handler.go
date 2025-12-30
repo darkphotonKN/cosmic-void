@@ -160,6 +160,9 @@ func (s *Server) setupClientWriter(conn *websocket.Conn) {
 	// back to the client
 	go func() {
 		for msg := range msgChan {
+			// TEST: remove after testing
+			fmt.Printf("\nclientWriter writing back to client message:\n\n%+v\n\n", msg)
+
 			err := conn.WriteJSON(msg)
 
 			if err != nil {

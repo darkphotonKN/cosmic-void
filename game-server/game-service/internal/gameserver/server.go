@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	grpcauth "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/auth"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
@@ -60,7 +61,7 @@ func NewServer(authClient grpcauth.AuthClient) *Server {
 		upgrader: upgrader,
 
 		serverChan: make(chan types.ClientPackage, 10),
-		msgChan:    make(map[*websocket.Conn]chan interface{}, 10),
+		msgChan:    make(map[*websocket.Conn]chan interface{}, constants.MaxMsgChanBuffer),
 
 		sessions:     make(map[uuid.UUID]*game.Session, 10),
 		players:      make(map[uuid.UUID]*types.Player, 10),
@@ -207,7 +208,10 @@ func (s *Server) GetConnFromPlayer(playerID uuid.UUID) (*websocket.Conn, bool) {
 * --- Internal Message Sending (used by MessageSender) ---
 **/
 
-// sendMessageInternal is the core function injected into MessageSender
+/**
+* PushMessageToChannelQueue
+* Allows the server to sequentially pipe multiple messages into a single channel for sequential writes back to the client due to gorilla websockets constraint of max one concurrent writer with conn.
+**/
 func (s *Server) PushMessageToChannelQueue(playerID uuid.UUID, msg interface{}) error {
 	conn, exists := s.GetConnFromPlayer(playerID)
 	if !exists {

@@ -31,6 +31,10 @@ const (
 	ErrorInternalServerError ErrorCode = "internal_server_error"
 )
 
+// Server Memory Constants
+const MaxMsgChanBuffer int = 30
+
+// Game Defaults
 const DefaultSpeed float64 = 1
 const DefaultInteractableRange float64 = 1
 const DefautMaxSessionPlayers = 2
