@@ -42,8 +42,8 @@ type ErrorResponse struct {
 type ClientGameState struct {
 	SessionID     uuid.UUID      `json:"session_id"`
 	CurrentPlayer *PlayerState   `json:"current_player"` // The recipient's player state
-	OtherPlayers  []*PlayerState `json:"other_players"`   // All other players
-	Items         []string       `json:"items"`           // TODO: update with item entity converted into struct format
+	OtherPlayers  []*PlayerState `json:"other_players"`  // All other players
+	Items         []string       `json:"items"`          // TODO: update with item entity converted into struct format
 	Doors         []*DoorState   `json:"doors"`
 }
 

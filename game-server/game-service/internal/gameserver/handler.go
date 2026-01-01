@@ -219,6 +219,7 @@ func (s *Server) cleanUpClient(conn *websocket.Conn) {
 
 	// 獲取玩家資訊
 	player, exists := s.connToPlayer[conn]
+
 	if exists {
 		fmt.Printf("Cleaning up client: %s\n", player.Username)
 		// 從 queue 中移除玩家

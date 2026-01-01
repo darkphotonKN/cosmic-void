@@ -42,10 +42,10 @@ func (s *MessageSender) SendMessage(playerID uuid.UUID, msg types.Message) error
 }
 
 // BroadcastToPlayerList 廣播給多個玩家（直接使用 Player list）
-func (s *MessageSender) BroadcastToPlayerList(players []*types.Player, msg types.Message) error {
+func (s *MessageSender) BroadcastToPlayerList(playerIds []uuid.UUID, msg types.Message) error {
 	var errs []error
-	for _, player := range players {
-		if err := s.SendToPlayer(player.ID, msg); err != nil {
+	for _, playerId := range playerIds {
+		if err := s.SendToPlayer(playerId, msg); err != nil {
 			errs = append(errs, err)
 		}
 	}

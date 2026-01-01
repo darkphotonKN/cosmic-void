@@ -63,7 +63,7 @@ var ItemPool = []ItemConfig{
 
 type SessionSender interface {
 	SendToPlayer(playerID uuid.UUID, message types.Message) error
-	BroadcastToPlayerList(players []*types.Player, msg types.Message) error
+	BroadcastToPlayerList(players []uuid.UUID, msg types.Message) error
 	SendStateToPlayer(playerID uuid.UUID, clientState *types.ClientGameState) error
 	BroadcastStateToPlayerList(players []uuid.UUID, state *types.ClientGameState) error
 }

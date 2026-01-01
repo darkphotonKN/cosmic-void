@@ -49,6 +49,10 @@ type Server struct {
 	authClient grpcauth.AuthClient
 }
 
+type MessageSender interface {
+	BroadcastToPlayerList(players []*types.Player, msg types.Message) error
+}
+
 func NewServer(authClient grpcauth.AuthClient) *Server {
 	upgrader := websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
@@ -147,6 +151,8 @@ func (s *Server) CreateGameSession(players []*types.Player) *game.Session {
 
 	s.sessions[newGameSession.ID] = newGameSession
 	fmt.Printf("New game session initiated, id: %s\n", newGameSession.ID)
+
+	// broadcast initial game information to client
 
 	return newGameSession
 }

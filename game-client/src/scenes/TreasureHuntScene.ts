@@ -8,6 +8,7 @@ import { ActionType } from "@/assets/types/client";
 import { socketManager } from "@/utils/class/SocketManager";
 import { ClientGameState } from "@/types/gameState";
 import { GameStateLogger } from "@/utils/gameStateLogger";
+import { gameSession } from "@/utils/gameSession";
 
 interface Building {
   id: string;
@@ -175,6 +176,17 @@ export class TreasureHuntScene extends Phaser.Scene {
     // Log state assignment for debugging (remove when implementing rendering)
     if (this.currentGameState) {
       // State stored for future rendering implementation
+    }
+
+    // Store session and player IDs for future messages
+    if (state.session_id && state.current_player) {
+      // Only set if not already set (to avoid overwriting with each update)
+      if (!gameSession.getSessionId()) {
+        gameSession.setSessionId(state.session_id);
+      }
+      if (!gameSession.getPlayerId()) {
+        gameSession.setPlayerId(state.current_player.id);
+      }
     }
 
     // Update status display with current player position
@@ -585,9 +597,14 @@ export class TreasureHuntScene extends Phaser.Scene {
     // 設置速度
     this.player.setVelocity(vx, vy);
 
-    // 發送 WebSocket 訊息（包含八個方位）
-    if (vx !== 0 || vy !== 0) {
-      socketManager.sendMessage(ActionType.Move, { x: vx, y: vy });
+    // 發送 WebSocket 訊息（包含正確的 vx, vy 格式）
+    if ((vx !== 0 || vy !== 0) && gameSession.isReady()) {
+      try {
+        const movePayload = gameSession.createMovePayload(vx, vy);
+        socketManager.sendMessage(ActionType.Move, movePayload);
+      } catch (error) {
+        console.error('Failed to send move command:', error);
+      }
     }
 
     // 檢查是否進入/離開建築

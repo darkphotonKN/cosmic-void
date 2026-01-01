@@ -204,7 +204,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     this.buttonBg.on("pointerdown", () => {
       if (this.isConnected) {
-        socketManager.sendMessage(ActionType.Find_Game, { playerId: "1" });
+        socketManager.sendMessage(ActionType.Find_Game, { player_id: "1" });
         this.queuePopup();
       }
     });

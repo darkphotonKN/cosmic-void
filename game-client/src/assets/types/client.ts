@@ -1,33 +1,45 @@
-export interface MovePayload {
-  x: number;
-  y: number;
+// Base payload that all game actions must include
+export interface PlayerSessionPayload {
+  session_id: string;
+  player_id: string;
 }
 
-export interface AttackPayload {
-  targetId: string;
+// Individual action payloads (matching backend expectations)
+export interface MovePayload extends PlayerSessionPayload {
+  vx: number;  // velocity x (not position)
+  vy: number;  // velocity y (not position)
 }
 
-export interface PickupPayload {
-  itemId: string;
+export interface InteractPayload extends PlayerSessionPayload {
+  entity_id: string;
 }
 
-export interface UsePayload {
-  itemId: string;
-  targetId?: string; // 可選：對誰使用
+export interface AttackPayload extends PlayerSessionPayload {
+  target_id: string;
 }
 
-export interface ChatPayload {
+export interface PickupPayload extends PlayerSessionPayload {
+  item_id: string;
+}
+
+export interface UsePayload extends PlayerSessionPayload {
+  item_id: string;
+  target_id?: string; // optional: who to use it on
+}
+
+export interface ChatPayload extends PlayerSessionPayload {
   message: string;
 }
 
 export interface FindGamePayload {
-  playerId: string;
+  player_id: string;  // This one doesn't need session_id since it's for finding a game
 }
 
 // ====== 動作類型對應 Payload ======
 
 export interface ActionMap {
   move: MovePayload;
+  interact: InteractPayload;
   attack: AttackPayload;
   pickup: PickupPayload;
   use: UsePayload;
@@ -37,6 +49,7 @@ export interface ActionMap {
 
 export const ActionType = {
   Move: "move",
+  Interact: "interact",
   Attack: "attack",
   Pickup: "pickup",
   Use: "use",
@@ -58,7 +71,9 @@ export interface ClientMessage<T extends keyof ActionMap> {
 
 export type ClientAction =
   | { action: "move"; payload: MovePayload; seq: number }
+  | { action: "interact"; payload: InteractPayload; seq: number }
   | { action: "attack"; payload: AttackPayload; seq: number }
   | { action: "pickup"; payload: PickupPayload; seq: number }
   | { action: "use"; payload: UsePayload; seq: number }
-  | { action: "chat"; payload: ChatPayload; seq: number };
+  | { action: "chat"; payload: ChatPayload; seq: number }
+  | { action: "find_game"; payload: FindGamePayload; seq: number };

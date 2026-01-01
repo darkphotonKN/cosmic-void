@@ -36,17 +36,20 @@ interface ActionResult<T extends ActionType = ActionType> {
   action: T;
   success: boolean;
   message?: string;
-  data?: ActionResultData[T];
+  // TODO: Fix type indexing issue
+  // data?: ActionResultData[T];
+  data?: any;
 }
 
-interface ActionResultData {
-  move: null;
-  attack: { damage: number; targetHp: number };
-  pickup: { itemId: string; value: number };
-  use: { effect: string };
-  chat: null;
-  find_game: null;
-}
+// TODO: Uncomment and fix when needed
+// interface ActionResultData {
+//   move: null;
+//   attack: { damage: number; targetHp: number };
+//   pickup: { itemId: string; value: number };
+//   use: { effect: string };
+//   chat: null;
+//   find_game: null;
+// }
 
 // ====== 事件 ======
 
