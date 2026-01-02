@@ -7,7 +7,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
-	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/systems"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/queue"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -32,7 +32,7 @@ type SessionManager interface {
 	AddPlayerToQueue(*types.Player)
 	GetPlayerFromConn(conn *websocket.Conn) (*types.Player, bool)
 	GetMatchedChan() chan []*types.Player
-	GetQueueStatusChan() chan systems.QueueStatus
+	GetQueueStatusChan() chan queue.QueueStatus
 }
 
 func NewMessageHub(sessionManager SessionManager, sender *messaging.MessageSender) *messageHub {

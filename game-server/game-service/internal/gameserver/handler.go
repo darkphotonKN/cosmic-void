@@ -222,7 +222,7 @@ func (s *Server) cleanUpClient(conn *websocket.Conn) {
 	if exists {
 		fmt.Printf("Cleaning up client: %s\n", player.Username)
 		// 從 queue 中移除玩家
-		s.queueSystem.PlayerRemoveQueue(player)
+		s.queue.PlayerRemoveQueue(player)
 	}
 
 	// 關閉並刪除 msgChan

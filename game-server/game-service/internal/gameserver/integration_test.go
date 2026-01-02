@@ -13,6 +13,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	grpcauth "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/auth"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/queue"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -38,6 +39,41 @@ func (m *MockAuthClient) ValidateToken(ctx context.Context, req *pb.ValidateToke
 	}, nil
 }
 
+type mockQueueService struct {
+	players         []*types.Player
+	matchedChan     chan []*types.Player
+	statusChan      chan queue.QueueStatus
+	QueueStatusChan chan queue.QueueStatus
+}
+
+func NewMockQueueService() *mockQueueService {
+	return &mockQueueService{
+		players:         make([]*types.Player, 0),
+		matchedChan:     make(chan []*types.Player),
+		statusChan:      make(chan queue.QueueStatus),
+		QueueStatusChan: make(chan queue.QueueStatus),
+	}
+}
+func (m *mockQueueService) JoinQueue()                    {}
+func (m *mockQueueService) PlayerJoinQueue(*types.Player) {}
+
+func (m *mockQueueService) GetQueueStatusChan() chan queue.QueueStatus {
+	return m.QueueStatusChan
+}
+func (m *mockQueueService) AddPlayerChan(player *types.Player) {
+
+}
+
+func (m *mockQueueService) PlayerRemoveQueue(player *types.Player) {}
+func (m *mockQueueService) MatchQueue()                            {}
+func (m *mockQueueService) Start() {
+	// 測試時不需要真的啟動
+}
+
+func (m *mockQueueService) GetMatchedChan() chan []*types.Player {
+	return m.matchedChan
+}
+
 /**
 * testing cross module functionality and behaviors.
 **/
@@ -46,7 +82,8 @@ func (m *MockAuthClient) ValidateToken(ctx context.Context, req *pb.ValidateToke
 // message sent to client sends to Server →  Hub routes →  Session receives
 func TestServerHubSessionIntegration(t *testing.T) {
 	mockAuthClient := &MockAuthClient{}
-	server := NewServer(mockAuthClient)
+	mockQueue := NewMockQueueService()
+	server := NewServer(mockAuthClient, mockQueue)
 
 	// create test players
 	player1 := &types.Player{
@@ -118,7 +155,8 @@ func registerTestConn(s *Server, conn *websocket.Conn, player *types.Player) cha
 
 func TestQueueFindGameFlow(t *testing.T) {
 	mockAuthClient := &MockAuthClient{}
-	server := NewServer(mockAuthClient)
+	mockQueue := NewMockQueueService()
+	server := NewServer(mockAuthClient, mockQueue)
 
 	playerCount := 10
 	var wg sync.WaitGroup
@@ -181,7 +219,8 @@ func TestQueueFindGameFlow(t *testing.T) {
 }
 func TestResponseBuilderIntegration(t *testing.T) {
 	mockAuthClient := &MockAuthClient{}
-	server := NewServer(mockAuthClient)
+	mockQueue := NewMockQueueService()
+	server := NewServer(mockAuthClient, mockQueue)
 	// create test players
 	player1 := &types.Player{
 		ID:       uuid.New(),
@@ -244,7 +283,8 @@ func TestSenderToBroadcastToPlayerList(t *testing.T) {
 	consulAddr := commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
 	registry, err := consul.NewRegistry(consulAddr, serviceName)
 	authClient := grpcauth.NewClient(registry)
-	server := NewServer(authClient)
+	mockQueue := NewMockQueueService()
+	server := NewServer(authClient, mockQueue)
 
 	newSender := messaging.NewMessageSender(server)
 	// create test players
