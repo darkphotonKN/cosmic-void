@@ -5,6 +5,7 @@ import (
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 )
 
 /**
@@ -26,7 +27,7 @@ func NewMessageSender(dispatcher MessageDispatcher) *MessageSender {
 * Sends to a single player after packaging the state and formatting the response to
 * a consistent format.
 **/
-func (s *MessageSender) SendToPlayer(playerID uuid.UUID, message types.Message) error {
+func (s *MessageSender) SendMessageToPlayer(playerID uuid.UUID, message types.Message) error {
 	fmt.Println("Sending message to player:", playerID)
 
 	msg := types.Message{
@@ -36,16 +37,17 @@ func (s *MessageSender) SendToPlayer(playerID uuid.UUID, message types.Message) 
 	return s.dispatcher.PushMessageToChannelQueue(playerID, msg)
 }
 
-// SendMessage 直接發送 Message（給 Hub 使用）
-func (s *MessageSender) SendMessage(playerID uuid.UUID, msg types.Message) error {
-	return s.dispatcher.PushMessageToChannelQueue(playerID, msg)
+// SendMessage 直接發送 Message（沒有player Id）
+func (s *MessageSender) SendMessageToConn(conn *websocket.Conn, msg types.Message) error {
+
+	return s.dispatcher.PushMessageToConn(conn, msg)
 }
 
 // BroadcastToPlayerList 廣播給多個玩家（直接使用 Player list）
-func (s *MessageSender) BroadcastToPlayerList(players []*types.Player, msg types.Message) error {
+func (s *MessageSender) BroadcastToPlayerList(players []uuid.UUID, msg types.Message) error {
 	var errs []error
 	for _, player := range players {
-		if err := s.SendToPlayer(player.ID, msg); err != nil {
+		if err := s.SendMessageToPlayer(player, msg); err != nil {
 			errs = append(errs, err)
 		}
 	}

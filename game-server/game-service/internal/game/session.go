@@ -62,8 +62,8 @@ var ItemPool = []ItemConfig{
 }
 
 type SessionSender interface {
-	SendToPlayer(playerID uuid.UUID, message types.Message) error
-	BroadcastToPlayerList(players []*types.Player, msg types.Message) error
+	SendMessageToPlayer(playerID uuid.UUID, message types.Message) error
+	BroadcastToPlayerList(players []uuid.UUID, msg types.Message) error
 	SendStateToPlayer(playerID uuid.UUID, clientState *types.ClientGameState) error
 	BroadcastStateToPlayerList(players []uuid.UUID, state *types.ClientGameState) error
 }
@@ -195,9 +195,12 @@ func (s *Session) manageClientMessages() {
 				err = s.handleInteract(playerID, entityIDUUID)
 
 				if err != nil {
-					s.sender.SendToPlayer(playerID, types.Message{})
+					s.sender.SendMessageToPlayer(playerID, types.Message{})
 				}
 			}
+		case <-s.stopChan:
+			fmt.Printf("Game session %s: message handler stopped\n", s.ID)
+			return
 		}
 	}
 }
@@ -232,6 +235,9 @@ func (s *Session) manageGameLoop() {
 				fmt.Printf("Error occured when broadcasting state: %+v\n", err)
 				continue
 			}
+		case <-s.stopChan:
+			fmt.Printf("Game session %s: game loop stopped\n", s.ID)
+			return
 		}
 	}
 }

@@ -233,6 +233,33 @@ func (s *Server) PushMessageToChannelQueue(playerID uuid.UUID, msg interface{}) 
 	}
 }
 
+func (s *Server) PushMessageToConn(conn *websocket.Conn, msg interface{}) error {
+	typeMsg, ok := msg.(types.Message)
+	if !ok {
+		return fmt.Errorf("invalid message type")
+	}
+	if conn == nil {
+		fmt.Println("Warning: nil connection, skipping send")
+		return nil
+	}
+	s.mu.RLock()
+	ch, ok := s.msgChan[conn]
+	s.mu.RUnlock()
+
+	if !ok {
+		fmt.Println("Warning: message channel not found for connection")
+		return nil
+	}
+
+	select {
+	case ch <- typeMsg:
+		return nil
+	default:
+		return fmt.Errorf("message channel full for connection")
+	}
+
+}
+
 /**
 * returns the auth client for gRPC calls
 **/

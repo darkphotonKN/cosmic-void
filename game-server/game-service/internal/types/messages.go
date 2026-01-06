@@ -15,6 +15,7 @@ import (
 type Message struct {
 	Action  string                 `json:"action"`
 	Payload map[string]interface{} `json:"payload"`
+	Error   *string                `json:"error,omitempty"`
 }
 
 /**
@@ -26,24 +27,12 @@ type ClientPackage struct {
 	Conn    *websocket.Conn
 }
 
-type ServerResponse struct {
-	Action  string                 `json:"action"`
-	Payload map[string]interface{} `json:"payload"`
-	Success bool                   `json:"success,omitempty"`
-	Error   *ErrorResponse         `json:"error,omitempty"`
-}
-
-type ErrorResponse struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
-}
-
 // represents entire game state that client receives
 type ClientGameState struct {
 	SessionID     uuid.UUID      `json:"session_id"`
 	CurrentPlayer *PlayerState   `json:"current_player"` // The recipient's player state
-	OtherPlayers  []*PlayerState `json:"other_players"`   // All other players
-	Items         []string       `json:"items"`           // TODO: update with item entity converted into struct format
+	OtherPlayers  []*PlayerState `json:"other_players"`  // All other players
+	Items         []string       `json:"items"`          // TODO: update with item entity converted into struct format
 	Doors         []*DoorState   `json:"doors"`
 }
 
