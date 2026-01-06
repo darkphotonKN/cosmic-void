@@ -564,7 +564,6 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 			if !hasItemIDs {
 				fmt.Printf("Error when attempting to retrieve container entity itemIDs component with entityID %s\n", targetEntityID)
 				return fmt.Errorf("Error when attempting to retrieve container entity itemIDs component with entityID %s", targetEntityID)
-
 			}
 
 			containerItemIDs := itemIDsComponent.(*components.ItemIDListComponent)
