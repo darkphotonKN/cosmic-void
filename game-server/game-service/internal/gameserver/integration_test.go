@@ -2,6 +2,7 @@ package gameserver
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -19,6 +20,13 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+var (
+	ErrPlayerNotConnected     = errors.New("player not connected")
+	ErrBroadcastFailed        = errors.New("broadcast failed")
+	ErrAllPlayersFailed       = errors.New("broadcast failed for all players")
+	ErrPartialBroadcastFailed = errors.New("broadcast partially failed")
 )
 
 // MockAuthClient for testing
@@ -218,57 +226,6 @@ func TestQueueFindGameFlow(t *testing.T) {
 	fmt.Println("總共創建遊戲數量", expectedSessions)
 }
 
-// func TestResponseBuilderIntegration(t *testing.T) {
-// 	mockAuthClient := &MockAuthClient{}
-// 	server := NewServer(mockAuthClient)
-// 	// create test players
-// 	player1 := &types.Player{
-// 		ID:       uuid.New(),
-// 		Username: "TestPlayer1",
-// 	}
-// 	player2 := &types.Player{
-// 		ID:       uuid.New(),
-// 		Username: "TestPlayer2",
-// 	}
-
-// 	testPlayers := []*types.Player{player1, player2}
-
-// 	// create game session through server
-// 	session := server.CreateGameSession(testPlayers)
-
-// 	clientMsg := types.Message{
-// 		Action: string(constants.ActionMove),
-// 		Payload: map[string]interface{}{
-// 			"session_id": session.ID.String(),
-// 			"player_id":  player1.ID.String(),
-// 			"vx":         1.0,
-// 			"vy":         0.0,
-// 		},
-// 	}
-// 	clientPackage := types.ClientPackage{
-// 		Message: clientMsg,
-// 		Conn:    nil, // no real connection needed for this test
-// 	}
-
-// 	testConn := &Conn{}
-// 	responseSuccess := response.Success(
-// 		testConn,
-// 		clientPackage.Message.Action,
-// 		map[string]interface{}{"status": "ok"},
-// 	)
-
-// 	responseErr := response.Error(
-// 		testConn,
-// 		clientPackage.Message.Action,
-// 		constants.ErrorInvalidSessionID,
-// 		"Invalid session ID",
-// 	)
-
-// 	assert.Nil(t, responseSuccess, "Response Error method should not return error")
-// 	assert.Nil(t, responseErr, "Response Error method should not return error")
-
-// }
-
 type Conn struct{}
 
 func (c *Conn) WriteJSON(v interface{}) error {
@@ -277,58 +234,150 @@ func (c *Conn) WriteJSON(v interface{}) error {
 }
 
 func TestSenderToBroadcastToPlayerList(t *testing.T) {
-	serviceName := "game"
-	consulAddr := commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
-	registry, err := consul.NewRegistry(consulAddr, serviceName)
-	authClient := grpcauth.NewClient(registry)
-	mockQueue := NewMockQueueService()
-	server := NewServer(authClient, mockQueue)
+	testCases := []struct {
+		name          string                    // 測試案例名稱
+		setupPlayers  func(*Server) []uuid.UUID // 設置玩家的函數
+		action        constants.Action          // 要測試的 action
+		payload       map[string]interface{}    // 訊息內容
+		expectedError error                     // 預期的錯誤 (使用 errors.New() 定義的)
+		errorContains string                    // 錯誤訊息應該包含的文字 (用於更詳細的檢查)
+	}{
+		{
+			name: "broadcast to all connected players - success",
+			setupPlayers: func(s *Server) []uuid.UUID {
+				// 情境:所有玩家都有連線
+				player1 := &types.Player{ID: uuid.New(), Username: "Player1"}
+				player2 := &types.Player{ID: uuid.New(), Username: "Player2"}
+				player3 := &types.Player{ID: uuid.New(), Username: "Player3"}
 
-	newSender := messaging.NewMessageSender(server)
-	// create test players
-	player1 := &types.Player{
-		ID:       uuid.New(),
-		Username: "TestPlayer1",
-	}
-	player2 := &types.Player{
-		ID:       uuid.New(),
-		Username: "TestPlayer2",
-	}
-	player3 := &types.Player{
-		ID:       uuid.New(),
-		Username: "TestPlayer3",
-	}
+				// 模擬建立連線和 message channel
+				conn1 := &websocket.Conn{} // 這裡需要實際的 mock connection
+				conn2 := &websocket.Conn{}
+				conn3 := &websocket.Conn{}
 
-	testPlayers := []uuid.UUID{player1.ID, player2.ID, player3.ID}
-	newSender.BroadcastToPlayerList(testPlayers, types.Message{
-		Action: string(constants.ActionFindGame),
-		Payload: map[string]interface{}{
-			"info": "This is a test broadcast message",
+				s.mu.Lock()
+				s.connToPlayer[conn1] = player1
+				s.connToPlayer[conn2] = player2
+				s.connToPlayer[conn3] = player3
+				s.msgChan[conn1] = make(chan interface{}, 10)
+				s.msgChan[conn2] = make(chan interface{}, 10)
+				s.msgChan[conn3] = make(chan interface{}, 10)
+				s.mu.Unlock()
+
+				return []uuid.UUID{player1.ID, player2.ID, player3.ID}
+			},
+			action: constants.ActionFindGame,
+			payload: map[string]interface{}{
+				"info": "Game found, starting match",
+			},
+			expectedError: nil, // 不應該有錯誤
 		},
-	})
-	actionType := "attack"
-	switch actionType {
-	case string(constants.ActionAttack):
-		assert.Equal(t, "attack", actionType, "Action type string should be 'attack'")
-	case string(constants.ActionMove):
-		assert.Equal(t, "move", actionType, "Action type string should be 'move'")
-	case string(constants.ActionInteract):
-		assert.Equal(t, "interact", actionType, "Action type string should be 'interact'")
-	case string(constants.ActionPickup):
-		assert.Equal(t, "pickup", actionType, "Action type string should be 'pickup'")
-	case string(constants.ActionDropItem):
-		assert.Equal(t, "drop", actionType, "Action type string should be 'drop'")
-	case string(constants.ActionUseItem):
-		assert.Equal(t, "use_item", actionType, "Action type string should be 'use_item'")
-	case string(constants.ActionChat):
-		assert.Equal(t, "chat", actionType, "Action type string should be 'chat'")
-	case string(constants.ActionFindGame):
-		assert.Equal(t, "find_game", actionType, "Action type string should be 'find_game'")
-	case string(constants.ActionLeaveQueue):
-		assert.Equal(t, "leave_game", actionType, "Action type string should be 'leave_game'")
-	case string(constants.ActionQueue):
-		assert.Equal(t, "queue_status", actionType, "Action type string should be 'queue_status'")
+		{
+			name: "broadcast to disconnected players - should error",
+			setupPlayers: func(s *Server) []uuid.UUID {
+				// 情境:玩家已經創建但沒有連線
+				player1 := uuid.New()
+				player2 := uuid.New()
+				player3 := uuid.New()
+
+				// 不設置連線,模擬玩家已斷線
+				return []uuid.UUID{player1, player2, player3}
+			},
+			action: constants.ActionFindGame,
+			payload: map[string]interface{}{
+				"info": "Test broadcast to disconnected players",
+			},
+			expectedError: ErrAllPlayersFailed, // 使用預定義的錯誤常量
+			errorContains: "broadcast failed for 3 players",
+		},
+		{
+			name: "broadcast to mixed connected/disconnected players",
+			setupPlayers: func(s *Server) []uuid.UUID {
+				// 情境:部分玩家有連線,部分沒有
+				player1 := &types.Player{ID: uuid.New(), Username: "ConnectedPlayer"}
+				player2 := uuid.New() // 沒有連線的玩家
+				player3 := uuid.New() // 沒有連線的玩家
+
+				conn1 := &websocket.Conn{}
+				s.mu.Lock()
+				s.connToPlayer[conn1] = player1
+				s.msgChan[conn1] = make(chan interface{}, 10)
+				s.mu.Unlock()
+
+				return []uuid.UUID{player1.ID, player2, player3}
+			},
+			action: constants.ActionQueue,
+			payload: map[string]interface{}{
+				"current": 2,
+				"total":   3,
+			},
+			expectedError: ErrPartialBroadcastFailed, // 使用預定義的錯誤常量
+			errorContains: "broadcast failed for 2 players",
+		},
+		{
+			name: "broadcast with empty player list",
+			setupPlayers: func(s *Server) []uuid.UUID {
+				// 情境:空的玩家列表
+				return []uuid.UUID{}
+			},
+			action: constants.ActionFindGame,
+			payload: map[string]interface{}{
+				"info": "No players to broadcast to",
+			},
+			expectedError: nil, // 空列表不應該報錯,只是什麼都不做
+		},
 	}
 
-	assert.NotNil(t, err, "Broadcast should return error for missing player connection")
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			serviceName := "game"
+			consulAddr := commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
+			registry, _ := consul.NewRegistry(consulAddr, serviceName)
+			authClient := grpcauth.NewClient(registry)
+			mockQueue := NewMockQueueService()
+			server := NewServer(authClient, mockQueue)
+			playerIDs := tc.setupPlayers(server)
+
+			newSender := messaging.NewMessageSender(server)
+			err := newSender.BroadcastToPlayerList(playerIDs, types.Message{
+				Action:  string(tc.action),
+				Payload: tc.payload,
+			})
+
+			if tc.expectedError != nil {
+				assert.Error(t, err, "Expected error for test case: %s", tc.name)
+				if tc.errorContains != "" {
+					assert.Contains(t, err.Error(), tc.errorContains,
+						"Error message should contain: %s", tc.errorContains)
+				}
+			} else {
+				assert.NoError(t, err, "Should not return error for test case: %s", tc.name)
+			}
+		})
+	}
+}
+
+func TestActionConstants(t *testing.T) {
+	testCases := []struct {
+		action   constants.Action
+		expected string
+	}{
+		{constants.ActionAttack, "attack"},
+		{constants.ActionMove, "move"},
+		{constants.ActionInteract, "interact"},
+		{constants.ActionPickup, "pickup"},
+		{constants.ActionDropItem, "drop"},
+		{constants.ActionUseItem, "use_item"},
+		{constants.ActionChat, "chat"},
+		{constants.ActionFindGame, "find_game"},
+		{constants.ActionLeaveQueue, "leave_game"},
+		{constants.ActionQueue, "queue_status"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(string(tc.action), func(t *testing.T) {
+			assert.Equal(t, tc.expected, string(tc.action),
+				"Action constant %s should equal %s", tc.action, tc.expected)
+		})
+	}
 }
