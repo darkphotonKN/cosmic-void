@@ -35,6 +35,6 @@ const (
 const MaxMsgChanBuffer int = 30
 
 // Game Defaults
-const DefaultSpeed float64 = 1
+const DefaultSpeed float64 = 200
 const DefaultInteractableRange float64 = 1
 const DefautMaxSessionPlayers = 2

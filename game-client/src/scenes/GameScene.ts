@@ -209,11 +209,11 @@ export class GameScene extends Phaser.Scene {
     if (this.cursors.left.isDown || this.keyA.isDown) {
       this.me.setVelocityX(-this.speed);
       this.me.anims.play("left", true);
-      this.sendMessage(ActionType.Move, { x: -this.speed, y: 0 });
+      this.sendMessage(ActionType.Move, { vx: -this.speed, vy: 0 });
     } else if (this.cursors.right.isDown || this.keyD.isDown) {
       this.me.setVelocityX(this.speed);
       this.me.anims.play("right", true);
-      this.sendMessage(ActionType.Move, { x: this.speed, y: 0 });
+      this.sendMessage(ActionType.Move, { vx: this.speed, vy: 0 });
     } else {
       this.me.setVelocityX(0);
       this.me.anims.play("turn");
@@ -221,10 +221,10 @@ export class GameScene extends Phaser.Scene {
 
     if (this.cursors.up.isDown || this.keyW.isDown) {
       this.me.setVelocityY(-this.speed);
-      this.sendMessage(ActionType.Move, { x: 0, y: -this.speed });
+      this.sendMessage(ActionType.Move, { vx: 0, vy: -this.speed });
     } else if (this.cursors.down.isDown || this.keyS.isDown) {
       this.me.setVelocityY(this.speed);
-      this.sendMessage(ActionType.Move, { x: 0, y: this.speed });
+      this.sendMessage(ActionType.Move, { vx: 0, vy: this.speed });
     }
 
     const distance = Phaser.Math.Distance.Between(

@@ -1,6 +1,10 @@
+export interface gameInfo {
+  session_id: string;
+  player_id: string;
+}
 export interface MovePayload {
-  x: number;
-  y: number;
+  vx: number;
+  vy: number;
 }
 
 export interface AttackPayload {
