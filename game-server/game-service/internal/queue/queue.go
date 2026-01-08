@@ -1,4 +1,4 @@
-package systems
+package queue
 
 import (
 	"fmt"
@@ -19,7 +19,7 @@ type QueueStatus struct {
 	Total   int
 }
 
-type QueueSystem struct {
+type queueService struct {
 	// 接收要加入配對的玩家
 	playerChan chan *types.Player
 	queue      []*types.Player
@@ -32,8 +32,8 @@ type QueueSystem struct {
 	QueueStatusChan chan QueueStatus
 }
 
-func NewQueueSystem(matchSize int) *QueueSystem {
-	return &QueueSystem{
+func NewQueueService(matchSize int) QueueService {
+	return &queueService{
 		playerChan:      make(chan *types.Player),
 		matchSize:       matchSize,
 		queue:           make([]*types.Player, 0),
@@ -43,18 +43,18 @@ func NewQueueSystem(matchSize int) *QueueSystem {
 }
 
 // Start 啟動 queue 監聽
-func (q *QueueSystem) Start() {
-	go q.matchQueue()
+func (q *queueService) Start() {
+	go q.MatchQueue()
 	go q.JoinQueue()
 	fmt.Println("QueueSystem started, listening for players...")
 }
 
 // AddPlayer 將玩家加入配對 queue（透過 channel）
-func (q *QueueSystem) AddPlayerChan(player *types.Player) {
+func (q *queueService) AddPlayerChan(player *types.Player) {
 	q.playerChan <- player
 }
 
-func (q *QueueSystem) JoinQueue() {
+func (q *queueService) JoinQueue() {
 	for {
 		select {
 		case player := <-q.playerChan:
@@ -64,7 +64,7 @@ func (q *QueueSystem) JoinQueue() {
 }
 
 // matchQueue 每秒檢查一次 queue
-func (q *QueueSystem) matchQueue() {
+func (q *queueService) MatchQueue() {
 	fmt.Println("Listening for queue...")
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
@@ -117,7 +117,7 @@ func (q *QueueSystem) matchQueue() {
 }
 
 // handlePlayerJoinQueue 處理玩家加入 queue 的邏輯
-func (q *QueueSystem) PlayerJoinQueue(player *types.Player) {
+func (q *queueService) PlayerJoinQueue(player *types.Player) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
@@ -135,7 +135,7 @@ func (q *QueueSystem) PlayerJoinQueue(player *types.Player) {
 }
 
 // TODO: discconnect remove player
-func (q *QueueSystem) PlayerRemoveQueue(player *types.Player) {
+func (q *queueService) PlayerRemoveQueue(player *types.Player) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	for i, queue := range q.queue {
@@ -144,4 +144,12 @@ func (q *QueueSystem) PlayerRemoveQueue(player *types.Player) {
 			return
 		}
 	}
+}
+
+func (q *queueService) GetMatchedChan() chan []*types.Player {
+	return q.MatchedChan
+}
+
+func (q *queueService) GetQueueStatusChan() chan QueueStatus {
+	return q.QueueStatusChan
 }

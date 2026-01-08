@@ -9,8 +9,8 @@ import (
 	grpcauth "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/auth"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/queue"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/serializer"
-	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/systems"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -43,8 +43,7 @@ type Server struct {
 
 	mu sync.RWMutex
 
-	queueSystem *systems.QueueSystem
-
+	queue queue.QueueService
 	// auth client for gRPC calls
 	authClient grpcauth.AuthClient
 }
@@ -53,7 +52,7 @@ type MessageSender interface {
 	BroadcastToPlayerList(players []*types.Player, msg types.Message) error
 }
 
-func NewServer(authClient grpcauth.AuthClient) *Server {
+func NewServer(authClient grpcauth.AuthClient, queueService queue.QueueService) *Server {
 	upgrader := websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
 			// TODO: Allow all connections by default for simplicity; can add more logic here
@@ -71,15 +70,14 @@ func NewServer(authClient grpcauth.AuthClient) *Server {
 		players:      make(map[uuid.UUID]*types.Player, 10),
 		connToPlayer: make(map[*websocket.Conn]*types.Player, 10),
 
+		queue:      queueService,
 		authClient: authClient,
 	}
 
 	// initialize message sender (inject send function)
 	newSender := messaging.NewMessageSender(server)
 
-	// initialize queue system
-	server.queueSystem = systems.NewQueueSystem(2)
-	server.queueSystem.Start()
+	server.queue.Start()
 
 	// initialize message hub
 	messageHub := NewMessageHub(server, newSender)
@@ -171,28 +169,28 @@ func (s *Server) GetGameSession(id uuid.UUID) (*game.Session, bool) {
 * add player to queue (delegates to QueueSystem)
 **/
 func (s *Server) AddPlayerToQueue(player *types.Player) {
-	s.queueSystem.AddPlayerChan(player)
+	s.queue.AddPlayerChan(player)
 }
 
 /**
 * remove player from queue (delegates to QueueSystem)
 **/
 func (s *Server) RemovePlayerFromQueue(player *types.Player) {
-	s.queueSystem.PlayerRemoveQueue(player)
+	s.queue.PlayerRemoveQueue(player)
 }
 
 /**
 * get matched channel for listening to matched players
 **/
 func (s *Server) GetMatchedChan() chan []*types.Player {
-	return s.queueSystem.MatchedChan
+	return s.queue.GetMatchedChan()
 }
 
 /**
 * get queue status channel for listening to queue updates
 **/
-func (s *Server) GetQueueStatusChan() chan systems.QueueStatus {
-	return s.queueSystem.QueueStatusChan
+func (s *Server) GetQueueStatusChan() chan queue.QueueStatus {
+	return s.queue.GetQueueStatusChan()
 }
 
 /**
@@ -239,6 +237,33 @@ func (s *Server) PushMessageToChannelQueue(playerID uuid.UUID, msg interface{}) 
 	default:
 		return fmt.Errorf("message channel full for player %s", playerID)
 	}
+}
+
+func (s *Server) PushMessageToConn(conn *websocket.Conn, msg interface{}) error {
+	typeMsg, ok := msg.(types.Message)
+	if !ok {
+		return fmt.Errorf("invalid message type")
+	}
+	if conn == nil {
+		fmt.Println("Warning: nil connection, skipping send")
+		return nil
+	}
+	s.mu.RLock()
+	ch, ok := s.msgChan[conn]
+	s.mu.RUnlock()
+
+	if !ok {
+		fmt.Println("Warning: message channel not found for connection")
+		return nil
+	}
+
+	select {
+	case ch <- typeMsg:
+		return nil
+	default:
+		return fmt.Errorf("message channel full for connection")
+	}
+
 }
 
 /**

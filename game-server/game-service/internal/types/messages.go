@@ -15,6 +15,7 @@ import (
 type Message struct {
 	Action  string                 `json:"action"`
 	Payload map[string]interface{} `json:"payload"`
+	Error   *string                `json:"error,omitempty"`
 }
 
 /**
@@ -24,18 +25,6 @@ type Message struct {
 type ClientPackage struct {
 	Message Message
 	Conn    *websocket.Conn
-}
-
-type ServerResponse struct {
-	Action  string                 `json:"action"`
-	Payload map[string]interface{} `json:"payload"`
-	Success bool                   `json:"success,omitempty"`
-	Error   *ErrorResponse         `json:"error,omitempty"`
-}
-
-type ErrorResponse struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
 }
 
 // represents entire game state that client receives

@@ -28,9 +28,9 @@ func (s *StateSerializer) Serialize(sessionID uuid.UUID, recipientPlayerID uuid.
 	}
 
 	for _, entity := range entities {
-
 		// --- Player ---
 		pc, isPlayer := entity.GetComponent(ecs.ComponentTypePlayer)
+
 		if isPlayer {
 			// -- get all player components --
 			player := pc.(*components.PlayerComponent)

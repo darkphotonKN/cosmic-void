@@ -7,6 +7,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/game-service/auth"
 	grpcauth "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/auth"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/gameserver"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/queue"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
@@ -38,8 +39,9 @@ func SetupRouter(db *sqlx.DB, registry discovery.Registry) *gin.Engine {
 	// --- AUTH CLIENT ---
 	authClient := grpcauth.NewClient(registry)
 
+	queueService := queue.NewQueueService(2)
 	// --- WEBSOCKET CONNECTION ---
-	server := gameserver.NewServer(authClient)
+	server := gameserver.NewServer(authClient, queueService)
 
 	// -- routes --
 	router.GET("/game/ws", auth.WSAuthMiddleware(authClient), server.HandleWebSocketConnection)
