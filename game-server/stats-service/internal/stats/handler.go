@@ -75,3 +75,4 @@ func (h *Handler) GetMatchHistory(ctx context.Context, req *pb.GetMatchHistoryRe
 func (h *Handler) RecordMatch(ctx context.Context, req *pb.RecordMatchRequest) (*pb.MatchResult, error) {
 	return nil, status.Errorf(codes.Unimplemented, "not implemented")
 }
+

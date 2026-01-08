@@ -5,6 +5,13 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 )
 
+// Map boundaries (should match frontend)
+const (
+	MapWidth  = 1200
+	MapHeight = 800
+	PlayerRadius = 20 // player sprite radius for boundary collision
+)
+
 type MovementSystem struct{}
 
 func NewMovementSystem() *MovementSystem {
@@ -28,5 +35,19 @@ func (s *MovementSystem) Update(deltaTime float64, entities []*ecs.Entity) {
 		// update position based on velocity
 		transform.X += velocity.VX * velocity.Speed * deltaTime
 		transform.Y += velocity.VY * velocity.Speed * deltaTime
+
+		// clamp position to map boundaries
+		if transform.X < PlayerRadius {
+			transform.X = PlayerRadius
+		}
+		if transform.X > MapWidth-PlayerRadius {
+			transform.X = MapWidth - PlayerRadius
+		}
+		if transform.Y < PlayerRadius {
+			transform.Y = PlayerRadius
+		}
+		if transform.Y > MapHeight-PlayerRadius {
+			transform.Y = MapHeight - PlayerRadius
+		}
 	}
 }

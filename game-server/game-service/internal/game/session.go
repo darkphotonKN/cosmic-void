@@ -205,7 +205,7 @@ func (s *Session) manageClientMessages() {
 	}
 }
 
-const framerate = 1
+const framerate = 30
 
 /**
 * manages all the game update loops.
@@ -223,7 +223,8 @@ func (s *Session) manageGameLoop() {
 
 			// movement
 			movementSys := systems.MovementSystem{}
-			movementSys.Update(float64(1), entities)
+			deltaTime := 1.0 / float64(framerate)
+			movementSys.Update(deltaTime, entities)
 
 			// interaction
 			interactionSys := systems.InteractionSystem{}
@@ -249,8 +250,8 @@ func (s *Session) AddPlayer(playerID uuid.UUID, username string) uuid.UUID {
 	PlayerConfig := PlayerConfig{
 		UserID:        playerID,
 		Username:      username,
-		X:             0,
-		Y:             0,
+		X:             600, // map center (MapWidth / 2)
+		Y:             400, // map center (MapHeight / 2)
 		SkillName:     "Basic Attack",
 		SkillLevel:    1,
 		CurrentHealth: 100,

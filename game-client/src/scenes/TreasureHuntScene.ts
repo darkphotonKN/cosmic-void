@@ -26,6 +26,9 @@ interface Building {
 export class TreasureHuntScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
 
+  // Other players
+  private otherPlayers: Map<string, Phaser.Physics.Arcade.Sprite> = new Map();
+
   // Controls
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: {
@@ -39,8 +42,12 @@ export class TreasureHuntScene extends Phaser.Scene {
   private onStatusChange?: (status: string, color: string) => void;
 
   // Game state
-  private currentGameState?: ClientGameState; // Will be used for rendering players in next phase
+  private currentGameState?: ClientGameState;
   private gameStateUnsubscribe?: () => void;
+
+  // Server reconciliation
+  private serverPosition: { x: number; y: number } = { x: 600, y: 400 };
+  private reconciliationThreshold = 10; // 超過這個距離才修正
 
   // 地圖大小
   private mapWidth = 1200;
@@ -62,6 +69,7 @@ export class TreasureHuntScene extends Phaser.Scene {
 
   preload(): void {
     this.createPlayerTexture();
+    this.createOtherPlayerTexture();
   }
 
   private createPlayerTexture(): void {
@@ -72,6 +80,17 @@ export class TreasureHuntScene extends Phaser.Scene {
     graphics.fillCircle(14, 16, 4);
     graphics.fillCircle(26, 16, 4);
     graphics.generateTexture("player", 40, 40);
+    graphics.destroy();
+  }
+
+  private createOtherPlayerTexture(): void {
+    const graphics = this.make.graphics({});
+    graphics.fillStyle(0xff6b6b, 1);  // 紅色
+    graphics.fillCircle(20, 20, 18);
+    graphics.fillStyle(0xffffff, 1);
+    graphics.fillCircle(14, 16, 4);
+    graphics.fillCircle(26, 16, 4);
+    graphics.generateTexture("otherPlayer", 40, 40);
     graphics.destroy();
   }
 
@@ -127,34 +146,72 @@ export class TreasureHuntScene extends Phaser.Scene {
 
     // 顯示座標 UI
     this.createUI();
+
+    // 放開移動鍵時停止
+    this.input.keyboard?.on("keyup", (event: KeyboardEvent) => {
+      const movementKeys = [
+        "KeyW",
+        "KeyA",
+        "KeyS",
+        "KeyD",
+        "ArrowUp",
+        "ArrowDown",
+        "ArrowLeft",
+        "ArrowRight",
+      ];
+
+      if (movementKeys.includes(event.code)) {
+        const anyMovementKeyDown =
+          this.wasd.up.isDown ||
+          this.wasd.down.isDown ||
+          this.wasd.left.isDown ||
+          this.wasd.right.isDown;
+
+        if (!anyMovementKeyDown) {
+          socketManager.sendMessage("move", { vx: 0, vy: 0 });
+        }
+      }
+    });
   }
 
   private connectToServer(): void {
     // Connect if not already connected
     if (!socketManager.isConnected()) {
-      socketManager.connect('ws://localhost:5555/game/ws');
-      GameStateLogger.logConnectionStatus('Connecting to game server...', '#ffcc00');
+      socketManager.connect("ws://localhost:5555/game/ws");
+      GameStateLogger.logConnectionStatus(
+        "Connecting to game server...",
+        "#ffcc00",
+      );
     } else {
-      GameStateLogger.logConnectionStatus('Already connected to server', '#4ecca3');
+      GameStateLogger.logConnectionStatus(
+        "Already connected to server",
+        "#4ecca3",
+      );
     }
 
     // Subscribe to connection status changes
     socketManager.onConnectionStatusChange((status) => {
       switch (status) {
-        case 'connected':
-          this.updateStatus('Connected', '#4ecca3');
-          GameStateLogger.logConnectionStatus('Connected successfully!', '#4ecca3');
+        case "connected":
+          this.updateStatus("Connected", "#4ecca3");
+          GameStateLogger.logConnectionStatus(
+            "Connected successfully!",
+            "#4ecca3",
+          );
           break;
-        case 'connecting':
-          this.updateStatus('Connecting...', '#ffcc00');
+        case "connecting":
+          this.updateStatus("Connecting...", "#ffcc00");
           break;
-        case 'disconnected':
-          this.updateStatus('Disconnected', '#ff4444');
-          GameStateLogger.logConnectionStatus('Disconnected from server', '#ff4444');
+        case "disconnected":
+          this.updateStatus("Disconnected", "#ff4444");
+          GameStateLogger.logConnectionStatus(
+            "Disconnected from server",
+            "#ff4444",
+          );
           break;
-        case 'error':
-          this.updateStatus('Connection Error', '#ff4444');
-          GameStateLogger.logError('WebSocket connection error');
+        case "error":
+          this.updateStatus("Connection Error", "#ff4444");
+          GameStateLogger.logError("WebSocket connection error");
           break;
       }
     });
@@ -163,7 +220,7 @@ export class TreasureHuntScene extends Phaser.Scene {
     this.gameStateUnsubscribe = socketManager.onGameStateUpdate(
       (state: ClientGameState) => {
         this.handleGameStateUpdate(state);
-      }
+      },
     );
 
     // Reset the logger for new session
@@ -173,6 +230,7 @@ export class TreasureHuntScene extends Phaser.Scene {
   private handleGameStateUpdate(state: ClientGameState): void {
     this.currentGameState = state;
 
+<<<<<<< HEAD
     // Log state assignment for debugging (remove when implementing rendering)
     if (this.currentGameState) {
       // State stored for future rendering implementation
@@ -190,19 +248,85 @@ export class TreasureHuntScene extends Phaser.Scene {
     }
 
     // Update status display with current player position
+=======
+    // Store server position for reconciliation
+>>>>>>> 70c74326b4474a1d9777f47e2b9c1ba046940f80
     if (state.current_player) {
       const pos = state.current_player.position;
-      const playerCount = (state.other_players?.length || 0) + 1;
-      this.updateStatus(
-        `Players: ${playerCount} | You: (${pos.x.toFixed(0)}, ${pos.y.toFixed(0)})`,
-        '#4ecca3'
-      );
+      this.serverPosition = { x: pos.x, y: pos.y };
 
-      // TODO: Update player sprite position based on state
-      // This will be implemented in the next phase
+      const playerCount = (state.other_players?.length || 0) + 1;
+      const localPos = this.player ? { x: this.player.x, y: this.player.y } : pos;
+      const diff = Math.sqrt(
+        Math.pow(localPos.x - pos.x, 2) + Math.pow(localPos.y - pos.y, 2)
+      );
+      this.updateStatus(
+        `Players: ${playerCount} | Diff: ${diff.toFixed(0)}px`,
+        diff > this.reconciliationThreshold ? "#ff4444" : "#4ecca3",
+      );
     } else {
-      this.updateStatus('Waiting for player data...', '#ffcc00');
+      this.updateStatus("Waiting for player data...", "#ffcc00");
     }
+
+    // Update all other players (supports multiple)
+    this.updateOtherPlayers(state.other_players || []);
+  }
+
+  private updateOtherPlayers(otherPlayersData: import("@/types/gameState").PlayerState[]): void {
+    // Debug: log other players data
+    console.log("Other players data:", otherPlayersData);
+
+    // Track which players are in the current state
+    const currentPlayerIds = new Set(otherPlayersData.map(p => p.id));
+
+    // Remove players that are no longer in the game
+    this.otherPlayers.forEach((sprite, playerId) => {
+      if (!currentPlayerIds.has(playerId)) {
+        // Destroy name label first
+        const nameLabel = sprite.getData("nameLabel") as Phaser.GameObjects.Text;
+        if (nameLabel) {
+          nameLabel.destroy();
+        }
+        sprite.destroy();
+        this.otherPlayers.delete(playerId);
+      }
+    });
+
+    // Add or update each other player
+    otherPlayersData.forEach(playerData => {
+      let sprite = this.otherPlayers.get(playerData.id);
+
+      if (!sprite) {
+        // Create new player sprite
+        sprite = this.physics.add.sprite(
+          playerData.position.x,
+          playerData.position.y,
+          "otherPlayer"
+        );
+        sprite.setDepth(99);
+        this.otherPlayers.set(playerData.id, sprite);
+
+        // Add username label above the player
+        const nameLabel = this.add.text(
+          playerData.position.x,
+          playerData.position.y - 30,
+          playerData.username,
+          { fontSize: "12px", color: "#ffffff", backgroundColor: "#000000aa" }
+        );
+        nameLabel.setOrigin(0.5);
+        nameLabel.setDepth(100);
+        sprite.setData("nameLabel", nameLabel);
+      } else {
+        // Update existing player position
+        sprite.setPosition(playerData.position.x, playerData.position.y);
+
+        // Update name label position
+        const nameLabel = sprite.getData("nameLabel") as Phaser.GameObjects.Text;
+        if (nameLabel) {
+          nameLabel.setPosition(playerData.position.x, playerData.position.y - 30);
+        }
+      }
+    });
   }
 
   private createMapBackground(): void {
@@ -570,7 +694,7 @@ export class TreasureHuntScene extends Phaser.Scene {
     // Clean up subscriptions when scene is destroyed
     if (this.gameStateUnsubscribe) {
       this.gameStateUnsubscribe();
-      GameStateLogger.logConnectionStatus('Scene shutting down', '#808080');
+      GameStateLogger.logConnectionStatus("Scene shutting down", "#808080");
     }
   }
 
@@ -582,21 +706,22 @@ export class TreasureHuntScene extends Phaser.Scene {
 
     // 計算水平方向
     if (this.cursors.left.isDown || this.wasd.left.isDown) {
-      vx = -speed;
+      vx = -1;
     } else if (this.cursors.right.isDown || this.wasd.right.isDown) {
-      vx = speed;
+      vx = 1;
     }
 
     // 計算垂直方向
     if (this.cursors.up.isDown || this.wasd.up.isDown) {
-      vy = -speed;
+      vy = -1;
     } else if (this.cursors.down.isDown || this.wasd.down.isDown) {
-      vy = speed;
+      vy = 1;
     }
 
     // 設置速度
-    this.player.setVelocity(vx, vy);
+    this.player.setVelocity(vx * speed, vy * speed);
 
+<<<<<<< HEAD
     // 發送 WebSocket 訊息（包含正確的 vx, vy 格式）
     if ((vx !== 0 || vy !== 0) && gameSession.isReady()) {
       try {
@@ -605,10 +730,35 @@ export class TreasureHuntScene extends Phaser.Scene {
       } catch (error) {
         console.error('Failed to send move command:', error);
       }
+=======
+    // 發送 WebSocket 訊息（包含八個方位）
+    if (vx !== 0 || vy !== 0) {
+      socketManager.sendMessage(ActionType.Move, {
+        vx: vx,
+        vy: vy,
+      });
+>>>>>>> 70c74326b4474a1d9777f47e2b9c1ba046940f80
     }
 
     // 檢查是否進入/離開建築
     this.checkBuildingStatus();
+
+    // Server reconciliation: 如果本地位置和 server 位置差太多，平滑修正
+    this.reconcilePosition();
+  }
+
+  private reconcilePosition(): void {
+    const dx = this.serverPosition.x - this.player.x;
+    const dy = this.serverPosition.y - this.player.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // 只有超過閾值才修正
+    if (distance > this.reconciliationThreshold) {
+      // 使用 lerp 平滑插值 (0.1 = 10% 每幀靠近 server 位置)
+      const lerpFactor = 0.1;
+      this.player.x += dx * lerpFactor;
+      this.player.y += dy * lerpFactor;
+    }
   }
 
   // private connectWebSocket(): void {

@@ -1,7 +1,17 @@
+<<<<<<< HEAD
 // Base payload that all game actions must include
 export interface PlayerSessionPayload {
   session_id: string;
   player_id: string;
+=======
+export interface gameInfo {
+  session_id: string;
+  player_id: string;
+}
+export interface MovePayload {
+  vx: number;
+  vy: number;
+>>>>>>> 70c74326b4474a1d9777f47e2b9c1ba046940f80
 }
 
 // Individual action payloads (matching backend expectations)

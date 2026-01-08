@@ -1,8 +1,14 @@
 import { ActionMap, ClientMessage } from "@/assets/types/client";
 import { ClientGameState, isGameState } from "@/types/gameState";
 import { GameStateLogger } from "@/utils/gameStateLogger";
+import { useGameStore } from "@/stores/gameStore";
+import { useAuthStore } from "@/stores/authStore";
 
-export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
+export type ConnectionStatus =
+  | "disconnected"
+  | "connecting"
+  | "connected"
+  | "error";
 
 // SocketManager.js
 class SocketManager {
@@ -14,7 +20,8 @@ class SocketManager {
   private onAuthError?: () => void;
   // Connection status
   private connectionStatus: ConnectionStatus = "disconnected";
-  private connectionStatusListeners: Set<(status: ConnectionStatus) => void> = new Set();
+  private connectionStatusListeners: Set<(status: ConnectionStatus) => void> =
+    new Set();
   private seq: number = 0;
   // Game state listeners
   private gameStateListeners: Set<(state: ClientGameState) => void> = new Set();
@@ -32,7 +39,9 @@ class SocketManager {
     return this.connectionStatus === "connected";
   }
 
-  onConnectionStatusChange(callback: (status: ConnectionStatus) => void): () => void {
+  onConnectionStatusChange(
+    callback: (status: ConnectionStatus) => void,
+  ): () => void {
     this.connectionStatusListeners.add(callback);
     // 立即觸發一次當前狀態
     callback(this.connectionStatus);
@@ -87,6 +96,15 @@ class SocketManager {
         // Check if it's a game state update
         if (isGameState(data)) {
           this.handleGameStateUpdate(data);
+        } else if (data.action === "game_found") {
+          // Store session_id when game is found
+          const sessionId = data.payload?.session_id;
+          if (sessionId) {
+            useGameStore.getState().setSessionId(sessionId);
+            console.log("Game found, session_id:", sessionId);
+          }
+          // Also notify listeners
+          this.listeners.get(data.action)?.(data.payload);
         } else if (data.action && this.listeners.has(data.action)) {
           // Handle action-based messages
           console.log("Received action message:", data.action);
@@ -114,9 +132,19 @@ class SocketManager {
     payload: ActionMap[T],
   ): void {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      // Auto-inject session_id and player_id
+      const sessionId = useGameStore.getState().sessionId;
+      const playerId = useAuthStore.getState().memberInfo?.id;
+
+      const enrichedPayload = {
+        ...payload,
+        session_id: sessionId,
+        player_id: playerId,
+      };
+
       const message: ClientMessage<T> = {
         action,
-        payload,
+        payload: enrichedPayload,
         seq: ++this.seq,
       };
 
@@ -159,7 +187,7 @@ class SocketManager {
     GameStateLogger.logGameState(state);
 
     // Notify all game state listeners
-    this.gameStateListeners.forEach(listener => {
+    this.gameStateListeners.forEach((listener) => {
       try {
         listener(state);
       } catch (error) {
