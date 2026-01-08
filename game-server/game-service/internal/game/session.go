@@ -205,15 +205,12 @@ func (s *Session) manageClientMessages() {
 	}
 }
 
-const framerate = 30
-
 /**
 * manages all the game update loops.
 * runs system code to update state of game x times every second.
 **/
 func (s *Session) manageGameLoop() {
-	// TODO: update from once per second to 30 / 60 times a second
-	ticker := time.NewTicker((1 * time.Second) / framerate)
+	ticker := time.NewTicker((1 * time.Second) / time.Duration(constants.GameFrameRate))
 	defer ticker.Stop()
 
 	for {
@@ -223,7 +220,7 @@ func (s *Session) manageGameLoop() {
 
 			// movement
 			movementSys := systems.MovementSystem{}
-			deltaTime := 1.0 / float64(framerate)
+			deltaTime := 1.0 / float64(constants.GameFrameRate)
 			movementSys.Update(deltaTime, entities)
 
 			// interaction
@@ -250,8 +247,8 @@ func (s *Session) AddPlayer(playerID uuid.UUID, username string) uuid.UUID {
 	PlayerConfig := PlayerConfig{
 		UserID:        playerID,
 		Username:      username,
-		X:             600, // map center (MapWidth / 2)
-		Y:             400, // map center (MapHeight / 2)
+		X:             rand.Float64() * (constants.MapWidth - constants.PlayerRadius),
+		Y:             rand.Float64() * (constants.MapHeight - constants.PlayerRadius),
 		SkillName:     "Basic Attack",
 		SkillLevel:    1,
 		CurrentHealth: 100,
@@ -274,8 +271,23 @@ func (s *Session) AddPlayer(playerID uuid.UUID, username string) uuid.UUID {
 }
 
 func (s *Session) RemovePlayer(userID string) {
-	// 選項 1: 直接移除
-	// 選項 2: 標記為死亡，等待復活
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	playerID, err := uuid.Parse(userID)
+	if err != nil {
+		fmt.Println("RemovePlayer: Invailid userID", playerID)
+		return
+	}
+	entityID, exists := s.playerEntityIDToPlayerID[playerID]
+	if !exists {
+		fmt.Println("RemovePlayer: playerID not found in session", playerID)
+		return
+	}
+	s.EntityManager.RemoveEntity(entityID)
+
+	delete(s.playerIDToEntitiesID, playerID)
+	delete(s.playerEntityIDToPlayerID, entityID)
+	fmt.Printf("Remove player %s from session %s\n", playerID, s.ID)
 }
 
 func (s *Session) AddDoor(x, y float64) uuid.UUID {

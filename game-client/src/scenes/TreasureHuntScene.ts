@@ -20,13 +20,16 @@ interface Building {
   roof: Phaser.GameObjects.Graphics;
   floor: Phaser.GameObjects.Graphics;
   doorMarker: Phaser.GameObjects.Graphics;
+  // Door properties
+  door: Phaser.GameObjects.Graphics;
+  doorCollider: Phaser.GameObjects.Rectangle;
+  isOpen: boolean;
 }
 
 export class TreasureHuntScene extends Phaser.Scene {
-  private player!: Phaser.Physics.Arcade.Sprite;
-
-  // Other players
+  private player?: Phaser.Physics.Arcade.Sprite;
   private otherPlayers: Map<string, Phaser.Physics.Arcade.Sprite> = new Map();
+  private otherPlayersTargets: Map<string, { x: number; y: number }> = new Map();
 
   // Controls
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -41,12 +44,9 @@ export class TreasureHuntScene extends Phaser.Scene {
   private onStatusChange?: (status: string, color: string) => void;
 
   // Game state
-  private currentGameState?: ClientGameState;
+  private currentGameState?: ClientGameState; // Will be used for rendering players in next phase
   private gameStateUnsubscribe?: () => void;
-
-  // Server reconciliation
-  private serverPosition: { x: number; y: number } = { x: 600, y: 400 };
-  private reconciliationThreshold = 10; // 超過這個距離才修正
+  private targetPosition: { x: number; y: number } | null = null;
 
   // 地圖大小
   private mapWidth = 1200;
@@ -84,13 +84,28 @@ export class TreasureHuntScene extends Phaser.Scene {
 
   private createOtherPlayerTexture(): void {
     const graphics = this.make.graphics({});
-    graphics.fillStyle(0xff6b6b, 1);  // 紅色
+    graphics.fillStyle(0xff6b6b, 1); // Red color for other players
     graphics.fillCircle(20, 20, 18);
     graphics.fillStyle(0xffffff, 1);
     graphics.fillCircle(14, 16, 4);
     graphics.fillCircle(26, 16, 4);
     graphics.generateTexture("otherPlayer", 40, 40);
     graphics.destroy();
+  }
+
+  private createPlayer(x: number, y: number): void {
+    this.player = this.physics.add.sprite(x, y, "player");
+    this.player.setCollideWorldBounds(true);
+    this.player.setDepth(100);
+
+    // 玩家與所有建築牆壁/門碰撞
+    this.buildings.forEach((building) => {
+      this.physics.add.collider(this.player!, building.wallGroup);
+      this.physics.add.collider(this.player!, building.doorCollider);
+    });
+
+    // 相機跟隨玩家
+    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
   }
 
   create(): void {
@@ -106,23 +121,8 @@ export class TreasureHuntScene extends Phaser.Scene {
     // 創建建築
     this.createBuildings();
 
-    // 創建玩家（置中）
-    this.player = this.physics.add.sprite(
-      this.mapWidth / 2,
-      this.mapHeight / 2,
-      "player",
-    );
-    this.player.setCollideWorldBounds(true);
-    this.player.setDepth(100);
-
-    // 玩家與所有建築牆壁碰撞
-    this.buildings.forEach((building) => {
-      this.physics.add.collider(this.player, building.wallGroup);
-    });
-
-    // 設置相機
+    // 設置相機邊界（玩家建立後再 follow）
     this.cameras.main.setBounds(0, 0, this.mapWidth, this.mapHeight);
-    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
 
     // 輸入控制
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -136,6 +136,14 @@ export class TreasureHuntScene extends Phaser.Scene {
     // ESC 返回主選單
     this.input.keyboard?.on("keydown-ESC", () => {
       this.scene.start("MainMenuScene");
+    });
+
+    // E 鍵開關門
+    this.input.keyboard?.on("keydown-E", () => {
+      const nearbyBuilding = this.getNearbyBuilding();
+      if (nearbyBuilding) {
+        this.toggleDoor(nearbyBuilding);
+      }
     });
 
     // 創建室內遮罩（用於遮住建築外面）
@@ -229,82 +237,70 @@ export class TreasureHuntScene extends Phaser.Scene {
   private handleGameStateUpdate(state: ClientGameState): void {
     this.currentGameState = state;
 
-    // Store server position for reconciliation
+    // Update current player position from server
     if (state.current_player) {
       const pos = state.current_player.position;
-      this.serverPosition = { x: pos.x, y: pos.y };
+
+      // 第一次收到位置，建立玩家
+      if (!this.player) {
+        this.createPlayer(pos.x, pos.y);
+      }
+
+      // 設定目標位置，在 update() 中平滑移動
+      this.targetPosition = { x: pos.x, y: pos.y };
 
       const playerCount = (state.other_players?.length || 0) + 1;
-      const localPos = this.player ? { x: this.player.x, y: this.player.y } : pos;
-      const diff = Math.sqrt(
-        Math.pow(localPos.x - pos.x, 2) + Math.pow(localPos.y - pos.y, 2)
-      );
       this.updateStatus(
-        `Players: ${playerCount} | Diff: ${diff.toFixed(0)}px`,
-        diff > this.reconciliationThreshold ? "#ff4444" : "#4ecca3",
+        `Players: ${playerCount} | You: (${pos.x.toFixed(0)}, ${pos.y.toFixed(0)})`,
+        "#4ecca3",
       );
     } else {
       this.updateStatus("Waiting for player data...", "#ffcc00");
     }
 
-    // Update all other players (supports multiple)
+    // Update other players on screen
     this.updateOtherPlayers(state.other_players || []);
   }
 
-  private updateOtherPlayers(otherPlayersData: import("@/types/gameState").PlayerState[]): void {
-    // Debug: log other players data
-    console.log("Other players data:", otherPlayersData);
+  private updateOtherPlayers(
+    otherPlayersData: Array<{
+      id: string;
+      username: string;
+      position: { x: number; y: number };
+    }>,
+  ): void {
+    // Track which players are still in the game
+    const activePlayerIds = new Set(otherPlayersData.map((p) => p.id));
 
-    // Track which players are in the current state
-    const currentPlayerIds = new Set(otherPlayersData.map(p => p.id));
-
-    // Remove players that are no longer in the game
+    // Remove players who left
     this.otherPlayers.forEach((sprite, playerId) => {
-      if (!currentPlayerIds.has(playerId)) {
-        // Destroy name label first
-        const nameLabel = sprite.getData("nameLabel") as Phaser.GameObjects.Text;
-        if (nameLabel) {
-          nameLabel.destroy();
-        }
+      if (!activePlayerIds.has(playerId)) {
         sprite.destroy();
         this.otherPlayers.delete(playerId);
+        this.otherPlayersTargets.delete(playerId);
       }
     });
 
-    // Add or update each other player
-    otherPlayersData.forEach(playerData => {
+    // Update or create other players
+    otherPlayersData.forEach((playerData) => {
       let sprite = this.otherPlayers.get(playerData.id);
 
       if (!sprite) {
-        // Create new player sprite
+        // Create new sprite for this player
         sprite = this.physics.add.sprite(
           playerData.position.x,
           playerData.position.y,
-          "otherPlayer"
+          "otherPlayer",
         );
         sprite.setDepth(99);
         this.otherPlayers.set(playerData.id, sprite);
-
-        // Add username label above the player
-        const nameLabel = this.add.text(
-          playerData.position.x,
-          playerData.position.y - 30,
-          playerData.username,
-          { fontSize: "12px", color: "#ffffff", backgroundColor: "#000000aa" }
-        );
-        nameLabel.setOrigin(0.5);
-        nameLabel.setDepth(100);
-        sprite.setData("nameLabel", nameLabel);
-      } else {
-        // Update existing player position
-        sprite.setPosition(playerData.position.x, playerData.position.y);
-
-        // Update name label position
-        const nameLabel = sprite.getData("nameLabel") as Phaser.GameObjects.Text;
-        if (nameLabel) {
-          nameLabel.setPosition(playerData.position.x, playerData.position.y - 30);
-        }
       }
+
+      // 設定目標位置，在 update() 中平滑移動
+      this.otherPlayersTargets.set(playerData.id, {
+        x: playerData.position.x,
+        y: playerData.position.y,
+      });
     });
   }
 
@@ -541,6 +537,54 @@ export class TreasureHuntScene extends Phaser.Scene {
     this.outsideObjects.push(wallGraphics);
     this.outsideObjects.push(roof);
 
+    // 創建門 (可開關的)
+    const door = this.add.graphics();
+    door.setDepth(51);
+
+    // 計算門的位置和大小
+    let doorRectX = 0;
+    let doorRectY = 0;
+    let doorRectW = 0;
+    let doorRectH = 0;
+
+    if (doorSide === "top") {
+      doorRectX = x + (width - doorWidth) / 2;
+      doorRectY = y;
+      doorRectW = doorWidth;
+      doorRectH = wallThickness;
+    } else if (doorSide === "bottom") {
+      doorRectX = x + (width - doorWidth) / 2;
+      doorRectY = y + height - wallThickness;
+      doorRectW = doorWidth;
+      doorRectH = wallThickness;
+    } else if (doorSide === "left") {
+      doorRectX = x;
+      doorRectY = y + (height - doorWidth) / 2;
+      doorRectW = wallThickness;
+      doorRectH = doorWidth;
+    } else {
+      doorRectX = x + width - wallThickness;
+      doorRectY = y + (height - doorWidth) / 2;
+      doorRectW = wallThickness;
+      doorRectH = doorWidth;
+    }
+
+    // 畫門 (棕色)
+    door.fillStyle(0x8b4513, 1);
+    door.fillRect(doorRectX, doorRectY, doorRectW, doorRectH);
+    door.lineStyle(2, 0x5a2d0a, 1);
+    door.strokeRect(doorRectX, doorRectY, doorRectW, doorRectH);
+
+    // 創建門的碰撞體 (Rectangle)
+    const doorCollider = this.add.rectangle(
+      doorRectX + doorRectW / 2,
+      doorRectY + doorRectH / 2,
+      doorRectW,
+      doorRectH,
+    );
+    this.physics.add.existing(doorCollider, true); // true = static body
+    doorCollider.setVisible(false);
+
     return {
       id,
       x,
@@ -552,10 +596,14 @@ export class TreasureHuntScene extends Phaser.Scene {
       roof,
       floor,
       doorMarker,
+      door,
+      doorCollider,
+      isOpen: false,
     };
   }
 
   private isPlayerInsideBuilding(building: Building): boolean {
+    if (!this.player) return false;
     return (
       this.player.x >= building.x &&
       this.player.x <= building.x + building.width &&
@@ -644,6 +692,65 @@ export class TreasureHuntScene extends Phaser.Scene {
     this.indoorMask.fillRect(bx + bw, by, this.mapWidth + 1000, bh);
   }
 
+  private toggleDoor(building: Building): void {
+    building.isOpen = !building.isOpen;
+
+    if (building.isOpen) {
+      // 開門：隱藏門並禁用碰撞
+      building.door.setVisible(false);
+      const body = building.doorCollider.body as Phaser.Physics.Arcade.StaticBody;
+      if (body) {
+        body.enable = false;
+      }
+    } else {
+      // 關門：顯示門並啟用碰撞
+      building.door.setVisible(true);
+      const body = building.doorCollider.body as Phaser.Physics.Arcade.StaticBody;
+      if (body) {
+        body.enable = true;
+      }
+    }
+  }
+
+  private getNearbyBuilding(): Building | null {
+    if (!this.player) return null;
+    const interactDistance = 60;
+
+    for (const building of this.buildings) {
+      // 計算門的中心位置
+      const doorWidth = 50;
+      let doorCenterX = 0;
+      let doorCenterY = 0;
+
+      if (building.doorSide === "top") {
+        doorCenterX = building.x + building.width / 2;
+        doorCenterY = building.y;
+      } else if (building.doorSide === "bottom") {
+        doorCenterX = building.x + building.width / 2;
+        doorCenterY = building.y + building.height;
+      } else if (building.doorSide === "left") {
+        doorCenterX = building.x;
+        doorCenterY = building.y + building.height / 2;
+      } else {
+        doorCenterX = building.x + building.width;
+        doorCenterY = building.y + building.height / 2;
+      }
+
+      const distance = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        doorCenterX,
+        doorCenterY,
+      );
+
+      if (distance < interactDistance) {
+        return building;
+      }
+    }
+
+    return null;
+  }
+
   private createUI(): void {
     const posText = this.add.text(10, 10, "", {
       fontSize: "14px",
@@ -656,6 +763,10 @@ export class TreasureHuntScene extends Phaser.Scene {
 
     // 每幀更新座標
     this.events.on("update", () => {
+      if (!this.player) {
+        posText.setText("Waiting for server...");
+        return;
+      }
       const status = this.currentBuilding ? `Indoor` : `Outdoor`;
       posText.setText(
         `X: ${Math.round(this.player.x)} Y: ${Math.round(this.player.y)} | ${status}`,
@@ -698,7 +809,7 @@ export class TreasureHuntScene extends Phaser.Scene {
     }
 
     // 設置速度
-    this.player.setVelocity(vx * speed, vy * speed);
+    // this.player.setVelocity(vx * speed, vy * speed);
 
     // 發送 WebSocket 訊息（包含八個方位）
     if (vx !== 0 || vy !== 0) {
@@ -708,25 +819,33 @@ export class TreasureHuntScene extends Phaser.Scene {
       });
     }
 
+    // 平滑移動到目標位置 (lerp)
+    const lerpFactor = 0.3; // 0-1，越大越快到達目標
+
+    if (this.player && this.targetPosition) {
+      this.player.x = Phaser.Math.Linear(
+        this.player.x,
+        this.targetPosition.x,
+        lerpFactor,
+      );
+      this.player.y = Phaser.Math.Linear(
+        this.player.y,
+        this.targetPosition.y,
+        lerpFactor,
+      );
+    }
+
+    // 其他玩家也平滑移動
+    this.otherPlayers.forEach((sprite, playerId) => {
+      const target = this.otherPlayersTargets.get(playerId);
+      if (target) {
+        sprite.x = Phaser.Math.Linear(sprite.x, target.x, lerpFactor);
+        sprite.y = Phaser.Math.Linear(sprite.y, target.y, lerpFactor);
+      }
+    });
+
     // 檢查是否進入/離開建築
     this.checkBuildingStatus();
-
-    // Server reconciliation: 如果本地位置和 server 位置差太多，平滑修正
-    this.reconcilePosition();
-  }
-
-  private reconcilePosition(): void {
-    const dx = this.serverPosition.x - this.player.x;
-    const dy = this.serverPosition.y - this.player.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-
-    // 只有超過閾值才修正
-    if (distance > this.reconciliationThreshold) {
-      // 使用 lerp 平滑插值 (0.1 = 10% 每幀靠近 server 位置)
-      const lerpFactor = 0.1;
-      this.player.x += dx * lerpFactor;
-      this.player.y += dy * lerpFactor;
-    }
   }
 
   // private connectWebSocket(): void {
