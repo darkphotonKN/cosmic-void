@@ -6,6 +6,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/api-gateway/internal/auth"
 	authService "github.com/darkphotonKN/cosmic-void-server/api-gateway/internal/gateway/auth"
 	"github.com/darkphotonKN/cosmic-void-server/api-gateway/internal/gateway/example"
+	"github.com/darkphotonKN/cosmic-void-server/api-gateway/internal/gateway/stats"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -66,6 +67,14 @@ func SetupRouter(registry discovery.Registry, db *sqlx.DB) *gin.Engine {
 	memberRoutes.GET("", authHandler.GetMemberByIdHandler)
 	memberRoutes.PATCH("/update-password", authHandler.UpdatePasswordMemberHandler)
 	memberRoutes.PATCH("/update-info", authHandler.UpdateInfoMemberHandler)
+
+	// --- STATS MICROSERVICE ---
+
+	statsClient := stats.NewClient(registry)
+	statsHandler := stats.NewHandler(statsClient)
+
+	statsRoutes := api.Group("/stats")
+	statsRoutes.GET("/player/:playerId", statsHandler.GetPlayerStats)
 
 	// --- GAME SERVICE ---
 	// TODO: Add game service routes when implemented

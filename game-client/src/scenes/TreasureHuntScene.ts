@@ -29,7 +29,8 @@ interface Building {
 export class TreasureHuntScene extends Phaser.Scene {
   private player?: Phaser.Physics.Arcade.Sprite;
   private otherPlayers: Map<string, Phaser.Physics.Arcade.Sprite> = new Map();
-  private otherPlayersTargets: Map<string, { x: number; y: number }> = new Map();
+  private otherPlayersTargets: Map<string, { x: number; y: number }> =
+    new Map();
 
   // Controls
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -698,14 +699,16 @@ export class TreasureHuntScene extends Phaser.Scene {
     if (building.isOpen) {
       // 開門：隱藏門並禁用碰撞
       building.door.setVisible(false);
-      const body = building.doorCollider.body as Phaser.Physics.Arcade.StaticBody;
+      const body = building.doorCollider
+        .body as Phaser.Physics.Arcade.StaticBody;
       if (body) {
         body.enable = false;
       }
     } else {
       // 關門：顯示門並啟用碰撞
       building.door.setVisible(true);
-      const body = building.doorCollider.body as Phaser.Physics.Arcade.StaticBody;
+      const body = building.doorCollider
+        .body as Phaser.Physics.Arcade.StaticBody;
       if (body) {
         body.enable = true;
       }

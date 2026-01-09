@@ -230,10 +230,11 @@ func (s *Server) cleanUpClient(conn *websocket.Conn) {
 
 	// 獲取玩家資訊
 	player, exists := s.connToPlayer[conn]
-	if !exists {
-		s.mu.Unlock()
-		fmt.Println("cleanUpClient: connection not found in connToPlayer map")
-		conn.Close()
+
+	if exists {
+		fmt.Printf("Cleaning up client: %s\n", player.Username)
+		// 從 queue 中移除玩家
+		s.queue.PlayerRemoveQueue(player)
 		return
 	}
 

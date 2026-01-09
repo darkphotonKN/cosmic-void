@@ -6,4 +6,5 @@ use (
 	./common
 	./example-service
 	./game-service
+	./stats-service
 )

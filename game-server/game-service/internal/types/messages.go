@@ -37,7 +37,6 @@ type ClientGameState struct {
 }
 
 func (m *Message) ParsePayload() (interface{}, error) {
-
 	switch constants.Action(m.Action) {
 	case constants.ActionMove:
 		parsedPayload := PlayerSessionMovePayload{

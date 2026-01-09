@@ -147,7 +147,18 @@ class SocketManager {
         payload: enrichedPayload,
         seq: ++this.seq,
       };
+
+      // Debug logging for outgoing messages
+      console.log(
+        `%c[WebSocket Send] Action: ${action}`,
+        'color: #ff69b4; font-weight: bold'
+      );
+      console.log('Payload:', payload);
+      console.log('Full message:', message);
+
       this.socket.send(JSON.stringify(message));
+    } else {
+      console.warn('Cannot send message: WebSocket not connected');
     }
   }
 

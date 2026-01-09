@@ -1,0 +1,135 @@
+syntax = "proto3";
+
+package stats;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats";
+
+service StatsService {
+  rpc GetPlayerStats(GetPlayerStatsRequest) returns (PlayerStats);
+  rpc UpdatePlayerStats(UpdatePlayerStatsRequest) returns (PlayerStats);
+  rpc GetLeaderboard(GetLeaderboardRequest) returns (LeaderboardResponse);
+  rpc GetMatchHistory(GetMatchHistoryRequest) returns (MatchHistoryResponse);
+  rpc RecordMatch(RecordMatchRequest) returns (MatchResult);
+}
+
+message GetPlayerStatsRequest {
+  string player_id = 1;
+}
+
+message UpdatePlayerStatsRequest {
+  string player_id = 1;
+  StatsUpdate update = 2;
+}
+
+message StatsUpdate {
+  optional int32 kills_delta = 1;
+  optional int32 deaths_delta = 2;
+  optional int32 assists_delta = 3;
+  optional int32 matches_delta = 4;
+  optional int32 wins_delta = 5;
+  optional int32 xp_delta = 6;
+  optional int32 items_collected_delta = 7;
+  optional float damage_dealt_delta = 8;
+  optional float damage_taken_delta = 9;
+  optional int32 play_time_seconds_delta = 10;
+}
+
+message PlayerStats {
+  string id = 1;
+  string player_id = 2;
+  int32 level = 3;
+  int32 xp = 4;
+  int32 total_matches = 5;
+  int32 wins = 6;
+  int32 losses = 7;
+  int32 kills = 8;
+  int32 deaths = 9;
+  int32 assists = 10;
+  float kd_ratio = 11;
+  float win_rate = 12;
+  int32 items_collected = 13;
+  float damage_dealt = 14;
+  float damage_taken = 15;
+  int32 play_time_seconds = 16;
+  int32 current_streak = 17;
+  int32 best_streak = 18;
+  google.protobuf.Timestamp created_at = 19;
+  google.protobuf.Timestamp updated_at = 20;
+}
+
+message GetLeaderboardRequest {
+  enum Period {
+    DAILY = 0;
+    WEEKLY = 1;
+    MONTHLY = 2;
+    ALL_TIME = 3;
+  }
+
+  enum Category {
+    XP = 0;
+    KILLS = 1;
+    WINS = 2;
+    KD_RATIO = 3;
+    WIN_RATE = 4;
+  }
+
+  Period period = 1;
+  Category category = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message LeaderboardEntry {
+  int32 rank = 1;
+  string player_id = 2;
+  string player_name = 3;
+  float score = 4;
+  PlayerStats stats = 5;
+}
+
+message LeaderboardResponse {
+  repeated LeaderboardEntry entries = 1;
+  int32 total_players = 2;
+}
+
+message GetMatchHistoryRequest {
+  string player_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message MatchResult {
+  string id = 1;
+  string match_id = 2;
+  string player_id = 3;
+  bool won = 4;
+  int32 kills = 5;
+  int32 deaths = 6;
+  int32 assists = 7;
+  float damage_dealt = 8;
+  float damage_taken = 9;
+  int32 items_collected = 10;
+  int32 duration_seconds = 11;
+  int32 xp_gained = 12;
+  google.protobuf.Timestamp played_at = 13;
+}
+
+message MatchHistoryResponse {
+  repeated MatchResult matches = 1;
+  int32 total_matches = 2;
+}
+
+message RecordMatchRequest {
+  string match_id = 1;
+  string player_id = 2;
+  bool won = 3;
+  int32 kills = 4;
+  int32 deaths = 5;
+  int32 assists = 6;
+  float damage_dealt = 7;
+  float damage_taken = 8;
+  int32 items_collected = 9;
+  int32 duration_seconds = 10;
+}
