@@ -36,7 +36,7 @@ const MaxMsgChanBuffer int = 30
 
 // Game Defaults
 const DefaultSpeed float64 = 200
-const DefaultInteractableRange float64 = 1
+const DefaultInteractableRange float64 = 60
 const DefautMaxSessionPlayers = 2
 
 // map setting

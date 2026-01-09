@@ -6,7 +6,7 @@
 import Phaser from "phaser";
 import { ActionType } from "@/assets/types/client";
 import { socketManager } from "@/utils/class/SocketManager";
-import { ClientGameState } from "@/types/gameState";
+import { ClientGameState, ContainerState, ItemState } from "@/types/gameState";
 import { GameStateLogger } from "@/utils/gameStateLogger";
 
 interface Building {
@@ -45,7 +45,6 @@ export class TreasureHuntScene extends Phaser.Scene {
   private onStatusChange?: (status: string, color: string) => void;
 
   // Game state
-  private currentGameState?: ClientGameState; // Will be used for rendering players in next phase
   private gameStateUnsubscribe?: () => void;
   private targetPosition: { x: number; y: number } | null = null;
 
@@ -59,6 +58,15 @@ export class TreasureHuntScene extends Phaser.Scene {
   private outsideObjects: Phaser.GameObjects.GameObject[] = [];
   private indoorMask!: Phaser.GameObjects.Graphics;
 
+  // 寶箱 (從後端同步)
+  private chests: Map<string, { sprite: Phaser.GameObjects.Sprite; entityId: string }> = new Map();
+
+  // 寶箱跳窗
+  private chestPopup?: Phaser.GameObjects.Container;
+  private isPopupOpen = false;
+  private openedChestEntityId?: string;
+  private popupItemsText?: Phaser.GameObjects.Text;
+
   constructor() {
     super({ key: "TreasureHuntScene" });
   }
@@ -70,6 +78,7 @@ export class TreasureHuntScene extends Phaser.Scene {
   preload(): void {
     this.createPlayerTexture();
     this.createOtherPlayerTexture();
+    this.createChestTextures();
   }
 
   private createPlayerTexture(): void {
@@ -92,6 +101,216 @@ export class TreasureHuntScene extends Phaser.Scene {
     graphics.fillCircle(26, 16, 4);
     graphics.generateTexture("otherPlayer", 40, 40);
     graphics.destroy();
+  }
+
+  private createChestTextures(): void {
+    const width = 40;
+    const height = 32;
+
+    // 關閉的寶箱
+    const closed = this.make.graphics({});
+    closed.fillStyle(0x8b4513, 1);
+    closed.fillRect(0, 10, width, height - 10);
+    closed.fillStyle(0x654321, 1);
+    closed.fillRect(0, 0, width, 12);
+    closed.fillStyle(0xffd700, 1);
+    closed.fillRect(0, 10, width, 3);
+    closed.fillRect(16, 6, 8, 10);
+    closed.lineStyle(2, 0x3d2314, 1);
+    closed.strokeRect(0, 0, width, height);
+    closed.generateTexture("chest_closed", width, height);
+    closed.destroy();
+
+    // 打開的寶箱
+    const open = this.make.graphics({});
+    open.fillStyle(0x8b4513, 1);
+    open.fillRect(0, 16, width, height - 16);
+    open.fillStyle(0x654321, 1);
+    open.fillRect(0, 0, width, 10);
+    open.fillStyle(0xffec8b, 1);
+    open.fillRect(4, 18, width - 8, height - 22);
+    open.fillStyle(0xffd700, 1);
+    open.fillRect(0, 16, width, 3);
+    open.lineStyle(2, 0x3d2314, 1);
+    open.strokeRect(0, 0, width, height);
+    open.generateTexture("chest_open", width, height);
+    open.destroy();
+  }
+
+  private updateContainers(containers: ContainerState[]): void {
+    const activeEntityIds = new Set(containers.map(c => c.entity_id));
+
+    // 移除不存在的寶箱
+    this.chests.forEach((chest, entityId) => {
+      if (!activeEntityIds.has(entityId)) {
+        chest.sprite.destroy();
+        this.chests.delete(entityId);
+      }
+    });
+
+    // 新增或更新寶箱
+    containers.forEach((container) => {
+      let chest = this.chests.get(container.entity_id);
+
+      if (!chest) {
+        // 新增寶箱
+        const sprite = this.add.sprite(
+          container.position.x,
+          container.position.y,
+          container.is_open ? "chest_open" : "chest_closed"
+        );
+        sprite.setDepth(50);
+        chest = { sprite, entityId: container.entity_id };
+        this.chests.set(container.entity_id, chest);
+      } else {
+        // 更新寶箱狀態
+        chest.sprite.setTexture(container.is_open ? "chest_open" : "chest_closed");
+        chest.sprite.setPosition(container.position.x, container.position.y);
+      }
+
+      // 如果是打開的寶箱，更新跳窗內容
+      if (container.is_open && this.openedChestEntityId === container.entity_id) {
+        this.updatePopupItems(container.items);
+      }
+    });
+  }
+
+  private toggleChest(entityId: string): void {
+    // 發送互動請求到後端
+    socketManager.sendMessage(ActionType.Interact, {
+      entity_id: entityId,
+    });
+
+    // 如果是關閉跳窗
+    if (this.isPopupOpen && this.openedChestEntityId === entityId) {
+      this.hideChestPopup();
+      this.openedChestEntityId = undefined;
+    } else {
+      // 開啟跳窗
+      this.openedChestEntityId = entityId;
+      this.showChestPopup();
+    }
+  }
+
+  private checkChestDistance(): void {
+    if (!this.player || !this.openedChestEntityId || !this.isPopupOpen) return;
+
+    const chest = this.chests.get(this.openedChestEntityId);
+    if (!chest) return;
+
+    const distance = Phaser.Math.Distance.Between(
+      this.player.x,
+      this.player.y,
+      chest.sprite.x,
+      chest.sprite.y,
+    );
+
+    const interactDistance = 60;
+    if (distance > interactDistance) {
+      this.hideChestPopup();
+      this.openedChestEntityId = undefined;
+    }
+  }
+
+  private showChestPopup(): void {
+    if (this.isPopupOpen) return;
+
+    const centerX = this.cameras.main.width / 2;
+    const centerY = this.cameras.main.height / 2;
+    const popupWidth = 300;
+    const popupHeight = 250;
+
+    // 半透明背景
+    const bg = this.add.graphics();
+    bg.fillStyle(0x000000, 0.7);
+    bg.fillRoundedRect(
+      -popupWidth / 2,
+      -popupHeight / 2,
+      popupWidth,
+      popupHeight,
+      16,
+    );
+    bg.lineStyle(2, 0xffd700, 1);
+    bg.strokeRoundedRect(
+      -popupWidth / 2,
+      -popupHeight / 2,
+      popupWidth,
+      popupHeight,
+      16,
+    );
+
+    // 標題
+    const title = this.add.text(0, -popupHeight / 2 + 20, "寶箱內容", {
+      fontSize: "20px",
+      color: "#ffd700",
+    });
+    title.setOrigin(0.5);
+
+    // 物品區
+    this.popupItemsText = this.add.text(0, 0, "載入中...", {
+      fontSize: "14px",
+      color: "#ffffff",
+      align: "center",
+      lineSpacing: 8,
+    });
+    this.popupItemsText.setOrigin(0.5);
+
+    // 提示
+    const hint = this.add.text(0, popupHeight / 2 - 25, "按 E 關閉", {
+      fontSize: "12px",
+      color: "#aaaaaa",
+    });
+    hint.setOrigin(0.5);
+
+    // Container
+    this.chestPopup = this.add.container(centerX, centerY, [
+      bg,
+      title,
+      this.popupItemsText,
+      hint,
+    ]);
+    this.chestPopup.setDepth(1000);
+    this.chestPopup.setScrollFactor(0);
+
+    this.isPopupOpen = true;
+  }
+
+  private updatePopupItems(items: ItemState[]): void {
+    if (!this.popupItemsText) return;
+
+    if (items.length === 0) {
+      this.popupItemsText.setText("（空的）");
+    } else {
+      const itemLines = items.map(item => `${item.name} x${item.quantity}`);
+      this.popupItemsText.setText(itemLines.join("\n"));
+    }
+  }
+
+  private hideChestPopup(): void {
+    if (this.chestPopup) {
+      this.chestPopup.destroy();
+      this.chestPopup = undefined;
+    }
+    this.popupItemsText = undefined;
+    this.isPopupOpen = false;
+  }
+
+  private getNearbyChest(): { entityId: string } | null {
+    if (!this.player) return null;
+    const interactDistance = 60;
+
+    for (const [entityId, chest] of this.chests) {
+      const distance = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        chest.sprite.x,
+        chest.sprite.y,
+      );
+      if (distance < interactDistance) {
+        return { entityId };
+      }
+    }
+    return null;
   }
 
   private createPlayer(x: number, y: number): void {
@@ -122,6 +341,8 @@ export class TreasureHuntScene extends Phaser.Scene {
     // 創建建築
     this.createBuildings();
 
+    // 寶箱由後端同步，不在這裡創建
+
     // 設置相機邊界（玩家建立後再 follow）
     this.cameras.main.setBounds(0, 0, this.mapWidth, this.mapHeight);
 
@@ -139,11 +360,18 @@ export class TreasureHuntScene extends Phaser.Scene {
       this.scene.start("MainMenuScene");
     });
 
-    // E 鍵開關門
+    // E 鍵互動（門、寶箱）
     this.input.keyboard?.on("keydown-E", () => {
+      // 檢查門
       const nearbyBuilding = this.getNearbyBuilding();
       if (nearbyBuilding) {
         this.toggleDoor(nearbyBuilding);
+        return;
+      }
+      // 檢查寶箱
+      const nearbyChest = this.getNearbyChest();
+      if (nearbyChest) {
+        this.toggleChest(nearbyChest.entityId);
       }
     });
 
@@ -236,8 +464,6 @@ export class TreasureHuntScene extends Phaser.Scene {
   }
 
   private handleGameStateUpdate(state: ClientGameState): void {
-    this.currentGameState = state;
-
     // Update current player position from server
     if (state.current_player) {
       const pos = state.current_player.position;
@@ -261,6 +487,9 @@ export class TreasureHuntScene extends Phaser.Scene {
 
     // Update other players on screen
     this.updateOtherPlayers(state.other_players || []);
+
+    // Update containers from server
+    this.updateContainers(state.containers || []);
   }
 
   private updateOtherPlayers(
@@ -849,6 +1078,11 @@ export class TreasureHuntScene extends Phaser.Scene {
 
     // 檢查是否進入/離開建築
     this.checkBuildingStatus();
+
+    // 檢查寶箱距離，太遠自動關閉（只有跳窗開啟時才檢查）
+    if (this.isPopupOpen) {
+      this.checkChestDistance();
+    }
   }
 
   // private connectWebSocket(): void {

@@ -1,6 +1,6 @@
 import { createStarfield } from "@/utils/Background";
 import { Player } from "@/utils/class/Player";
-// import { ActionMap, ActionType, ClientMessage } from "@/assets/types/client"; // TODO: Re-enable when updating GameScene
+import { ActionMap, ActionType, ClientMessage } from "@/assets/types/client";
 import Phaser from "phaser";
 
 // {
@@ -31,7 +31,7 @@ export class GameScene extends Phaser.Scene {
   private visionCircle!: Phaser.GameObjects.Graphics;
 
   // latest socket number
-  // private seq!: number; // TODO: Re-enable when updating GameScene
+  private seq!: number;
   constructor() {
     super({ key: "GameScene" });
   }
@@ -209,21 +209,11 @@ export class GameScene extends Phaser.Scene {
     if (this.cursors.left.isDown || this.keyA.isDown) {
       this.me.setVelocityX(-this.speed);
       this.me.anims.play("left", true);
-<<<<<<< HEAD
-      // TODO: Update to use new message format with vx/vy and session/player IDs
-      // this.sendMessage(ActionType.Move, { vx: -this.speed, vy: 0 });
-    } else if (this.cursors.right.isDown || this.keyD.isDown) {
-      this.me.setVelocityX(this.speed);
-      this.me.anims.play("right", true);
-      // TODO: Update to use new message format with vx/vy and session/player IDs
-      // this.sendMessage(ActionType.Move, { vx: this.speed, vy: 0 });
-=======
       this.sendMessage(ActionType.Move, { vx: -this.speed, vy: 0 });
     } else if (this.cursors.right.isDown || this.keyD.isDown) {
       this.me.setVelocityX(this.speed);
       this.me.anims.play("right", true);
       this.sendMessage(ActionType.Move, { vx: this.speed, vy: 0 });
->>>>>>> 70c74326b4474a1d9777f47e2b9c1ba046940f80
     } else {
       this.me.setVelocityX(0);
       this.me.anims.play("turn");
@@ -231,19 +221,10 @@ export class GameScene extends Phaser.Scene {
 
     if (this.cursors.up.isDown || this.keyW.isDown) {
       this.me.setVelocityY(-this.speed);
-<<<<<<< HEAD
-      // TODO: Update to use new message format with vx/vy and session/player IDs
-      // this.sendMessage(ActionType.Move, { vx: 0, vy: -this.speed });
-    } else if (this.cursors.down.isDown || this.keyS.isDown) {
-      this.me.setVelocityY(this.speed);
-      // TODO: Update to use new message format with vx/vy and session/player IDs
-      // this.sendMessage(ActionType.Move, { vx: 0, vy: this.speed });
-=======
       this.sendMessage(ActionType.Move, { vx: 0, vy: -this.speed });
     } else if (this.cursors.down.isDown || this.keyS.isDown) {
       this.me.setVelocityY(this.speed);
       this.sendMessage(ActionType.Move, { vx: 0, vy: this.speed });
->>>>>>> 70c74326b4474a1d9777f47e2b9c1ba046940f80
     }
 
     const distance = Phaser.Math.Distance.Between(
@@ -265,24 +246,23 @@ export class GameScene extends Phaser.Scene {
       }
     }
   }
-  // TODO: Re-enable when updating GameScene to use new message format
   // 發送訊息 通用模組
-  // sendMessage<T extends keyof ActionMap>(
-  //   action: T,
-  //   payload: ActionMap[T],
-  // ): void {
-  //   console.log("this.socket.readyState", this.socket.readyState);
-  //   if (this.socket.readyState === WebSocket.OPEN) {
-  //     console.log("socket action", action);
-  //     console.log("socket payload", payload);
-  //     const message: ClientMessage<T> = {
-  //       action,
-  //       payload,
-  //       seq: ++this.seq,
-  //     };
-  //     this.socket.send(JSON.stringify(message));
-  //   }
-  // }
+  sendMessage<T extends keyof ActionMap>(
+    action: T,
+    payload: ActionMap[T],
+  ): void {
+    console.log("this.socket.readyState", this.socket.readyState);
+    if (this.socket.readyState === WebSocket.OPEN) {
+      console.log("socket action", action);
+      console.log("socket payload", payload);
+      const message: ClientMessage<T> = {
+        action,
+        payload,
+        seq: ++this.seq,
+      };
+      this.socket.send(JSON.stringify(message));
+    }
+  }
 
   handlePlayerEnemyCollision(
     _player: Phaser.Physics.Arcade.Sprite,

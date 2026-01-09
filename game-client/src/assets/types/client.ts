@@ -28,6 +28,10 @@ export interface FindGamePayload {
   playerId: string;
 }
 
+export interface InteractPayload {
+  entity_id: string;
+}
+
 // ====== 動作類型對應 Payload ======
 
 export interface ActionMap {
@@ -37,6 +41,7 @@ export interface ActionMap {
   use: UsePayload;
   chat: ChatPayload;
   find_game: FindGamePayload;
+  interact: InteractPayload;
 }
 
 export const ActionType = {
@@ -46,6 +51,7 @@ export const ActionType = {
   Use: "use",
   Chat: "chat",
   Find_Game: "find_game",
+  Interact: "interact",
 } as const;
 
 export type ActionType = (typeof ActionType)[keyof typeof ActionType];

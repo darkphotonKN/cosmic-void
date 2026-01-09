@@ -32,6 +32,23 @@ export interface DoorState {
   is_open: boolean;
 }
 
+// Item state
+export interface ItemState {
+  item_id: UUID;
+  entity_id: UUID;
+  name: string;
+  quantity: number;
+}
+
+// Container/chest state
+export interface ContainerState {
+  container_id: UUID;
+  entity_id: UUID;
+  position: Position;
+  is_open: boolean;
+  items: ItemState[];
+}
+
 // Complete game state received from server
 export interface ClientGameState {
   session_id: UUID;
@@ -39,6 +56,7 @@ export interface ClientGameState {
   other_players: PlayerState[];        // Other players in session
   items: string[];                     // TODO: Update when items are structured
   doors: DoorState[];
+  containers: ContainerState[];
 }
 
 // Type guard to check if a message is a game state update

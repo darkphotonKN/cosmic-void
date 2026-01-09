@@ -7,6 +7,7 @@ import (
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	grpcauth "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/auth"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/queue"
@@ -136,9 +137,13 @@ func (s *Server) GetPlayerFromConn(conn *websocket.Conn) (*types.Player, bool) {
 * allows the creation of a new game session.
 **/
 func (s *Server) CreateGameSession(players []*types.Player) *game.Session {
-	stateSerializer := serializer.NewStateSerializer()
+	// create entity manager first so it can be shared
+	entityManager := ecs.NewEntityManager()
+	stateSerializer := serializer.NewStateSerializer(entityManager)
 	// create session with message sender
-	newGameSession := game.NewSession(messaging.NewMessageSender(s), stateSerializer)
+	newGameSession := game.NewSession(messaging.NewMessageSender(s), stateSerializer, entityManager)
+
+	newGameSession.InitialMapObjects()
 
 	for _, player := range players {
 		newGameSession.AddPlayer(player.ID, player.Username)

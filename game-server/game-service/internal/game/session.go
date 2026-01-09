@@ -68,12 +68,12 @@ type SessionSender interface {
 	BroadcastStateToPlayerList(players []uuid.UUID, state *types.ClientGameState) error
 }
 
-func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSerializer) *Session {
+func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSerializer, em *ecs.EntityManager) *Session {
 	sessionId := uuid.New()
 
 	s := &Session{
 		ID:            sessionId,
-		EntityManager: ecs.NewEntityManager(),
+		EntityManager: em,
 		// map [playerID] to entityID
 		playerIDToEntitiesID:     make(map[uuid.UUID]uuid.UUID),
 		playerEntityIDToPlayerID: make(map[uuid.UUID]uuid.UUID, constants.DefautMaxSessionPlayers),
@@ -312,6 +312,7 @@ func (s *Session) AddContainer(x, y float64) uuid.UUID {
 		Y: y,
 	}
 	itemIDList := make([]uuid.UUID, 0)
+
 	entity := CreateContainerEntity(s.EntityManager, ContainerConfig, itemIDList)
 	return entity.ID
 }
@@ -660,4 +661,11 @@ func (s *Session) addItem(itemConfig ItemConfig) uuid.UUID {
 
 	entity := CreateItemEntity(s.EntityManager, itemConfig)
 	return entity.ID
+}
+
+func (s *Session) InitialMapObjects() {
+	// add container
+	containerX := rand.Float64() * (constants.MapWidth - constants.PlayerRadius)
+	containerY := rand.Float64() * (constants.MapHeight - constants.PlayerRadius)
+	s.AddContainer(containerX, containerY)
 }

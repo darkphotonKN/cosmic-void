@@ -31,3 +31,17 @@ type DoorState struct {
 	Position Position
 	IsOpen   bool `json:"is_open"`
 }
+
+type ItemState struct {
+	ItemID   uuid.UUID `json:"item_id"`
+	EntityID uuid.UUID `json:"entity_id"`
+	Name     string    `json:"name"`
+	Quantity int       `json:"quantity"`
+}
+type ContainerState struct {
+	ContainerID uuid.UUID    `json:"container_id"`
+	EntityID    uuid.UUID    `json:"entity_id"`
+	Position    *Position    `json:"position"`
+	IsOpen      bool         `json:"is_open"`
+	Items       []*ItemState `json:"items"`
+}
