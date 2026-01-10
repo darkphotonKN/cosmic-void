@@ -649,3 +649,13 @@ func (s *Session) addItem(itemConfig ItemConfig) uuid.UUID {
 	entity := CreateItemEntity(s.EntityManager, itemConfig)
 	return entity.ID
 }
+
+/**
+* Formats the final end game data from the final game state.
+**/
+// TODO: WIP
+func (s *Session) formatEndGameData() (*types.EndGameState, error) {
+	entities := s.EntityManager.GetAllEntities()
+
+	return nil, nil
+}

@@ -5,3 +5,4 @@ gen:
 		api/proto/example/example.proto \
 		api/proto/auth/auth.proto \
 		api/proto/game/game.proto \
+		api/proto/stats/stats.proto \

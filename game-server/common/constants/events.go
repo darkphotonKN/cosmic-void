@@ -12,20 +12,8 @@ const (
 	MemberSignedInEvent = "member.signedin"       // when user signs into their account
 	PasswordResetEvent  = "member.password_reset" // when password reset is requested
 
-	// Build events
-	BuildCreatedEvent   = "build.created"   // when build is first created (draft)
-	BuildPublishedEvent = "build.published" // when build is made public
-	BuildUpdatedEvent   = "build.updated"   // when published build is edited
-	BuildDeletedEvent   = "build.deleted"   // when build is deleted
-	BuildRatedEvent     = "build.rated"     // when someone rates a build)
-
-	// Item events
-	ItemCreatedItemEvent = "item.created" // when item is created
-
-	// Stats events
-	StatsUpdatedEvent     = "stats.updated"      // when player stats are updated
-	MatchCompletedEvent   = "match.completed"    // when a game match is completed
-	PlayerActionEvent     = "player.action"     // when player performs an action
+	// Game Events
+	GameMatchEndedEvent = "game.match_ended"
 )
 
 /**

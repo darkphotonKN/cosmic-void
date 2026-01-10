@@ -31,3 +31,8 @@ type DoorState struct {
 	Position Position
 	IsOpen   bool `json:"is_open"`
 }
+
+// TODO: needs to include all fields that need converting
+type EndGameState struct {
+	players []*PlayerState
+}

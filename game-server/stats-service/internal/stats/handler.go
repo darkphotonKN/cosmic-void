@@ -4,75 +4,79 @@ import (
 	"context"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats"
-	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-type Service interface {
-	GetPlayerStats(ctx context.Context, playerID uuid.UUID) (*PlayerStats, error)
+// ServiceInterface defines what the handler needs from the service
+type ServiceInterface interface {
+	CreatePlayerMatchStats(ctx context.Context, req *pb.CreatePlayerMatchStatsRequest) (*pb.PlayerMatchStats, error)
+	CreatePlayerRankingStats(ctx context.Context, req *pb.CreatePlayerRankingStatsRequest) (*pb.PlayerRankingStats, error)
+	CreateMatchHistory(ctx context.Context, req *pb.CreateMatchHistoryRequest) (*pb.MatchHistory, error)
 }
 
 type Handler struct {
 	pb.UnimplementedStatsServiceServer
-	service Service
+	service ServiceInterface
 }
 
-func NewHandler(service Service) *Handler {
+func NewHandler(service ServiceInterface) *Handler {
 	return &Handler{
 		service: service,
 	}
 }
 
-func (h *Handler) GetPlayerStats(ctx context.Context, req *pb.GetPlayerStatsRequest) (*pb.PlayerStats, error) {
-	playerID, err := uuid.Parse(req.PlayerId)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid player ID: %v", err)
+// CreatePlayerMatchStats handles the gRPC request to create player match stats
+func (h *Handler) CreatePlayerMatchStats(ctx context.Context, req *pb.CreatePlayerMatchStatsRequest) (*pb.PlayerMatchStats, error) {
+	if req.MemberId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "member ID is required")
 	}
 
-	stats, err := h.service.GetPlayerStats(ctx, playerID)
+	stats, err := h.service.CreatePlayerMatchStats(ctx, req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get player stats: %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to create player match stats: %v", err)
 	}
 
-	return &pb.PlayerStats{
-		Id:              stats.ID.String(),
-		PlayerId:        stats.PlayerID.String(),
-		Level:           stats.Level,
-		Xp:              stats.XP,
-		TotalMatches:    stats.TotalMatches,
-		Wins:            stats.Wins,
-		Losses:          stats.Losses,
-		Kills:           stats.Kills,
-		Deaths:          stats.Deaths,
-		Assists:         stats.Assists,
-		KdRatio:         stats.KDRatio,
-		WinRate:         stats.WinRate,
-		ItemsCollected:  stats.ItemsCollected,
-		DamageDealt:     stats.DamageDealt,
-		DamageTaken:     stats.DamageTaken,
-		PlayTimeSeconds: stats.PlayTimeSeconds,
-		CurrentStreak:   stats.CurrentStreak,
-		BestStreak:      stats.BestStreak,
-		CreatedAt:       timestamppb.New(stats.CreatedAt),
-		UpdatedAt:       timestamppb.New(stats.UpdatedAt),
-	}, nil
+	return stats, nil
 }
 
-func (h *Handler) UpdatePlayerStats(ctx context.Context, req *pb.UpdatePlayerStatsRequest) (*pb.PlayerStats, error) {
-	return nil, status.Errorf(codes.Unimplemented, "not implemented")
+// CreatePlayerRankingStats handles the gRPC request to create player ranking stats
+func (h *Handler) CreatePlayerRankingStats(ctx context.Context, req *pb.CreatePlayerRankingStatsRequest) (*pb.PlayerRankingStats, error) {
+	if req.MemberId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "member ID is required")
+	}
+
+	if req.Username == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "username is required")
+	}
+
+	stats, err := h.service.CreatePlayerRankingStats(ctx, req)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create player ranking stats: %v", err)
+	}
+
+	return stats, nil
 }
 
-func (h *Handler) GetLeaderboard(ctx context.Context, req *pb.GetLeaderboardRequest) (*pb.LeaderboardResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "not implemented")
-}
+// CreateMatchHistory handles the gRPC request to create match history
+func (h *Handler) CreateMatchHistory(ctx context.Context, req *pb.CreateMatchHistoryRequest) (*pb.MatchHistory, error) {
+	if req.SessionId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "session ID is required")
+	}
 
-func (h *Handler) GetMatchHistory(ctx context.Context, req *pb.GetMatchHistoryRequest) (*pb.MatchHistoryResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "not implemented")
-}
+	if req.MemberId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "member ID is required")
+	}
 
-func (h *Handler) RecordMatch(ctx context.Context, req *pb.RecordMatchRequest) (*pb.MatchResult, error) {
-	return nil, status.Errorf(codes.Unimplemented, "not implemented")
+	if req.MatchStartedAt == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "match started at is required")
+	}
+
+	history, err := h.service.CreateMatchHistory(ctx, req)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create match history: %v", err)
+	}
+
+	return history, nil
 }
 

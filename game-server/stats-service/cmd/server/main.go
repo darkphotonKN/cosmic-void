@@ -6,14 +6,12 @@ import (
 	"net"
 	"time"
 
-	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats"
 	"github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/darkphotonKN/cosmic-void-server/stats-service/config"
-	"github.com/darkphotonKN/cosmic-void-server/stats-service/internal/stats"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
@@ -79,13 +77,8 @@ func main() {
 		ch.Close()
 	}()
 
-	repo := stats.NewRepository(db)
-	service := stats.NewService(repo, ch)
-	handler := stats.NewHandler(service)
-	consumer := stats.NewConsumer(service, ch)
-	consumer.Listen()
-
-	pb.RegisterStatsServiceServer(grpcServer, handler)
+	// Use the new config setup to initialize all services
+	grpcServer = config.SetupServices(db, ch)
 
 	log.Printf("grpc Stats Server started on PORT: %s\n", grpcAddr)
 
