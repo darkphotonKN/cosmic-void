@@ -19,23 +19,26 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	StatsService_CreatePlayerMatchStats_FullMethodName   = "/stats.StatsService/CreatePlayerMatchStats"
-	StatsService_CreatePlayerRankingStats_FullMethodName = "/stats.StatsService/CreatePlayerRankingStats"
-	StatsService_CreateMatchHistory_FullMethodName       = "/stats.StatsService/CreateMatchHistory"
+	StatsService_ProcessMatchCompleted_FullMethodName = "/stats.StatsService/ProcessMatchCompleted"
+	StatsService_GetPlayerMatchStats_FullMethodName   = "/stats.StatsService/GetPlayerMatchStats"
+	StatsService_GetPlayerRankingStats_FullMethodName = "/stats.StatsService/GetPlayerRankingStats"
+	StatsService_GetMatchHistory_FullMethodName       = "/stats.StatsService/GetMatchHistory"
+	StatsService_GetLeaderboard_FullMethodName        = "/stats.StatsService/GetLeaderboard"
 )
 
 // StatsServiceClient is the client API for StatsService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// StatsService provides methods for creating player statistics records
+// StatsService external API for stats
 type StatsServiceClient interface {
-	// Create a new player match stats record
-	CreatePlayerMatchStats(ctx context.Context, in *CreatePlayerMatchStatsRequest, opts ...grpc.CallOption) (*PlayerMatchStats, error)
-	// Create a new player ranking stats record
-	CreatePlayerRankingStats(ctx context.Context, in *CreatePlayerRankingStatsRequest, opts ...grpc.CallOption) (*PlayerRankingStats, error)
-	// Create a new match history record
-	CreateMatchHistory(ctx context.Context, in *CreateMatchHistoryRequest, opts ...grpc.CallOption) (*MatchHistory, error)
+	// Single entry point process entire match result
+	ProcessMatchCompleted(ctx context.Context, in *ProcessMatchCompletedRequest, opts ...grpc.CallOption) (*ProcessMatchCompletedResponse, error)
+	// Read operations (for other services or client)
+	GetPlayerMatchStats(ctx context.Context, in *GetPlayerMatchStatsRequest, opts ...grpc.CallOption) (*PlayerMatchStats, error)
+	GetPlayerRankingStats(ctx context.Context, in *GetPlayerRankingStatsRequest, opts ...grpc.CallOption) (*PlayerRankingStats, error)
+	GetMatchHistory(ctx context.Context, in *GetMatchHistoryRequest, opts ...grpc.CallOption) (*GetMatchHistoryResponse, error)
+	GetLeaderboard(ctx context.Context, in *GetLeaderboardRequest, opts ...grpc.CallOption) (*GetLeaderboardResponse, error)
 }
 
 type statsServiceClient struct {
@@ -46,30 +49,50 @@ func NewStatsServiceClient(cc grpc.ClientConnInterface) StatsServiceClient {
 	return &statsServiceClient{cc}
 }
 
-func (c *statsServiceClient) CreatePlayerMatchStats(ctx context.Context, in *CreatePlayerMatchStatsRequest, opts ...grpc.CallOption) (*PlayerMatchStats, error) {
+func (c *statsServiceClient) ProcessMatchCompleted(ctx context.Context, in *ProcessMatchCompletedRequest, opts ...grpc.CallOption) (*ProcessMatchCompletedResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ProcessMatchCompletedResponse)
+	err := c.cc.Invoke(ctx, StatsService_ProcessMatchCompleted_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *statsServiceClient) GetPlayerMatchStats(ctx context.Context, in *GetPlayerMatchStatsRequest, opts ...grpc.CallOption) (*PlayerMatchStats, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PlayerMatchStats)
-	err := c.cc.Invoke(ctx, StatsService_CreatePlayerMatchStats_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, StatsService_GetPlayerMatchStats_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *statsServiceClient) CreatePlayerRankingStats(ctx context.Context, in *CreatePlayerRankingStatsRequest, opts ...grpc.CallOption) (*PlayerRankingStats, error) {
+func (c *statsServiceClient) GetPlayerRankingStats(ctx context.Context, in *GetPlayerRankingStatsRequest, opts ...grpc.CallOption) (*PlayerRankingStats, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PlayerRankingStats)
-	err := c.cc.Invoke(ctx, StatsService_CreatePlayerRankingStats_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, StatsService_GetPlayerRankingStats_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *statsServiceClient) CreateMatchHistory(ctx context.Context, in *CreateMatchHistoryRequest, opts ...grpc.CallOption) (*MatchHistory, error) {
+func (c *statsServiceClient) GetMatchHistory(ctx context.Context, in *GetMatchHistoryRequest, opts ...grpc.CallOption) (*GetMatchHistoryResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MatchHistory)
-	err := c.cc.Invoke(ctx, StatsService_CreateMatchHistory_FullMethodName, in, out, cOpts...)
+	out := new(GetMatchHistoryResponse)
+	err := c.cc.Invoke(ctx, StatsService_GetMatchHistory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *statsServiceClient) GetLeaderboard(ctx context.Context, in *GetLeaderboardRequest, opts ...grpc.CallOption) (*GetLeaderboardResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetLeaderboardResponse)
+	err := c.cc.Invoke(ctx, StatsService_GetLeaderboard_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -80,14 +103,15 @@ func (c *statsServiceClient) CreateMatchHistory(ctx context.Context, in *CreateM
 // All implementations must embed UnimplementedStatsServiceServer
 // for forward compatibility.
 //
-// StatsService provides methods for creating player statistics records
+// StatsService external API for stats
 type StatsServiceServer interface {
-	// Create a new player match stats record
-	CreatePlayerMatchStats(context.Context, *CreatePlayerMatchStatsRequest) (*PlayerMatchStats, error)
-	// Create a new player ranking stats record
-	CreatePlayerRankingStats(context.Context, *CreatePlayerRankingStatsRequest) (*PlayerRankingStats, error)
-	// Create a new match history record
-	CreateMatchHistory(context.Context, *CreateMatchHistoryRequest) (*MatchHistory, error)
+	// Single entry point process entire match result
+	ProcessMatchCompleted(context.Context, *ProcessMatchCompletedRequest) (*ProcessMatchCompletedResponse, error)
+	// Read operations (for other services or client)
+	GetPlayerMatchStats(context.Context, *GetPlayerMatchStatsRequest) (*PlayerMatchStats, error)
+	GetPlayerRankingStats(context.Context, *GetPlayerRankingStatsRequest) (*PlayerRankingStats, error)
+	GetMatchHistory(context.Context, *GetMatchHistoryRequest) (*GetMatchHistoryResponse, error)
+	GetLeaderboard(context.Context, *GetLeaderboardRequest) (*GetLeaderboardResponse, error)
 	mustEmbedUnimplementedStatsServiceServer()
 }
 
@@ -98,14 +122,20 @@ type StatsServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedStatsServiceServer struct{}
 
-func (UnimplementedStatsServiceServer) CreatePlayerMatchStats(context.Context, *CreatePlayerMatchStatsRequest) (*PlayerMatchStats, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreatePlayerMatchStats not implemented")
+func (UnimplementedStatsServiceServer) ProcessMatchCompleted(context.Context, *ProcessMatchCompletedRequest) (*ProcessMatchCompletedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProcessMatchCompleted not implemented")
 }
-func (UnimplementedStatsServiceServer) CreatePlayerRankingStats(context.Context, *CreatePlayerRankingStatsRequest) (*PlayerRankingStats, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreatePlayerRankingStats not implemented")
+func (UnimplementedStatsServiceServer) GetPlayerMatchStats(context.Context, *GetPlayerMatchStatsRequest) (*PlayerMatchStats, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPlayerMatchStats not implemented")
 }
-func (UnimplementedStatsServiceServer) CreateMatchHistory(context.Context, *CreateMatchHistoryRequest) (*MatchHistory, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateMatchHistory not implemented")
+func (UnimplementedStatsServiceServer) GetPlayerRankingStats(context.Context, *GetPlayerRankingStatsRequest) (*PlayerRankingStats, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPlayerRankingStats not implemented")
+}
+func (UnimplementedStatsServiceServer) GetMatchHistory(context.Context, *GetMatchHistoryRequest) (*GetMatchHistoryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMatchHistory not implemented")
+}
+func (UnimplementedStatsServiceServer) GetLeaderboard(context.Context, *GetLeaderboardRequest) (*GetLeaderboardResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLeaderboard not implemented")
 }
 func (UnimplementedStatsServiceServer) mustEmbedUnimplementedStatsServiceServer() {}
 func (UnimplementedStatsServiceServer) testEmbeddedByValue()                      {}
@@ -128,56 +158,92 @@ func RegisterStatsServiceServer(s grpc.ServiceRegistrar, srv StatsServiceServer)
 	s.RegisterService(&StatsService_ServiceDesc, srv)
 }
 
-func _StatsService_CreatePlayerMatchStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreatePlayerMatchStatsRequest)
+func _StatsService_ProcessMatchCompleted_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ProcessMatchCompletedRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(StatsServiceServer).CreatePlayerMatchStats(ctx, in)
+		return srv.(StatsServiceServer).ProcessMatchCompleted(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: StatsService_CreatePlayerMatchStats_FullMethodName,
+		FullMethod: StatsService_ProcessMatchCompleted_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(StatsServiceServer).CreatePlayerMatchStats(ctx, req.(*CreatePlayerMatchStatsRequest))
+		return srv.(StatsServiceServer).ProcessMatchCompleted(ctx, req.(*ProcessMatchCompletedRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _StatsService_CreatePlayerRankingStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreatePlayerRankingStatsRequest)
+func _StatsService_GetPlayerMatchStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPlayerMatchStatsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(StatsServiceServer).CreatePlayerRankingStats(ctx, in)
+		return srv.(StatsServiceServer).GetPlayerMatchStats(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: StatsService_CreatePlayerRankingStats_FullMethodName,
+		FullMethod: StatsService_GetPlayerMatchStats_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(StatsServiceServer).CreatePlayerRankingStats(ctx, req.(*CreatePlayerRankingStatsRequest))
+		return srv.(StatsServiceServer).GetPlayerMatchStats(ctx, req.(*GetPlayerMatchStatsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _StatsService_CreateMatchHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateMatchHistoryRequest)
+func _StatsService_GetPlayerRankingStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPlayerRankingStatsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(StatsServiceServer).CreateMatchHistory(ctx, in)
+		return srv.(StatsServiceServer).GetPlayerRankingStats(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: StatsService_CreateMatchHistory_FullMethodName,
+		FullMethod: StatsService_GetPlayerRankingStats_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(StatsServiceServer).CreateMatchHistory(ctx, req.(*CreateMatchHistoryRequest))
+		return srv.(StatsServiceServer).GetPlayerRankingStats(ctx, req.(*GetPlayerRankingStatsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _StatsService_GetMatchHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMatchHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StatsServiceServer).GetMatchHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StatsService_GetMatchHistory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StatsServiceServer).GetMatchHistory(ctx, req.(*GetMatchHistoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _StatsService_GetLeaderboard_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLeaderboardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StatsServiceServer).GetLeaderboard(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StatsService_GetLeaderboard_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StatsServiceServer).GetLeaderboard(ctx, req.(*GetLeaderboardRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -190,16 +256,24 @@ var StatsService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*StatsServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "CreatePlayerMatchStats",
-			Handler:    _StatsService_CreatePlayerMatchStats_Handler,
+			MethodName: "ProcessMatchCompleted",
+			Handler:    _StatsService_ProcessMatchCompleted_Handler,
 		},
 		{
-			MethodName: "CreatePlayerRankingStats",
-			Handler:    _StatsService_CreatePlayerRankingStats_Handler,
+			MethodName: "GetPlayerMatchStats",
+			Handler:    _StatsService_GetPlayerMatchStats_Handler,
 		},
 		{
-			MethodName: "CreateMatchHistory",
-			Handler:    _StatsService_CreateMatchHistory_Handler,
+			MethodName: "GetPlayerRankingStats",
+			Handler:    _StatsService_GetPlayerRankingStats_Handler,
+		},
+		{
+			MethodName: "GetMatchHistory",
+			Handler:    _StatsService_GetMatchHistory_Handler,
+		},
+		{
+			MethodName: "GetLeaderboard",
+			Handler:    _StatsService_GetLeaderboard_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

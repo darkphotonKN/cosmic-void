@@ -7,15 +7,13 @@ import (
 	"time"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats"
-	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // ConsumerService defines what the consumer needs from the service
 type ConsumerService interface {
-	CreateMatchHistory(ctx context.Context, req *pb.CreateMatchHistoryRequest) (*pb.MatchHistory, error)
-	CreatePlayerMatchStats(ctx context.Context, req *pb.CreatePlayerMatchStatsRequest) (*pb.PlayerMatchStats, error)
+	ProcessMatchCompleted(ctx context.Context, req *pb.ProcessMatchCompletedRequest) (*pb.ProcessMatchCompletedResponse, error)
 }
 
 type Consumer struct {
@@ -30,18 +28,23 @@ func NewConsumer(service ConsumerService, channel *amqp.Channel) *Consumer {
 	}
 }
 
-// MatchCompletedEvent represents the event payload when a match is completed
+// MatchCompletedEvent represents the complete match result event payload
 type MatchCompletedEvent struct {
-	SessionID      string    `json:"session_id"`
-	MemberID       string    `json:"member_id"`
-	Win            bool      `json:"win"`
-	FinalPosition  int32     `json:"final_position"`
-	Kills          int32     `json:"kills"`
-	Deaths         int32     `json:"deaths"`
-	RatingBefore   *int32    `json:"rating_before,omitempty"`
-	RatingAfter    *int32    `json:"rating_after,omitempty"`
-	RatingChange   *int32    `json:"rating_change,omitempty"`
-	MatchStartedAt time.Time `json:"match_started_at"`
+	SessionID      string                 `json:"session_id"`
+	MatchStartedAt time.Time              `json:"match_started_at"`
+	MatchEndedAt   time.Time              `json:"match_ended_at"`
+	TotalPlayers   int32                  `json:"total_players"`
+	Players        []*PlayerMatchOutcome  `json:"players"`
+}
+
+// PlayerMatchOutcome represents individual player result in the match
+type PlayerMatchOutcome struct {
+	MemberID      string `json:"member_id"`
+	Username      string `json:"username"`
+	Win           bool   `json:"win"`
+	FinalPosition int32  `json:"final_position"`
+	Kills         int32  `json:"kills"`
+	Deaths        int32  `json:"deaths"`
 }
 
 // Listen starts consuming messages from the configured queues
@@ -91,27 +94,35 @@ func (c *Consumer) consumeMatchCompleted() {
 			continue
 		}
 
-		// Create match history record
+		// Convert to proto request
 		ctx := context.Background()
-		req := &pb.CreateMatchHistoryRequest{
+		req := &pb.ProcessMatchCompletedRequest{
 			SessionId:      event.SessionID,
-			MemberId:       event.MemberID,
-			Win:            event.Win,
-			FinalPosition:  event.FinalPosition,
-			Kills:          event.Kills,
-			Deaths:         event.Deaths,
-			RatingBefore:   event.RatingBefore,
-			RatingAfter:    event.RatingAfter,
-			RatingChange:   event.RatingChange,
 			MatchStartedAt: timestamppb.New(event.MatchStartedAt),
+			MatchEndedAt:   timestamppb.New(event.MatchEndedAt),
+			TotalPlayers:   event.TotalPlayers,
+			Players:        make([]*pb.PlayerMatchOutcome, len(event.Players)),
 		}
 
-		_, err = c.service.CreateMatchHistory(ctx, req)
+		// Convert players
+		for i, player := range event.Players {
+			req.Players[i] = &pb.PlayerMatchOutcome{
+				MemberId:      player.MemberID,
+				Username:      player.Username,
+				Win:           player.Win,
+				FinalPosition: player.FinalPosition,
+				Kills:         player.Kills,
+				Deaths:        player.Deaths,
+			}
+		}
+
+		// Process the complete match
+		response, err := c.service.ProcessMatchCompleted(ctx, req)
 		if err != nil {
-			slog.Error("Failed to create match history",
+			slog.Error("Failed to process match completed",
 				"error", err,
 				"session_id", event.SessionID,
-				"member_id", event.MemberID,
+				"total_players", event.TotalPlayers,
 			)
 			msg.Nack(false, true) // Negative acknowledgment with requeue
 			continue
@@ -119,9 +130,12 @@ func (c *Consumer) consumeMatchCompleted() {
 
 		// Successfully processed
 		msg.Ack(false)
-		slog.Info("Match history created",
+		slog.Info("Match completed processed successfully",
 			"session_id", event.SessionID,
-			"member_id", event.MemberID,
+			"total_players", event.TotalPlayers,
+			"players_processed", response.PlayersProcessed,
+			"success", response.Success,
+			"message", response.Message,
 		)
 	}
 }
@@ -170,13 +184,4 @@ func SetupAMQPInfrastructure(channel *amqp.Channel) error {
 	return nil
 }
 
-// StatsUpdateEvent represents an event to update player stats
-type StatsUpdateEvent struct {
-	MemberID            uuid.UUID `json:"member_id"`
-	GamesPlayed         int32     `json:"games_played"`
-	Wins                int32     `json:"wins"`
-	Losses              int32     `json:"losses"`
-	Kills               int32     `json:"kills"`
-	Deaths              int32     `json:"deaths"`
-	TimesPlacedTopThree int32     `json:"times_placed_top_three"`
-}
+

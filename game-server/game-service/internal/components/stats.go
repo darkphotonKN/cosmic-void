@@ -8,6 +8,9 @@ type StatsComponent struct {
 	Strength     int
 	Agility      int
 	Intelligence int
+	Kills        int
+	Deaths       int
+	Position     int
 }
 
 func (s *StatsComponent) Type() ecs.ComponentType {
@@ -21,5 +24,8 @@ func NewStatsComponent() *StatsComponent {
 		Strength:     10,
 		Agility:      10,
 		Intelligence: 10,
+		Kills:        0,
+		Deaths:       0,
+		Position:     0,
 	}
 }
