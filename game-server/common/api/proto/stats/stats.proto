@@ -1,24 +1,51 @@
 syntax = "proto3";
-
 package stats;
-
 import "google/protobuf/timestamp.proto";
-
 option go_package = "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats";
 
-// StatsService provides methods for creating player statistics records
+// StatsService external API for stats
 service StatsService {
-  // Create a new player match stats record
-  rpc CreatePlayerMatchStats(CreatePlayerMatchStatsRequest) returns (PlayerMatchStats);
-
-  // Create a new player ranking stats record
-  rpc CreatePlayerRankingStats(CreatePlayerRankingStatsRequest) returns (PlayerRankingStats);
-
-  // Create a new match history record
-  rpc CreateMatchHistory(CreateMatchHistoryRequest) returns (MatchHistory);
+  // Single entry point process entire match result
+  rpc ProcessMatchCompleted(ProcessMatchCompletedRequest) returns (ProcessMatchCompletedResponse);
+  
+  // Read operations (for other services or client)
+  rpc GetPlayerMatchStats(GetPlayerMatchStatsRequest) returns (PlayerMatchStats);
+  rpc GetPlayerRankingStats(GetPlayerRankingStatsRequest) returns (PlayerRankingStats);
+  rpc GetMatchHistory(GetMatchHistoryRequest) returns (GetMatchHistoryResponse);
+  rpc GetLeaderboard(GetLeaderboardRequest) returns (GetLeaderboardResponse);
 }
 
-// PlayerMatchStats represents aggregated match statistics for a player
+// ============ Process Match (from gameservice) ============
+
+message ProcessMatchCompletedRequest {
+  string session_id = 1;
+  google.protobuf.Timestamp match_started_at = 2;
+  google.protobuf.Timestamp match_ended_at = 3;
+  int32 total_players = 4;
+  repeated PlayerMatchOutcome players = 5;
+}
+
+message PlayerMatchOutcome {
+  string member_id = 1;
+  string username = 2;
+  bool win = 3;
+  int32 final_position = 4;
+  int32 kills = 5;
+  int32 deaths = 6;
+}
+
+message ProcessMatchCompletedResponse {
+  bool success = 1;
+  string message = 2;
+  int32 players_processed = 3;
+}
+
+// ============ Read Operations ============
+
+message GetPlayerMatchStatsRequest {
+  string member_id = 1;
+}
+
 message PlayerMatchStats {
   string id = 1;
   string member_id = 2;
@@ -32,18 +59,10 @@ message PlayerMatchStats {
   google.protobuf.Timestamp updated_at = 10;
 }
 
-// Request to create player match stats
-message CreatePlayerMatchStatsRequest {
+message GetPlayerRankingStatsRequest {
   string member_id = 1;
-  int32 games_played = 2;
-  int32 wins = 3;
-  int32 losses = 4;
-  int32 kills = 5;
-  int32 deaths = 6;
-  int32 times_placed_top_three = 7;
 }
 
-// PlayerRankingStats represents ranking and leaderboard data
 message PlayerRankingStats {
   string id = 1;
   string member_id = 2;
@@ -57,17 +76,17 @@ message PlayerRankingStats {
   google.protobuf.Timestamp updated_at = 10;
 }
 
-// Request to create player ranking stats
-message CreatePlayerRankingStatsRequest {
+message GetMatchHistoryRequest {
   string member_id = 1;
-  string username = 2;
-  int32 wins = 3;
-  int32 top_threes = 4;
-  int32 rating = 5;
-  optional int32 rank_position = 6;
+  optional int32 limit = 2;
+  optional int32 offset = 3;
 }
 
-// MatchHistory represents a single match record
+message GetMatchHistoryResponse {
+  repeated MatchHistory matches = 1;
+  int32 total_count = 2;
+}
+
 message MatchHistory {
   string id = 1;
   string session_id = 2;
@@ -83,16 +102,12 @@ message MatchHistory {
   google.protobuf.Timestamp created_at = 12;
 }
 
-// Request to create match history record
-message CreateMatchHistoryRequest {
-  string session_id = 1;
-  string member_id = 2;
-  bool win = 3;
-  int32 final_position = 4;
-  int32 kills = 5;
-  int32 deaths = 6;
-  optional int32 rating_before = 7;
-  optional int32 rating_after = 8;
-  optional int32 rating_change = 9;
-  google.protobuf.Timestamp match_started_at = 10;
+message GetLeaderboardRequest {
+  optional int32 limit = 1;
+  optional int32 offset = 2;
+}
+
+message GetLeaderboardResponse {
+  repeated PlayerRankingStats players = 1;
+  int32 total_count = 2;
 }

@@ -1,6 +1,7 @@
 package game
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"math/rand/v2"
@@ -46,6 +47,7 @@ type Session struct {
 	// dependency injections
 	sender          SessionSender
 	stateSerializer *serializer.StateSerializer
+	eventEmitter    EventEmitter
 }
 
 var ItemPool = []ItemConfig{
@@ -66,6 +68,10 @@ type SessionSender interface {
 	BroadcastToPlayerList(players []uuid.UUID, msg types.Message) error
 	SendStateToPlayer(playerID uuid.UUID, clientState *types.ClientGameState) error
 	BroadcastStateToPlayerList(players []uuid.UUID, state *types.ClientGameState) error
+}
+
+type EventEmitter interface {
+	PublishMatchComplete(ctx context.Context, data *types.MatchEndState) error
 }
 
 func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSerializer) *Session {
@@ -651,11 +657,29 @@ func (s *Session) addItem(itemConfig ItemConfig) uuid.UUID {
 }
 
 /**
+* Handles all processes at the end of a match session.
+**/
+func (s *Session) endSession() {
+	// clean up
+	s.Shutdown()
+
+	matchEndData, err := s.formatMatchEndData()
+	if err != nil {
+		fmt.Printf("\nMatch end data err: %+v\n\n", err)
+	}
+
+	fmt.Printf("\nMatch end data: %+v\n\n", matchEndData)
+
+	s.eventEmitter.PublishMatchComplete(context.Background(), matchEndData)
+}
+
+/**
 * Formats the final end game data from the final game state.
 **/
 // TODO: WIP
-func (s *Session) formatEndGameData() (*types.EndGameState, error) {
-	entities := s.EntityManager.GetAllEntities()
+func (s *Session) formatMatchEndData() (*types.MatchEndState, error) {
+	// entities := s.EntityManager.GetAllEntities()
+	fmt.Println("Formatting data after match ended.")
 
 	return nil, nil
 }
