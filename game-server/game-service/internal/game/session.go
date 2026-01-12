@@ -247,8 +247,8 @@ func (s *Session) AddPlayer(playerID uuid.UUID, username string) uuid.UUID {
 	PlayerConfig := PlayerConfig{
 		UserID:        playerID,
 		Username:      username,
-		X:             rand.Float64() * (constants.MapWidth - constants.PlayerRadius),
-		Y:             rand.Float64() * (constants.MapHeight - constants.PlayerRadius),
+		X:             constants.PlayerRadius + rand.Float64()*(constants.MapWidth-2*constants.PlayerRadius),
+		Y:             constants.PlayerRadius + rand.Float64()*(constants.MapHeight-2*constants.PlayerRadius),
 		SkillName:     "Basic Attack",
 		SkillLevel:    1,
 		CurrentHealth: 100,
@@ -568,10 +568,10 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 
 		containerOpenable := containerOpenableComponent.(*components.OpenableComponent)
 
-		// update state
-		containerOpenable.IsOpen = !containerOpenable.IsOpen
+		// Only open, never close (chest stays open once opened)
+		containerOpenable.IsOpen = true
 
-		// create items
+		// create items on first open
 		if containerOpenable.HasBeenOpened == false {
 			containerOpenable.HasBeenOpened = true
 			itemIDs := make([]uuid.UUID, 0)
@@ -664,8 +664,8 @@ func (s *Session) addItem(itemConfig ItemConfig) uuid.UUID {
 }
 
 func (s *Session) InitialMapObjects() {
-	// add container
-	containerX := rand.Float64() * (constants.MapWidth - constants.PlayerRadius)
-	containerY := rand.Float64() * (constants.MapHeight - constants.PlayerRadius)
+	// add container (ensure it's not cut off at edges)
+	containerX := constants.ContainerWidthRadius + rand.Float64()*(constants.MapWidth-2*constants.ContainerWidthRadius)
+	containerY := constants.ContainerHeightRadius + rand.Float64()*(constants.MapHeight-2*constants.ContainerHeightRadius)
 	s.AddContainer(containerX, containerY)
 }

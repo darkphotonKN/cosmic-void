@@ -43,6 +43,8 @@ const DefautMaxSessionPlayers = 2
 const MapWidth float64 = 1200
 const MapHeight float64 = 800
 const PlayerRadius float64 = 20
+const ContainerWidthRadius float64 = 20
+const ContainerHeightRadius float64 = 16
 const InitialPlayerX float64 = 600
 const InitialPlayerY float64 = 400
 

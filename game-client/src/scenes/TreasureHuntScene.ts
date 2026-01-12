@@ -207,6 +207,7 @@ export class TreasureHuntScene extends Phaser.Scene {
 
     const interactDistance = 60;
     if (distance > interactDistance) {
+      // Just close popup locally, let backend state control chest visual
       this.hideChestPopup();
       this.openedChestEntityId = undefined;
     }
@@ -240,14 +241,14 @@ export class TreasureHuntScene extends Phaser.Scene {
     );
 
     // 標題
-    const title = this.add.text(0, -popupHeight / 2 + 20, "寶箱內容", {
+    const title = this.add.text(0, -popupHeight / 2 + 20, "Chest Contents", {
       fontSize: "20px",
       color: "#ffd700",
     });
     title.setOrigin(0.5);
 
     // 物品區
-    this.popupItemsText = this.add.text(0, 0, "載入中...", {
+    this.popupItemsText = this.add.text(0, 0, "Loading...", {
       fontSize: "14px",
       color: "#ffffff",
       align: "center",
@@ -256,7 +257,7 @@ export class TreasureHuntScene extends Phaser.Scene {
     this.popupItemsText.setOrigin(0.5);
 
     // 提示
-    const hint = this.add.text(0, popupHeight / 2 - 25, "按 E 關閉", {
+    const hint = this.add.text(0, popupHeight / 2 - 25, "Press E to close", {
       fontSize: "12px",
       color: "#aaaaaa",
     });
@@ -279,7 +280,7 @@ export class TreasureHuntScene extends Phaser.Scene {
     if (!this.popupItemsText) return;
 
     if (items.length === 0) {
-      this.popupItemsText.setText("（空的）");
+      this.popupItemsText.setText("(Empty)");
     } else {
       const itemLines = items.map(item => `${item.name} x${item.quantity}`);
       this.popupItemsText.setText(itemLines.join("\n"));
