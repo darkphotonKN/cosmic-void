@@ -8,17 +8,17 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// ServiceInterface defines what the handler needs from the service
-type ServiceInterface interface {
+// Service defines what the handler needs from the service
+type Service interface {
 	ProcessMatchCompleted(ctx context.Context, req *pb.ProcessMatchCompletedRequest) (*pb.ProcessMatchCompletedResponse, error)
 }
 
 type Handler struct {
 	pb.UnimplementedStatsServiceServer
-	service ServiceInterface
+	service Service
 }
 
-func NewHandler(service ServiceInterface) *Handler {
+func NewHandler(service Service) *Handler {
 	return &Handler{
 		service: service,
 	}
@@ -91,4 +91,3 @@ func (h *Handler) GetMatchHistory(ctx context.Context, req *pb.GetMatchHistoryRe
 func (h *Handler) GetLeaderboard(ctx context.Context, req *pb.GetLeaderboardRequest) (*pb.GetLeaderboardResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "not implemented yet")
 }
-

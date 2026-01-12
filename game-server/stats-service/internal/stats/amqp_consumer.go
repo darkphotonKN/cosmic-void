@@ -30,11 +30,11 @@ func NewConsumer(service ConsumerService, channel *amqp.Channel) *Consumer {
 
 // MatchCompletedEvent represents the complete match result event payload
 type MatchCompletedEvent struct {
-	SessionID      string                 `json:"session_id"`
-	MatchStartedAt time.Time              `json:"match_started_at"`
-	MatchEndedAt   time.Time              `json:"match_ended_at"`
-	TotalPlayers   int32                  `json:"total_players"`
-	Players        []*PlayerMatchOutcome  `json:"players"`
+	SessionID      string                `json:"session_id"`
+	MatchStartedAt time.Time             `json:"match_started_at"`
+	MatchEndedAt   time.Time             `json:"match_ended_at"`
+	TotalPlayers   int32                 `json:"total_players"`
+	Players        []*PlayerMatchOutcome `json:"players"`
 }
 
 // PlayerMatchOutcome represents individual player result in the match
@@ -183,5 +183,3 @@ func SetupAMQPInfrastructure(channel *amqp.Channel) error {
 
 	return nil
 }
-
-

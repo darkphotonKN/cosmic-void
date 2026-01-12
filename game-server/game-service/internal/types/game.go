@@ -36,7 +36,6 @@ type DoorState struct {
 	IsOpen   bool `json:"is_open"`
 }
 
-// TODO: needs to include all fields that need converting
 type MatchEndState struct {
 	SessionID          uuid.UUID `json:"session_id"`
 	MatchStartedAt     time.Time `json:"match_started_at"`
