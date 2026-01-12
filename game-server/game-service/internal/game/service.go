@@ -27,9 +27,8 @@ func (s *service) PublishMatchComplete(ctx context.Context, data *types.MatchEnd
 		false,
 		false,
 		amqp.Publishing{
-			ContentType: "application/json",
-			Body:        nil,
-			// persist message
+			ContentType:  "application/json",
+			Body:         nil,
 			DeliveryMode: amqp.Persistent,
 		})
 

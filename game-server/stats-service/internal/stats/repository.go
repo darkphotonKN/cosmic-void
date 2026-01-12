@@ -8,18 +8,18 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type Repository struct {
+type repository struct {
 	DB *sqlx.DB
 }
 
-func NewRepository(db *sqlx.DB) *Repository {
-	return &Repository{
+func NewRepository(db *sqlx.DB) *repository {
+	return &repository{
 		DB: db,
 	}
 }
 
 // CreatePlayerMatchStats creates a new player match stats record
-func (r *Repository) CreatePlayerMatchStats(ctx context.Context, stats *PlayerMatchStats) error {
+func (r *repository) CreatePlayerMatchStats(ctx context.Context, stats *PlayerMatchStats) error {
 	stats.ID = uuid.New()
 
 	query := `
@@ -40,7 +40,7 @@ func (r *Repository) CreatePlayerMatchStats(ctx context.Context, stats *PlayerMa
 }
 
 // CreatePlayerRankingStats creates a new player ranking stats record
-func (r *Repository) CreatePlayerRankingStats(ctx context.Context, stats *PlayerRankingStats) error {
+func (r *repository) CreatePlayerRankingStats(ctx context.Context, stats *PlayerRankingStats) error {
 	stats.ID = uuid.New()
 
 	query := `
@@ -61,7 +61,7 @@ func (r *Repository) CreatePlayerRankingStats(ctx context.Context, stats *Player
 }
 
 // CreateMatchHistory creates a new match history record
-func (r *Repository) CreateMatchHistory(ctx context.Context, history *MatchHistory) error {
+func (r *repository) CreateMatchHistory(ctx context.Context, history *MatchHistory) error {
 	history.ID = uuid.New()
 
 	query := `
@@ -82,3 +82,4 @@ func (r *Repository) CreateMatchHistory(ctx context.Context, history *MatchHisto
 
 	return nil
 }
+

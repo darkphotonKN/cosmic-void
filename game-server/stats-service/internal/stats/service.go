@@ -9,18 +9,18 @@ import (
 )
 
 // Repository interface defines what the service needs from the repository
-type RepositoryInterface interface {
+type Repository interface {
 	CreatePlayerMatchStats(ctx context.Context, stats *PlayerMatchStats) error
 	CreatePlayerRankingStats(ctx context.Context, stats *PlayerRankingStats) error
 	CreateMatchHistory(ctx context.Context, history *MatchHistory) error
 }
 
 type service struct {
-	repo      RepositoryInterface
+	repo      Repository
 	publishCh *amqp.Channel
 }
 
-func NewService(repo RepositoryInterface, publishCh *amqp.Channel) *service {
+func NewService(repo Repository, publishCh *amqp.Channel) *service {
 	return &service{
 		repo:      repo,
 		publishCh: publishCh,

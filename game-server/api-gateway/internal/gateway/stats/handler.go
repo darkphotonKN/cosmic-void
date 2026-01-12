@@ -26,8 +26,8 @@ func (h *Handler) GetPlayerStats(c *gin.Context) {
 		return
 	}
 
-	stats, err := h.client.GetPlayerStats(c.Request.Context(), &pb.GetPlayerStatsRequest{
-		PlayerId: playerID,
+	stats, err := h.client.GetPlayerStats(c.Request.Context(), &pb.GetPlayerMatchStatsRequest{
+		MemberId: playerID,
 	})
 
 	if err != nil {
@@ -50,3 +50,4 @@ func (h *Handler) GetPlayerStats(c *gin.Context) {
 
 	c.JSON(http.StatusOK, stats)
 }
+

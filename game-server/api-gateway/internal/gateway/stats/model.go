@@ -7,5 +7,6 @@ import (
 )
 
 type StatsClient interface {
-	GetPlayerStats(ctx context.Context, req *pb.GetPlayerStatsRequest) (*pb.PlayerStats, error)
+	GetPlayerStats(ctx context.Context, req *pb.GetPlayerMatchStatsRequest) (*pb.PlayerMatchStats, error)
 }
+

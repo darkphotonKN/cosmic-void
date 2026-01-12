@@ -22,7 +22,7 @@ func NewClient(registry discovery.Registry) StatsClient {
 	}
 }
 
-func (c *Client) GetPlayerStats(ctx context.Context, req *pb.GetPlayerStatsRequest) (*pb.PlayerStats, error) {
+func (c *Client) GetPlayerStats(ctx context.Context, req *pb.GetPlayerMatchStatsRequest) (*pb.PlayerMatchStats, error) {
 	conn, err := discovery.ServiceConnection(ctx, serviceName, c.registry)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to stats service: %w", err)
@@ -30,10 +30,11 @@ func (c *Client) GetPlayerStats(ctx context.Context, req *pb.GetPlayerStatsReque
 	defer conn.Close()
 
 	client := pb.NewStatsServiceClient(conn)
-	stats, err := client.GetPlayerStats(ctx, req)
+	stats, err := client.GetPlayerMatchStats(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get player stats: %w", err)
 	}
 
 	return stats, nil
 }
+
