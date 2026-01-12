@@ -1,10 +1,15 @@
 package types
 
-import "github.com/google/uuid"
+import (
+	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
+	"github.com/google/uuid"
+)
 
 type Player struct {
-	ID       uuid.UUID
-	Username string
+	ID                   uuid.UUID
+	Username             string
+	CurrentGameSessionId uuid.UUID
+	ConnectState         *constants.ConnectState
 }
 
 type PlayerState struct {

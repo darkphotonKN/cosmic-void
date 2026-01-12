@@ -145,18 +145,27 @@ func (s *Server) CreateGameSession(players []*types.Player) *game.Session {
 
 	newGameSession.InitialMapObjects()
 
-	for _, player := range players {
-		newGameSession.AddPlayer(player.ID, player.Username)
-	}
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	for _, player := range players {
+		// 將玩家加入 session
+		newGameSession.AddPlayer(player.ID, player.Username)
+		connected := constants.Connected
+		// 更新玩家的 SessionId
+		player.CurrentGameSessionId = newGameSession.ID
+		player.ConnectState = &connected
+
+		// 同時更新 server 的 players map 中的玩家資訊 (如果存在)
+		if existingPlayer, exists := s.players[player.ID]; exists {
+			existingPlayer.CurrentGameSessionId = newGameSession.ID
+			existingPlayer.ConnectState = &connected
+		}
+	}
+
 	s.sessions[newGameSession.ID] = newGameSession
-	fmt.Printf("New game session initiated, id: %s\n", newGameSession.ID)
-
-	// broadcast initial game information to client
-
+	fmt.Printf("New game session initiated, id: %s, players: %d\n", newGameSession.ID, len(players))
+	
 	return newGameSession
 }
 

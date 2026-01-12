@@ -48,3 +48,11 @@ const InitialPlayerY float64 = 400
 
 // game loop
 const GameFrameRate int = 30
+
+type ConnectState string
+
+const (
+	Connected    ConnectState = "connected"
+	Disconnected ConnectState = "disconnected"
+	Reconnecting ConnectState = "reconnecting"
+)
