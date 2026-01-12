@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
-	"time"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats"
+	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -26,25 +26,6 @@ func NewConsumer(service ConsumerService, channel *amqp.Channel) *Consumer {
 		service: service,
 		channel: channel,
 	}
-}
-
-// MatchCompletedEvent represents the complete match result event payload
-type MatchCompletedEvent struct {
-	SessionID      string                `json:"session_id"`
-	MatchStartedAt time.Time             `json:"match_started_at"`
-	MatchEndedAt   time.Time             `json:"match_ended_at"`
-	TotalPlayers   int32                 `json:"total_players"`
-	Players        []*PlayerMatchOutcome `json:"players"`
-}
-
-// PlayerMatchOutcome represents individual player result in the match
-type PlayerMatchOutcome struct {
-	MemberID      string `json:"member_id"`
-	Username      string `json:"username"`
-	Win           bool   `json:"win"`
-	FinalPosition int32  `json:"final_position"`
-	Kills         int32  `json:"kills"`
-	Deaths        int32  `json:"deaths"`
 }
 
 // Listen starts consuming messages from the configured queues
@@ -87,7 +68,7 @@ func (c *Consumer) consumeMatchCompleted() {
 
 	for msg := range msgs {
 		// Parse the message
-		var event MatchCompletedEvent
+		var event commontypes.MatchEndState
 		if err := json.Unmarshal(msg.Body, &event); err != nil {
 			slog.Error("Failed to parse match completed event", "error", err)
 			msg.Nack(false, false) // Negative acknowledgment
@@ -97,16 +78,15 @@ func (c *Consumer) consumeMatchCompleted() {
 		// Convert to proto request
 		ctx := context.Background()
 		req := &pb.ProcessMatchCompletedRequest{
-			SessionId:      event.SessionID,
+			SessionId:      event.SessionID.String(),
 			MatchStartedAt: timestamppb.New(event.MatchStartedAt),
 			MatchEndedAt:   timestamppb.New(event.MatchEndedAt),
-			TotalPlayers:   event.TotalPlayers,
-			Players:        make([]*pb.PlayerMatchOutcome, len(event.Players)),
+			Players:        make([]*pb.PlayerMatchResults, len(event.PlayerMatchResults)),
 		}
 
 		// Convert players
-		for i, player := range event.Players {
-			req.Players[i] = &pb.PlayerMatchOutcome{
+		for i, player := range event.PlayerMatchResults {
+			req.Players[i] = &pb.PlayerMatchResults{
 				MemberId:      player.MemberID,
 				Username:      player.Username,
 				Win:           player.Win,
@@ -122,7 +102,6 @@ func (c *Consumer) consumeMatchCompleted() {
 			slog.Error("Failed to process match completed",
 				"error", err,
 				"session_id", event.SessionID,
-				"total_players", event.TotalPlayers,
 			)
 			msg.Nack(false, true) // Negative acknowledgment with requeue
 			continue
@@ -132,7 +111,6 @@ func (c *Consumer) consumeMatchCompleted() {
 		msg.Ack(false)
 		slog.Info("Match completed processed successfully",
 			"session_id", event.SessionID,
-			"total_players", event.TotalPlayers,
 			"players_processed", response.PlayersProcessed,
 			"success", response.Success,
 			"message", response.Message,

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
-	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
+	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -17,7 +17,7 @@ func NewService() *service {
 	return &service{}
 }
 
-func (s *service) PublishMatchComplete(ctx context.Context, data *types.MatchEndState) error {
+func (s *service) PublishMatchComplete(ctx context.Context, data *commontypes.MatchEndState) error {
 
 	// publish as game match ended event
 	err := s.publishCh.PublishWithContext(

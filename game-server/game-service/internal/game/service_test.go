@@ -4,18 +4,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
+	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestPublishMatchComplete_DataStructure(t *testing.T) {
 	// Create test data - 6 player match results
-	matchEndData := &types.MatchEndState{
+	matchEndData := &commontypes.MatchEndState{
 		SessionID:      uuid.MustParse("550e8400-e29b-41d4-a716-446655440001"),
 		MatchStartedAt: time.Now().Add(-15 * time.Minute), // Match lasted 15 minutes
 		MatchEndedAt:   time.Now(),
-		PlayerMatchResults: []*types.PlayerMatchResults{
+		PlayerMatchResults: []*commontypes.PlayerMatchResults{
 			{
 				MemberID:      "123e4567-e89b-12d3-a456-426614174001",
 				Username:      "DragonSlayer99",
@@ -137,11 +137,11 @@ func TestPublishMatchComplete_DataStructure(t *testing.T) {
 // TestMatchEndDataSerialization tests that the data can be properly serialized
 func TestMatchEndDataSerialization(t *testing.T) {
 	// Create a simpler match data for testing
-	matchEndData := &types.MatchEndState{
+	matchEndData := &commontypes.MatchEndState{
 		SessionID:      uuid.MustParse("550e8400-e29b-41d4-a716-446655440002"),
 		MatchStartedAt: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
 		MatchEndedAt:   time.Date(2024, 1, 1, 12, 10, 0, 0, time.UTC),
-		PlayerMatchResults: []*types.PlayerMatchResults{
+		PlayerMatchResults: []*commontypes.PlayerMatchResults{
 			{
 				MemberID:      "test-player-001",
 				Username:      "TestPlayer1",
@@ -176,3 +176,4 @@ func TestMatchEndDataSerialization(t *testing.T) {
 	assert.False(t, loser.Win)
 	assert.Equal(t, int32(2), loser.FinalPosition)
 }
+

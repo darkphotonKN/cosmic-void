@@ -43,10 +43,6 @@ func (h *Handler) ProcessMatchCompleted(ctx context.Context, req *pb.ProcessMatc
 		return nil, status.Errorf(codes.InvalidArgument, "at least one player is required")
 	}
 
-	if req.TotalPlayers != int32(len(req.Players)) {
-		return nil, status.Errorf(codes.InvalidArgument, "total players count does not match players array length")
-	}
-
 	// Validate each player
 	for i, player := range req.Players {
 		if player.MemberId == "" {

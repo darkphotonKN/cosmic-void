@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
@@ -71,7 +72,7 @@ type SessionSender interface {
 }
 
 type EventEmitter interface {
-	PublishMatchComplete(ctx context.Context, data *types.MatchEndState) error
+	PublishMatchComplete(ctx context.Context, data *commontypes.MatchEndState) error
 }
 
 func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSerializer) *Session {
@@ -677,7 +678,7 @@ func (s *Session) endSession() {
 * Formats the final end game data from the final game state.
 **/
 // TODO: WIP
-func (s *Session) formatMatchEndData() (*types.MatchEndState, error) {
+func (s *Session) formatMatchEndData() (*commontypes.MatchEndState, error) {
 	// entities := s.EntityManager.GetAllEntities()
 	fmt.Println("Formatting data after match ended.")
 

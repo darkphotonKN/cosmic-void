@@ -21,11 +21,10 @@ message ProcessMatchCompletedRequest {
   string session_id = 1;
   google.protobuf.Timestamp match_started_at = 2;
   google.protobuf.Timestamp match_ended_at = 3;
-  int32 total_players = 4;
-  repeated PlayerMatchOutcome players = 5;
+  repeated PlayerMatchResults players = 5;
 }
 
-message PlayerMatchOutcome {
+message PlayerMatchResults {
   string member_id = 1;
   string username = 2;
   bool win = 3;

@@ -31,7 +31,6 @@ func NewService(repo Repository, publishCh *amqp.Channel) *service {
 func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.ProcessMatchCompletedRequest) (*pb.ProcessMatchCompletedResponse, error) {
 	slog.Info("Processing match completed",
 		"session_id", req.SessionId,
-		"total_players", req.TotalPlayers,
 		"match_started_at", req.MatchStartedAt.AsTime(),
 		"match_ended_at", req.MatchEndedAt.AsTime(),
 	)
@@ -57,8 +56,7 @@ func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.ProcessMatc
 	// - Update rankings
 
 	return &pb.ProcessMatchCompletedResponse{
-		Success:          true,
-		Message:          "Match data processed successfully",
-		PlayersProcessed: req.TotalPlayers,
+		Success: true,
+		Message: "Match data processed successfully",
 	}, nil
 }
