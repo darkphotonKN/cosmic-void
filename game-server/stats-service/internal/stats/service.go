@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats"
+	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -43,8 +44,33 @@ func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.ProcessMatc
 
 	// TODO: implement seperate updates to relevant tables
 
+	// TODO: get match record history
+	matchHistoryData, err := s.GetMatchHistory()
+	if err != nil {
+		slog.Info("Errored when attempting to get match history", "err", err)
+		return nil, err
+	}
+
+	// TODO: add match stats to match record
+	matchHistoryWithNewData := append(matchHistoryData, &MatchHistory{})
+
+	s.CalculateMatchAverage(ctx, matchHistoryWithNewData)
+
+	// TODO: call auth service for player information
+
+	// TODO: update denormazlied ranking table
+	s.repo.CreatePlayerRankingStats()
+
 	return &pb.ProcessMatchCompletedResponse{
 		Success: true,
 		Message: "Match data processed successfully",
 	}, nil
+}
+
+func (s *service) GetMatchHistory(ctx context.Context, userID uuid.UUID) ([]*MatchHistory, error) {
+
+	return nil, nil
+}
+
+func (s *service) CalculateMatchAverage(ctx context.Context, []*MatchHistory) error {
 }
