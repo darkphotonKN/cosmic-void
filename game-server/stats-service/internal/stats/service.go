@@ -35,25 +35,13 @@ func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.ProcessMatc
 		"match_ended_at", req.MatchEndedAt.AsTime(),
 	)
 
-	// Log all player outcomes
-	for i, player := range req.Players {
+	for _, player := range req.Players {
 		slog.Info("Player match outcome",
-			"player_index", i+1,
-			"member_id", player.MemberId,
-			"username", player.Username,
-			"win", player.Win,
-			"final_position", player.FinalPosition,
-			"kills", player.Kills,
-			"deaths", player.Deaths,
+			"player", player,
 		)
 	}
 
-	// TODO: Implement the actual processing logic here
-	// - Create/update player match stats (aggregated stats)
-	// - Create/update player ranking stats (for leaderboard)
-	// - Create individual match history records
-	// - Calculate rating changes
-	// - Update rankings
+	// TODO: implement seperate updates to relevant tables
 
 	return &pb.ProcessMatchCompletedResponse{
 		Success: true,

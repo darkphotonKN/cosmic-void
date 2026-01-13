@@ -3,9 +3,11 @@ package stats
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats"
+	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -32,12 +34,12 @@ func NewConsumer(service ConsumerService, channel *amqp.Channel) *Consumer {
 func (c *Consumer) Listen() {
 	// Set up queue for match completed events
 	_, err := c.channel.QueueDeclare(
-		"stats.match.completed", // queue name
-		true,                    // durable
-		false,                   // delete when unused
-		false,                   // exclusive
-		false,                   // no-wait
-		nil,                     // arguments
+		commonconstants.GameMatchEndedEvent, // queue name
+		true,                                // durable
+		false,                               // delete when unused
+		false,                               // exclusive
+		false,                               // no-wait
+		nil,                                 // arguments
 	)
 	if err != nil {
 		slog.Error("Failed to declare queue", "error", err)
@@ -53,21 +55,21 @@ func (c *Consumer) Listen() {
 // consumeMatchCompleted handles match completion events
 func (c *Consumer) consumeMatchCompleted() {
 	msgs, err := c.channel.Consume(
-		"stats.match.completed", // queue name
-		"",                      // consumer
-		false,                   // auto-ack (set to false for manual ack)
-		false,                   // exclusive
-		false,                   // no-local
-		false,                   // no-wait
-		nil,                     // args
+		commonconstants.GameMatchEndedEvent, // queue name
+		"",                                  // consumer
+		false,                               // auto-ack (set to false for manual ack)
+		false,                               // exclusive
+		false,                               // no-local
+		false,                               // no-wait
+		nil,                                 // args
 	)
+
 	if err != nil {
 		slog.Error("Failed to register consumer", "error", err)
 		return
 	}
 
 	for msg := range msgs {
-		// Parse the message
 		var event commontypes.MatchEndState
 		if err := json.Unmarshal(msg.Body, &event); err != nil {
 			slog.Error("Failed to parse match completed event", "error", err)
@@ -75,7 +77,8 @@ func (c *Consumer) consumeMatchCompleted() {
 			continue
 		}
 
-		// Convert to proto request
+		fmt.Printf("\n\nevent:\n%s consumed and unmarshalled:\n%+v\n", commonconstants.GameMatchEndedEvent, event)
+
 		ctx := context.Background()
 		req := &pb.ProcessMatchCompletedRequest{
 			SessionId:      event.SessionID.String(),
@@ -84,7 +87,6 @@ func (c *Consumer) consumeMatchCompleted() {
 			Players:        make([]*pb.PlayerMatchResults, len(event.PlayerMatchResults)),
 		}
 
-		// Convert players
 		for i, player := range event.PlayerMatchResults {
 			req.Players[i] = &pb.PlayerMatchResults{
 				MemberId:      player.MemberID,
@@ -96,7 +98,7 @@ func (c *Consumer) consumeMatchCompleted() {
 			}
 		}
 
-		// Process the complete match
+		// process the complete match
 		response, err := c.service.ProcessMatchCompleted(ctx, req)
 		if err != nil {
 			slog.Error("Failed to process match completed",

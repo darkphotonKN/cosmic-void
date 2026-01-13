@@ -1,12 +1,18 @@
 package types
 
 import (
+<<<<<<< HEAD
+=======
+	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
+>>>>>>> 6b9035e6768d7d3684efc2bf15d0e9631bc6e32c
 	"github.com/google/uuid"
 )
 
 type Player struct {
-	ID       uuid.UUID
-	Username string
+	ID                   uuid.UUID
+	Username             string
+	CurrentGameSessionId uuid.UUID
+	ConnectState         *constants.ConnectState
 }
 
 type PlayerState struct {
@@ -32,4 +38,18 @@ type DoorState struct {
 	EntityID uuid.UUID `json:"entity_id"`
 	Position Position
 	IsOpen   bool `json:"is_open"`
+}
+
+type ItemState struct {
+	ItemID   uuid.UUID `json:"item_id"`
+	EntityID uuid.UUID `json:"entity_id"`
+	Name     string    `json:"name"`
+	Quantity int       `json:"quantity"`
+}
+type ContainerState struct {
+	ContainerID uuid.UUID    `json:"container_id"`
+	EntityID    uuid.UUID    `json:"entity_id"`
+	Position    *Position    `json:"position"`
+	IsOpen      bool         `json:"is_open"`
+	Items       []*ItemState `json:"items"`
 }

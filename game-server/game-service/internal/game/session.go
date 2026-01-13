@@ -71,16 +71,20 @@ type SessionSender interface {
 	BroadcastStateToPlayerList(players []uuid.UUID, state *types.ClientGameState) error
 }
 
+<<<<<<< HEAD
 type EventEmitter interface {
 	PublishMatchComplete(ctx context.Context, data *commontypes.MatchEndState) error
 }
 
 func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSerializer) *Session {
+=======
+func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSerializer, em *ecs.EntityManager) *Session {
+>>>>>>> 6b9035e6768d7d3684efc2bf15d0e9631bc6e32c
 	sessionId := uuid.New()
 
 	s := &Session{
 		ID:            sessionId,
-		EntityManager: ecs.NewEntityManager(),
+		EntityManager: em,
 		// map [playerID] to entityID
 		playerIDToEntitiesID:     make(map[uuid.UUID]uuid.UUID),
 		playerEntityIDToPlayerID: make(map[uuid.UUID]uuid.UUID, constants.DefautMaxSessionPlayers),
@@ -212,15 +216,12 @@ func (s *Session) manageClientMessages() {
 	}
 }
 
-const framerate = 30
-
 /**
 * manages all the game update loops.
 * runs system code to update state of game x times every second.
 **/
 func (s *Session) manageGameLoop() {
-	// TODO: update from once per second to 30 / 60 times a second
-	ticker := time.NewTicker((1 * time.Second) / framerate)
+	ticker := time.NewTicker((1 * time.Second) / time.Duration(constants.GameFrameRate))
 	defer ticker.Stop()
 
 	for {
@@ -230,7 +231,7 @@ func (s *Session) manageGameLoop() {
 
 			// movement
 			movementSys := systems.MovementSystem{}
-			deltaTime := 1.0 / float64(framerate)
+			deltaTime := 1.0 / float64(constants.GameFrameRate)
 			movementSys.Update(deltaTime, entities)
 
 			// interaction
@@ -257,8 +258,8 @@ func (s *Session) AddPlayer(playerID uuid.UUID, username string) uuid.UUID {
 	PlayerConfig := PlayerConfig{
 		UserID:        playerID,
 		Username:      username,
-		X:             600, // map center (MapWidth / 2)
-		Y:             400, // map center (MapHeight / 2)
+		X:             constants.PlayerRadius + rand.Float64()*(constants.MapWidth-2*constants.PlayerRadius),
+		Y:             constants.PlayerRadius + rand.Float64()*(constants.MapHeight-2*constants.PlayerRadius),
 		SkillName:     "Basic Attack",
 		SkillLevel:    1,
 		CurrentHealth: 100,
@@ -281,8 +282,23 @@ func (s *Session) AddPlayer(playerID uuid.UUID, username string) uuid.UUID {
 }
 
 func (s *Session) RemovePlayer(userID string) {
-	// 選項 1: 直接移除
-	// 選項 2: 標記為死亡，等待復活
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	playerID, err := uuid.Parse(userID)
+	if err != nil {
+		fmt.Println("RemovePlayer: Invailid userID", playerID)
+		return
+	}
+	entityID, exists := s.playerEntityIDToPlayerID[playerID]
+	if !exists {
+		fmt.Println("RemovePlayer: playerID not found in session", playerID)
+		return
+	}
+	s.EntityManager.RemoveEntity(entityID)
+
+	delete(s.playerIDToEntitiesID, playerID)
+	delete(s.playerEntityIDToPlayerID, entityID)
+	fmt.Printf("Remove player %s from session %s\n", playerID, s.ID)
 }
 
 func (s *Session) AddDoor(x, y float64) uuid.UUID {
@@ -307,6 +323,7 @@ func (s *Session) AddContainer(x, y float64) uuid.UUID {
 		Y: y,
 	}
 	itemIDList := make([]uuid.UUID, 0)
+
 	entity := CreateContainerEntity(s.EntityManager, ContainerConfig, itemIDList)
 	return entity.ID
 }
@@ -562,10 +579,10 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 
 		containerOpenable := containerOpenableComponent.(*components.OpenableComponent)
 
-		// update state
-		containerOpenable.IsOpen = !containerOpenable.IsOpen
+		// Only open, never close (chest stays open once opened)
+		containerOpenable.IsOpen = true
 
-		// create items
+		// create items on first open
 		if containerOpenable.HasBeenOpened == false {
 			containerOpenable.HasBeenOpened = true
 			itemIDs := make([]uuid.UUID, 0)
@@ -657,6 +674,7 @@ func (s *Session) addItem(itemConfig ItemConfig) uuid.UUID {
 	return entity.ID
 }
 
+<<<<<<< HEAD
 /**
 * Handles all processes at the end of a match session.
 **/
@@ -683,4 +701,11 @@ func (s *Session) formatMatchEndData() (*commontypes.MatchEndState, error) {
 	fmt.Println("Formatting data after match ended.")
 
 	return nil, nil
+=======
+func (s *Session) InitialMapObjects() {
+	// add container (ensure it's not cut off at edges)
+	containerX := constants.ContainerWidthRadius + rand.Float64()*(constants.MapWidth-2*constants.ContainerWidthRadius)
+	containerY := constants.ContainerHeightRadius + rand.Float64()*(constants.MapHeight-2*constants.ContainerHeightRadius)
+	s.AddContainer(containerX, containerY)
+>>>>>>> 6b9035e6768d7d3684efc2bf15d0e9631bc6e32c
 }

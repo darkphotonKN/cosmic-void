@@ -7,6 +7,7 @@ import (
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	grpcauth "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/auth"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/queue"
@@ -136,22 +137,35 @@ func (s *Server) GetPlayerFromConn(conn *websocket.Conn) (*types.Player, bool) {
 * allows the creation of a new game session.
 **/
 func (s *Server) CreateGameSession(players []*types.Player) *game.Session {
-	stateSerializer := serializer.NewStateSerializer()
+	// create entity manager first so it can be shared
+	entityManager := ecs.NewEntityManager()
+	stateSerializer := serializer.NewStateSerializer(entityManager)
 	// create session with message sender
-	newGameSession := game.NewSession(messaging.NewMessageSender(s), stateSerializer)
+	newGameSession := game.NewSession(messaging.NewMessageSender(s), stateSerializer, entityManager)
 
-	for _, player := range players {
-		newGameSession.AddPlayer(player.ID, player.Username)
-	}
+	newGameSession.InitialMapObjects()
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	for _, player := range players {
+		// 將玩家加入 session
+		newGameSession.AddPlayer(player.ID, player.Username)
+		connected := constants.Connected
+		// 更新玩家的 SessionId
+		player.CurrentGameSessionId = newGameSession.ID
+		player.ConnectState = &connected
+
+		// 同時更新 server 的 players map 中的玩家資訊 (如果存在)
+		if existingPlayer, exists := s.players[player.ID]; exists {
+			existingPlayer.CurrentGameSessionId = newGameSession.ID
+			existingPlayer.ConnectState = &connected
+		}
+	}
+
 	s.sessions[newGameSession.ID] = newGameSession
-	fmt.Printf("New game session initiated, id: %s\n", newGameSession.ID)
-
-	// broadcast initial game information to client
-
+	fmt.Printf("New game session initiated, id: %s, players: %d\n", newGameSession.ID, len(players))
+	
 	return newGameSession
 }
 

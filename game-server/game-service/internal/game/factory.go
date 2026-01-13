@@ -55,7 +55,8 @@ type ContainerConfig struct {
 
 func CreateContainerEntity(em *ecs.EntityManager, containerconfig ContainerConfig, itemIDList []uuid.UUID) *ecs.Entity {
 	entity := em.CreateEntity()
-	entity.AddComponent(components.NewContainerComponent())
+	containerID := uuid.New()
+	entity.AddComponent(components.NewContainerComponent(containerID))
 	entity.AddComponent(components.NewTransformComponent(containerconfig.X, containerconfig.Y))
 	entity.AddComponent(components.NewOpenableComponent(false)) // default false
 	entity.AddComponent(components.NewItemIDListComponent(itemIDList))

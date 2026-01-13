@@ -29,11 +29,12 @@ type ClientPackage struct {
 
 // represents entire game state that client receives
 type ClientGameState struct {
-	SessionID     uuid.UUID      `json:"session_id"`
-	CurrentPlayer *PlayerState   `json:"current_player"` // The recipient's player state
-	OtherPlayers  []*PlayerState `json:"other_players"`  // All other players
-	Items         []string       `json:"items"`          // TODO: update with item entity converted into struct format
-	Doors         []*DoorState   `json:"doors"`
+	SessionID     uuid.UUID         `json:"session_id"`
+	CurrentPlayer *PlayerState      `json:"current_player"` // The recipient's player state
+	OtherPlayers  []*PlayerState    `json:"other_players"`  // All other players
+	Items         []uuid.UUID       `json:"items"`          // TODO: update with item entity converted into struct format
+	Doors         []*DoorState      `json:"doors"`
+	Containers    []*ContainerState `json:"containers"`
 }
 
 func (m *Message) ParsePayload() (interface{}, error) {

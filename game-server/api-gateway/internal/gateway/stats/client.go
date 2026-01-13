@@ -37,4 +37,7 @@ func (c *Client) GetPlayerStats(ctx context.Context, req *pb.GetPlayerMatchStats
 
 	return stats, nil
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 6b9035e6768d7d3684efc2bf15d0e9631bc6e32c

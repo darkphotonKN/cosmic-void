@@ -85,3 +85,4 @@ func main() {
 		log.Fatal("Can't connect to grpc server. Error:", err.Error())
 	}
 }
+

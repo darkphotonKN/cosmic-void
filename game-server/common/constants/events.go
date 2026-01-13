@@ -10,10 +10,10 @@ const (
 	// Member Events
 	MemberSignedUpEvent = "member.signedup"       // when user creates account
 	MemberSignedInEvent = "member.signedin"       // when user signs into their account
-	PasswordResetEvent  = "member.password_reset" // when password reset is requested
+	PasswordResetEvent  = "member.password.reset" // when password reset is requested
 
 	// Game Events
-	GameMatchEndedEvent = "game.match_ended"
+	GameMatchEndedEvent = "game.match.ended" // match ended
 )
 
 /**

@@ -10,6 +10,12 @@ export class MainMenuScene extends Phaser.Scene {
   private isConnected: boolean = false;
   private dotAnimation?: Phaser.Time.TimerEvent;
   private dotCount: number = 0;
+  // 隊列彈窗狀態
+  private queuePopupActive: boolean = false;
+  private queueTitle?: Phaser.GameObjects.Text;
+  private queuePeopleText?: Phaser.GameObjects.Text;
+  private queueOverlay?: Phaser.GameObjects.Rectangle;
+  private queuePopupContainer?: Phaser.GameObjects.Container;
 
   constructor() {
     super({ key: "MainMenuScene" });
@@ -118,6 +124,45 @@ export class MainMenuScene extends Phaser.Scene {
       },
     );
 
+    // 🔥 監聽重連訊息 - 在 create() 時就註冊
+    socketManager.on("reconnected", (payload: { session_id: string; username: string; message: string }) => {
+      console.log("🔄 Reconnected!", payload);
+      if (this.connectionStatusText) {
+        this.connectionStatusText.setText(`Welcome back, ${payload.username}!`);
+        this.connectionStatusText.setColor("#4ecca3");
+      }
+    });
+
+    // 🔥 監聽 game_found - 在 create() 時就註冊，處理重連後自動進入遊戲
+    socketManager.on("game_found", (payload: { session_id?: string; sessionID?: string }) => {
+      console.log("🎮 Game found! Payload:", payload);
+
+      // 兼容後端的 session_id 和前端的 sessionID
+      const sessionID = payload.session_id || payload.sessionID;
+
+      if (!sessionID) {
+        console.error("No session ID in game_found payload:", payload);
+        return;
+      }
+
+      // 如果彈窗開啟，顯示 "Game Found!" 並延遲進入
+      if (this.queuePopupActive && this.queueTitle && this.queuePeopleText) {
+        console.log("Queue popup is active, showing Game Found message...");
+        this.queueTitle.setText("Game Found!");
+        this.queuePeopleText.setText("Starting game...");
+
+        // 1.5 秒後進入遊戲場景
+        this.time.delayedCall(1500, () => {
+          this.closeQueuePopup();
+          this.scene.start("TreasureHuntScene", { sessionID });
+        });
+      } else {
+        // 沒有彈窗（重連情況），直接進入遊戲
+        console.log("No popup active (reconnection), navigating immediately...");
+        this.scene.start("TreasureHuntScene", { sessionID });
+      }
+    });
+
     // Controls info
     const controlsText = this.add.text(
       width / 2,
@@ -204,7 +249,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     this.buttonBg.on("pointerdown", () => {
       if (this.isConnected) {
-        socketManager.sendMessage(ActionType.Find_Game, { player_id: "1" });
+        socketManager.sendMessage(ActionType.Find_Game, { playerId: "1" });
         this.queuePopup();
       }
     });
@@ -223,8 +268,11 @@ export class MainMenuScene extends Phaser.Scene {
   queuePopup() {
     const { width, height } = this.scale;
 
+    // 標記彈窗開啟
+    this.queuePopupActive = true;
+
     // 半透明背景遮罩
-    const overlay = this.add.rectangle(
+    this.queueOverlay = this.add.rectangle(
       width / 2,
       height / 2,
       width,
@@ -234,13 +282,13 @@ export class MainMenuScene extends Phaser.Scene {
     );
 
     // 彈窗背景
-    const popup = this.add.container(width / 2, height / 2);
+    this.queuePopupContainer = this.add.container(width / 2, height / 2);
 
     const bg = this.add
       .rectangle(0, 0, 300, 200, 0xffffff, 1)
       .setStrokeStyle(2, 0x000000);
 
-    const title = this.add
+    this.queueTitle = this.add
       .text(0, -60, "Queueing...", {
         fontSize: "28px",
         color: "#000",
@@ -256,7 +304,7 @@ export class MainMenuScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
 
-    const peopleCountText = this.add
+    this.queuePeopleText = this.add
       .text(0, -10, "People in queue: 0 / 2", {
         fontSize: "16px",
         color: "#000",
@@ -267,40 +315,41 @@ export class MainMenuScene extends Phaser.Scene {
     socketManager.on(
       "queue_status",
       (payload: { current: number; total: number }) => {
-        console.log("payload", payload);
-        if (!payload) return;
-        peopleCountText.setText(
+        console.log("Queue status payload:", payload);
+        if (!payload || !this.queuePeopleText) return;
+        this.queuePeopleText.setText(
           `People in queue: ${payload.current} / ${payload.total}`,
         );
       },
     );
 
-    // 監聽配對成功
-    socketManager.on("game_found", (payload: { sessionID: string }) => {
-      if (!payload) return;
-      console.log("Game found! Session ID:", payload.sessionID);
-      title.setText("Game Found!");
-      peopleCountText.setText("Starting game...");
-
-      // 1.5 秒後進入遊戲場景
-      this.time.delayedCall(1500, () => {
-        socketManager.off("queue_status");
-        socketManager.off("game_found");
-        overlay.destroy();
-        popup.destroy();
-        this.scene.start("TreasureHuntScene", { sessionID: payload.sessionID });
-      });
-    });
-
+    // 關閉按鈕
     closeBtn.on("pointerdown", () => {
-      // 取消監聽
-      socketManager.off("queue_status");
-      socketManager.off("game_found");
+      this.closeQueuePopup();
       // TODO: 發送離開排隊的訊息給後端
-      overlay.destroy();
-      popup.destroy();
     });
 
-    popup.add([bg, title, closeBtn, peopleCountText]);
+    this.queuePopupContainer.add([bg, this.queueTitle, closeBtn, this.queuePeopleText]);
+  }
+
+  private closeQueuePopup() {
+    this.queuePopupActive = false;
+
+    // 取消排隊狀態監聽
+    socketManager.off("queue_status");
+
+    // 清理 UI
+    if (this.queueOverlay) {
+      this.queueOverlay.destroy();
+      this.queueOverlay = undefined;
+    }
+    if (this.queuePopupContainer) {
+      this.queuePopupContainer.destroy();
+      this.queuePopupContainer = undefined;
+    }
+
+    // 清理引用
+    this.queueTitle = undefined;
+    this.queuePeopleText = undefined;
   }
 }

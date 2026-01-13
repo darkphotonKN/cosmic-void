@@ -47,8 +47,9 @@ func createMockSender() *messaging.MessageSender {
 // white box test, we need to verify internal state like playerEntities
 func TestSessionCreation(t *testing.T) {
 	sender := createMockSender()
-	stateSerializer := serializer.NewStateSerializer()
-	session := NewSession(sender, stateSerializer)
+	em := ecs.NewEntityManager()
+	stateSerializer := serializer.NewStateSerializer(em)
+	session := NewSession(sender, stateSerializer, em)
 
 	// verify session initialized
 	require.NotNil(t, session, "Session should not be nil")
@@ -67,8 +68,9 @@ func TestSessionCreation(t *testing.T) {
 // test adding a single player to an existing session
 func TestSessionAddPlayer(t *testing.T) {
 	sender := createMockSender()
-	stateSerializer := serializer.NewStateSerializer()
-	session := NewSession(sender, stateSerializer)
+	em := ecs.NewEntityManager()
+	stateSerializer := serializer.NewStateSerializer(em)
+	session := NewSession(sender, stateSerializer, em)
 	defer session.Shutdown()
 
 	playerID := uuid.New()
@@ -99,8 +101,9 @@ func TestSessionAddPlayer(t *testing.T) {
 // existing session
 func TestSessionAddMultiplePlayers(t *testing.T) {
 	sender := createMockSender()
-	stateSerializer := serializer.NewStateSerializer()
-	session := NewSession(sender, stateSerializer)
+	em := ecs.NewEntityManager()
+	stateSerializer := serializer.NewStateSerializer(em)
+	session := NewSession(sender, stateSerializer, em)
 	defer session.Shutdown()
 
 	player1ID := uuid.New()
@@ -122,8 +125,9 @@ func TestSessionAddMultiplePlayers(t *testing.T) {
 // test initial coordinates are correctly set by addPlayer
 func TestAddPlayerSetsInitialPosition(t *testing.T) {
 	sender := createMockSender()
-	stateSerializer := serializer.NewStateSerializer()
-	session := NewSession(sender, stateSerializer)
+	em := ecs.NewEntityManager()
+	stateSerializer := serializer.NewStateSerializer(em)
+	session := NewSession(sender, stateSerializer, em)
 
 	player1ID := uuid.New()
 	username := "Player1"
@@ -183,8 +187,9 @@ func TestHandleInteract(t *testing.T) {
 	}
 
 	sender := createMockSender()
-	stateSerializer := serializer.NewStateSerializer()
-	session := NewSession(sender, stateSerializer)
+	em := ecs.NewEntityManager()
+	stateSerializer := serializer.NewStateSerializer(em)
+	session := NewSession(sender, stateSerializer, em)
 
 	player1ID := uuid.New()
 	username := "Player1"
@@ -247,8 +252,9 @@ func TestHandleInteractContainer(t *testing.T) {
 	}
 
 	sender := createMockSender()
-	stateSerializer := serializer.NewStateSerializer()
-	session := NewSession(sender, stateSerializer)
+	em := ecs.NewEntityManager()
+	stateSerializer := serializer.NewStateSerializer(em)
+	session := NewSession(sender, stateSerializer, em)
 
 	player1ID := uuid.New()
 	username := "Player1"

@@ -28,7 +28,7 @@ func NewMessageSender(dispatcher MessageDispatcher) *MessageSender {
 * a consistent format.
 **/
 func (s *MessageSender) SendMessageToPlayer(playerID uuid.UUID, message types.Message) error {
-	fmt.Println("Sending message to player:", playerID)
+	// fmt.Println("Sending message to player:", playerID)
 
 	msg := types.Message{
 		Action:  message.Action,

@@ -34,8 +34,9 @@ func (m *MessageSender) PushMessageToConn(
 func TestHandleMoveUpdatesPositionIntegration(t *testing.T) {
 	mockMessageSender := MessageSender{}
 	sender := messaging.NewMessageSender(&mockMessageSender)
-	stateSerializer := serializer.NewStateSerializer()
-	session := NewSession(sender, stateSerializer)
+	em := ecs.NewEntityManager()
+	stateSerializer := serializer.NewStateSerializer(em)
+	session := NewSession(sender, stateSerializer, em)
 
 	player1ID := uuid.New()
 	username := "Player1"
