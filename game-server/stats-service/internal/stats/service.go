@@ -14,6 +14,7 @@ type Repository interface {
 	UpsertPlayerMatchStats(ctx context.Context, params *UpdateStatsParams) (*PlayerMatchStats, error)
 	CreatePlayerRankingStats(ctx context.Context, stats *PlayerRankingStats) error
 	CreateMatchHistory(ctx context.Context, history *MatchHistory) error
+	GetPlayerMatchStats(ctx context.Context, memberID uuid.UUID) (*PlayerMatchStats, error)
 }
 
 type service struct {
@@ -83,9 +84,34 @@ func (s *service) updatePlayerStats(ctx context.Context, player *pb.PlayerMatchR
 
 	// newPlayerAverages := s.calculateMatchAverage(ctx, matchHistoryUpdated)
 
-	// update aggregate stats
-	// s.repo.
+	// get current stats
+	playerStats, err := s.repo.GetPlayerMatchStats(ctx, memberId)
 
+	if err != nil {
+		return nil, err
+	}
+
+	playerStats.GamesPlayed += 1
+	playerStats.Kills += int(player.Kills)
+	playerStats.Deaths += int(player.Deaths)
+	// TODO: check if player won
+	playerStats.Wins += 0
+	playerStats.Losses += 1
+
+	// update aggregate stats
+	_, err = s.repo.UpsertPlayerMatchStats(ctx, &UpdateStatsParams{
+		MemberID:            playerStats.MemberID,
+		GamesPlayed:         playerStats.GamesPlayed,
+		Wins:                playerStats.Wins,
+		Losses:              playerStats.Losses,
+		Kills:               playerStats.Kills,
+		Deaths:              playerStats.Deaths,
+		TimesPlacedTopThree: playerStats.TimesPlacedTopThree,
+	})
+
+	if err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 

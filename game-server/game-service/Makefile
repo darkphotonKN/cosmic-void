@@ -97,6 +97,11 @@ test-watch: ## Watch and run tests on file changes (requires watchexec)
 	@echo "Watching for changes and running tests..."
 	@watchexec -e go -c -r "make test"
 
+.PHONY: service-test
+service-test: ## Run service tests only
+	@echo "Running service tests..."
+	@go test -v ./internal/game -run "TestPublishMatchComplete" -count=1
+
 # =============================================================================
 # Code Quality
 # =============================================================================

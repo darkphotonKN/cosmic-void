@@ -2,6 +2,8 @@ package stats
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -66,6 +68,7 @@ func (r *repository) UpsertPlayerMatchStats(ctx context.Context, params *UpdateS
 	defer rows.Close()
 
 	var updated PlayerMatchStats
+
 	if err := rows.StructScan(&updated); err != nil {
 		return nil, err
 	}
@@ -73,7 +76,39 @@ func (r *repository) UpsertPlayerMatchStats(ctx context.Context, params *UpdateS
 	return &updated, nil
 }
 
-// CreatePlayerRankingStats creates a new player ranking stats record
+func (r *repository) GetPlayerMatchStats(ctx context.Context, memberID uuid.UUID) (*PlayerMatchStats, error) {
+	query := `
+	SELECT 
+			id,
+			member_id,
+			games_played,
+			wins,
+			losses,
+			kills,
+			deaths,
+			times_placed_top_three,
+			created_at,
+			updated_at
+	FROM player_match_stats
+	WHERE member_id = $1
+	`
+
+	var playerMatchStats PlayerMatchStats
+
+	err := r.DB.GetContext(ctx, &playerMatchStats, query, memberID)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		slog.Info("Errored when attempting to getting player stats", "memberID", memberID, "error", err)
+		return nil, err
+	}
+
+	return &playerMatchStats, nil
+}
+
 func (r *repository) CreatePlayerRankingStats(ctx context.Context, stats *PlayerRankingStats) error {
 	stats.ID = uuid.New()
 
