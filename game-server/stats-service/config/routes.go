@@ -4,8 +4,8 @@ import (
 	"log/slog"
 	"net"
 
-	"github.com/darkphotonKN/cosmic-void-server/stats-service/internal/stats"
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats"
+	"github.com/darkphotonKN/cosmic-void-server/stats-service/internal/stats"
 	"github.com/jmoiron/sqlx"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/grpc"
@@ -78,3 +78,4 @@ func InitializeAMQPConnection(amqpURL string) (*amqp.Connection, *amqp.Channel, 
 
 	return conn, channel, nil
 }
+

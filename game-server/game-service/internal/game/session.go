@@ -71,15 +71,11 @@ type SessionSender interface {
 	BroadcastStateToPlayerList(players []uuid.UUID, state *types.ClientGameState) error
 }
 
-<<<<<<< HEAD
 type EventEmitter interface {
 	PublishMatchComplete(ctx context.Context, data *commontypes.MatchEndState) error
 }
 
-func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSerializer) *Session {
-=======
 func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSerializer, em *ecs.EntityManager) *Session {
->>>>>>> 6b9035e6768d7d3684efc2bf15d0e9631bc6e32c
 	sessionId := uuid.New()
 
 	s := &Session{
@@ -674,7 +670,6 @@ func (s *Session) addItem(itemConfig ItemConfig) uuid.UUID {
 	return entity.ID
 }
 
-<<<<<<< HEAD
 /**
 * Handles all processes at the end of a match session.
 **/
@@ -701,11 +696,11 @@ func (s *Session) formatMatchEndData() (*commontypes.MatchEndState, error) {
 	fmt.Println("Formatting data after match ended.")
 
 	return nil, nil
-=======
+}
+
 func (s *Session) InitialMapObjects() {
 	// add container (ensure it's not cut off at edges)
 	containerX := constants.ContainerWidthRadius + rand.Float64()*(constants.MapWidth-2*constants.ContainerWidthRadius)
 	containerY := constants.ContainerHeightRadius + rand.Float64()*(constants.MapHeight-2*constants.ContainerHeightRadius)
 	s.AddContainer(containerX, containerY)
->>>>>>> 6b9035e6768d7d3684efc2bf15d0e9631bc6e32c
 }

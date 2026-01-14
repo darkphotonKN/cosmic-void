@@ -1,10 +1,7 @@
 package types
 
 import (
-<<<<<<< HEAD
-=======
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
->>>>>>> 6b9035e6768d7d3684efc2bf15d0e9631bc6e32c
 	"github.com/google/uuid"
 )
 

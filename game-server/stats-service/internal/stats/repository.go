@@ -3,6 +3,7 @@ package stats
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -18,25 +19,58 @@ func NewRepository(db *sqlx.DB) *repository {
 	}
 }
 
-// CreatePlayerMatchStats creates a new player match stats record
-func (r *repository) CreatePlayerMatchStats(ctx context.Context, stats *PlayerMatchStats) error {
-	stats.ID = uuid.New()
+/**
+* update the baseline player stats but increasing or decreasing the aggregate values.
+**/
+func (r *repository) UpsertPlayerMatchStats(ctx context.Context, params *UpdateStatsParams) (*PlayerMatchStats, error) {
+	rows, err := r.DB.NamedQueryContext(ctx, `
+	INSERT INTO player_match_stats (
+			member_id,
+			games_played,
+			wins,
+			losses,
+			kills,
+			deaths,
+			times_placed_top_three,
+			created_at,
+			updated_at
+	)
+	VALUES (
+			:member_id,
+			:games_played,
+			:wins,
+			:losses,
+			:kills,
+			:deaths,
+			:times_placed_top_three,
+			CURRENT_TIMESTAMP,
+			CURRENT_TIMESTAMP
+	)
+	ON CONFLICT (member_id)
+	DO UPDATE SET
+			games_played = EXCLUDED.games_played,
+			wins = EXCLUDED.wins,
+			losses = EXCLUDED.losses,
+			kills = EXCLUDED.kills,
+			deaths = EXCLUDED.deaths,
+			times_placed_top_three = EXCLUDED.times_placed_top_three,
+			updated_at = CURRENT_TIMESTAMP
+	RETURNING *;
+`, params)
 
-	query := `
-		INSERT INTO player_match_stats (
-			id, member_id, games_played, wins, losses,
-			kills, deaths, times_placed_top_three
-		) VALUES (
-			:id, :member_id, :games_played, :wins, :losses,
-			:kills, :deaths, :times_placed_top_three
-		)`
-
-	_, err := r.DB.NamedExecContext(ctx, query, stats)
 	if err != nil {
-		return fmt.Errorf("failed to create player match stats: %w", err)
+		slog.Info("Errored when attempting to update player stats", "err", err)
+		return nil, err
 	}
 
-	return nil
+	defer rows.Close()
+
+	var updated PlayerMatchStats
+	if err := rows.StructScan(&updated); err != nil {
+		return nil, err
+	}
+
+	return &updated, nil
 }
 
 // CreatePlayerRankingStats creates a new player ranking stats record

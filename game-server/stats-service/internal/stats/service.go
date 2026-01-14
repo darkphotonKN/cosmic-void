@@ -11,7 +11,7 @@ import (
 
 // Repository interface defines what the service needs from the repository
 type Repository interface {
-	CreatePlayerMatchStats(ctx context.Context, stats *PlayerMatchStats) error
+	UpsertPlayerMatchStats(ctx context.Context, params *UpdateStatsParams) (*PlayerMatchStats, error)
 	CreatePlayerRankingStats(ctx context.Context, stats *PlayerRankingStats) error
 	CreateMatchHistory(ctx context.Context, history *MatchHistory) error
 }
@@ -28,7 +28,10 @@ func NewService(repo Repository, publishCh *amqp.Channel) *service {
 	}
 }
 
-// ProcessMatchCompleted processes entire match result data
+/**
+* Runs all the relevant processes after a match is completed, updating the
+* relavant tables.
+**/
 func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.ProcessMatchCompletedRequest) (*pb.ProcessMatchCompletedResponse, error) {
 	slog.Info("Processing match completed",
 		"session_id", req.SessionId,
@@ -36,30 +39,21 @@ func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.ProcessMatc
 		"match_ended_at", req.MatchEndedAt.AsTime(),
 	)
 
+	// TODO: implement seperate updates to relevant tables
+
 	for _, player := range req.Players {
 		slog.Info("Player match outcome",
 			"player", player,
 		)
+
+		s.updatePlayerStats(ctx, player)
 	}
-
-	// TODO: implement seperate updates to relevant tables
-
-	// TODO: get match record history
-	matchHistoryData, err := s.GetMatchHistory()
-	if err != nil {
-		slog.Info("Errored when attempting to get match history", "err", err)
-		return nil, err
-	}
-
-	// TODO: add match stats to match record
-	matchHistoryWithNewData := append(matchHistoryData, &MatchHistory{})
-
-	s.CalculateMatchAverage(ctx, matchHistoryWithNewData)
 
 	// TODO: call auth service for player information
 
 	// TODO: update denormazlied ranking table
-	s.repo.CreatePlayerRankingStats()
+	// - add update param struct for repo updates
+	// s.repo.CreatePlayerRankingStats(ctx, )
 
 	return &pb.ProcessMatchCompletedResponse{
 		Success: true,
@@ -67,10 +61,40 @@ func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.ProcessMatc
 	}, nil
 }
 
-func (s *service) GetMatchHistory(ctx context.Context, userID uuid.UUID) ([]*MatchHistory, error) {
+func (s *service) updatePlayerStats(ctx context.Context, player *pb.PlayerMatchResults) ([]*MatchHistory, error) {
+
+	memberId, err := uuid.Parse(player.MemberId)
+	if err != nil {
+		slog.Info("Errored when attempting to get parse member id into UUID", "err", err)
+		return nil, err
+	}
+
+	// TODO: recalculate averages, averages WIP
+	matchHistoryData, err := s.getMatchHistory(ctx, memberId)
+
+	if err != nil {
+		slog.Info("Errored when attempting to get match history", "err", err)
+		return nil, err
+	}
+
+	slog.Info("Match history data for player", "player", player, "data", matchHistoryData)
+
+	// matchHistoryUpdated := append(matchHistoryData, &MatchHistory{})
+
+	// newPlayerAverages := s.calculateMatchAverage(ctx, matchHistoryUpdated)
+
+	// update aggregate stats
+	// s.repo.
 
 	return nil, nil
 }
 
-func (s *service) CalculateMatchAverage(ctx context.Context, []*MatchHistory) error {
+func (s *service) getMatchHistory(ctx context.Context, memberID uuid.UUID) ([]*MatchHistory, error) {
+
+	return nil, nil
+}
+
+func (s *service) calculateMatchAverage(ctx context.Context, matchHistory []*MatchHistory) (*PlayerMatchStats, error) {
+	// TODO: calculate the new averages
+	return nil, nil
 }
