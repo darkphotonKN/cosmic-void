@@ -1,6 +1,7 @@
 package game
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -36,6 +37,7 @@ func TestPublishMatchComplete_DataStructure(t *testing.T) {
 	}
 
 	service := NewService()
+	service.PublishMatchComplete(context.Background(), matchEndData)
 
 	// Test data structure validity
 	t.Run("match data has correct structure", func(t *testing.T) {
@@ -146,4 +148,3 @@ func TestMatchEndDataSerialization(t *testing.T) {
 	assert.False(t, loser.Win)
 	assert.Equal(t, int32(2), loser.FinalPosition)
 }
-

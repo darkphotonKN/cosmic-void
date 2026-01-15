@@ -6,17 +6,19 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/auth"
 	grpcauth "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/auth"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/gameserver"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/queue"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 /**
 * Sets up API prefix route and all routers.
 **/
-func SetupRouter(db *sqlx.DB, registry discovery.Registry) *gin.Engine {
+func SetupRouter(db *sqlx.DB, registry discovery.Registry, ch *amqp.Channel) *gin.Engine {
 	router := gin.Default()
 
 	// NOTE: debugging middleware
@@ -40,8 +42,10 @@ func SetupRouter(db *sqlx.DB, registry discovery.Registry) *gin.Engine {
 	authClient := grpcauth.NewClient(registry)
 
 	queueService := queue.NewQueueService(2)
+
 	// --- WEBSOCKET CONNECTION ---
-	server := gameserver.NewServer(authClient, queueService)
+	gameService := game.NewService(ch)
+	server := gameserver.NewServer(authClient, queueService, gameService)
 
 	// -- routes --
 	router.GET("/game/ws", auth.WSAuthMiddleware(authClient), server.HandleWebSocketConnection)

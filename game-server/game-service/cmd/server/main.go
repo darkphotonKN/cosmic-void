@@ -103,7 +103,7 @@ func main() {
 	log.Printf("grpc Game Server started on PORT: %s\n", grpcAddr)
 
 	// routes setup
-	routes := config.SetupRouter(db, registry)
+	routes := config.SetupRouter(db, registry, ch)
 
 	fmt.Printf("Server listening on port %s.\n", gamePort)
 

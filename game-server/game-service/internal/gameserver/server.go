@@ -47,13 +47,16 @@ type Server struct {
 	queue queue.QueueService
 	// auth client for gRPC calls
 	authClient grpcauth.AuthClient
+
+	// message broker communication channel
+	eventEmitter game.EventEmitter
 }
 
 type MessageSender interface {
 	BroadcastToPlayerList(players []*types.Player, msg types.Message) error
 }
 
-func NewServer(authClient grpcauth.AuthClient, queueService queue.QueueService) *Server {
+func NewServer(authClient grpcauth.AuthClient, queueService queue.QueueService, eventEmitter game.EventEmitter) *Server {
 	upgrader := websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
 			// TODO: Allow all connections by default for simplicity; can add more logic here
@@ -71,8 +74,9 @@ func NewServer(authClient grpcauth.AuthClient, queueService queue.QueueService) 
 		players:      make(map[uuid.UUID]*types.Player, 10),
 		connToPlayer: make(map[*websocket.Conn]*types.Player, 10),
 
-		queue:      queueService,
-		authClient: authClient,
+		queue:        queueService,
+		authClient:   authClient,
+		eventEmitter: eventEmitter,
 	}
 
 	// initialize message sender (inject send function)
@@ -140,8 +144,9 @@ func (s *Server) CreateGameSession(players []*types.Player) *game.Session {
 	// create entity manager first so it can be shared
 	entityManager := ecs.NewEntityManager()
 	stateSerializer := serializer.NewStateSerializer(entityManager)
+
 	// create session with message sender
-	newGameSession := game.NewSession(messaging.NewMessageSender(s), stateSerializer, entityManager)
+	newGameSession := game.NewSession(messaging.NewMessageSender(s), stateSerializer, entityManager, s.eventEmitter)
 
 	newGameSession.InitialMapObjects()
 
@@ -165,7 +170,7 @@ func (s *Server) CreateGameSession(players []*types.Player) *game.Session {
 
 	s.sessions[newGameSession.ID] = newGameSession
 	fmt.Printf("New game session initiated, id: %s, players: %d\n", newGameSession.ID, len(players))
-	
+
 	return newGameSession
 }
 

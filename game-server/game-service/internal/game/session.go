@@ -75,7 +75,7 @@ type EventEmitter interface {
 	PublishMatchComplete(ctx context.Context, data *commontypes.MatchEndState) error
 }
 
-func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSerializer, em *ecs.EntityManager) *Session {
+func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSerializer, em *ecs.EntityManager, eventEmitter EventEmitter) *Session {
 	sessionId := uuid.New()
 
 	s := &Session{
@@ -96,6 +96,7 @@ func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSer
 		containerInteractedCache: make(map[uuid.UUID]bool),
 		sender:                   sender,
 		stateSerializer:          serializer,
+		eventEmitter:             eventEmitter,
 	}
 
 	go s.Start()

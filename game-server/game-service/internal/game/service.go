@@ -13,13 +13,13 @@ type service struct {
 	publishCh *amqp.Channel
 }
 
-func NewService() *service {
-	return &service{}
+func NewService(publishCh *amqp.Channel) *service {
+	return &service{
+		publishCh: publishCh,
+	}
 }
 
 func (s *service) PublishMatchComplete(ctx context.Context, data *commontypes.MatchEndState) error {
-
-	// publish as game match ended event
 	err := s.publishCh.PublishWithContext(
 		ctx,
 		commonconstants.GameMatchEndedEvent,
