@@ -35,6 +35,8 @@ func TestPublishMatchComplete_DataStructure(t *testing.T) {
 		},
 	}
 
+	service := NewService()
+
 	// Test data structure validity
 	t.Run("match data has correct structure", func(t *testing.T) {
 		// Verify basic match info

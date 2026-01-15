@@ -151,4 +151,3 @@ func (r *repository) CreateMatchHistory(ctx context.Context, history *MatchHisto
 
 	return nil
 }
-
