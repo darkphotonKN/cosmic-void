@@ -1,10 +1,12 @@
 package game
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
 
+	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
@@ -31,12 +33,20 @@ func (m *MessageSender) PushMessageToConn(
 	return nil
 }
 
+// Mock EventEmitter for testing
+type mockEventEmitter struct{}
+
+func (m *mockEventEmitter) PublishMatchComplete(ctx context.Context, data *commontypes.MatchEndState) error {
+	return nil
+}
+
 func TestHandleMoveUpdatesPositionIntegration(t *testing.T) {
 	mockMessageSender := MessageSender{}
 	sender := messaging.NewMessageSender(&mockMessageSender)
 	em := ecs.NewEntityManager()
 	stateSerializer := serializer.NewStateSerializer(em)
-	session := NewSession(sender, stateSerializer, em)
+	mockEmitter := &mockEventEmitter{}
+	session := NewSession(sender, stateSerializer, em, mockEmitter)
 
 	player1ID := uuid.New()
 	username := "Player1"
