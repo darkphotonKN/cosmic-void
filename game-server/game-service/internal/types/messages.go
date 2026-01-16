@@ -65,6 +65,26 @@ func (m *Message) ParsePayload() (interface{}, error) {
 		fmt.Printf("\n\npayload of action interact was: %+v\n", parsedPayload)
 
 		return parsedPayload, nil
+
+	case constants.ActionLoot:
+		itemEntityIDsRaw := m.Payload["item_entity_ids"].([]interface{})
+		itemEntityIDs := make([]string, len(itemEntityIDsRaw))
+		for i, id := range itemEntityIDsRaw {
+			itemEntityIDs[i] = id.(string)
+		}
+
+		parsedPayload := PlayerSessionLootPayload{
+			PlayerSessionPayload: PlayerSessionPayload{
+				SessionID: m.Payload["session_id"].(string),
+				PlayerID:  m.Payload["player_id"].(string),
+			},
+			ContainerEntityID: m.Payload["container_entity_id"].(string),
+			ItemEntityIDs:     itemEntityIDs,
+		}
+
+		fmt.Printf("\n\npayload of action loot was: %+v\n", parsedPayload)
+
+		return parsedPayload, nil
 	default:
 		return nil, fmt.Errorf("No matching actions.")
 	}
@@ -109,4 +129,10 @@ type PlayerSessionMovePayload struct {
 type PlayerSessionInteractPayload struct {
 	PlayerSessionPayload
 	EntityID string `json:"entity_id"`
+}
+
+type PlayerSessionLootPayload struct {
+	PlayerSessionPayload
+	ContainerEntityID string   `json:"container_entity_id"`
+	ItemEntityIDs     []string `json:"item_entity_ids"`
 }

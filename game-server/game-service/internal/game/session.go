@@ -205,7 +205,49 @@ func (s *Session) manageClientMessages() {
 				if err != nil {
 					s.sender.SendMessageToPlayer(playerID, types.Message{})
 				}
+			case constants.ActionLoot:
+
+				fmt.Printf("Action from client was loot")
+				parsedPayload, err := msg.Message.ParsePayload()
+
+				if err != nil {
+					// TODO respond to client error
+				}
+
+				lootPayload := parsedPayload.(types.PlayerSessionLootPayload)
+				fmt.Printf("\nParsed interact payload:\n%+v\n\n", lootPayload)
+
+				playerID, err := uuid.Parse(lootPayload.PlayerID)
+
+				if err != nil {
+					fmt.Printf("\nPlayerID %s from session payload was invalid.\n\n", lootPayload.PlayerID)
+					// TODO: respond to client error
+				}
+
+				containerEntityID, err := uuid.Parse(lootPayload.ContainerEntityID)
+
+				if err != nil {
+
+					fmt.Printf("\nContainerEntityID %s from session payload was invalid.\n\n", lootPayload.ContainerEntityID)
+					// TODO: respond to client error
+				}
+
+				itemEntityIDUUIDs := []uuid.UUID{}
+				for _, itemEntityId := range lootPayload.ItemEntityIDs {
+					entityId, err := uuid.Parse(itemEntityId)
+					if err != nil {
+						fmt.Printf("\n itemEntityId %s is invalid", entityId)
+					}
+					itemEntityIDUUIDs = append(itemEntityIDUUIDs, entityId)
+				}
+
+				err = s.handleLoot(playerID, containerEntityID, itemEntityIDUUIDs)
+
+				if err != nil {
+					s.sender.SendMessageToPlayer(playerID, types.Message{})
+				}
 			}
+
 		case <-s.stopChan:
 			fmt.Printf("Game session %s: message handler stopped\n", s.ID)
 			return
@@ -625,6 +667,41 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		}()
 	}
 
+	return nil
+}
+
+func (s *Session) handleLoot(playerID uuid.UUID, containerEntityID uuid.UUID, removeEntityIDs []uuid.UUID) error {
+	containerEntity, ok := s.EntityManager.GetEntity(containerEntityID)
+	if !ok {
+		fmt.Printf("entity %s is not exists", containerEntityID)
+		return fmt.Errorf("entity %s is not exists", containerEntityID)
+	}
+
+	for _, entityID := range removeEntityIDs {
+		_, ok := s.EntityManager.GetEntity(entityID)
+		if !ok {
+			fmt.Printf("Item entity %s is not exists", entityID)
+			fmt.Errorf("Item entity %s is not exists", entityID)
+		}
+	}
+
+	itemIDsComponent, _ := containerEntity.GetComponent(ecs.ComponentTypeItemIDList)
+	containerItemIDs := itemIDsComponent.(*components.ItemIDListComponent)
+	// remove container item
+	removeItemEntityIDsMap := make(map[uuid.UUID]struct{})
+	for _, removeEntityID := range removeEntityIDs {
+		removeItemEntityIDsMap[removeEntityID] = struct{}{}
+	}
+	newItemIDs := []uuid.UUID{}
+	for _, itemID := range containerItemIDs.ItemIDs {
+		if _, exists := removeItemEntityIDsMap[itemID]; exists {
+			// remove entity item
+			// s.EntityManager.RemoveEntity(itemID)
+		} else {
+			newItemIDs = append(newItemIDs, itemID)
+		}
+	}
+	containerItemIDs.ItemIDs = newItemIDs
 	return nil
 }
 
