@@ -1,16 +1,31 @@
 package game
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/darkphotonKN/cosmic-void-server/common/broker"
+	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
+	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/google/uuid"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
 )
 
+var (
+	serviceName = "stats"
+	grpcAddr    = commonhelpers.GetEnvString("GRPC_STATS_ADDR", "7011")
+	consulAddr  = commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
+
+	amqpUser     = commonhelpers.GetEnvString("RABBITMQ_USER", "guest")
+	amqpPassword = commonhelpers.GetEnvString("RABBITMQ_PASS", "guest")
+	amqpHost     = commonhelpers.GetEnvString("RABBITMQ_HOST", "localhost")
+	amqpPort     = commonhelpers.GetEnvString("RABBITMQ_PORT", "5672")
+)
+
 func TestPublishMatchComplete_DataStructure(t *testing.T) {
+
 	// Create test data - 6 player match results
 	matchEndData := &commontypes.MatchEndState{
 		SessionID:      uuid.MustParse("550e8400-e29b-41d4-a716-446655440001"),
@@ -36,11 +51,18 @@ func TestPublishMatchComplete_DataStructure(t *testing.T) {
 		},
 	}
 
-	// Create a nil channel for testing - we're only testing data structures
-	var mockChannel *amqp.Channel
-	_ = NewService(mockChannel)
-	// Don't actually publish since we don't have a real channel
-	// service.PublishMatchComplete(context.Background(), matchEndData)
+	ch, close := broker.Connect(amqpUser, amqpPassword, amqpHost, amqpPort)
+
+	// Only declare the exchange we actually consume from
+	broker.DeclareExchange(ch, commonconstants.GameMatchEndedEvent, "fanout")
+
+	defer func() {
+		close()
+		ch.Close()
+	}()
+
+	service := NewService(ch)
+	service.PublishMatchComplete(context.Background(), matchEndData)
 
 	// Test data structure validity
 	t.Run("match data has correct structure", func(t *testing.T) {

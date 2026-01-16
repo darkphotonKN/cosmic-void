@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
@@ -20,6 +21,8 @@ func NewService(publishCh *amqp.Channel) *service {
 }
 
 func (s *service) PublishMatchComplete(ctx context.Context, data *commontypes.MatchEndState) error {
+	slog.Info("Publishing game match ended.")
+
 	err := s.publishCh.PublishWithContext(
 		ctx,
 		commonconstants.GameMatchEndedEvent,
