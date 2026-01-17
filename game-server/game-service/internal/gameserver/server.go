@@ -79,7 +79,7 @@ func NewServer(authClient grpcauth.AuthClient, queueService queue.QueueService, 
 		eventEmitter: eventEmitter,
 	}
 
-	// initialize message sender (inject send function)
+	// initialize message sender
 	newSender := messaging.NewMessageSender(server)
 
 	server.queue.Start()

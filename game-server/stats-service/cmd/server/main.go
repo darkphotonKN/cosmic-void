@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/common/broker"
-	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
@@ -67,9 +66,6 @@ func main() {
 	defer listener.Close()
 
 	ch, close := broker.Connect(amqpUser, amqpPassword, amqpHost, amqpPort)
-
-	// Only declare the exchange we actually consume from
-	broker.DeclareExchange(ch, commonconstants.GameMatchEndedEvent, "fanout")
 
 	defer func() {
 		close()

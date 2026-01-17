@@ -27,7 +27,7 @@ func SetupRouter(db *sqlx.DB, registry discovery.Registry, ch *amqp.Channel) *gi
 		c.Next()
 	})
 
-	// CORS for development - more specific for game service with WebSocket support
+	// CORS for development more specific for game service with WebSocket support
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://localhost:3838"},
 		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
@@ -41,9 +41,8 @@ func SetupRouter(db *sqlx.DB, registry discovery.Registry, ch *amqp.Channel) *gi
 	// --- AUTH CLIENT ---
 	authClient := grpcauth.NewClient(registry)
 
+	// --- GAME SERVER SETUP ---
 	queueService := queue.NewQueueService(2)
-
-	// --- WEBSOCKET CONNECTION ---
 	gameService := game.NewService(ch)
 	server := gameserver.NewServer(authClient, queueService, gameService)
 

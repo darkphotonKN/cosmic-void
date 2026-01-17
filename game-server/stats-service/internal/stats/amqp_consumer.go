@@ -30,22 +30,10 @@ func NewConsumer(service ConsumerService, channel *amqp.Channel) *Consumer {
 	}
 }
 
+const statsMatchEndedQueue = "stats.game.match.ended"
+
 // Listen starts consuming messages from the configured queues
 func (c *Consumer) Listen() {
-	// Set up queue for match completed events
-	_, err := c.channel.QueueDeclare(
-		commonconstants.GameMatchEndedEvent, // queue name
-		true,                                // durable
-		false,                               // delete when unused
-		false,                               // exclusive
-		false,                               // no-wait
-		nil,                                 // arguments
-	)
-	if err != nil {
-		slog.Error("Failed to declare queue", "error", err)
-		return
-	}
-
 	// Start consuming match completed events
 	go c.consumeMatchCompleted()
 
@@ -55,13 +43,13 @@ func (c *Consumer) Listen() {
 // consumeMatchCompleted handles match completion events
 func (c *Consumer) consumeMatchCompleted() {
 	msgs, err := c.channel.Consume(
-		commonconstants.GameMatchEndedEvent, // queue name
-		"",                                  // consumer
-		false,                               // auto-ack (set to false for manual ack)
-		false,                               // exclusive
-		false,                               // no-local
-		false,                               // no-wait
-		nil,                                 // args
+		statsMatchEndedQueue, // queue name
+		"",                   // consumer
+		false,                // auto-ack (set to false for manual ack)
+		false,                // exclusive
+		false,                // no-local
+		false,                // no-wait
+		nil,                  // args
 	)
 
 	if err != nil {
@@ -122,15 +110,14 @@ func (c *Consumer) consumeMatchCompleted() {
 
 // Helper method to set up AMQP exchange and bindings
 func SetupAMQPInfrastructure(channel *amqp.Channel) error {
-	// Declare the exchange
 	err := channel.ExchangeDeclare(
-		"game.events", // exchange name
-		"topic",       // exchange type
-		true,          // durable
-		false,         // auto-deleted
-		false,         // internal
-		false,         // no-wait
-		nil,           // arguments
+		commonconstants.GameMatchEndedEvent, // exchange name
+		"fanout",                            // exchange type
+		true,                                // durable
+		false,                               // auto-deleted
+		false,                               // internal
+		false,                               // no-wait
+		nil,                                 // arguments
 	)
 	if err != nil {
 		return err
@@ -138,24 +125,25 @@ func SetupAMQPInfrastructure(channel *amqp.Channel) error {
 
 	// Declare the queue
 	_, err = channel.QueueDeclare(
-		"stats.match.completed", // queue name
-		true,                    // durable
-		false,                   // delete when unused
-		false,                   // exclusive
-		false,                   // no-wait
-		nil,                     // arguments
+		statsMatchEndedQueue, // queue name
+		true,                 // durable
+		false,                // delete when unused
+		false,                // exclusive
+		false,                // no-wait
+		nil,                  // arguments
 	)
 	if err != nil {
+		slog.Error("Failed to declare queue", "error", err)
 		return err
 	}
 
 	// Bind the queue to the exchange
 	err = channel.QueueBind(
-		"stats.match.completed", // queue name
-		"match.completed",       // routing key
-		"game.events",           // exchange
-		false,                   // no-wait
-		nil,                     // args
+		statsMatchEndedQueue,                // queue name
+		"match.completed",                   // routing key
+		commonconstants.GameMatchEndedEvent, // exchange
+		false,                               // no-wait
+		nil,                                 // args
 	)
 	if err != nil {
 		return err

@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 
@@ -23,7 +24,9 @@ func NewService(publishCh *amqp.Channel) *service {
 func (s *service) PublishMatchComplete(ctx context.Context, data *commontypes.MatchEndState) error {
 	slog.Info("Publishing game match ended.")
 
-	err := s.publishCh.PublishWithContext(
+	dataJSON, err := json.Marshal(data)
+
+	err = s.publishCh.PublishWithContext(
 		ctx,
 		commonconstants.GameMatchEndedEvent,
 		"",
@@ -31,7 +34,7 @@ func (s *service) PublishMatchComplete(ctx context.Context, data *commontypes.Ma
 		false,
 		amqp.Publishing{
 			ContentType:  "application/json",
-			Body:         nil,
+			Body:         dataJSON,
 			DeliveryMode: amqp.Persistent,
 		})
 
