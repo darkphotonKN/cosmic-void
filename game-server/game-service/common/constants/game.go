@@ -17,6 +17,7 @@ const (
 	ActionUseItem  Action = "use_item"
 	ActionDropItem Action = "drop_item"
 	ActionChat     Action = "chat"
+	ActionLoot     Action = "loot"
 
 	// system actions
 	ActionError   Action = "error"

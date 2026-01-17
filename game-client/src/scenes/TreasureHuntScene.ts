@@ -67,6 +67,16 @@ export class TreasureHuntScene extends Phaser.Scene {
   private openedChestEntityId?: string;
   private popupItemsText?: Phaser.GameObjects.Text;
 
+  // 道具欄
+  private inventoryPopup?: Phaser.GameObjects.Container;
+  private isInventoryOpen = false;
+  private inventoryItems: ItemState[] = [];
+  private inventoryItemsText?: Phaser.GameObjects.Text;
+
+  // 當前寶箱的物品（用於 F 鍵取得）
+  private currentChestItems: ItemState[] = [];
+  private justLooted = false; // 防止 loot 後被後端舊狀態覆蓋
+
   constructor() {
     super({ key: "TreasureHuntScene" });
   }
@@ -256,8 +266,8 @@ export class TreasureHuntScene extends Phaser.Scene {
     });
     this.popupItemsText.setOrigin(0.5);
 
-    // 提示
-    const hint = this.add.text(0, popupHeight / 2 - 25, "Press E to close", {
+    // 底部快捷鍵
+    const hint = this.add.text(0, popupHeight / 2 - 25, "E - Close  |  F - Take", {
       fontSize: "12px",
       color: "#aaaaaa",
     });
@@ -279,6 +289,20 @@ export class TreasureHuntScene extends Phaser.Scene {
   private updatePopupItems(items: ItemState[]): void {
     if (!this.popupItemsText) return;
 
+    // 如果剛 loot 過，等後端確認清空才更新
+    if (this.justLooted) {
+      if (items.length === 0) {
+        // 後端已確認清空
+        this.justLooted = false;
+      } else {
+        // 後端還沒處理完，忽略這次更新
+        return;
+      }
+    }
+
+    // 儲存當前寶箱物品（用於 F 鍵取得）
+    this.currentChestItems = items.map(item => ({ ...item }));
+
     if (items.length === 0) {
       this.popupItemsText.setText("(Empty)");
     } else {
@@ -294,6 +318,142 @@ export class TreasureHuntScene extends Phaser.Scene {
     }
     this.popupItemsText = undefined;
     this.isPopupOpen = false;
+    this.currentChestItems = [];
+    this.justLooted = false;
+  }
+
+  // === 道具欄功能 ===
+
+  private toggleInventory(): void {
+    if (this.isInventoryOpen) {
+      this.hideInventory();
+    } else {
+      this.showInventory();
+    }
+  }
+
+  private showInventory(): void {
+    if (this.isInventoryOpen) return;
+
+    const centerX = this.cameras.main.width / 2;
+    const centerY = this.cameras.main.height / 2;
+    const popupWidth = 300;
+    const popupHeight = 300;
+
+    // 半透明背景
+    const bg = this.add.graphics();
+    bg.fillStyle(0x000000, 0.8);
+    bg.fillRoundedRect(
+      -popupWidth / 2,
+      -popupHeight / 2,
+      popupWidth,
+      popupHeight,
+      16,
+    );
+    bg.lineStyle(2, 0x4ecca3, 1);
+    bg.strokeRoundedRect(
+      -popupWidth / 2,
+      -popupHeight / 2,
+      popupWidth,
+      popupHeight,
+      16,
+    );
+
+    // 標題
+    const title = this.add.text(0, -popupHeight / 2 + 20, "Inventory", {
+      fontSize: "22px",
+      color: "#4ecca3",
+    });
+    title.setOrigin(0.5);
+
+    // 物品列表
+    this.inventoryItemsText = this.add.text(0, 0, "", {
+      fontSize: "14px",
+      color: "#ffffff",
+      align: "center",
+      lineSpacing: 8,
+    });
+    this.inventoryItemsText.setOrigin(0.5);
+    this.updateInventoryDisplay();
+
+    // 底部快捷鍵
+    const hint = this.add.text(0, popupHeight / 2 - 25, "I - Close", {
+      fontSize: "12px",
+      color: "#aaaaaa",
+    });
+    hint.setOrigin(0.5);
+
+    // Container
+    this.inventoryPopup = this.add.container(centerX, centerY, [
+      bg,
+      title,
+      this.inventoryItemsText,
+      hint,
+    ]);
+    this.inventoryPopup.setDepth(1001);
+    this.inventoryPopup.setScrollFactor(0);
+
+    this.isInventoryOpen = true;
+  }
+
+  private hideInventory(): void {
+    if (this.inventoryPopup) {
+      this.inventoryPopup.destroy();
+      this.inventoryPopup = undefined;
+    }
+    this.inventoryItemsText = undefined;
+    this.isInventoryOpen = false;
+  }
+
+  private updateInventoryDisplay(): void {
+    if (!this.inventoryItemsText) return;
+
+    if (this.inventoryItems.length === 0) {
+      this.inventoryItemsText.setText("(Empty)");
+    } else {
+      const itemLines = this.inventoryItems.map(item => `${item.name} x${item.quantity}`);
+      this.inventoryItemsText.setText(itemLines.join("\n"));
+    }
+  }
+
+  private pickupItemFromChest(): void {
+    // 只有在寶箱跳窗開啟時才能取得道具
+    if (!this.isPopupOpen || this.currentChestItems.length === 0 || !this.openedChestEntityId) {
+      return;
+    }
+
+    // 收集所有 item entity IDs
+    const itemEntityIds = this.currentChestItems.map(item => item.entity_id);
+
+    // 發送 loot action 到後端
+    socketManager.sendMessage(ActionType.Loot, {
+      container_entity_id: this.openedChestEntityId,
+      item_entity_ids: itemEntityIds,
+    });
+
+    // 標記剛 loot，防止後端舊狀態覆蓋
+    this.justLooted = true;
+
+    // 取得全部道具到本地道具欄
+    for (const item of this.currentChestItems) {
+      const existingItem = this.inventoryItems.find(i => i.name === item.name);
+      if (existingItem) {
+        existingItem.quantity += item.quantity;
+      } else {
+        this.inventoryItems.push({ ...item });
+      }
+    }
+
+    // 清空寶箱（本地）
+    this.currentChestItems = [];
+
+    // 更新寶箱跳窗顯示
+    this.updatePopupItems(this.currentChestItems);
+
+    // 如果道具欄開啟，也更新顯示
+    if (this.isInventoryOpen) {
+      this.updateInventoryDisplay();
+    }
   }
 
   private getNearbyChest(): { entityId: string } | null {
@@ -374,6 +534,16 @@ export class TreasureHuntScene extends Phaser.Scene {
       if (nearbyChest) {
         this.toggleChest(nearbyChest.entityId);
       }
+    });
+
+    // I 鍵開啟/關閉道具欄
+    this.input.keyboard?.on("keydown-I", () => {
+      this.toggleInventory();
+    });
+
+    // F 鍵從寶箱取得道具
+    this.input.keyboard?.on("keydown-F", () => {
+      this.pickupItemFromChest();
     });
 
     // 創建室內遮罩（用於遮住建築外面）
