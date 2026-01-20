@@ -13,27 +13,27 @@ import (
 
 // SetupServices initializes all services and their dependencies
 func SetupServices(db *sqlx.DB, amqpChannel *amqp.Channel) *grpc.Server {
-	// Create repository
+	// create repository
 	repo := stats.NewRepository(db)
 
-	// Create service with repository and AMQP channel
+	// create service with repository and AMQP channel
 	service := stats.NewService(repo, amqpChannel)
 
-	// Create gRPC handler with service
+	// create gRPC handler with service
 	handler := stats.NewHandler(service)
 
-	// Create AMQP consumer with service
+	// create AMQP consumer with service
 	consumer := stats.NewConsumer(service, amqpChannel)
 
-	// Set up AMQP infrastructure
+	// set up AMQP infrastructure
 	if err := stats.SetupAMQPInfrastructure(amqpChannel); err != nil {
 		slog.Error("Failed to setup AMQP infrastructure", "error", err)
 	}
 
-	// Start listening for AMQP events
+	// start listening for AMQP events
 	consumer.Listen()
 
-	// Create gRPC server
+	// create gRPC server
 	grpcServer := grpc.NewServer()
 
 	// Register stats service with gRPC server
@@ -78,4 +78,3 @@ func InitializeAMQPConnection(amqpURL string) (*amqp.Connection, *amqp.Channel, 
 
 	return conn, channel, nil
 }
-

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	commonutils "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
@@ -69,8 +70,10 @@ func (r *repository) UpsertPlayerMatchStats(ctx context.Context, params *UpdateS
 
 	var updated PlayerMatchStats
 
-	if err := rows.StructScan(&updated); err != nil {
-		return nil, err
+	err = rows.StructScan(&updated)
+
+	if err != nil {
+		return nil, commonutils.AnalyzeDBErr(err)
 	}
 
 	return &updated, nil

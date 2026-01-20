@@ -2,7 +2,9 @@ package game
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
@@ -20,7 +22,11 @@ func NewService(publishCh *amqp.Channel) *service {
 }
 
 func (s *service) PublishMatchComplete(ctx context.Context, data *commontypes.MatchEndState) error {
-	err := s.publishCh.PublishWithContext(
+	slog.Info("Publishing game match ended.")
+
+	dataJSON, err := json.Marshal(data)
+
+	err = s.publishCh.PublishWithContext(
 		ctx,
 		commonconstants.GameMatchEndedEvent,
 		"",
@@ -28,7 +34,7 @@ func (s *service) PublishMatchComplete(ctx context.Context, data *commontypes.Ma
 		false,
 		amqp.Publishing{
 			ContentType:  "application/json",
-			Body:         nil,
+			Body:         dataJSON,
 			DeliveryMode: amqp.Persistent,
 		})
 

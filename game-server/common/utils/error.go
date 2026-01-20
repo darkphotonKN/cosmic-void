@@ -5,6 +5,7 @@ Commonly shared error helpers utilities.
 */
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"strings"
@@ -26,6 +27,9 @@ func AnalyzeDBErr(err error) error {
 	}
 	if IsConstraintViolation(err) {
 		return commonconstants.ErrConstraintViolation
+	}
+	if IsTransientError(err) {
+		return commonconstants.ErrTransient
 	}
 	if errors.Is(err, sql.ErrNoRows) {
 		return commonconstants.ErrNotFound
@@ -54,4 +58,25 @@ func IsConstraintViolation(err error) bool {
 		return false
 	}
 	return strings.Contains(err.Error(), "violates check constraint")
+}
+
+/**
+* Helper that detemrines if an error is considered a transient error that means we could retry consuming the event message and running the subsequent processes.
+**/
+func IsTransientError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errStr := err.Error()
+
+	if errors.Is(err, sql.ErrConnDone) || errors.Is(err, context.DeadlineExceeded) ||
+		strings.Contains(errStr, "connection refused") ||
+		strings.Contains(errStr, "connection reset") ||
+		strings.Contains(errStr, "timeout") ||
+		strings.Contains(errStr, "too many connections") {
+		return true
+	}
+
+	return false
 }

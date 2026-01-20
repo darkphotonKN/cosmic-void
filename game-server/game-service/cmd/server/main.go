@@ -90,12 +90,9 @@ func main() {
 		ch.Close()
 	}()
 
-	// TODO: Declare your exchanges here
 	broker.DeclareExchange(ch, commonconstants.GameMatchEndedEvent, "fanout")
 
 	// TODO: Initialize your services and handlers
-	// When ready, import the proto package and uncomment:
-	// pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/game"
 	// repo := yourpackage.NewRepository(db)
 	// service := yourpackage.NewService(repo, ch)
 	// handler := yourpackage.NewHandler(service)
