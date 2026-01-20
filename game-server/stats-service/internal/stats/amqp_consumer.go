@@ -86,7 +86,6 @@ func (c *Consumer) consumeMatchCompleted() {
 			}
 		}
 
-		// process the complete match
 		response, err := c.service.ProcessMatchCompleted(ctx, req)
 
 		if err != nil {
@@ -95,8 +94,13 @@ func (c *Consumer) consumeMatchCompleted() {
 				"session_id", event.SessionID,
 			)
 
-			errors.Is()
-			msg.Nack(false, true) // Negative acknowledgment with requeue
+			// retry if error is transient
+			if errors.Is(err, commonconstants.ErrTransient) {
+				msg.Nack(false, true)
+			} else {
+				msg.Nack(false, false) // TODO: setup DLQ
+			}
+
 			continue
 		}
 

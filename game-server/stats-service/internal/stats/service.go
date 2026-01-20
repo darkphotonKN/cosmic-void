@@ -91,6 +91,19 @@ func (s *service) updatePlayerStats(ctx context.Context, player *pb.PlayerMatchR
 		return nil, err
 	}
 
+	if playerStats == nil {
+		// initialize struct, players first time
+		playerStats = &PlayerMatchStats{
+			MemberID:            memberId,
+			GamesPlayed:         0,
+			Wins:                0,
+			Losses:              0,
+			Kills:               0,
+			Deaths:              0,
+			TimesPlacedTopThree: 0,
+		}
+	}
+
 	playerStats.GamesPlayed += 1
 	playerStats.Kills += int(player.Kills)
 	playerStats.Deaths += int(player.Deaths)
