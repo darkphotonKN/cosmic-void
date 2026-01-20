@@ -3,7 +3,7 @@ package stats
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"log/slog"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats"
@@ -61,11 +61,11 @@ func (c *Consumer) consumeMatchCompleted() {
 		var event commontypes.MatchEndState
 		if err := json.Unmarshal(msg.Body, &event); err != nil {
 			slog.Error("Failed to parse match completed event", "error", err)
-			msg.Nack(false, false) // Negative acknowledgment
+			msg.Nack(false, false)
 			continue
 		}
 
-		fmt.Printf("\n\nevent:\n%s consumed and unmarshalled:\n%+v\n", commonconstants.GameMatchEndedEvent, event)
+		slog.Info("Unmarshalled MatchEndState extracted from event.", "event type", commonconstants.GameMatchEndedEvent, "event data", event)
 
 		ctx := context.Background()
 		req := &pb.ProcessMatchCompletedRequest{
@@ -88,16 +88,19 @@ func (c *Consumer) consumeMatchCompleted() {
 
 		// process the complete match
 		response, err := c.service.ProcessMatchCompleted(ctx, req)
+
 		if err != nil {
 			slog.Error("Failed to process match completed",
 				"error", err,
 				"session_id", event.SessionID,
 			)
+
+			errors.Is()
 			msg.Nack(false, true) // Negative acknowledgment with requeue
 			continue
 		}
 
-		// Successfully processed
+		// successfully processed
 		msg.Ack(false)
 		slog.Info("Match completed processed successfully",
 			"session_id", event.SessionID,
