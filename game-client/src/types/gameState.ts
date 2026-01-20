@@ -23,6 +23,7 @@ export interface PlayerState {
   username: string;
   position: Position;
   direction: PlayerDirection;
+  inventory?: ItemState[];  // 玩家背包
 }
 
 // Door/interactable state
@@ -38,6 +39,7 @@ export interface ItemState {
   entity_id: UUID;
   name: string;
   quantity: number;
+  lootedAt?: number;  // 本地取得時間戳，用於 pending 判斷
 }
 
 // Container/chest state
