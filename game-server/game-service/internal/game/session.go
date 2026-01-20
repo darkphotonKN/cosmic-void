@@ -308,6 +308,8 @@ func (s *Session) AddPlayer(playerID uuid.UUID, username string) uuid.UUID {
 
 		Vx: 0,
 		Vy: 0,
+
+		ItemIDList: []uuid.UUID{},
 	}
 
 	// create player state entity
@@ -670,14 +672,24 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 	return nil
 }
 
-func (s *Session) handleLoot(playerID uuid.UUID, containerEntityID uuid.UUID, removeEntityIDs []uuid.UUID) error {
+func (s *Session) handleLoot(playerID uuid.UUID, containerEntityID uuid.UUID, lootEntityIDs []uuid.UUID) error {
+	// 取得 player entity ID
+	playerEntityID, ok := s.playerIDToEntitiesID[playerID]
+	if !ok {
+		return fmt.Errorf("Player %s not found", playerID)
+	}
+
+	playerEntity, ok := s.EntityManager.GetEntity(playerEntityID)
+	if !ok {
+		return fmt.Errorf("Player %s is not exists", playerID)
+	}
 	containerEntity, ok := s.EntityManager.GetEntity(containerEntityID)
 	if !ok {
 		fmt.Printf("entity %s is not exists", containerEntityID)
 		return fmt.Errorf("entity %s is not exists", containerEntityID)
 	}
 
-	for _, entityID := range removeEntityIDs {
+	for _, entityID := range lootEntityIDs {
 		_, ok := s.EntityManager.GetEntity(entityID)
 		if !ok {
 			fmt.Printf("Item entity %s is not exists", entityID)
@@ -687,21 +699,26 @@ func (s *Session) handleLoot(playerID uuid.UUID, containerEntityID uuid.UUID, re
 
 	itemIDsComponent, _ := containerEntity.GetComponent(ecs.ComponentTypeItemIDList)
 	containerItemIDs := itemIDsComponent.(*components.ItemIDListComponent)
-	// remove container item
+
+	// store to player's inventory
+	playerItemIDsComponent, _ := playerEntity.GetComponent(ecs.ComponentTypeItemIDList)
+	playerItemIDs, _ := playerItemIDsComponent.(*components.ItemIDListComponent)
+	playerItemIDs.ItemIDs = append(playerItemIDs.ItemIDs, lootEntityIDs...)
+
+	// remove looted items from container
 	removeItemEntityIDsMap := make(map[uuid.UUID]struct{})
-	for _, removeEntityID := range removeEntityIDs {
+	for _, removeEntityID := range lootEntityIDs {
 		removeItemEntityIDsMap[removeEntityID] = struct{}{}
 	}
 	newItemIDs := []uuid.UUID{}
+	// 不在移除清單內的物品才保留
 	for _, itemID := range containerItemIDs.ItemIDs {
-		if _, exists := removeItemEntityIDsMap[itemID]; exists {
-			// remove entity item
-			// s.EntityManager.RemoveEntity(itemID)
-		} else {
+		if _, exists := removeItemEntityIDsMap[itemID]; !exists {
 			newItemIDs = append(newItemIDs, itemID)
 		}
 	}
 	containerItemIDs.ItemIDs = newItemIDs
+
 	return nil
 }
 
