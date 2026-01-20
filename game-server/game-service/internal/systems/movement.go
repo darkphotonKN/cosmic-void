@@ -13,21 +13,33 @@ type MovementSystem struct{}
 func NewMovementSystem() *MovementSystem {
 	return &MovementSystem{}
 }
-func checkCollision(newX, newY float64, Entity *ecs.Entity, leftCellKey int) bool {
-	OtherTransformComp, OtherHasTransform := Entity.GetComponent(ecs.ComponentTypeTransform)
-	_, OtherHasVelocity := Entity.GetComponent(ecs.ComponentTypeVelocity)
+// resolveCollision 檢查碰撞並返回解析後的位置
+// 如果有碰撞，會將位置推到剛好不重疊的地方
+func resolveCollision(newX, newY float64, other *ecs.Entity) (float64, float64, bool) {
+	otherTransformComp, hasTransform := other.GetComponent(ecs.ComponentTypeTransform)
+	_, hasVelocity := other.GetComponent(ecs.ComponentTypeVelocity)
 
-	if !OtherHasTransform || !OtherHasVelocity {
-		return true
+	if !hasTransform || !hasVelocity {
+		return newX, newY, false
 	}
-	OtherTransform := OtherTransformComp.(*components.TransformComponent)
-	//calc distance
-	distance := math.Hypot(newX-OtherTransform.X, newY-OtherTransform.Y)
-	if distance < 2*constants.PlayerRadius {
-		newX = OtherTransform.X + constants.PlayerRadius
-		return true
+
+	otherTransform := otherTransformComp.(*components.TransformComponent)
+
+	dx := newX - otherTransform.X
+	dy := newY - otherTransform.Y
+	distance := math.Hypot(dx, dy)
+
+	minDist := 2 * constants.PlayerRadius
+
+	if distance < minDist && distance > 0 {
+		// 碰撞了，推到剛好不重疊的位置
+		ratio := minDist / distance
+		resolvedX := otherTransform.X + dx*ratio
+		resolvedY := otherTransform.Y + dy*ratio
+		return resolvedX, resolvedY, true
 	}
-	return false
+
+	return newX, newY, false
 }
 
 // NOTE: this runs every game tick
@@ -53,7 +65,6 @@ func (s *MovementSystem) Update(deltaTime float64, entities []*ecs.Entity) {
 
 		entitiesMap[key] = entity
 	}
-outer:
 	for _, entity := range entitiesMap {
 		targetEntity := entity
 		transformComp, _ := targetEntity.GetComponent(ecs.ComponentTypeTransform)
@@ -68,6 +79,7 @@ outer:
 		newX := transform.X + velocity.VX*velocity.Speed*deltaTime
 		newY := transform.Y + velocity.VY*velocity.Speed*deltaTime
 
+		// 檢查 9 宮格內的碰撞，並解析位置
 		for i := -1; i <= 1; i++ {
 			for j := -1; j <= 1; j++ {
 				cellKey := (cellX+i)<<8 | (cellY + j)
@@ -75,24 +87,26 @@ outer:
 					if other.ID == targetEntity.ID {
 						continue
 					}
-					if checkCollision(newX, newY, entitiesMap[cellKey], cellKey) {
-						continue outer
+					resolvedX, resolvedY, collided := resolveCollision(newX, newY, other)
+					if collided {
+						newX = resolvedX
+						newY = resolvedY
 					}
 				}
 			}
 		}
 		// clamp position to map boundaries
 		if newX < constants.PlayerRadius {
-			continue
+			newX = constants.PlayerRadius
 		}
 		if newX > constants.MapWidth-constants.PlayerRadius {
-			continue
+			newX = constants.MapWidth - constants.PlayerRadius
 		}
 		if newY < constants.PlayerRadius {
-			continue
+			newY = constants.PlayerRadius
 		}
 		if newY > constants.MapHeight-constants.PlayerRadius {
-			continue
+			newY = constants.MapHeight - constants.PlayerRadius
 		}
 		// update position based on velocity
 		transform.X = newX
