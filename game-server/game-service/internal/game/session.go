@@ -742,7 +742,7 @@ func (s *Session) calcWithinDistance(x, y, xTarget, yTarget float64) bool {
 /**
 * createRandomItem creates a random item entity and returns its ID
 **/
-func (s *Session) createRandomItem()  {
+func (s *Session) createRandomItem() uuid.UUID {
 	rendomIndex := rand.IntN(10)
 	itemOfPool := ItemPool[rendomIndex]
 	quantity := rand.IntN(10) + 1
@@ -751,19 +751,18 @@ func (s *Session) createRandomItem()  {
 		Quantity: quantity,
 	}
 	itemId := s.addItem(item)
-	fmt.Println(itemId)
-	
+	return itemId
 }
 
 /**
 * addItem creates an item entity from config and returns its ID
 **/
-func (s *Session) addItem(itemConfig ItemConfig) *uuid.UUID {
+func (s *Session) addItem(itemConfig ItemConfig) uuid.UUID {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// entity := CreateItemEntity(s.EntityManager, itemConfig)
-	return nil
+	entity := CreateItemEntity(s.EntityManager, itemConfig)
+	return entity.ID
 }
 
 /**
