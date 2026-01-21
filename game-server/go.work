@@ -7,4 +7,5 @@ use (
 	./example-service
 	./game-service
 	./stats-service
+	./items-service
 )

@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:17
+    container_name: cosmic_void_items_service_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cosmic_void_items_service_db
+    ports:
+      - "5107:5432"
+    volumes:
+      - cosmic_void_items_service_pgdata:/var/lib/postgresql/data
+
+  test-db:
+    image: postgres:17
+    container_name: cosmic_void_items_service_test_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cosmic_void_items_service_test_db
+    ports:
+      - "6107:5432"
+    volumes:
+      - cosmic_void_items_service_test_pgdata:/var/lib/postgresql/data
+    restart: "no"
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6387:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+volumes:
+  cosmic_void_items_service_pgdata:
+  cosmic_void_items_service_test_pgdata:
+  redis_data:

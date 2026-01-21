@@ -742,7 +742,7 @@ func (s *Session) calcWithinDistance(x, y, xTarget, yTarget float64) bool {
 /**
 * createRandomItem creates a random item entity and returns its ID
 **/
-func (s *Session) createRandomItem() uuid.UUID {
+func (s *Session) createRandomItem()  {
 	rendomIndex := rand.IntN(10)
 	itemOfPool := ItemPool[rendomIndex]
 	quantity := rand.IntN(10) + 1
@@ -751,18 +751,19 @@ func (s *Session) createRandomItem() uuid.UUID {
 		Quantity: quantity,
 	}
 	itemId := s.addItem(item)
-	return itemId
+	fmt.Println(itemId)
+	
 }
 
 /**
 * addItem creates an item entity from config and returns its ID
 **/
-func (s *Session) addItem(itemConfig ItemConfig) uuid.UUID {
+func (s *Session) addItem(itemConfig ItemConfig) *uuid.UUID {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	entity := CreateItemEntity(s.EntityManager, itemConfig)
-	return entity.ID
+	// entity := CreateItemEntity(s.EntityManager, itemConfig)
+	return nil
 }
 
 /**
@@ -792,7 +793,6 @@ func (s *Session) formatMatchEndData() (*commontypes.MatchEndState, error) {
 
 	return nil, nil
 }
-
 func (s *Session) InitialMapObjects() {
 	// add container (ensure it's not cut off at edges)
 	containerX := constants.ContainerWidthRadius + rand.Float64()*(constants.MapWidth-2*constants.ContainerWidthRadius)

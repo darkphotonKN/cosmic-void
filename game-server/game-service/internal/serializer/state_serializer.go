@@ -1,6 +1,8 @@
 package serializer
 
 import (
+	"fmt"
+
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
@@ -107,12 +109,11 @@ func (s *StateSerializer) Serialize(sessionID uuid.UUID, recipientPlayerID uuid.
 					if exists {
 						itemComp, hasItem := itemEntity.GetComponent(ecs.ComponentTypeItem)
 						if hasItem {
-							item := itemComp.(*components.ItemComponent)
+							fmt.Println(itemComp)
+							// item := itemComp.(*components.ItemIDListComponent)
 							itemState := &types.ItemState{
 								ItemID:   itemID,
 								EntityID: itemEntity.ID,
-								Name:     item.ItemName,
-								Quantity: item.Quantity,
 							}
 							items = append(items, itemState)
 						}
