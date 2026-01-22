@@ -18,6 +18,7 @@ type PlayerConfig struct {
 	ItemName      string
 	ItemQuantity  int
 	Vx, Vy        float64
+	ItemIDList    []uuid.UUID
 }
 
 func CreatePlayerEntity(em *ecs.EntityManager, config PlayerConfig) *ecs.Entity {
@@ -30,6 +31,8 @@ func CreatePlayerEntity(em *ecs.EntityManager, config PlayerConfig) *ecs.Entity 
 
 	entity.AddComponent(components.NewHealthComponent(config.CurrentHealth, config.MaxHealth))
 	entity.AddComponent(components.NewSkillComponent(config.SkillName, config.SkillLevel))
+
+	entity.AddComponent(components.NewItemIDListComponent(config.ItemIDList))
 
 	entity.AddComponent(components.NewStatsComponent())
 
@@ -67,11 +70,12 @@ func CreateContainerEntity(em *ecs.EntityManager, containerconfig ContainerConfi
 type ItemConfig struct {
 	Name     string
 	Quantity int
+	ItemTool interface{}
 }
 
 func CreateItemEntity(em *ecs.EntityManager, itemconfig ItemConfig) *ecs.Entity {
 	entity := em.CreateEntity()
-	entity.AddComponent(components.NewItemComponent(itemconfig.Name, itemconfig.Quantity))
+	entity.AddComponent(components.NewItemComponent(itemconfig.Name, itemconfig.Quantity, itemconfig.ItemTool))
 
 	return entity
 }

@@ -18,6 +18,7 @@ type PlayerState struct {
 	Username  string           `json:"username"`
 	Position  *Position        `json:"position"`
 	Direction *PlayerDirection `json:"direction"`
+	Inventory []*ItemState     `json:"inventory"`
 }
 
 type Position struct {

@@ -1,0 +1,76 @@
+syntax = "proto3";
+package items;
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+option go_package = "github.com/darkphotonKN/cosmic-void-server/common/api/proto/items";
+
+// ItemsService external API for items
+service ItemsService {
+  // Weapon operations
+  rpc CreateWeapon(CreateWeaponRequest) returns (Weapon);
+  rpc GetWeaponWithTemplateByID(GetWeaponRequest) returns (WeaponDetail);
+  rpc ListWeaponsWithTemplate(google.protobuf.Empty) returns (ListWeaponsResponse);
+}
+
+// ============ Layered Message Definitions ============
+
+// Layer 1: Basic Weapon (weapons table only - for create/simple queries)
+message Weapon {
+  string id = 1;
+  string type_id = 2;
+  string rarity_id = 3;
+  int32 attack_power = 4;
+  int32 durability = 5;
+  float critical_rate = 6;
+  string weapon_type = 7;
+  string description = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+// Layer 2: WeaponDetail (weapons + item_templates joined - for detailed queries)
+message WeaponDetail {
+  // Weapon specific fields (from weapons table)
+  string id = 1;
+  string type_id = 2;
+  string rarity_id = 3;
+  int32 attack_power = 4;
+  int32 durability = 5;
+  float critical_rate = 6;
+  string weapon_type = 7;
+  string description = 8;
+
+  // ItemTemplate fields (from item_templates table)
+  string item_template_id = 9;
+  string item_name = 10;
+  string item_code = 11;
+  string icon_url = 12;
+  bool is_tradeable = 13;
+  bool is_droppable = 14;
+  int32 required_level = 15;
+  int32 base_sell_price = 16;
+  int32 base_buy_price = 17;
+
+  google.protobuf.Timestamp created_at = 18;
+  google.protobuf.Timestamp updated_at = 19;
+}
+
+// ============ Request/Response Messages ============
+
+message CreateWeaponRequest {
+  string type_id = 1;
+  string rarity_id = 2;
+  int32 attack_power = 3;
+  int32 durability = 4;
+  float critical_rate = 5;
+  string weapon_type = 6;
+  string description = 7;
+}
+
+message GetWeaponRequest {
+  string id = 1;
+}
+
+message ListWeaponsResponse {
+  repeated WeaponDetail weapons = 1;
+}

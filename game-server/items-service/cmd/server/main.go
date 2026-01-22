@@ -12,23 +12,19 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
-	"github.com/darkphotonKN/cosmic-void-server/game-service/config"
+	"github.com/darkphotonKN/cosmic-void-server/items-service/config"
+	"github.com/darkphotonKN/cosmic-void-server/items-service/internal/items"
+	"github.com/google/uuid"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
 )
 
 var (
-	// game service
-	gamePort = fmt.Sprintf(":%s", commonhelpers.GetEnvString("GAME_PORT", "5555"))
+	serviceName = "items"
+	grpcAddr    = commonhelpers.GetEnvString("GRPC_ITEMS_ADDR", "7013")
+	consulAddr  = commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
 
-	// grpc
-	serviceName  = "game"
-	grpcAuthAddr = commonhelpers.GetEnvString("GRPC_AUTH_ADDR", "7003")
-	grpcAddr     = commonhelpers.GetEnvString("GRPC_GAME_ADDR", "7004")
-	consulAddr   = commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
-
-	// rabbit mq
 	amqpUser     = commonhelpers.GetEnvString("RABBITMQ_USER", "guest")
 	amqpPassword = commonhelpers.GetEnvString("RABBITMQ_PASS", "guest")
 	amqpHost     = commonhelpers.GetEnvString("RABBITMQ_HOST", "localhost")
@@ -36,29 +32,31 @@ var (
 )
 
 func main() {
-	// --- database setup ---
-
 	db := config.InitDB()
 	defer db.Close()
 
-	// --- service discovery setup ---
-
-	// -- consul client --
 	registry, err := consul.NewRegistry(consulAddr, serviceName)
 	if err != nil {
 		log.Fatal("Failed to create Consul registry")
 	}
 
 	ctx := context.Background()
+
+	// test
+	repo := items.NewRepository(db)
+	testItemId := uuid.MustParse("aa0e8400-e29b-41d4-a716-446655440001")
+
+	itemData, err := repo.GetItemTemplateByID(ctx, testItemId)
+	fmt.Println("here %v:", itemData)
+	// end test
+
 	instanceID := discovery.GenerateInstanceID(serviceName)
 
-	// -- discovery --
 	if err := registry.Register(ctx, instanceID, serviceName, "localhost:"+grpcAddr); err != nil {
 		log.Printf("\nError when registering service:\n\n%s\n\n", err)
 		panic(err)
 	}
 
-	// -- health check --
 	go func() {
 		for {
 			if err := registry.HealthCheck(instanceID, serviceName); err != nil {
@@ -70,12 +68,9 @@ func main() {
 
 	defer registry.Deregister(ctx, instanceID, serviceName)
 
-	// --- grpc ---
 	grpcServer := grpc.NewServer()
 
-	// create a network listener to this service
 	listener, err := net.Listen("tcp", "localhost:"+grpcAddr)
-
 	if err != nil {
 		log.Fatalf(
 			"Failed to listen at port: %s\nError: %s\n", grpcAddr, err,
@@ -83,38 +78,21 @@ func main() {
 	}
 	defer listener.Close()
 
-	// --- message broker - rabbit mq ---
 	ch, close := broker.Connect(amqpUser, amqpPassword, amqpHost, amqpPort)
+
+	// Only declare the exchange we actually consume from
+	broker.DeclareExchange(ch, commonconstants.GameMatchEndedEvent, "fanout")
+
 	defer func() {
 		close()
 		ch.Close()
 	}()
 
-	broker.DeclareExchange(ch, commonconstants.GameMatchEndedEvent, "fanout")
+	// Use the new config setup to initialize all services
+	grpcServer = config.SetupServices(db, ch)
 
-	// TODO: Initialize your services and handlers
-	// repo := yourpackage.NewRepository(db)
-	// service := yourpackage.NewService(repo, ch)
-	// handler := yourpackage.NewHandler(service)
-	// pb.RegisterGameServiceServer(grpcServer, handler)
+	log.Printf("grpc Items Server started on PORT: %s\n", grpcAddr)
 
-	log.Printf("grpc Game Server started on PORT: %s\n", grpcAddr)
-
-	// routes setup
-	routes := config.SetupRouter(db, registry, ch)
-
-	fmt.Printf("Server listening on port %s.\n", gamePort)
-
-	go func() {
-		err := routes.Run(gamePort)
-
-		if err != nil {
-			log.Fatal("Can't connect to game server. Error:", err.Error())
-		}
-
-	}()
-
-	// 這個會阻塞，所以測試要放在上面
 	if err := grpcServer.Serve(listener); err != nil {
 		log.Fatal("Can't connect to grpc server. Error:", err.Error())
 	}

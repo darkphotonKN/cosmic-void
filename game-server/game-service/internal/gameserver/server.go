@@ -1,12 +1,16 @@
 package gameserver
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 
+	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/items"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	grpcauth "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/auth"
+	grpcitems "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/items"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
@@ -50,13 +54,15 @@ type Server struct {
 
 	// message broker communication channel
 	eventEmitter game.EventEmitter
+	// item client for gRPC
+	itemsClient grpcitems.ItemsClient
 }
 
 type MessageSender interface {
 	BroadcastToPlayerList(players []*types.Player, msg types.Message) error
 }
 
-func NewServer(authClient grpcauth.AuthClient, queueService queue.QueueService, eventEmitter game.EventEmitter) *Server {
+func NewServer(authClient grpcauth.AuthClient, queueService queue.QueueService, eventEmitter game.EventEmitter, itemsClient grpcitems.ItemsClient) *Server {
 	upgrader := websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
 			// TODO: Allow all connections by default for simplicity; can add more logic here
@@ -77,6 +83,7 @@ func NewServer(authClient grpcauth.AuthClient, queueService queue.QueueService, 
 		queue:        queueService,
 		authClient:   authClient,
 		eventEmitter: eventEmitter,
+		itemsClient:  itemsClient,
 	}
 
 	// initialize message sender
@@ -149,6 +156,11 @@ func (s *Server) CreateGameSession(players []*types.Player) *game.Session {
 	newGameSession := game.NewSession(messaging.NewMessageSender(s), stateSerializer, entityManager, s.eventEmitter)
 
 	newGameSession.InitialMapObjects()
+	newGameSession.AddItem(game.ItemConfig{
+		Name:     "test",
+		Quantity: 1,
+		ItemTool: s.GetItemsClient(),
+	})
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -291,4 +303,20 @@ func (s *Server) PushMessageToConn(conn *websocket.Conn, msg interface{}) error 
 **/
 func (s *Server) GetAuthClient() grpcauth.AuthClient {
 	return s.authClient
+}
+
+func (s *Server) GetItemsClient() *pb.ListWeaponsResponse {
+	ctx := context.Background()
+	response, err := s.itemsClient.ListWeaponsWithTemplate(ctx)
+
+	if err != nil {
+		return nil
+	}
+
+	if len(response.Weapons) == 0 {
+		log.Println("No weapons found in database")
+		log.Println("Try creating some weapons first using items-service API")
+	}
+
+	return response
 }

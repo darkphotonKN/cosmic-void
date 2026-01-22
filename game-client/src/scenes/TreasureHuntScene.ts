@@ -75,7 +75,8 @@ export class TreasureHuntScene extends Phaser.Scene {
 
   // 當前寶箱的物品（用於 F 鍵取得）
   private currentChestItems: ItemState[] = [];
-  private justLooted = false; // 防止 loot 後被後端舊狀態覆蓋
+  private chestLootedAtMap = new Map<string, number>(); // entityId → loot 時間戳
+  private readonly PENDING_DURATION = 1000; // 1 秒內不比對剛拿的物品
 
   constructor() {
     super({ key: "TreasureHuntScene" });
@@ -180,7 +181,7 @@ export class TreasureHuntScene extends Phaser.Scene {
 
       // 如果是打開的寶箱，更新跳窗內容
       if (container.is_open && this.openedChestEntityId === container.entity_id) {
-        this.updatePopupItems(container.items);
+        this.updatePopupItems(container.items, container.entity_id);
       }
     });
   }
@@ -286,14 +287,21 @@ export class TreasureHuntScene extends Phaser.Scene {
     this.isPopupOpen = true;
   }
 
-  private updatePopupItems(items: ItemState[]): void {
+  private updatePopupItems(items: ItemState[], entityId?: string): void {
     if (!this.popupItemsText) return;
 
+    const chestId = entityId || this.openedChestEntityId;
+    if (!chestId) return;
+
+    const now = Date.now();
+    const lootedAt = this.chestLootedAtMap.get(chestId);
+    const isPending = lootedAt && (now - lootedAt) < this.PENDING_DURATION;
+
     // 如果剛 loot 過，等後端確認清空才更新
-    if (this.justLooted) {
+    if (isPending) {
       if (items.length === 0) {
         // 後端已確認清空
-        this.justLooted = false;
+        this.chestLootedAtMap.delete(chestId);
       } else {
         // 後端還沒處理完，忽略這次更新
         return;
@@ -319,7 +327,7 @@ export class TreasureHuntScene extends Phaser.Scene {
     this.popupItemsText = undefined;
     this.isPopupOpen = false;
     this.currentChestItems = [];
-    this.justLooted = false;
+    // 不清除 chestLootedAtMap，讓後端確認時自動清除
   }
 
   // === 道具欄功能 ===
@@ -408,11 +416,60 @@ export class TreasureHuntScene extends Phaser.Scene {
   private updateInventoryDisplay(): void {
     if (!this.inventoryItemsText) return;
 
-    if (this.inventoryItems.length === 0) {
+    // 合併同名物品顯示
+    const merged = new Map<string, number>();
+    for (const item of this.inventoryItems) {
+      merged.set(item.name, (merged.get(item.name) || 0) + item.quantity);
+    }
+
+    if (merged.size === 0) {
       this.inventoryItemsText.setText("(Empty)");
     } else {
-      const itemLines = this.inventoryItems.map(item => `${item.name} x${item.quantity}`);
+      const itemLines = Array.from(merged.entries()).map(([name, qty]) => `${name} x${qty}`);
       this.inventoryItemsText.setText(itemLines.join("\n"));
+    }
+  }
+
+  private syncInventory(serverInventory: ItemState[]): void {
+    const now = Date.now();
+
+    // 建立後端物品 Map (by entity_id)
+    const serverItemMap = new Map<string, ItemState>();
+    for (const item of serverInventory) {
+      serverItemMap.set(item.entity_id, item);
+    }
+
+    // 過濾本地物品：保留後端有的 + pending 中的
+    const newInventory: ItemState[] = [];
+
+    for (const localItem of this.inventoryItems) {
+      const isPending = localItem.lootedAt && (now - localItem.lootedAt) < this.PENDING_DURATION;
+
+      if (serverItemMap.has(localItem.entity_id)) {
+        // 後端有，使用後端資料（清除 pending 狀態）
+        const serverItem = serverItemMap.get(localItem.entity_id)!;
+        newInventory.push({
+          ...serverItem,
+          lootedAt: undefined, // 後端確認後清除 pending
+        });
+        serverItemMap.delete(localItem.entity_id);
+      } else if (isPending) {
+        // 後端沒有，但還在 pending 中，保留本地的
+        newInventory.push(localItem);
+      }
+      // 後端沒有且不是 pending → 不保留（被移除了）
+    }
+
+    // 加入後端有但本地沒有的（其他來源的物品）
+    for (const item of serverItemMap.values()) {
+      newInventory.push(item);
+    }
+
+    this.inventoryItems = newInventory;
+
+    // 更新顯示
+    if (this.isInventoryOpen) {
+      this.updateInventoryDisplay();
     }
   }
 
@@ -431,17 +488,16 @@ export class TreasureHuntScene extends Phaser.Scene {
       item_entity_ids: itemEntityIds,
     });
 
-    // 標記剛 loot，防止後端舊狀態覆蓋
-    this.justLooted = true;
+    // 記錄 loot 時間
+    const now = Date.now();
+    this.chestLootedAtMap.set(this.openedChestEntityId, now);
 
     // 取得全部道具到本地道具欄
     for (const item of this.currentChestItems) {
-      const existingItem = this.inventoryItems.find(i => i.name === item.name);
-      if (existingItem) {
-        existingItem.quantity += item.quantity;
-      } else {
-        this.inventoryItems.push({ ...item });
-      }
+      this.inventoryItems.push({
+        ...item,
+        lootedAt: now,
+      });
     }
 
     // 清空寶箱（本地）
@@ -646,6 +702,11 @@ export class TreasureHuntScene extends Phaser.Scene {
 
       // 設定目標位置，在 update() 中平滑移動
       this.targetPosition = { x: pos.x, y: pos.y };
+
+      // 同步玩家背包
+      if (state.current_player.inventory) {
+        this.syncInventory(state.current_player.inventory);
+      }
 
       const playerCount = (state.other_players?.length || 0) + 1;
       this.updateStatus(

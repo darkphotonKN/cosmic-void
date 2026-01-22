@@ -1,6 +1,8 @@
 package serializer
 
 import (
+	"fmt"
+
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
@@ -40,7 +42,23 @@ func (s *StateSerializer) Serialize(sessionID uuid.UUID, recipientPlayerID uuid.
 			transform := tc.(*components.TransformComponent)
 			vc, _ := entity.GetComponent(ecs.ComponentTypeVelocity)
 			velocity := vc.(*components.VelocityComponent)
-
+			// get player's inventory
+			inventory := []*types.ItemState{}
+			itemIDListC, _ := entity.GetComponent(ecs.ComponentTypeItemIDList)
+			itemIDList := itemIDListC.(*components.ItemIDListComponent)
+			for _, itemID := range itemIDList.ItemIDs {
+				itemEntity, exists := s.em.GetEntity(itemID)
+				if exists {
+					itemC, _ := itemEntity.GetComponent(ecs.ComponentTypeItem)
+					item := itemC.(*components.ItemComponent)
+					inventory = append(inventory, &types.ItemState{
+						ItemID:   itemID,
+						EntityID: itemEntity.ID,
+						Name:     item.ItemName,
+						Quantity: item.Quantity,
+					})
+				}
+			}
 			playerState := &types.PlayerState{
 				ID:       player.UserID,
 				EntityID: entity.ID,
@@ -54,6 +72,7 @@ func (s *StateSerializer) Serialize(sessionID uuid.UUID, recipientPlayerID uuid.
 					VY:    velocity.VY,
 					Speed: velocity.Speed,
 				},
+				Inventory: inventory,
 			}
 
 			// Check if this is the recipient player
@@ -90,12 +109,11 @@ func (s *StateSerializer) Serialize(sessionID uuid.UUID, recipientPlayerID uuid.
 					if exists {
 						itemComp, hasItem := itemEntity.GetComponent(ecs.ComponentTypeItem)
 						if hasItem {
-							item := itemComp.(*components.ItemComponent)
+							fmt.Println(itemComp)
+							// item := itemComp.(*components.ItemIDListComponent)
 							itemState := &types.ItemState{
 								ItemID:   itemID,
 								EntityID: itemEntity.ID,
-								Name:     item.ItemName,
-								Quantity: item.Quantity,
 							}
 							items = append(items, itemState)
 						}
