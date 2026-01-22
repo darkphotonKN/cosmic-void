@@ -6,6 +6,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/auth"
 	grpcauth "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/auth"
+	grpcitems "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/items"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/gameserver"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/queue"
@@ -40,11 +41,12 @@ func SetupRouter(db *sqlx.DB, registry discovery.Registry, ch *amqp.Channel) *gi
 
 	// --- AUTH CLIENT ---
 	authClient := grpcauth.NewClient(registry)
+	itemsClient := grpcitems.NewClient(registry)
 
 	// --- GAME SERVER SETUP ---
 	queueService := queue.NewQueueService(2)
 	gameService := game.NewService(ch)
-	server := gameserver.NewServer(authClient, queueService, gameService)
+	server := gameserver.NewServer(authClient, queueService, gameService, itemsClient)
 
 	// -- routes --
 	router.GET("/game/ws", auth.WSAuthMiddleware(authClient), server.HandleWebSocketConnection)

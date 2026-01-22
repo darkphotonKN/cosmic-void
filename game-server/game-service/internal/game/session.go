@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/items"
 	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
@@ -750,18 +751,44 @@ func (s *Session) createRandomItem() uuid.UUID {
 		Name:     itemOfPool.Name,
 		Quantity: quantity,
 	}
-	itemId := s.addItem(item)
+	itemId := s.AddItem(item)
 	return itemId
 }
 
 /**
 * addItem creates an item entity from config and returns its ID
 **/
-func (s *Session) addItem(itemConfig ItemConfig) uuid.UUID {
+func (s *Session) AddItem(itemConfig ItemConfig) uuid.UUID {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
 	entity := CreateItemEntity(s.EntityManager, itemConfig)
+
+	// 印出創建的 entity 詳細資訊
+	fmt.Printf("========================================\n")
+	fmt.Printf("📦 Created Item Entity:\n")
+	fmt.Printf("  Entity ID: %s\n", entity.ID)
+	fmt.Printf("  Item Name: %s\n", itemConfig.Name)
+	fmt.Printf("  Quantity: %d\n", itemConfig.Quantity)
+
+	// 印出 entity 的所有 components
+	if itemComp, hasItem := entity.GetComponent(ecs.ComponentTypeItem); hasItem {
+		item := itemComp.(*components.ItemComponent)
+		fmt.Printf("  ItemComponent:\n")
+		fmt.Printf("    - ItemName: %s\n", item.ItemName)
+		fmt.Printf("    - Quantity: %d\n", item.Quantity)
+		fmt.Printf("    - ItemTool type: %T\n", item.ItemTool)
+
+		// 如果是武器資料，印出武器列表
+		if weaponResponse, ok := item.ItemTool.(*pb.ListWeaponsResponse); ok && weaponResponse != nil {
+			fmt.Printf("    - Weapons count: %d\n", len(weaponResponse.Weapons))
+			for i, weapon := range weaponResponse.Weapons {
+				fmt.Printf("      [%d] %s (Attack: %d, Durability: %d, CritRate: %.2f%%)\n",
+					i+1, weapon.ItemName, weapon.AttackPower, weapon.Durability, weapon.CriticalRate)
+			}
+		}
+	}
+	fmt.Printf("========================================\n")
+
 	return entity.ID
 }
 

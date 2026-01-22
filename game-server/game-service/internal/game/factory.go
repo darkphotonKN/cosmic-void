@@ -70,11 +70,12 @@ func CreateContainerEntity(em *ecs.EntityManager, containerconfig ContainerConfi
 type ItemConfig struct {
 	Name     string
 	Quantity int
+	ItemTool interface{}
 }
 
 func CreateItemEntity(em *ecs.EntityManager, itemconfig ItemConfig) *ecs.Entity {
 	entity := em.CreateEntity()
-	entity.AddComponent(components.NewItemComponent(itemconfig.Name, itemconfig.Quantity))
+	entity.AddComponent(components.NewItemComponent(itemconfig.Name, itemconfig.Quantity, itemconfig.ItemTool))
 
 	return entity
 }
