@@ -25,8 +25,7 @@ var (
 )
 
 func TestPublishMatchComplete_DataStructure(t *testing.T) {
-
-	// Create test data - 6 player match results
+	// create test data player match results
 	matchEndData := &commontypes.MatchEndState{
 		SessionID:      uuid.MustParse("550e8400-e29b-41d4-a716-446655440001"),
 		MatchStartedAt: time.Now().Add(-15 * time.Minute), // Match lasted 15 minutes

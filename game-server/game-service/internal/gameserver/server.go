@@ -156,6 +156,7 @@ func (s *Server) CreateGameSession(players []*types.Player) *game.Session {
 	for _, player := range players {
 		// 將玩家加入 session
 		newGameSession.AddPlayer(player.ID, player.Username)
+
 		connected := constants.Connected
 		// 更新玩家的 SessionId
 		player.CurrentGameSessionId = newGameSession.ID
