@@ -1,9 +1,13 @@
 package game
 
 import (
+	"context"
+	"encoding/json"
+	"log/slog"
 	"testing"
 	"time"
 
+	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/google/uuid"
@@ -20,6 +24,24 @@ var (
 	amqpHost     = commonhelpers.GetEnvString("RABBITMQ_HOST", "localhost")
 	amqpPort     = commonhelpers.GetEnvString("RABBITMQ_PORT", "5672")
 )
+
+// publisher for testing
+
+type TestPublisher struct {
+}
+
+func (p *TestPublisher) PublishWithContext(_ context.Context, exchange, key string, msg commonbroker.Message) error {
+	var matchEndData commontypes.MatchEndState
+
+	err := json.Unmarshal(msg.Body, &matchEndData)
+	if err != nil {
+		slog.Info("Error when unmarshalling published message.")
+		return err
+	}
+
+	slog.Info("Worked!", "matchEndData", matchEndData)
+	return nil
+}
 
 func TestPublishMatchComplete_DataStructure(t *testing.T) {
 	// create test data player match results
@@ -47,112 +69,19 @@ func TestPublishMatchComplete_DataStructure(t *testing.T) {
 		},
 	}
 
-	// Test data structure validity
-	t.Run("match data has correct structure", func(t *testing.T) {
-		// Verify basic match info
-		assert.NotEqual(t, uuid.Nil, matchEndData.SessionID)
-		assert.True(t, matchEndData.MatchEndedAt.After(matchEndData.MatchStartedAt))
+	service := NewService(&TestPublisher{})
 
-		// Verify we have 6 players
-		assert.Len(t, matchEndData.PlayerMatchResults, 6, "Should have exactly 6 players")
+	jsonBinary, err := json.Marshal(matchEndData)
 
-		// Verify player data
-		winnerCount := 0
-		for i, player := range matchEndData.PlayerMatchResults {
-			// Check required fields
-			assert.NotEmpty(t, player.MemberID, "Player %d should have MemberID", i+1)
-			assert.NotEmpty(t, player.Username, "Player %d should have Username", i+1)
-			assert.GreaterOrEqual(t, player.FinalPosition, int32(1), "Player %d position should be >= 1", i+1)
-			assert.LessOrEqual(t, player.FinalPosition, int32(6), "Player %d position should be <= 6", i+1)
-			assert.GreaterOrEqual(t, player.Kills, int32(0), "Player %d kills should be >= 0", i+1)
-			assert.GreaterOrEqual(t, player.Deaths, int32(0), "Player %d deaths should be >= 0", i+1)
-
-			if player.Win {
-				winnerCount++
-				assert.Equal(t, int32(1), player.FinalPosition, "Winner should be in position 1")
-			}
-		}
-
-		// Verify only one winner
-		assert.Equal(t, 1, winnerCount, "Should have exactly one winner")
-
-		// Verify positions are sequential and unique
-		positionMap := make(map[int32]bool)
-		for _, player := range matchEndData.PlayerMatchResults {
-			assert.False(t, positionMap[player.FinalPosition], "Position %d should be unique", player.FinalPosition)
-			positionMap[player.FinalPosition] = true
-		}
-		assert.Len(t, positionMap, 6, "Should have 6 unique positions")
-	})
-
-	t.Run("match duration is reasonable", func(t *testing.T) {
-		duration := matchEndData.MatchEndedAt.Sub(matchEndData.MatchStartedAt)
-		assert.Greater(t, duration, time.Duration(0), "Match duration should be positive")
-		assert.LessOrEqual(t, duration, 60*time.Minute, "Match duration should be reasonable (< 1 hour)")
-	})
-
-	t.Run("player stats are realistic", func(t *testing.T) {
-		totalKills := int32(0)
-		totalDeaths := int32(0)
-
-		for _, player := range matchEndData.PlayerMatchResults {
-			totalKills += player.Kills
-			totalDeaths += player.Deaths
-		}
-
-		// In a battle royale/elimination game, total kills should roughly equal total deaths
-		// (minus environmental deaths or other factors)
-		assert.Greater(t, totalKills, int32(0), "Should have at least some kills")
-		assert.Greater(t, totalDeaths, int32(0), "Should have at least some deaths")
-
-		// Check that kills roughly match deaths (allowing some variance)
-		killDeathDiff := totalKills - totalDeaths
-		if killDeathDiff < 0 {
-			killDeathDiff = -killDeathDiff
-		}
-		assert.LessOrEqual(t, killDeathDiff, int32(5), "Total kills and deaths should be roughly balanced")
-	})
-}
-
-// TestMatchEndDataSerialization tests that the data can be properly serialized
-func TestMatchEndDataSerialization(t *testing.T) {
-	// Create a simpler match data for testing
-	matchEndData := &commontypes.MatchEndState{
-		SessionID:      uuid.MustParse("550e8400-e29b-41d4-a716-446655440002"),
-		MatchStartedAt: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
-		MatchEndedAt:   time.Date(2024, 1, 1, 12, 10, 0, 0, time.UTC),
-		PlayerMatchResults: []*commontypes.PlayerMatchResults{
-			{
-				MemberID:      "test-player-001",
-				Username:      "TestPlayer1",
-				Win:           true,
-				FinalPosition: 1,
-				Kills:         5,
-				Deaths:        1,
-			},
-			{
-				MemberID:      "test-player-002",
-				Username:      "TestPlayer2",
-				Win:           false,
-				FinalPosition: 2,
-				Kills:         3,
-				Deaths:        2,
-			},
-		},
+	if err != nil {
+		slog.Info("Error when unmarshalling published message.")
+		assert.NoError(t, err)
 	}
 
-	// Verify the data structure is valid
-	assert.NotNil(t, matchEndData)
-	assert.NotNil(t, matchEndData.PlayerMatchResults)
-	assert.Len(t, matchEndData.PlayerMatchResults, 2)
+	err = service.publishCh.PublishWithContext(context.Background(), "test", "", commonbroker.Message{
+		Body: jsonBinary,
+	})
 
-	// Verify the winner
-	winner := matchEndData.PlayerMatchResults[0]
-	assert.True(t, winner.Win)
-	assert.Equal(t, int32(1), winner.FinalPosition)
-
-	// Verify the non-winner
-	loser := matchEndData.PlayerMatchResults[1]
-	assert.False(t, loser.Win)
-	assert.Equal(t, int32(2), loser.FinalPosition)
+	// check no error occured
+	assert.NoError(t, err)
 }

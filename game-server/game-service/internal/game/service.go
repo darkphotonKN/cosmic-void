@@ -16,7 +16,7 @@ type service struct {
 	publishCh commonbroker.Publisher
 }
 
-func NewService(publishCh *commonbroker.AmqpPublisher) *service {
+func NewService(publishCh commonbroker.Publisher) *service {
 	return &service{
 		publishCh: publishCh,
 	}
