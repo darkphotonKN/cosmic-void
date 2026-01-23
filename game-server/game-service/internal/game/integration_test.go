@@ -1,11 +1,12 @@
 package game
 
 import (
-	"context"
 	"fmt"
+	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"testing"
 	"time"
 
+	"github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
@@ -35,10 +36,6 @@ func (m *MessageSender) PushMessageToConn(
 
 // Mock EventEmitter for testing
 type mockEventEmitter struct{}
-
-func (m *mockEventEmitter) PublishMatchComplete(ctx context.Context, data *commontypes.MatchEndState) error {
-	return nil
-}
 
 func TestHandleMoveUpdatesPositionIntegration(t *testing.T) {
 	mockMessageSender := MessageSender{}
@@ -82,4 +79,45 @@ func TestHandleMoveUpdatesPositionIntegration(t *testing.T) {
 	fmt.Printf("\nplayerTransformCoords after update: %+v\n\n", component)
 	assert.Equal(t, float64(0.81), component.X)
 	assert.Equal(t, float64(0.81), component.Y)
+}
+
+/**
+* test integration between match publish and event
+**/
+func TestPublishMatchComplete(t *testing.T) {
+	// create test data player match results
+	matchEndData := &commontypes.MatchEndState{
+		SessionID:      uuid.MustParse("550e8400-e29b-41d4-a716-446655440001"),
+		MatchStartedAt: time.Now().Add(-15 * time.Minute), // Match lasted 15 minutes
+		MatchEndedAt:   time.Now(),
+		PlayerMatchResults: []*commontypes.PlayerMatchResults{
+			{
+				MemberID:      "213b277a-68b8-4da2-ab6e-adb4f28e7b0d",
+				Username:      "testplayer1",
+				Win:           true,
+				FinalPosition: 1,
+				Kills:         8,
+				Deaths:        2,
+			},
+			{
+				MemberID:      "4bbd9306-f06e-440e-a870-a2db4e07a7a6",
+				Username:      "test2",
+				Win:           false,
+				FinalPosition: 2,
+				Kills:         6,
+				Deaths:        3,
+			},
+		},
+	}
+
+	ch, close := broker.Connect(amqpUser, amqpPassword, amqpHost, amqpPort)
+
+	broker.DeclareExchange(ch, commonconstants.GameMatchEndedEvent, "fanout")
+
+	defer func() {
+		close()
+		ch.Close()
+	}()
+
+	// consume for testing
 }

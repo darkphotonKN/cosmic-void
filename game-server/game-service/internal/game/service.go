@@ -15,6 +15,11 @@ type service struct {
 	publishCh *amqp.Channel
 }
 
+type MessagePublisher interface {
+	Publish(exchange string, key string, mandatory bool, immediate bool, msg Publishing) error
+	PublishWithContext(_ context.Context, exchange, key string, mandatory, immediate bool, msg Publishing) error
+}
+
 func NewService(publishCh *amqp.Channel) *service {
 	return &service{
 		publishCh: publishCh,

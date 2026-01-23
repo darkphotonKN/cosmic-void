@@ -1,12 +1,9 @@
 package game
 
 import (
-	"context"
 	"testing"
 	"time"
 
-	"github.com/darkphotonKN/cosmic-void-server/common/broker"
-	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/google/uuid"
@@ -49,19 +46,6 @@ func TestPublishMatchComplete_DataStructure(t *testing.T) {
 			},
 		},
 	}
-
-	ch, close := broker.Connect(amqpUser, amqpPassword, amqpHost, amqpPort)
-
-	// Only declare the exchange we actually consume from
-	broker.DeclareExchange(ch, commonconstants.GameMatchEndedEvent, "fanout")
-
-	defer func() {
-		close()
-		ch.Close()
-	}()
-
-	service := NewService(ch)
-	service.PublishMatchComplete(context.Background(), matchEndData)
 
 	// Test data structure validity
 	t.Run("match data has correct structure", func(t *testing.T) {
