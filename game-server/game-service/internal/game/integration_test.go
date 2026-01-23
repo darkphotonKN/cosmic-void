@@ -2,9 +2,11 @@ package game
 
 import (
 	"fmt"
-	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
+	"log/slog"
 	"testing"
 	"time"
+
+	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 
 	"github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
@@ -109,6 +111,8 @@ func TestPublishMatchComplete(t *testing.T) {
 			},
 		},
 	}
+
+	slog.Info("matchEndData:", matchEndData)
 
 	ch, close := broker.Connect(amqpUser, amqpPassword, amqpHost, amqpPort)
 

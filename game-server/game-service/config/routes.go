@@ -14,6 +14,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	amqp "github.com/rabbitmq/amqp091-go"
+
+	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 )
 
 /**
@@ -45,7 +47,11 @@ func SetupRouter(db *sqlx.DB, registry discovery.Registry, ch *amqp.Channel) *gi
 
 	// --- GAME SERVER SETUP ---
 	queueService := queue.NewQueueService(2)
-	gameService := game.NewService(ch)
+
+	// wrap with adapter to allow amqp rabbit mq channel to
+	// conform to our abstraction
+	publishCh := commonbroker.NewAmqpPublisher(ch)
+	gameService := game.NewService(publishCh)
 	server := gameserver.NewServer(authClient, queueService, gameService, itemsClient)
 
 	// -- routes --

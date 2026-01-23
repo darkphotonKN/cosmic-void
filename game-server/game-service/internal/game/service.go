@@ -6,21 +6,17 @@ import (
 	"fmt"
 	"log/slog"
 
+	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type service struct {
-	publishCh *amqp.Channel
+	publishCh commonbroker.Publisher
 }
 
-type MessagePublisher interface {
-	Publish(exchange string, key string, mandatory bool, immediate bool, msg Publishing) error
-	PublishWithContext(_ context.Context, exchange, key string, mandatory, immediate bool, msg Publishing) error
-}
-
-func NewService(publishCh *amqp.Channel) *service {
+func NewService(publishCh *commonbroker.AmqpPublisher) *service {
 	return &service{
 		publishCh: publishCh,
 	}
@@ -35,9 +31,7 @@ func (s *service) PublishMatchComplete(ctx context.Context, data *commontypes.Ma
 		ctx,
 		commonconstants.GameMatchEndedEvent,
 		"",
-		false,
-		false,
-		amqp.Publishing{
+		commonbroker.Message{
 			ContentType:  "application/json",
 			Body:         dataJSON,
 			DeliveryMode: amqp.Persistent,
