@@ -1,0 +1,142 @@
+# Full Observability Stack
+#
+# This runs the complete observability infrastructure locally.
+#
+# Architecture:
+#
+#   Your Services ──→ OTel Collector (:4317) ──→ Tempo (traces)
+#                           │
+#                           ├─────────────────→ Prometheus (metrics)
+#                           │
+#                           └─────────────────→ Loki (logs)
+#                                                    │
+#                                                    ▼
+#                                              Grafana (:3000)
+#                                         (visualizes everything)
+#
+# Usage:
+#   cd observability-stack
+#   docker-compose up -d
+#
+# Access:
+#   Grafana:    http://localhost:3000 (admin/admin)
+#   Prometheus: http://localhost:9090
+#   Tempo:      http://localhost:3200 (API only, use Grafana to view)
+#
+# Your services connect to:
+#   OTel Collector: localhost:4317 (gRPC) or localhost:4318 (HTTP)
+
+version: "3.8"
+
+services:
+  # ============================================================================
+  # OTEL COLLECTOR - Central telemetry router
+  # ============================================================================
+  # Receives traces/metrics/logs from your services
+  # Routes them to appropriate backends
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    command: ["--config=/etc/otel-collector.yaml"]
+    volumes:
+      - ./config/otel-collector.yaml:/etc/otel-collector.yaml:ro
+    ports:
+      - "4317:4317" # OTLP gRPC - your services send here
+      - "4318:4318" # OTLP HTTP - alternative endpoint
+      - "8889:8889" # Prometheus metrics endpoint (Prometheus scrapes this)
+      - "13133:13133" # Health check
+    depends_on:
+      - tempo
+      - loki
+    networks:
+      - observability
+
+  # ============================================================================
+  # TEMPO - Distributed tracing backend
+  # ============================================================================
+  # Stores and queries traces
+  # Grafana connects here to display trace data
+  tempo:
+    image: grafana/tempo:latest
+    container_name: tempo
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./config/tempo.yaml:/etc/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    ports:
+      - "3200:3200" # Tempo API (Grafana connects here)
+      - "4317" # OTLP gRPC (internal, Collector sends here)
+    networks:
+      - observability
+
+  # ============================================================================
+  # PROMETHEUS - Metrics storage
+  # ============================================================================
+  # Scrapes metrics from OTel Collector
+  # Grafana connects here for dashboards and alerts
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle" # Allows config reload via API
+    volumes:
+      - ./config/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090" # Prometheus UI and API
+    networks:
+      - observability
+
+  # ============================================================================
+  # LOKI - Log aggregation
+  # ============================================================================
+  # Receives logs from OTel Collector
+  # Grafana connects here to search logs
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    volumes:
+      - ./config/loki.yaml:/etc/loki/loki.yaml:ro
+      - loki-data:/loki
+    ports:
+      - "3100:3100" # Loki API
+    networks:
+      - observability
+
+  # ============================================================================
+  # GRAFANA - Visualization
+  # ============================================================================
+  # Single UI for traces (Tempo), metrics (Prometheus), and logs (Loki)
+  # This is where you'll spend most of your debugging time
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+    volumes:
+      - ./config/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3030:3000" # Grafana UI - your main interface
+    depends_on:
+      - prometheus
+      - tempo
+      - loki
+    networks:
+      - observability
+
+networks:
+  observability:
+    driver: bridge
+
+volumes:
+  tempo-data:
+  prometheus-data:
+  loki-data:
+  grafana-data:

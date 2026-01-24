@@ -1,0 +1,106 @@
+# OpenTelemetry Collector Configuration
+#
+# The Collector is the CENTRAL HUB for all telemetry data.
+# Your services send everything here, and it routes to the right backends.
+#
+# Architecture:
+#
+#   Your Services ──OTLP──→ [RECEIVERS] ──→ [PROCESSORS] ──→ [EXPORTERS]
+#                                                              │
+#                                                              ├──→ Tempo (traces)
+#                                                              ├──→ Prometheus (metrics)
+#                                                              └──→ Loki (logs)
+#
+# Three concepts:
+# - RECEIVERS: How data comes IN (OTLP from your services)
+# - PROCESSORS: Transform/batch/filter the data
+# - EXPORTERS: Where data goes OUT (Tempo, Prometheus, Loki)
+
+receivers:
+  # OTLP Receiver - accepts data from your Go services
+  # Your telemetry.Init() sends here via gRPC on port 4317
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317 # Your services connect here
+      http:
+        endpoint: 0.0.0.0:4318 # Alternative HTTP endpoint
+
+processors:
+  # Batch processor - groups data before sending
+  # More efficient than sending each span/metric individually
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+
+  # Resource processor - adds/modifies attributes on all telemetry
+  # Useful for adding environment info, cluster name, etc.
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: development
+        action: upsert
+
+exporters:
+  # TEMPO - receives traces
+  # Tempo natively speaks OTLP, so we use otlp exporter
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
+  # PROMETHEUS - receives metrics
+  # Prometheus PULLS metrics, so we expose an endpoint it can scrape
+  # This is different from traces - Prometheus comes to US
+  prometheus:
+    endpoint: 0.0.0.0:8889 # Prometheus scrapes this endpoint
+    namespace: otel
+
+  # LOKI - receives logs
+  # Loki speaks its own protocol, so we use the loki exporter
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+    labels:
+      resource:
+        service.name: "service_name"
+        service.namespace: "service_namespace"
+      attributes:
+        level: ""
+
+  # Debug exporter - prints to collector's stdout (useful for debugging)
+  debug:
+    verbosity: detailed
+
+# Extensions - additional collector features
+extensions:
+  # Health check endpoint for container orchestration
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+  # Performance profiler (optional, useful for debugging collector itself)
+  pprof:
+    endpoint: 0.0.0.0:1777
+
+# Service section - wires everything together
+# Defines PIPELINES: receiver → processor → exporter
+service:
+  extensions: [health_check, pprof]
+
+  pipelines:
+    # TRACES pipeline: OTLP in → batch → Tempo out
+    traces:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [otlp/tempo, debug] # debug shows traces in collector logs
+
+    # METRICS pipeline: OTLP in → batch → Prometheus out
+    metrics:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [prometheus, debug]
+
+    # LOGS pipeline: OTLP in → batch → Loki out
+    logs:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [loki, debug]

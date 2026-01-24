@@ -44,6 +44,7 @@ func (p *TestPublisher) PublishWithContext(_ context.Context, exchange, key stri
 }
 
 func TestPublishMatchComplete_DataStructure(t *testing.T) {
+
 	// create test data player match results
 	matchEndData := &commontypes.MatchEndState{
 		SessionID:      uuid.MustParse("550e8400-e29b-41d4-a716-446655440001"),

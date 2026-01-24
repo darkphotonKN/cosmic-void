@@ -13,14 +13,22 @@ import (
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
+	commontelemetry "github.com/darkphotonKN/cosmic-void-server/common/telemetry"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 )
 
 var (
+	environment = commonhelpers.GetEnvString("ENVIRONMENT", "development")
+
+	// observability
+	collectorEndpoint = commonhelpers.GetEnvString("COLLECTOR_ENDPOINT", "localhost:4317")
+	serviceVersion    = commonhelpers.GetEnvString("SERVICE_VERSION", "1.0.0")
+
 	// grpc
 	serviceName = "auth"
 	grpcAddr    = commonhelpers.GetEnvString("GRPC_AUTH_ADDR", "7003")
@@ -34,13 +42,27 @@ var (
 )
 
 func main() {
+	ctx := context.Background()
+
+	// --- observability ---
+	shutdown, err := commontelemetry.Init(ctx, commontelemetry.Config{
+		ServiceName:       serviceName,
+		ServiceVersion:    serviceVersion,
+		Environment:       environment,
+		CollectorEndpoint: collectorEndpoint,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer shutdown(ctx)
+
 	// --- database setup ---
 
 	db := config.InitDB()
 	defer db.Close()
 
 	// --- redis setup ---
-	err := config.InitRedis(config.RedisConfig{
+	err = config.InitRedis(config.RedisConfig{
 		Mode:         commonhelpers.GetEnvString("REDIS_MODE", "standalone"),
 		Addrs:        []string{commonhelpers.GetEnvString("REDIS_ADDR", "localhost:6379")},
 		Password:     commonhelpers.GetEnvString("REDIS_PASSWORD", ""),
@@ -62,7 +84,6 @@ func main() {
 		log.Fatal("Failed to create Consul registry")
 	}
 
-	ctx := context.Background()
 	instanceID := discovery.GenerateInstanceID(serviceName)
 
 	// -- discovery --
@@ -84,7 +105,9 @@ func main() {
 	defer registry.Deregister(ctx, instanceID, serviceName)
 
 	// --- grpc ---
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
+	)
 
 	// create a network listener to this service
 	listener, err := net.Listen("tcp", "localhost:"+grpcAddr)

@@ -22,16 +22,16 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 // Config holds the configuration for telemetry initialization.
 // You'll typically populate this from environment variables.
 type Config struct {
-	ServiceName    string // e.g., "stats-service", "auth-service"
-	ServiceVersion string // e.g., "1.0.0" - useful for tracking deployments
-	Environment    string // e.g., "development", "staging", "production"
-	OTLPEndpoint   string // e.g., "localhost:4317" - where the OTel Collector lives
+	ServiceName       string // e.g., "stats-service", "auth-service"
+	ServiceVersion    string // e.g., "1.0.0" - useful for tracking deployments
+	Environment       string // e.g., "development", "staging", "production"
+	CollectorEndpoint string // e.g., "localhost:4317" - where the OTel Collector lives
 }
 
 // Init initializes OpenTelemetry and returns a shutdown function.
@@ -47,9 +47,7 @@ type Config struct {
 //	}
 //	defer shutdown(ctx)
 func Init(ctx context.Context, cfg Config) (shutdown func(context.Context) error, err error) {
-	// =========================================================================
 	// STEP 1: Create a Resource
-	// =========================================================================
 	// A Resource describes WHO is producing the telemetry.
 	// Think of it as metadata that gets attached to every trace and metric.
 	//
@@ -69,9 +67,7 @@ func Init(ctx context.Context, cfg Config) (shutdown func(context.Context) error
 		return nil, fmt.Errorf("creating resource: %w", err)
 	}
 
-	// =========================================================================
 	// STEP 2: Create the Trace Exporter
-	// =========================================================================
 	// The exporter is HOW traces leave your application.
 	// We're using OTLP (OpenTelemetry Protocol) over gRPC.
 	//
@@ -84,16 +80,14 @@ func Init(ctx context.Context, cfg Config) (shutdown func(context.Context) error
 	// The Collector then forwards to your actual storage (Tempo, Jaeger, etc.)
 	//
 	traceExporter, err := otlptracegrpc.New(ctx,
-		otlptracegrpc.WithEndpoint(cfg.OTLPEndpoint),
+		otlptracegrpc.WithEndpoint(cfg.CollectorEndpoint),
 		otlptracegrpc.WithInsecure(), // TODO: Use TLS in production!
 	)
 	if err != nil {
 		return nil, fmt.Errorf("creating trace exporter: %w", err)
 	}
 
-	// =========================================================================
 	// STEP 3: Create the Tracer Provider
-	// =========================================================================
 	// The TracerProvider is the FACTORY that creates Tracers.
 	// You don't use it directly much - you just set it globally with otel.SetTracerProvider()
 	// Then anywhere in your code, otel.Tracer("name") returns a tracer.
@@ -120,9 +114,7 @@ func Init(ctx context.Context, cfg Config) (shutdown func(context.Context) error
 	// Now otel.Tracer("any-name") anywhere in your code will use this
 	otel.SetTracerProvider(tracerProvider)
 
-	// =========================================================================
 	// STEP 4: Set up Context Propagation
-	// =========================================================================
 	// THIS IS CRITICAL FOR DISTRIBUTED TRACING!
 	//
 	// When Service A calls Service B, how does B know it's part of A's trace?
@@ -137,11 +129,9 @@ func Init(ctx context.Context, cfg Config) (shutdown func(context.Context) error
 		propagation.Baggage{},      // Optional: carry business data across services
 	))
 
-	// =========================================================================
 	// STEP 5: Return Shutdown Function
-	// =========================================================================
-	// ALWAYS call this on application shutdown!
-	// It flushes any pending traces so you don't lose data.
+	// we always call this on application shutdown
+	// it flushes any pending traces so you don't lose data.
 	//
 	shutdown = func(ctx context.Context) error {
 		return tracerProvider.Shutdown(ctx)

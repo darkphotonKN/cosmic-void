@@ -8,6 +8,7 @@ import (
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"go.opentelemetry.io/otel"
 )
 
 type Repository struct {
@@ -19,6 +20,8 @@ func NewRepository(db *sqlx.DB) *Repository {
 		DB: db,
 	}
 }
+
+var tracer = otel.Tracer("auth/service")
 
 func (r *Repository) Create(name, email, password string) (uuid.UUID, error) {
 	memberId := uuid.New()

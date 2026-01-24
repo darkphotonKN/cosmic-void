@@ -1,0 +1,61 @@
+# Grafana Datasources Configuration
+#
+# This file auto-provisions datasources when Grafana starts.
+# No manual setup needed - Tempo, Prometheus, and Loki are ready to go.
+
+apiVersion: 1
+
+datasources:
+  # PROMETHEUS - for metrics
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+
+  # TEMPO - for traces
+  - name: Tempo
+    type: tempo
+    uid: tempo
+    access: proxy
+    url: http://tempo:3200
+    editable: false
+    jsonData:
+      httpMethod: GET
+      # Link traces to logs in Loki
+      tracesToLogs:
+        datasourceUid: loki
+        tags: ["service.name"]
+        mappedTags: [{ key: "service.name", value: "service_name" }]
+        mapTagNamesEnabled: true
+        spanStartTimeShift: "-1h"
+        spanEndTimeShift: "1h"
+        filterByTraceID: true
+        filterBySpanID: false
+      # Link traces to metrics in Prometheus
+      tracesToMetrics:
+        datasourceUid: prometheus
+        tags: [{ key: "service.name", value: "service" }]
+      serviceMap:
+        datasourceUid: prometheus
+      nodeGraph:
+        enabled: true
+      lokiSearch:
+        datasourceUid: loki
+
+  # LOKI - for logs
+  - name: Loki
+    type: loki
+    uid: loki
+    access: proxy
+    url: http://loki:3100
+    editable: false
+    jsonData:
+      # Link logs back to traces in Tempo
+      derivedFields:
+        - datasourceUid: tempo
+          matcherRegex: '"trace_id":"(\w+)"'
+          name: TraceID
+          url: "$${__value.raw}"
