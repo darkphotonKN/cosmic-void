@@ -3,7 +3,6 @@ package game
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
@@ -38,7 +37,7 @@ func (s *service) PublishMatchComplete(ctx context.Context, data *commontypes.Ma
 		})
 
 	if err != nil {
-		fmt.Printf("\nError when publishing game match end event: %v\n\n", err)
+		slog.Error("Error publishing game match end event", "error", err)
 		return err
 	}
 

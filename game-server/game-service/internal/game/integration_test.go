@@ -1,7 +1,7 @@
 package game
 
 import (
-	"fmt"
+	"context"
 	"log/slog"
 	"testing"
 	"time"
@@ -39,6 +39,10 @@ func (m *MessageSender) PushMessageToConn(
 // Mock EventEmitter for testing
 type mockEventEmitter struct{}
 
+func (m *mockEventEmitter) PublishMatchComplete(ctx context.Context, data *commontypes.MatchEndState) error {
+	return nil
+}
+
 func TestHandleMoveUpdatesPositionIntegration(t *testing.T) {
 	mockMessageSender := MessageSender{}
 	sender := messaging.NewMessageSender(&mockMessageSender)
@@ -55,17 +59,17 @@ func TestHandleMoveUpdatesPositionIntegration(t *testing.T) {
 	playerEntity, ok := session.EntityManager.GetEntity(playerEntityID)
 
 	if !ok {
-		fmt.Printf("\nPlayerEntity doesn't exist for player playerEntityID %s\n\n", playerEntityID)
+		slog.Error("PlayerEntity doesn't exist", "playerEntityID", playerEntityID)
 	}
 
 	playerTransformComponent, ok := playerEntity.GetComponent(ecs.ComponentTypeTransform)
 
 	if !ok {
-		fmt.Printf("\nPlayers Velocity Component doesn't exist for enntity ID: %s\n\n", playerEntity.ID)
+		slog.Error("Player's Velocity Component doesn't exist", "entityID", playerEntity.ID)
 	}
 
 	component := playerTransformComponent.(*components.TransformComponent)
-	fmt.Printf("\nplayerTransformCoords Initial: %+v\n\n", component)
+	slog.Debug("Player transform coordinates initial", "coordinates", component)
 
 	assert.Equal(t, float64(0), component.X)
 	assert.Equal(t, float64(0), component.Y)
@@ -78,7 +82,7 @@ func TestHandleMoveUpdatesPositionIntegration(t *testing.T) {
 	// account for system game loop refresh rate, but only time for 1 move
 	time.Sleep(time.Millisecond * 1200)
 
-	fmt.Printf("\nplayerTransformCoords after update: %+v\n\n", component)
+	slog.Debug("Player transform coordinates after update", "coordinates", component)
 	assert.Equal(t, float64(0.81), component.X)
 	assert.Equal(t, float64(0.81), component.Y)
 }
@@ -112,7 +116,7 @@ func TestPublishMatchComplete(t *testing.T) {
 		},
 	}
 
-	slog.Info("matchEndData:", matchEndData)
+	slog.Info("Match end data", "data", matchEndData)
 
 	ch, close := broker.Connect(amqpUser, amqpPassword, amqpHost, amqpPort)
 

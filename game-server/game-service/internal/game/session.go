@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math"
 	"math/rand/v2"
 	"sync"
@@ -136,7 +137,7 @@ func (s *Session) manageClientMessages() {
 		for {
 			select {
 			case message := <-s.MessageCh:
-				fmt.Printf("\nTest message received, %+v\n\n", message)
+				slog.Debug("Test message received", "message", message)
 
 				// propogate to test
 				s.TestMessageSpy <- message.Message
@@ -149,34 +150,34 @@ func (s *Session) manageClientMessages() {
 	for {
 		select {
 		case msg := <-s.MessageCh:
-			fmt.Printf("\nincoming message to game session %s:\n%v\n\n", s.ID, msg)
+			slog.Debug("Incoming message to game session", "sessionID", s.ID, "message", msg)
 
 			switch constants.Action(msg.Message.Action) {
 			case constants.ActionMove:
 
-				fmt.Printf("Action from client was move\n")
+				slog.Debug("Action from client was move")
 				// parse payload based on message action
 				parsedPayload, err := msg.Message.ParsePayload()
 
 				if err != nil {
 					// TODO: respond to client error
-					fmt.Printf("\n attempting to parse payload from %+v from unsuccesfull as types don't match.\n\n", parsedPayload)
+					slog.Error("Failed to parse payload - types don't match", "payload", parsedPayload, "error", err)
 				}
 
 				movePayload := parsedPayload.(types.PlayerSessionMovePayload)
 
-				fmt.Printf("\nParsed move payload:\n%+v\n\n", movePayload)
+				slog.Debug("Parsed move payload", "payload", movePayload)
 
 				// update based on action payload
 				playerID, err := uuid.Parse(movePayload.PlayerID)
 				if err != nil {
-					fmt.Printf("\nPlayerID %s from session payload was invalid.\n\n", movePayload.PlayerID)
+					slog.Error("Invalid PlayerID from session payload", "playerID", movePayload.PlayerID, "error", err)
 					// TODO: respond to client error
 				}
 				s.handleMove(playerID, movePayload.Vx, movePayload.Vy)
 
 			case constants.ActionInteract:
-				fmt.Printf("Action from client was interact")
+				slog.Debug("Action from client was interact")
 
 				parsedPayload, err := msg.Message.ParsePayload()
 
@@ -185,19 +186,19 @@ func (s *Session) manageClientMessages() {
 				}
 
 				interactPayload := parsedPayload.(types.PlayerSessionInteractPayload)
-				fmt.Printf("\nParsed interact payload:\n%+v\n\n", interactPayload)
+				slog.Debug("Parsed interact payload", "payload", interactPayload)
 
 				playerID, err := uuid.Parse(interactPayload.PlayerID)
 
 				if err != nil {
-					fmt.Printf("\nPlayerID %s from session payload was invalid.\n\n", interactPayload.PlayerID)
+					slog.Error("Invalid PlayerID from session payload", "playerID", interactPayload.PlayerID, "error", err)
 					// TODO: respond to client error
 				}
 
 				entityIDUUID, err := uuid.Parse(interactPayload.EntityID)
 
 				if err != nil {
-					fmt.Printf("\nEntityID %s from session payload was invalid.\n\n", interactPayload.EntityID)
+					slog.Error("Invalid EntityID from session payload", "entityID", interactPayload.EntityID, "error", err)
 					// TODO: respond to client error
 				}
 
@@ -208,7 +209,7 @@ func (s *Session) manageClientMessages() {
 				}
 			case constants.ActionLoot:
 
-				fmt.Printf("Action from client was loot")
+				slog.Debug("Action from client was loot")
 				parsedPayload, err := msg.Message.ParsePayload()
 
 				if err != nil {
@@ -216,12 +217,12 @@ func (s *Session) manageClientMessages() {
 				}
 
 				lootPayload := parsedPayload.(types.PlayerSessionLootPayload)
-				fmt.Printf("\nParsed interact payload:\n%+v\n\n", lootPayload)
+				slog.Debug("Parsed loot payload", "payload", lootPayload)
 
 				playerID, err := uuid.Parse(lootPayload.PlayerID)
 
 				if err != nil {
-					fmt.Printf("\nPlayerID %s from session payload was invalid.\n\n", lootPayload.PlayerID)
+					slog.Error("Invalid PlayerID from session payload", "playerID", lootPayload.PlayerID, "error", err)
 					// TODO: respond to client error
 				}
 
@@ -229,7 +230,7 @@ func (s *Session) manageClientMessages() {
 
 				if err != nil {
 
-					fmt.Printf("\nContainerEntityID %s from session payload was invalid.\n\n", lootPayload.ContainerEntityID)
+					slog.Error("Invalid ContainerEntityID from session payload", "containerEntityID", lootPayload.ContainerEntityID, "error", err)
 					// TODO: respond to client error
 				}
 
@@ -237,7 +238,7 @@ func (s *Session) manageClientMessages() {
 				for _, itemEntityId := range lootPayload.ItemEntityIDs {
 					entityId, err := uuid.Parse(itemEntityId)
 					if err != nil {
-						fmt.Printf("\n itemEntityId %s is invalid", entityId)
+						slog.Error("Invalid itemEntityId", "entityId", entityId, "error", err)
 					}
 					itemEntityIDUUIDs = append(itemEntityIDUUIDs, entityId)
 				}
@@ -250,7 +251,7 @@ func (s *Session) manageClientMessages() {
 			}
 
 		case <-s.stopChan:
-			fmt.Printf("Game session %s: message handler stopped\n", s.ID)
+			slog.Info("Game session message handler stopped", "sessionID", s.ID)
 			return
 		}
 	}
@@ -281,11 +282,11 @@ func (s *Session) manageGameLoop() {
 			// broadcast state update to all players
 			err := s.broadcastFullState()
 			if err != nil {
-				fmt.Printf("Error occured when broadcasting state: %+v\n", err)
+				slog.Error("Error broadcasting state", "error", err)
 				continue
 			}
 		case <-s.stopChan:
-			fmt.Printf("Game session %s: game loop stopped\n", s.ID)
+			slog.Info("Game session game loop stopped", "sessionID", s.ID)
 			return
 		}
 	}
@@ -328,19 +329,19 @@ func (s *Session) RemovePlayer(userID string) {
 	defer s.mu.Unlock()
 	playerID, err := uuid.Parse(userID)
 	if err != nil {
-		fmt.Println("RemovePlayer: Invailid userID", playerID)
+		slog.Error("RemovePlayer: Invalid userID", "userID", userID, "error", err)
 		return
 	}
 	entityID, exists := s.playerEntityIDToPlayerID[playerID]
 	if !exists {
-		fmt.Println("RemovePlayer: playerID not found in session", playerID)
+		slog.Warn("RemovePlayer: playerID not found in session", "playerID", playerID)
 		return
 	}
 	s.EntityManager.RemoveEntity(entityID)
 
 	delete(s.playerIDToEntitiesID, playerID)
 	delete(s.playerEntityIDToPlayerID, entityID)
-	fmt.Printf("Remove player %s from session %s\n", playerID, s.ID)
+	slog.Info("Removed player from session", "playerID", playerID, "sessionID", s.ID)
 }
 
 func (s *Session) AddDoor(x, y float64) uuid.UUID {
@@ -386,7 +387,7 @@ func (s *Session) Shutdown() {
 		return
 	}
 	s.mu.Unlock()
-	fmt.Printf("Shutting down game session id %s\n", s.ID)
+	slog.Info("Shutting down game session", "sessionID", s.ID)
 	close(s.stopChan)
 	close(s.MessageCh)
 }
@@ -416,13 +417,13 @@ func (s *Session) broadcastFullState() error {
 	for _, playerID := range s.playerEntityIDToPlayerID {
 		clientState, err := s.stateSerializer.Serialize(s.ID, playerID, entities)
 		if err != nil {
-			fmt.Printf("Error when attempting to serialize state for player %s: %+v\n", playerID, err)
+			slog.Error("Failed to serialize state for player", "playerID", playerID, "error", err)
 			continue
 		}
 
 		err = s.sender.SendStateToPlayer(playerID, clientState)
 		if err != nil {
-			fmt.Printf("Error sending state to player %s: %+v\n", playerID, err)
+			slog.Error("Failed to send state to player", "playerID", playerID, "error", err)
 		}
 	}
 
@@ -444,22 +445,22 @@ func (s *Session) handleMove(playerID uuid.UUID, vx, vy float64) error {
 	s.mu.RUnlock()
 
 	if !ok {
-		fmt.Printf("\nPlayerEntityID doesn't exist for playerID: %s\n\n", playerID)
-		return fmt.Errorf("\nPlayerEntityID doesn't exist for playerID: %s\n\n", playerID)
+		slog.Error("PlayerEntityID doesn't exist", "playerID", playerID)
+		return fmt.Errorf("PlayerEntityID doesn't exist for playerID: %s", playerID)
 	}
 
 	playerEntity, ok := s.EntityManager.GetEntity(playerEntityID)
 
 	if !ok {
-		fmt.Printf("\nPlayerEntity doesn't exist for player playerEntityID %s\n\n", playerID)
-		return fmt.Errorf("\nPlayer entity doens't exist for id %s\n\n", playerID)
+		slog.Error("PlayerEntity doesn't exist", "playerEntityID", playerEntityID, "playerID", playerID)
+		return fmt.Errorf("Player entity doesn't exist for id %s", playerID)
 	}
 
 	playerVelocityComponent, ok := playerEntity.GetComponent(ecs.ComponentTypeVelocity)
 
 	if !ok {
-		fmt.Printf("\nPlayers Velocity Component doesn't exist for enntity ID: %s\n\n", playerEntity.ID)
-		return fmt.Errorf("\nPlayers Velocity Component doesn't exist for enntity ID: %s\n\n", playerEntity.ID)
+		slog.Error("Player's Velocity Component doesn't exist", "entityID", playerEntity.ID)
+		return fmt.Errorf("Players Velocity Component doesn't exist for entity ID: %s", playerEntity.ID)
 	}
 
 	component := playerVelocityComponent.(*components.VelocityComponent)
@@ -478,7 +479,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 	targetEntity, hasEntity := s.EntityManager.GetEntity(targetEntityID)
 
 	if !hasEntity {
-		fmt.Printf("Error when attempting to retrieve target entity with entityID %s\n", targetEntityID)
+		slog.Error("Failed to retrieve target entity", "targetEntityID", targetEntityID)
 		return fmt.Errorf("Error when attempting to retrieve target entity with entityID %s", targetEntityID)
 	}
 
@@ -486,8 +487,8 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 	s.mu.RLock()
 	_, exists := s.containerInteractedCache[targetEntityID]
 	if exists {
-		fmt.Printf("container targeted entityID %s was still cached and not available to be interacted.\n", targetEntityID)
-		return fmt.Errorf("container targeted entityID %s was still cached and not available to be interacted.\n", targetEntityID)
+		slog.Debug("Container entity still cached, not available for interaction", "targetEntityID", targetEntityID)
+		return fmt.Errorf("container targeted entityID %s was still cached and not available to be interacted", targetEntityID)
 	}
 	s.mu.RUnlock()
 
@@ -496,8 +497,8 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 	_, isContainerEntity := targetEntity.GetComponent(ecs.ComponentTypeContainer)
 
 	if !isDoorEntity && !isContainerEntity {
-		fmt.Printf("entity type did not match any interactable entity.\n")
-		return fmt.Errorf("entity type did not match any interactable entity.\n")
+		slog.Debug("Entity type did not match any interactable entity", "targetEntityID", targetEntityID)
+		return fmt.Errorf("entity type did not match any interactable entity")
 	}
 
 	// --- player entity ---
@@ -513,22 +514,22 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 	s.mu.RUnlock()
 
 	if exists {
-		fmt.Printf("player interacted too soon with with playerEntityID %s\n", playerEntityID)
-		return fmt.Errorf("player interacted too soon with with playerEntityID %s\n", playerEntityID)
+		slog.Debug("Player interacted too soon", "playerEntityID", playerEntityID)
+		return fmt.Errorf("player interacted too soon with playerEntityID %s", playerEntityID)
 	}
 
 	playerEntity, hasPlayerEntity := s.EntityManager.GetEntity(playerEntityID)
 
 	if !hasPlayerEntity {
-		fmt.Printf("Error when attempting to retrieve target player entity with entityID %s\n", playerEntityID)
+		slog.Error("Failed to retrieve target player entity", "playerEntityID", playerEntityID)
 
-		return fmt.Errorf("Error when attempting to retrieve target player entity with entityID %s\n", targetEntityID)
+		return fmt.Errorf("Error when attempting to retrieve target player entity with entityID %s", targetEntityID)
 	}
 
 	playerTransformComponent, hasTransform := playerEntity.GetComponent(ecs.ComponentTypeTransform)
 
 	if !hasTransform {
-		fmt.Printf("Error when attempting to retrieve player entity transform component with entityID %s\n", playerEntityID)
+		slog.Error("Failed to retrieve player entity transform component", "playerEntityID", playerEntityID)
 		return fmt.Errorf("Error when attempting to retrieve player entity transform component with entityID %s", playerEntityID)
 	}
 
@@ -541,7 +542,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		doorTransformComponent, hasTransform := targetEntity.GetComponent(ecs.ComponentTypeTransform)
 
 		if !hasTransform {
-			fmt.Printf("Error when attempting to retrieve door entity transform component with entityID %s\n", targetEntityID)
+			slog.Error("Failed to retrieve door entity transform component", "targetEntityID", targetEntityID)
 			return fmt.Errorf("Error when attempting to retrieve door entity transform component with entityID %s", targetEntityID)
 		}
 
@@ -551,7 +552,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 
 		if !isWithinDistance {
 			// TODO: add return message to client
-			fmt.Printf("Error when attempting to interact with door entity as it was out of range. targetID: %s, playerID: %s. \n", targetEntityID, playerID)
+			slog.Debug("Door entity out of range for interaction", "targetID", targetEntityID, "playerID", playerID)
 			return ErrOutOfRange
 		}
 
@@ -559,7 +560,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		doorOpenableComponent, hasOpenable := targetEntity.GetComponent(ecs.ComponentTypeOpenable)
 
 		if !hasOpenable {
-			fmt.Printf("Error when attempting to retrieve door entity openable component with entityID %s\n", targetEntityID)
+			slog.Error("Failed to retrieve door entity openable component", "targetEntityID", targetEntityID)
 			return fmt.Errorf("Error when attempting to retrieve door entity openable component with entityID %s", targetEntityID)
 		}
 
@@ -600,7 +601,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		containerTransformComponent, hasTransform := targetEntity.GetComponent(ecs.ComponentTypeTransform)
 
 		if !hasTransform {
-			fmt.Printf("Error when attempting to retrieve container entity transform component with entityID %s\n", targetEntityID)
+			slog.Error("Failed to retrieve container entity transform component", "targetEntityID", targetEntityID)
 			return fmt.Errorf("Error when attempting to retrieve container entity transform component with entityID %s", targetEntityID)
 		}
 		containerTransform := containerTransformComponent.(*components.TransformComponent)
@@ -608,14 +609,14 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		isWithinDistance := s.calcWithinDistance(playerTransform.X, playerTransform.Y, containerTransform.X, containerTransform.Y)
 		if !isWithinDistance {
 			// TODO: add return message to client
-			fmt.Printf("Error when attempting to interact with container entity as it was out of range. targetID: %s, playerID: %s. \n", targetEntityID, playerID)
+			slog.Debug("Container entity out of range for interaction", "targetID", targetEntityID, "playerID", playerID)
 			return ErrOutOfRange
 		}
 		// trigger containers swap in openable state via its OpenableComponent
 		containerOpenableComponent, hasOpenable := targetEntity.GetComponent(ecs.ComponentTypeOpenable)
 
 		if !hasOpenable {
-			fmt.Printf("Error when attempting to retrieve container entity openable component with entityID %s\n", targetEntityID)
+			slog.Error("Failed to retrieve container entity openable component", "targetEntityID", targetEntityID)
 			return fmt.Errorf("Error when attempting to retrieve container entity openable component with entityID %s", targetEntityID)
 		}
 
@@ -635,7 +636,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 			}
 			itemIDsComponent, hasItemIDs := targetEntity.GetComponent(ecs.ComponentTypeItemIDList)
 			if !hasItemIDs {
-				fmt.Printf("Error when attempting to retrieve container entity itemIDs component with entityID %s\n", targetEntityID)
+				slog.Error("Failed to retrieve container entity itemIDs component", "targetEntityID", targetEntityID)
 				return fmt.Errorf("Error when attempting to retrieve container entity itemIDs component with entityID %s", targetEntityID)
 			}
 
@@ -686,15 +687,15 @@ func (s *Session) handleLoot(playerID uuid.UUID, containerEntityID uuid.UUID, lo
 	}
 	containerEntity, ok := s.EntityManager.GetEntity(containerEntityID)
 	if !ok {
-		fmt.Printf("entity %s is not exists", containerEntityID)
+		slog.Error("Container entity does not exist", "containerEntityID", containerEntityID)
 		return fmt.Errorf("entity %s is not exists", containerEntityID)
 	}
 
 	for _, entityID := range lootEntityIDs {
 		_, ok := s.EntityManager.GetEntity(entityID)
 		if !ok {
-			fmt.Printf("Item entity %s is not exists", entityID)
-			fmt.Errorf("Item entity %s is not exists", entityID)
+			slog.Error("Item entity does not exist", "entityID", entityID)
+			_ = fmt.Errorf("Item entity %s is not exists", entityID)
 		}
 	}
 
@@ -763,31 +764,33 @@ func (s *Session) AddItem(itemConfig ItemConfig) uuid.UUID {
 	defer s.mu.Unlock()
 	entity := CreateItemEntity(s.EntityManager, itemConfig)
 
-	// 印出創建的 entity 詳細資訊
-	fmt.Printf("========================================\n")
-	fmt.Printf("📦 Created Item Entity:\n")
-	fmt.Printf("  Entity ID: %s\n", entity.ID)
-	fmt.Printf("  Item Name: %s\n", itemConfig.Name)
-	fmt.Printf("  Quantity: %d\n", itemConfig.Quantity)
+	// Log created entity details
+	slog.Info("Created Item Entity",
+		"entityID", entity.ID,
+		"itemName", itemConfig.Name,
+		"quantity", itemConfig.Quantity)
 
-	// 印出 entity 的所有 components
+	// Log entity components
 	if itemComp, hasItem := entity.GetComponent(ecs.ComponentTypeItem); hasItem {
 		item := itemComp.(*components.ItemComponent)
-		fmt.Printf("  ItemComponent:\n")
-		fmt.Printf("    - ItemName: %s\n", item.ItemName)
-		fmt.Printf("    - Quantity: %d\n", item.Quantity)
-		fmt.Printf("    - ItemTool type: %T\n", item.ItemTool)
+		slog.Debug("ItemComponent details",
+			"itemName", item.ItemName,
+			"quantity", item.Quantity,
+			"itemToolType", fmt.Sprintf("%T", item.ItemTool))
 
-		// 如果是武器資料，印出武器列表
+		// If weapon data, log weapon list
 		if weaponResponse, ok := item.ItemTool.(*pb.ListWeaponsResponse); ok && weaponResponse != nil {
-			fmt.Printf("    - Weapons count: %d\n", len(weaponResponse.Weapons))
+			slog.Debug("Weapons data", "weaponCount", len(weaponResponse.Weapons))
 			for i, weapon := range weaponResponse.Weapons {
-				fmt.Printf("      [%d] %s (Attack: %d, Durability: %d, CritRate: %.2f%%)\n",
-					i+1, weapon.ItemName, weapon.AttackPower, weapon.Durability, weapon.CriticalRate)
+				slog.Debug("Weapon details",
+					"index", i+1,
+					"name", weapon.ItemName,
+					"attackPower", weapon.AttackPower,
+					"durability", weapon.Durability,
+					"criticalRate", weapon.CriticalRate)
 			}
 		}
 	}
-	fmt.Printf("========================================\n")
 
 	return entity.ID
 }
@@ -801,10 +804,10 @@ func (s *Session) endSession() {
 
 	matchEndData, err := s.formatMatchEndData()
 	if err != nil {
-		fmt.Printf("\nMatch end data err: %+v\n\n", err)
+		slog.Error("Failed to format match end data", "error", err)
 	}
 
-	fmt.Printf("\nMatch end data: %+v\n\n", matchEndData)
+	slog.Info("Match end data", "data", matchEndData)
 
 	s.eventEmitter.PublishMatchComplete(context.Background(), matchEndData)
 }
@@ -815,7 +818,7 @@ func (s *Session) endSession() {
 // TODO: WIP
 func (s *Session) formatMatchEndData() (*commontypes.MatchEndState, error) {
 	// entities := s.EntityManager.GetAllEntities()
-	fmt.Println("Formatting data after match ended.")
+	slog.Info("Formatting data after match ended")
 
 	return nil, nil
 }

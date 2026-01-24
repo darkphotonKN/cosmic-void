@@ -2,7 +2,7 @@ package game
 
 import (
 	"errors"
-	"fmt"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -141,17 +141,17 @@ func TestAddPlayerSetsInitialPosition(t *testing.T) {
 	playerEntity, ok := session.EntityManager.GetEntity(playerEntityID)
 
 	if !ok {
-		fmt.Printf("\nPlayerEntity doesn't exist for player playerEntityID %s\n\n", playerEntityID)
+		slog.Error("PlayerEntity doesn't exist", "playerEntityID", playerEntityID)
 	}
 
 	playerTransformComponent, ok := playerEntity.GetComponent(ecs.ComponentTypeTransform)
 
 	if !ok {
-		fmt.Printf("\nPlayers Velocity Component doesn't exist for enntity ID: %s\n\n", playerEntity.ID)
+		slog.Error("Player's Velocity Component doesn't exist", "entityID", playerEntity.ID)
 	}
 
 	component := playerTransformComponent.(*components.TransformComponent)
-	fmt.Printf("\nplayerTransformCoords Initial: %+v\n\n", component)
+	slog.Debug("Player transform coordinates initial", "coordinates", component)
 
 	assert.Equal(t, float64(0), component.X)
 	assert.Equal(t, float64(0), component.Y)
