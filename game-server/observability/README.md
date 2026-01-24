@@ -6,7 +6,7 @@ Complete local setup for traces, metrics, and logs.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           YOUR MICROSERVICES                                │
+│                            MICROSERVICES                                    │
 │                                                                             │
 │   ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                 │
 │   │ game-service │    │stats-service │    │ auth-service │                 │
