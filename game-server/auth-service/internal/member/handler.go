@@ -2,7 +2,7 @@ package member
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
 )
@@ -37,7 +37,7 @@ func (s *Handler) GetMember(ctx context.Context, req *pb.GetMemberRequest) (*pb.
 }
 
 func (s *Handler) CreateMember(ctx context.Context, req *pb.CreateMemberRequest) (*pb.Member, error) {
-	fmt.Printf("Creating member through auth-service, request: %+v\n", req)
+	slog.Info("Creating member through auth-service", "request", req)
 	return s.service.CreateMember(ctx, req)
 }
 

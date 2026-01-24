@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 
 	"github.com/darkphotonKN/cosmic-void-server/auth-service/internal/constants"
@@ -38,7 +39,7 @@ func InitDB() *sqlx.DB {
 		log.Fatalf("Failed to connect to the database: %v", err)
 	}
 
-	fmt.Printf("\nConnected to the database successfully.\n\n")
+	slog.Info("Connected to the database successfully")
 
 	// Run migrations
 	if err := runMigrations(db); err != nil {
@@ -67,7 +68,7 @@ func runMigrations(db *sqlx.DB) error {
 		return fmt.Errorf("could not run migrations: %v", err)
 	}
 
-	fmt.Printf("Successfully ran all migrations.\n\n")
+	slog.Info("Successfully ran all migrations")
 	return nil
 }
 
@@ -82,6 +83,6 @@ func SeedDefaults(db *sqlx.DB) {
 		log.Fatal("Error when attempting to create default members:", err)
 	}
 
-	fmt.Printf("Successfully created all default members.\n\n")
+	slog.Info("Successfully created all default members")
 
 }

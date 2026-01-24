@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -34,7 +35,7 @@ func InitRedis(config RedisConfig) error {
 	once.Do(func() {
 		switch config.Mode {
 		case "cluster":
-			fmt.Println("Initializing Redis in CLUSTER mode")
+			slog.Info("Initializing Redis in CLUSTER mode")
 			globalClient = redis.NewClusterClient(&redis.ClusterOptions{
 				Addrs:           config.Addrs,
 				Password:        config.Password,
@@ -53,11 +54,11 @@ func InitRedis(config RedisConfig) error {
 				RouteByLatency:  false,
 				RouteRandomly:   false,
 			})
-			fmt.Printf("Cluster nodes: %v\n", config.Addrs)
+			slog.Info("Cluster nodes", "addresses", config.Addrs)
 
 		// ========== Sentinel 模式 ==========
 		case "sentinel":
-			fmt.Println("Initializing Redis in SENTINEL mode")
+			slog.Info("Initializing Redis in SENTINEL mode")
 			globalClient = redis.NewFailoverClient(&redis.FailoverOptions{
 				// specify sentinel settings
 				MasterName:       config.MasterName,
@@ -79,10 +80,10 @@ func InitRedis(config RedisConfig) error {
 				MaxRetryBackoff: 512 * time.Millisecond,
 			})
 
-			fmt.Printf("Sentinel nodes: %v, MasterName: %s\n", config.Addrs, config.MasterName)
+			slog.Info("Sentinel nodes", "addresses", config.Addrs, "masterName", config.MasterName)
 
 		default: // standalone
-			fmt.Println("Initializing Redis in STANDALONE mode")
+			slog.Info("Initializing Redis in STANDALONE mode")
 
 			if len(config.Addrs) == 0 {
 				err = fmt.Errorf("standalone mode requires at least one address")
@@ -106,7 +107,7 @@ func InitRedis(config RedisConfig) error {
 				MaxRetryBackoff: 512 * time.Millisecond,
 			})
 
-			fmt.Printf("Standalone address: %s, DB: %d\n", config.Addrs[0], config.DB)
+			slog.Info("Standalone Redis", "address", config.Addrs[0], "db", config.DB)
 		}
 
 		// test connection
@@ -118,7 +119,7 @@ func InitRedis(config RedisConfig) error {
 			return
 		}
 
-		fmt.Println("Redis connection successful!")
+		slog.Info("Redis connection successful!")
 	})
 
 	return err

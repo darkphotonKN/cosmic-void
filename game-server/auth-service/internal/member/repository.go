@@ -2,6 +2,7 @@ package member
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/darkphotonKN/cosmic-void-server/auth-service/internal/models"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
@@ -25,7 +26,7 @@ func (r *Repository) Create(name, email, password string) (uuid.UUID, error) {
 
 	_, err := r.DB.Exec(query, memberId, name, email, password)
 	if err != nil {
-		fmt.Println("Error when creating member:", err)
+		slog.Error("Error creating member", "error", err)
 		return uuid.Nil, commonhelpers.AnalyzeDBErr(err)
 	}
 

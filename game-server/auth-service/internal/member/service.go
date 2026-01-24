@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"time"
 
@@ -144,7 +145,7 @@ func (s *service) LoginMember(ctx context.Context, req *pb.LoginRequest) (*pb.Lo
 		return nil, fmt.Errorf("error generating refresh token: %w", err)
 	}
 
-	fmt.Println("generated tokens:", accessToken)
+	slog.Debug("Generated tokens", "accessToken", accessToken)
 
 	return &pb.LoginResponse{
 		AccessToken:      accessToken,
