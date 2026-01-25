@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net"
+	"net/http"
 	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/auth-service/config"
@@ -18,6 +19,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 )
@@ -118,6 +120,15 @@ func main() {
 		)
 	}
 	defer listener.Close()
+
+	// --- metrics ---
+
+	// setup endpoint for metrics collection
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		log.Println("Metrics server started on :8081")
+		http.ListenAndServe(":8081", nil)
+	}()
 
 	// --- message broker - rabbit mq ---
 	ch, close := broker.Connect(amqpUser, amqpPassword, amqpHost, amqpPort)

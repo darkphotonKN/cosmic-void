@@ -43,7 +43,7 @@ scrape_configs:
       - targets: ["loki:3100"]
 
   # If you want to scrape your Go services directly (optional)
-  # Your services would need to expose /metrics endpoint
-  # - job_name: 'game-service'
-  #   static_configs:
-  #     - targets: ['game-service:8080']
+  # services is expose /metrics endpoint
+  - job_name: "auth-service"
+    static_configs:
+      - targets: ["host.docker.internal:8081"]

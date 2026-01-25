@@ -5,20 +5,29 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
+	commontelemetry "github.com/darkphotonKN/cosmic-void-server/common/telemetry"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/config"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 )
 
 var (
+	environment = commonhelpers.GetEnvString("ENVIRONMENT", "development")
+
+	// observability
+	collectorEndpoint = commonhelpers.GetEnvString("COLLECTOR_ENDPOINT", "localhost:4317")
+	serviceVersion    = commonhelpers.GetEnvString("SERVICE_VERSION", "1.0.0")
+
 	// game service
 	gamePort = fmt.Sprintf(":%s", commonhelpers.GetEnvString("GAME_PORT", "5555"))
 
@@ -36,6 +45,20 @@ var (
 )
 
 func main() {
+
+	ctx := context.Background()
+
+	// --- observability ---
+	shutdown, err := commontelemetry.Init(ctx, commontelemetry.Config{
+		ServiceName:       serviceName,
+		ServiceVersion:    serviceVersion,
+		Environment:       environment,
+		CollectorEndpoint: collectorEndpoint,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer shutdown(ctx)
 	// --- database setup ---
 
 	db := config.InitDB()
@@ -49,7 +72,6 @@ func main() {
 		log.Fatal("Failed to create Consul registry")
 	}
 
-	ctx := context.Background()
 	instanceID := discovery.GenerateInstanceID(serviceName)
 
 	// -- discovery --
@@ -82,6 +104,15 @@ func main() {
 		)
 	}
 	defer listener.Close()
+
+	// --- metrics ---
+
+	// setup endpoint for metrics collection
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		log.Println("Metrics server started on :8081")
+		http.ListenAndServe(":8081", nil)
+	}()
 
 	// --- message broker - rabbit mq ---
 	ch, close := broker.Connect(amqpUser, amqpPassword, amqpHost, amqpPort)

@@ -9,10 +9,12 @@
 # - No indexing (unlike Jaeger with Elasticsearch)
 # - Lookup by trace_id only
 
-# Grafana Tempo Configuration (simplified for latest version)
+# Grafana Tempo Configuration (single-node dev setup)
+stream_over_http_enabled: true
 
 server:
   http_listen_port: 3200
+  grpc_listen_port: 9095
 
 distributor:
   receivers:
@@ -20,16 +22,24 @@ distributor:
       protocols:
         grpc:
           endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+  ring:
+    kvstore:
+      store: inmemory
 
 ingester:
-  trace_idle_period: 10s
-  max_block_bytes: 1000000
   max_block_duration: 5m
+  lifecycler:
+    ring:
+      kvstore:
+        store: inmemory
+      replication_factor: 1
 
 storage:
   trace:
     backend: local
-    local:
-      path: /var/tempo/traces
     wal:
       path: /var/tempo/wal
+    local:
+      path: /var/tempo/blocks
