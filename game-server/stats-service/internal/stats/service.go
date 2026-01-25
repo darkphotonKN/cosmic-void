@@ -5,8 +5,8 @@ import (
 	"log/slog"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats"
+	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	"github.com/google/uuid"
-	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // Repository interface defines what the service needs from the repository
@@ -19,10 +19,10 @@ type Repository interface {
 
 type service struct {
 	repo      Repository
-	publishCh *amqp.Channel
+	publishCh commonbroker.Publisher
 }
 
-func NewService(repo Repository, publishCh *amqp.Channel) *service {
+func NewService(repo Repository, publishCh commonbroker.Publisher) *service {
 	return &service{
 		repo:      repo,
 		publishCh: publishCh,
@@ -47,7 +47,10 @@ func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.ProcessMatc
 			"player", player,
 		)
 
-		s.updatePlayerStats(ctx, player)
+		err := s.updatePlayerStats(ctx, player)
+		if err != nil {
+			slog.Error("error when updating match stats", "memberID", player.MemberId, "error", err)
+		}
 	}
 
 	// TODO: call auth service for player information
@@ -62,12 +65,11 @@ func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.ProcessMatc
 	}, nil
 }
 
-func (s *service) updatePlayerStats(ctx context.Context, player *pb.PlayerMatchResults) ([]*MatchHistory, error) {
-
+func (s *service) updatePlayerStats(ctx context.Context, player *pb.PlayerMatchResults) error {
 	memberId, err := uuid.Parse(player.MemberId)
 	if err != nil {
 		slog.Info("Errored when attempting to get parse member id into UUID", "err", err)
-		return nil, err
+		return err
 	}
 
 	// TODO: recalculate averages, averages WIP
@@ -75,20 +77,15 @@ func (s *service) updatePlayerStats(ctx context.Context, player *pb.PlayerMatchR
 
 	if err != nil {
 		slog.Info("Errored when attempting to get match history", "err", err)
-		return nil, err
+		return err
 	}
 
 	slog.Info("Match history data for player", "player", player, "data", matchHistoryData)
 
-	// matchHistoryUpdated := append(matchHistoryData, &MatchHistory{})
-
-	// newPlayerAverages := s.calculateMatchAverage(ctx, matchHistoryUpdated)
-
-	// get current stats
 	playerStats, err := s.repo.GetPlayerMatchStats(ctx, memberId)
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if playerStats == nil {
@@ -107,9 +104,13 @@ func (s *service) updatePlayerStats(ctx context.Context, player *pb.PlayerMatchR
 	playerStats.GamesPlayed += 1
 	playerStats.Kills += int(player.Kills)
 	playerStats.Deaths += int(player.Deaths)
+
 	// TODO: check if player won
-	playerStats.Wins += 0
-	playerStats.Losses += 1
+	if player.Win {
+		playerStats.Wins += 1
+	} else if player.FinalPosition == 5 {
+		playerStats.Losses += 1
+	}
 
 	// update aggregate stats
 	_, err = s.repo.UpsertPlayerMatchStats(ctx, &UpdateStatsParams{
@@ -123,9 +124,9 @@ func (s *service) updatePlayerStats(ctx context.Context, player *pb.PlayerMatchR
 	})
 
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return nil, nil
+	return nil
 }
 
 func (s *service) getMatchHistory(ctx context.Context, memberID uuid.UUID) ([]*MatchHistory, error) {

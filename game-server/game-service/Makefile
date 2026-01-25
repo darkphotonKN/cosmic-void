@@ -63,6 +63,7 @@ test: ## Run all tests
 test-unit: ## Run unit tests only
 	@echo "Running unit tests..."
 	@go test -v ./internal/game -count=1
+	@go test -v ./internal/gameserver -count=1
 	@go test -v ./internal/systems -count=1
 	@go test -v ./internal/ecs -count=1
 
@@ -70,6 +71,7 @@ test-unit: ## Run unit tests only
 test-integration: ## Run integration tests only
 	@echo "Running integration tests..."
 	@go test -v ./internal/gameserver -run Integration -count=1
+	@go test -v ./internal/game -run Integration -count=1
 
 .PHONY: test-cover
 test-cover: ## Run tests with coverage

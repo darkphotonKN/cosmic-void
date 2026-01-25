@@ -20,9 +20,55 @@ run:
 dev:
 	@air
 
-# Run tests with verbose output and coverage
-test:
-	@go test -v ./... -cover
+# =============================================================================
+# Testing Commands
+# =============================================================================
+
+.PHONY: test
+test: ## Run all tests
+	@echo "Running tests..."
+	@go test -v ./... -count=1
+
+.PHONY: test-unit
+test-unit: ## Run unit tests only
+	@echo "Running unit tests..."
+	@go test -v ./internal/stats -count=1
+
+.PHONY: test-integration
+test-integration: ## Run integration tests only
+	@echo "Running integration tests..."
+	@go test -v ./internal/stats -run Integration -count=1
+
+.PHONY: test-cover
+test-cover: ## Run tests with coverage
+	@echo "Running tests with coverage..."
+	@go test -v ./... -coverprofile=coverage.out -covermode=atomic
+	@go tool cover -func=coverage.out
+	@echo ""
+	@echo "✓ Coverage report saved to coverage.out"
+
+.PHONY: test-cover-html
+test-cover-html: test-cover ## Generate HTML coverage report
+	@echo "Generating HTML coverage report..."
+	@go tool cover -html=coverage.out -o coverage.html
+	@echo "✓ Coverage report: coverage.html"
+	@echo "Opening in browser..."
+	@open coverage.html || xdg-open coverage.html || start coverage.html
+
+.PHONY: test-race
+test-race: ## Run tests with race detector
+	@echo "Running tests with race detector..."
+	@go test -race -v ./... -count=1
+
+.PHONY: test-watch
+test-watch: ## Watch and run tests on file changes (requires watchexec)
+	@echo "Watching for changes and running tests..."
+	@watchexec -e go -c -r "make test"
+
+.PHONY: service-test
+service-test: ## Run service tests only
+	@echo "Running service tests..."
+	@go test -v ./internal/stats -run "TestPublishMatchComplete" -count=1
 
 # Run tests with coverage output and preview in a browser
 test-preview:

@@ -199,7 +199,7 @@ func TestServerHubSessionIntegration(t *testing.T) {
 		assert.Equal(t, string(constants.ActionMove), receivedPackage.Message.Action)
 		assert.Equal(t, session.ID.String(), receivedPackage.Message.Payload["session_id"])
 		assert.Equal(t, 1.0, receivedPackage.Message.Payload["vx"])
-		fmt.Printf("✅ Session received message: %+v\n", receivedPackage.Message)
+		fmt.Printf("Session received message: %+v\n", receivedPackage.Message)
 	case <-time.After(2 * time.Second):
 		t.Fatal("Message was not routed to session within timeout")
 	}
