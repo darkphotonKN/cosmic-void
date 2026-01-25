@@ -1,6 +1,7 @@
 package member
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -9,21 +10,28 @@ import (
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
 
-type Repository struct {
+type repository struct {
 	DB *sqlx.DB
 }
 
-func NewRepository(db *sqlx.DB) *Repository {
-	return &Repository{
+func NewRepository(db *sqlx.DB) *repository {
+	return &repository{
 		DB: db,
 	}
 }
 
 var tracer = otel.Tracer("auth/service")
 
-func (r *Repository) Create(name, email, password string) (uuid.UUID, error) {
+func (r *repository) Create(ctx context.Context, name, email, password string) (uuid.UUID, error) {
+	ctx, span := tracer.Start(ctx, "Login")
+	defer span.End()
+
+	// additional attributes for debugging
+	span.SetAttributes(attribute.String("email", email))
+
 	memberId := uuid.New()
 	query := `INSERT INTO members (id, name, email, password) VALUES ($1, $2, $3, $4)`
 
@@ -36,7 +44,7 @@ func (r *Repository) Create(name, email, password string) (uuid.UUID, error) {
 	return memberId, nil
 }
 
-func (r *Repository) UpdatePassword(params MemberUpdatePasswordParams) error {
+func (r *repository) UpdatePassword(ctx context.Context, params MemberUpdatePasswordParams) error {
 	query := `UPDATE members SET password = :password WHERE id = :id`
 
 	result, err := r.DB.NamedExec(query, params)
@@ -56,7 +64,7 @@ func (r *Repository) UpdatePassword(params MemberUpdatePasswordParams) error {
 	return nil
 }
 
-func (r *Repository) UpdateMemberInfo(id uuid.UUID, name, status string) error {
+func (r *repository) UpdateMemberInfo(ctx context.Context, id uuid.UUID, name, status string) error {
 	params := MemberUpdateInfoParams{
 		ID:     id,
 		Name:   name,
@@ -82,7 +90,7 @@ func (r *Repository) UpdateMemberInfo(id uuid.UUID, name, status string) error {
 	return nil
 }
 
-func (r *Repository) GetByIdWithPassword(id uuid.UUID) (*models.Member, error) {
+func (r *repository) GetByIdWithPassword(ctx context.Context, id uuid.UUID) (*models.Member, error) {
 	query := `SELECT * FROM members WHERE members.id = $1`
 
 	var member models.Member
@@ -94,7 +102,7 @@ func (r *Repository) GetByIdWithPassword(id uuid.UUID) (*models.Member, error) {
 	return &member, nil
 }
 
-func (r *Repository) GetById(id uuid.UUID) (*models.Member, error) {
+func (r *repository) GetById(ctx context.Context, id uuid.UUID) (*models.Member, error) {
 	query := `SELECT * FROM members WHERE members.id = $1`
 
 	var member models.Member
@@ -109,7 +117,7 @@ func (r *Repository) GetById(id uuid.UUID) (*models.Member, error) {
 	return &member, nil
 }
 
-func (r *Repository) GetMemberByEmail(email string) (*models.Member, error) {
+func (r *repository) GetMemberByEmail(ctx context.Context, email string) (*models.Member, error) {
 	var member models.Member
 	query := `SELECT * FROM members WHERE members.email = $1`
 
@@ -121,9 +129,9 @@ func (r *Repository) GetMemberByEmail(email string) (*models.Member, error) {
 	return &member, nil
 }
 
-func (r *Repository) VerifyCredentials(email, password string) (*models.Member, error) {
+func (r *repository) VerifyCredentials(ctx context.Context, email, password string) (*models.Member, error) {
 	// First get the member by email
-	member, err := r.GetMemberByEmail(email)
+	member, err := r.GetMemberByEmail(ctx, email)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +140,7 @@ func (r *Repository) VerifyCredentials(email, password string) (*models.Member, 
 	return member, nil
 }
 
-func (r *Repository) CreateDefaultMembers(members []CreateDefaultMember) error {
+func (r *repository) CreateDefaultMembers(ctx context.Context, members []CreateDefaultMember) error {
 	query := `
 	INSERT INTO members(id, email, name, password, status)
 	VALUES(:id, :email, :name, :password, :status)

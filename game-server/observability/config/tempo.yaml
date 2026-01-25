@@ -9,33 +9,23 @@
 # - No indexing (unlike Jaeger with Elasticsearch)
 # - Lookup by trace_id only
 
-server:
-  http_listen_port: 3200 # Grafana connects here to query traces
+# Grafana Tempo Configuration (simplified for latest version)
 
-# Distributor receives traces from OTel Collector
+server:
+  http_listen_port: 3200
+
 distributor:
   receivers:
     otlp:
       protocols:
         grpc:
-          endpoint: 0.0.0.0:4317 # OTel Collector sends here
+          endpoint: 0.0.0.0:4317
 
-# Ingester batches and writes traces to storage
 ingester:
   trace_idle_period: 10s
-  max_block_bytes: 1_000_000
+  max_block_bytes: 1000000
   max_block_duration: 5m
 
-# Compactor optimizes stored trace blocks
-compactor:
-  compaction:
-    compaction_window: 1h
-    max_block_bytes: 100_000_000
-    block_retention: 48h # Keep traces for 48 hours (increase for prod)
-
-# Storage - where traces actually live
-# Using local filesystem for development
-# In production, use S3, GCS, or Azure Blob
 storage:
   trace:
     backend: local
@@ -43,8 +33,3 @@ storage:
       path: /var/tempo/traces
     wal:
       path: /var/tempo/wal
-
-# Query frontend settings
-querier:
-  frontend_worker:
-    frontend_address: tempo:9095

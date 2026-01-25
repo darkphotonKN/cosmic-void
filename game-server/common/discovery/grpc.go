@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -28,5 +29,5 @@ func ServiceConnection(ctx context.Context, serviceName string, registry Registr
 	}
 	// credentials := insecure.NewCredentials()
 
-	return grpc.NewClient(addrs[rand.Intn(length)], grpc.WithTransportCredentials(insecure.NewCredentials()))
+	return grpc.NewClient(addrs[rand.Intn(length)], grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
 }

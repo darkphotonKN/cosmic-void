@@ -9,14 +9,23 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/api-gateway/config"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
+	commontelemetry "github.com/darkphotonKN/cosmic-void-server/common/telemetry"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	_ "github.com/joho/godotenv/autoload"
 )
 
 var (
+	environment = commonhelpers.GetEnvString("ENVIRONMENT", "development")
+
+	// observability
+	collectorEndpoint = commonhelpers.GetEnvString("COLLECTOR_ENDPOINT", "localhost:4317")
+	serviceVersion    = commonhelpers.GetEnvString("SERVICE_VERSION", "1.0.0")
+
 	serviceName = "api-gateway"
-	httpAddr    = commonhelpers.GetEnvString("PORT", "7001")
-	consulAddr  = commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
+
+	// grpc
+	httpAddr   = commonhelpers.GetEnvString("PORT", "7001")
+	consulAddr = commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
 )
 
 /**
@@ -24,6 +33,20 @@ var (
 * NOTE: Keep code here as clean and little as possible.
 **/
 func main() {
+	ctx := context.Background()
+
+	// --- observability ---
+	shutdown, err := commontelemetry.Init(ctx, commontelemetry.Config{
+		ServiceName:       serviceName,
+		ServiceVersion:    serviceVersion,
+		Environment:       environment,
+		CollectorEndpoint: collectorEndpoint,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer shutdown(ctx)
 	// --- database setup ---
 	db := config.InitDB()
 	defer db.Close()
@@ -36,7 +59,6 @@ func main() {
 		log.Fatal("Failed to create Consul registry")
 	}
 
-	ctx := context.Background()
 	instanceID := discovery.GenerateInstanceID(serviceName)
 
 	// -- discovery --

@@ -1,5 +1,5 @@
 /*
-* Open telemetry initialization and setup
+Open telemetry initialization and setup
 *
 * Every microservice needs the same OTel setup, so instead of copy-pasting,
 * we centralize it here. Please follow these patterns and use telemetry.Init() at startup.
@@ -9,7 +9,7 @@
 * 2. Creates a "tracer provider" - the thing that creates traces
 * 3. Creates a "meter provider" - the thing that creates metrics
 * 4. Sets up "propagation" - how trace context travels between services
- */
+*/
 package telemetry
 
 import (
@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 // Config holds the configuration for telemetry initialization.
@@ -54,14 +54,11 @@ func Init(ctx context.Context, cfg Config) (shutdown func(context.Context) error
 	// When you look at traces in Grafana, you'll filter by service.name
 	// to find "show me all traces from stats-service"
 	//
-	res, err := resource.Merge(
-		resource.Default(), // Adds SDK version, OS info, etc.
-		resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceName(cfg.ServiceName),       // REQUIRED: identifies your service
-			semconv.ServiceVersion(cfg.ServiceVersion), // Helps track issues to deployments
-			semconv.DeploymentEnvironment(cfg.Environment),
-		),
+	res := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceName(cfg.ServiceName),
+		semconv.ServiceVersion(cfg.ServiceVersion),
+		semconv.DeploymentEnvironment(cfg.Environment),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("creating resource: %w", err)

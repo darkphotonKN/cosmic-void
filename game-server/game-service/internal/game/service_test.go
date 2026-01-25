@@ -25,8 +25,7 @@ var (
 	amqpPort     = commonhelpers.GetEnvString("RABBITMQ_PORT", "5672")
 )
 
-// publisher for testing
-
+// test publisher just for testing
 type TestPublisher struct {
 }
 
@@ -34,8 +33,9 @@ func (p *TestPublisher) PublishWithContext(_ context.Context, exchange, key stri
 	var matchEndData commontypes.MatchEndState
 
 	err := json.Unmarshal(msg.Body, &matchEndData)
+
 	if err != nil {
-		slog.Info("Error when unmarshalling published message.")
+		slog.Info("Error when unmarshalling published message, message type could not not be unmarshaled to expected type MatchEndState")
 		return err
 	}
 

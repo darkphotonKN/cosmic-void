@@ -21,12 +21,22 @@ import (
 )
 
 type service struct {
-	Repo      *Repository
+	Repo      Repository
 	publishCh *amqp.Channel
 	cache     cache.Cache
 }
 
-func NewService(repo *Repository, ch *amqp.Channel, cacheService cache.Cache) *service {
+type Repository interface {
+	Create(ctx context.Context, name, email, password string) (uuid.UUID, error)
+	UpdatePassword(ctx context.Context, params MemberUpdatePasswordParams) error
+	UpdateMemberInfo(ctx context.Context, id uuid.UUID, name, status string) error
+	GetByIdWithPassword(ctx context.Context, id uuid.UUID) (*models.Member, error)
+	GetById(ctx context.Context, id uuid.UUID) (*models.Member, error)
+	GetMemberByEmail(ctx context.Context, email string) (*models.Member, error)
+	CreateDefaultMembers(ctx context.Context, members []CreateDefaultMember) error
+}
+
+func NewService(repo Repository, ch *amqp.Channel, cacheService cache.Cache) *service {
 	return &service{
 		Repo:      repo,
 		publishCh: ch,
@@ -64,7 +74,7 @@ func (s *service) GetMember(ctx context.Context, req *pb.GetMemberRequest) (*pb.
 		return nil, fmt.Errorf("invalid UUID: %w", err)
 	}
 
-	member, err := s.Repo.GetById(id)
+	member, err := s.Repo.GetById(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +90,7 @@ func (s *service) CreateMember(ctx context.Context, req *pb.CreateMemberRequest)
 	}
 
 	// Create the member
-	memberId, err := s.Repo.Create(req.Name, req.Email, hashedPw)
+	memberId, err := s.Repo.Create(ctx, req.Name, req.Email, hashedPw)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +123,7 @@ func (s *service) CreateMember(ctx context.Context, req *pb.CreateMemberRequest)
 		})
 
 	// Get the created member
-	member, err := s.Repo.GetById(memberId)
+	member, err := s.Repo.GetById(ctx, memberId)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +132,7 @@ func (s *service) CreateMember(ctx context.Context, req *pb.CreateMemberRequest)
 }
 
 func (s *service) LoginMember(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
-	member, err := s.Repo.GetMemberByEmail(req.Email)
+	member, err := s.Repo.GetMemberByEmail(ctx, req.Email)
 	if err != nil {
 		return nil, fmt.Errorf("could not find member with provided email: %w", err)
 	}
@@ -164,13 +174,13 @@ func (s *service) UpdateMemberInfo(ctx context.Context, req *pb.UpdateMemberInfo
 	}
 
 	// Update member info
-	err = s.Repo.UpdateMemberInfo(id, req.Name, req.Status)
+	err = s.Repo.UpdateMemberInfo(ctx, id, req.Name, req.Status)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get the updated member
-	member, err := s.Repo.GetById(id)
+	member, err := s.Repo.GetById(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +195,7 @@ func (s *service) UpdateMemberPassword(ctx context.Context, req *pb.UpdatePasswo
 	}
 
 	// Get the member with password
-	member, err := s.Repo.GetByIdWithPassword(id)
+	member, err := s.Repo.GetByIdWithPassword(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +232,7 @@ func (s *service) UpdateMemberPassword(ctx context.Context, req *pb.UpdatePasswo
 		Password: hashedPw,
 	}
 
-	err = s.Repo.UpdatePassword(params)
+	err = s.Repo.UpdatePassword(ctx, params)
 	if err != nil {
 		return &pb.UpdatePasswordResponse{
 			Success: false,
@@ -291,5 +301,5 @@ func (s *service) CreateDefaultMembers(members []CreateDefaultMember) error {
 		hashedPwMembers = append(hashedPwMembers, member)
 	}
 
-	return s.Repo.CreateDefaultMembers(hashedPwMembers)
+	return s.Repo.CreateDefaultMembers(context.Background(), hashedPwMembers)
 }
