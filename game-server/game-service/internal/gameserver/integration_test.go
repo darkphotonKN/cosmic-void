@@ -9,7 +9,9 @@ import (
 	"time"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
+	itemspb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/items"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
+	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	grpcauth "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/auth"
@@ -44,6 +46,57 @@ func (m *MockAuthClient) ValidateToken(ctx context.Context, req *pb.ValidateToke
 	return &pb.ValidateTokenResponse{
 		Valid:    true,
 		MemberId: uuid.New().String(),
+	}, nil
+}
+
+// MockEventEmitter for testing
+type MockEventEmitter struct{}
+
+func (m *MockEventEmitter) PublishMatchComplete(ctx context.Context, data *commontypes.MatchEndState) error {
+	return nil
+}
+
+// MockItemsClient for testing
+type MockItemsClient struct{}
+
+func (m *MockItemsClient) CreateWeapon(ctx context.Context, req *itemspb.CreateWeaponRequest) (*itemspb.Weapon, error) {
+	return &itemspb.Weapon{
+		Id:           uuid.New().String(),
+		TypeId:       "test-type",
+		RarityId:     "common",
+		AttackPower:  15,
+		Durability:   100,
+		CriticalRate: 0.1,
+		WeaponType:   "sword",
+		Description:  "A test weapon",
+	}, nil
+}
+
+func (m *MockItemsClient) GetWeaponWithTemplateByID(ctx context.Context, req *itemspb.GetWeaponRequest) (*itemspb.WeaponDetail, error) {
+	return &itemspb.WeaponDetail{
+		Id:             req.Id,
+		TypeId:         "test-type",
+		RarityId:       "common",
+		AttackPower:    15,
+		Durability:     100,
+		CriticalRate:   0.1,
+		WeaponType:     "sword",
+		Description:    "A test weapon",
+		ItemTemplateId: "test-template",
+		ItemName:       "Test Sword",
+		ItemCode:       "TEST_SWORD",
+		IconUrl:        "/icons/test-sword.png",
+		IsTradeable:    true,
+		IsDroppable:    true,
+		RequiredLevel:  1,
+		BaseSellPrice:  100,
+		BaseBuyPrice:   200,
+	}, nil
+}
+
+func (m *MockItemsClient) ListWeaponsWithTemplate(ctx context.Context) (*itemspb.ListWeaponsResponse, error) {
+	return &itemspb.ListWeaponsResponse{
+		Weapons: []*itemspb.WeaponDetail{},
 	}, nil
 }
 
@@ -91,7 +144,9 @@ func (m *mockQueueService) GetMatchedChan() chan []*types.Player {
 func TestServerHubSessionIntegration(t *testing.T) {
 	mockAuthClient := &MockAuthClient{}
 	mockQueue := NewMockQueueService()
-	server := NewServer(mockAuthClient, mockQueue)
+	mockEventEmitter := &MockEventEmitter{}
+	mockItemsClient := &MockItemsClient{}
+	server := NewServer(mockAuthClient, mockQueue, mockEventEmitter, mockItemsClient)
 
 	// create test players
 	player1 := &types.Player{
@@ -164,7 +219,9 @@ func registerTestConn(s *Server, conn *websocket.Conn, player *types.Player) cha
 func TestQueueFindGameFlow(t *testing.T) {
 	mockAuthClient := &MockAuthClient{}
 	mockQueue := NewMockQueueService()
-	server := NewServer(mockAuthClient, mockQueue)
+	mockEventEmitter := &MockEventEmitter{}
+	mockItemsClient := &MockItemsClient{}
+	server := NewServer(mockAuthClient, mockQueue, mockEventEmitter, mockItemsClient)
 
 	playerCount := 10
 	var wg sync.WaitGroup
@@ -335,7 +392,9 @@ func TestSenderToBroadcastToPlayerList(t *testing.T) {
 			registry, _ := consul.NewRegistry(consulAddr, serviceName)
 			authClient := grpcauth.NewClient(registry)
 			mockQueue := NewMockQueueService()
-			server := NewServer(authClient, mockQueue)
+			mockEventEmitter := &MockEventEmitter{}
+			mockItemsClient := &MockItemsClient{}
+			server := NewServer(authClient, mockQueue, mockEventEmitter, mockItemsClient)
 			playerIDs := tc.setupPlayers(server)
 
 			newSender := messaging.NewMessageSender(server)

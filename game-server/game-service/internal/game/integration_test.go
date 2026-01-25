@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"testing"
 	"time"
@@ -16,7 +17,10 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/serializer"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
+
+	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 )
 
 // test velocity updates transform of player entity after handle move and system update cycle
@@ -127,5 +131,20 @@ func TestPublishMatchComplete(t *testing.T) {
 		ch.Close()
 	}()
 
-	// consume for testing
+	// service setup
+	publishCh := commonbroker.NewAmqpPublisher(ch) // use adapter
+	service := NewService(publishCh)
+
+	dataJSON, err := json.Marshal(matchEndData)
+
+	assert.NoError(t, err)
+
+	service.publishCh.PublishWithContext(context.Background(), commonconstants.GameMatchEndedEvent, "fanout", commonbroker.Message{
+		Body:         dataJSON,
+		ContentType:  "application/json",
+		DeliveryMode: amqp.Persistent,
+	})
+
+	// TODO: consume for testing
+
 }
