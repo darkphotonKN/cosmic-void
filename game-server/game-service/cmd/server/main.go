@@ -110,8 +110,8 @@ func main() {
 	// setup endpoint for metrics collection
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
-		log.Println("Metrics server started on :8081")
-		http.ListenAndServe(":8081", nil)
+		log.Println("Metrics server started on :8082")
+		http.ListenAndServe(":8082", nil)
 	}()
 
 	// --- message broker - rabbit mq ---
