@@ -112,8 +112,7 @@ func (r *repository) GetPlayerMatchStats(ctx context.Context, memberID uuid.UUID
 	return &playerMatchStats, nil
 }
 
-func (r *repository) CreatePlayerRankingStats(ctx context.Context, stats *PlayerRankingStats) error {
-	stats.ID = uuid.New()
+func (r *repository) UpsertPlayerRankingStats(ctx context.Context, stats *UpdatePlayerRankingsParams) (*PlayerRankingStats, error) {
 
 	query := `
 		INSERT INTO player_ranking_stats (
@@ -122,14 +121,46 @@ func (r *repository) CreatePlayerRankingStats(ctx context.Context, stats *Player
 		) VALUES (
 			:id, :member_id, :username, :wins, :top_threes,
 			:rating, :rank_position
-		)`
+		)
+		ON CONFLICT (member_id)
+		DO UPDATE SET
+				username = EXCLUDED.username,
+				wins = EXCLUDED.wins,
+				top_threes = EXCLUDED.top_threes,
+				rating = EXCLUDED.rating,
+				rank_position = EXCLUDED.rank_position,
+				last_calculated_at = CURRENT_TIMESTAMP,
+			updated_at = CURRENT_TIMESTAMP
+		RETURNING *;
+	`
 
-	_, err := r.DB.NamedExecContext(ctx, query, stats)
+	rows, err := r.DB.NamedQueryContext(ctx, query, stats)
 	if err != nil {
-		return fmt.Errorf("failed to create player ranking stats: %w", err)
+		slog.Error("Could not run upsert to PlayerRankings successfully.",
+			"member_id", stats.MemberID,
+			"error", err,
+		)
+		return nil, commonutils.AnalyzeDBErr(err)
 	}
 
-	return nil
+	defer rows.Close()
+
+	var updated PlayerRankingStats
+
+	if rows.Next() {
+		err = rows.StructScan(&updated)
+
+		if err != nil {
+			slog.Error("Could not scan to row.",
+				"member_id", stats.MemberID,
+				"error", err,
+			)
+			return nil, commonutils.AnalyzeDBErr(err)
+		}
+
+	}
+
+	return &updated, nil
 }
 
 // CreateMatchHistory creates a new match history record

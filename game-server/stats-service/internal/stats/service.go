@@ -3,6 +3,7 @@ package stats
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats"
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
@@ -12,7 +13,7 @@ import (
 // Repository interface defines what the service needs from the repository
 type Repository interface {
 	UpsertPlayerMatchStats(ctx context.Context, params *UpdateStatsParams) (*PlayerMatchStats, error)
-	CreatePlayerRankingStats(ctx context.Context, stats *PlayerRankingStats) error
+	UpsertPlayerRankingStats(ctx context.Context, params *UpdatePlayerRankingsParams) error
 	CreateMatchHistory(ctx context.Context, history *MatchHistory) error
 	GetPlayerMatchStats(ctx context.Context, memberID uuid.UUID) (*PlayerMatchStats, error)
 }
@@ -42,22 +43,24 @@ func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.ProcessMatc
 
 	// TODO: implement seperate updates to relevant tables
 
-	for _, player := range req.Players {
+	for _, playerResults := range req.Players {
 		slog.Info("Player match outcome",
-			"player", player,
+			"playerResults", playerResults,
 		)
 
-		err := s.updatePlayerStats(ctx, player)
+		err := s.updatePlayerStats(ctx, playerResults)
 		if err != nil {
-			slog.Error("error when updating match stats", "memberID", player.MemberId, "error", err)
+			slog.Error("error when updating match stats", "memberID", playerResults.MemberId, "error", err)
+		}
+
+		// TODO: update denormalized ranking table
+		err = s.updateDenormalizedLeaderboard(ctx, playerResults)
+		if err != nil {
+			slog.Error("error when updating match stats", "memberID", playerResults.MemberId, "error", err)
 		}
 	}
 
 	// TODO: call auth service for player information
-
-	// TODO: update denormazlied ranking table
-	// - add update param struct for repo updates
-	// s.repo.CreatePlayerRankingStats(ctx, )
 
 	return &pb.ProcessMatchCompletedResponse{
 		Success: true,
@@ -72,7 +75,7 @@ func (s *service) updatePlayerStats(ctx context.Context, player *pb.PlayerMatchR
 		return err
 	}
 
-	// TODO: recalculate averages, averages WIP
+	// TODO: recalculate averages, averages migration and update WIP
 	matchHistoryData, err := s.getMatchHistory(ctx, memberId)
 
 	if err != nil {
@@ -137,4 +140,23 @@ func (s *service) getMatchHistory(ctx context.Context, memberID uuid.UUID) ([]*M
 func (s *service) calculateMatchAverage(ctx context.Context, matchHistory []*MatchHistory) (*PlayerMatchStats, error) {
 	// TODO: calculate the new averages
 	return nil, nil
+}
+
+/**
+* Handles setting up and updating the denormalized leaderboard stats.
+**/
+func (s *service) updateDenormalizedLeaderboard(ctx context.Context, results *pb.PlayerMatchResults) error {
+	// TODO: unfinished
+
+	statsParam := UpdatePlayerRankingsParams{
+		MemberID:         results.MemberId,
+		Username:         results.Username,
+		Wins:             results.Win,
+		TopThrees:        "",
+		Rating:           "",
+		RankPosition:     "",
+		LastCalculatedAt: time.Now(),
+	}
+
+	return nil
 }

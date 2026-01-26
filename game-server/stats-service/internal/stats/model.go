@@ -60,3 +60,14 @@ type UpdateStatsParams struct {
 	Deaths              int       `db:"deaths"`
 	TimesPlacedTopThree int       `db:"times_placed_top_three"`
 }
+
+// updating player rankings
+type UpdatePlayerRankingsParams struct {
+	MemberID         uuid.UUID `db:"member_id"`
+	Username         string    `db:"username"`
+	Wins             int       `db:"wins"`
+	TopThrees        int       `db:"top_threes"`
+	Rating           int       `db:"rating"`
+	RankPosition     *int      `db:"rank_position"`
+	LastCalculatedAt time.Time `db:"last_calculated_at"`
+}
