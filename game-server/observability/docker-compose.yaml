@@ -65,6 +65,8 @@ services:
       - tempo-data:/tmp/tempo
     ports:
       - "3200:3200" # HTTP
+    networks:
+      - observability
 
   # ============================================================================
   # PROMETHEUS - Metrics storage
