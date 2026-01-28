@@ -9,7 +9,6 @@ import (
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -23,14 +22,11 @@ func NewRepository(db *sqlx.DB) *repository {
 	}
 }
 
-var tracer = otel.Tracer("auth/service")
-
 func (r *repository) Create(ctx context.Context, name, email, password string) (uuid.UUID, error) {
-	ctx, span := tracer.Start(ctx, "Login")
+	ctx, span := repoTracer.Start(ctx, "repository.Create")
 	defer span.End()
 
-	// additional attributes for debugging
-	span.SetAttributes(attribute.String("email", email))
+	span.SetAttributes(attribute.String("email", email)) // debug
 
 	memberId := uuid.New()
 	query := `INSERT INTO members (id, name, email, password) VALUES ($1, $2, $3, $4)`

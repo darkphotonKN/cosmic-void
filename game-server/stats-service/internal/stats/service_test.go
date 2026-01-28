@@ -17,9 +17,11 @@ type mockRepo struct {
 	getPlayerStatsReturn *PlayerMatchStats
 	getPlayerStatsErr    error
 
-	upsertCalled bool
-	upsertParams *UpdateStatsParams
-	upsertErr    error
+	upsertCalled               bool
+	upsertParams               *UpdateStatsParams
+	upsertErr                  error
+	upsertPlayerRankingsCalled bool
+	upsertPlayerRankingParams  *UpdatePlayerRankingsParams
 }
 
 func (m *mockRepo) GetPlayerMatchStats(ctx context.Context, memberID uuid.UUID) (*PlayerMatchStats, error) {
@@ -32,6 +34,12 @@ func (m *mockRepo) UpsertPlayerMatchStats(ctx context.Context, params *UpdateSta
 	return nil, m.upsertErr
 }
 
+func (m *mockRepo) UpsertPlayerRankingStats(ctx context.Context, params *UpdatePlayerRankingsParams) (*PlayerRankingStats, error) {
+	m.upsertPlayerRankingsCalled = true
+	m.upsertPlayerRankingParams = params
+	return nil, m.upsertErr
+}
+
 // NOTE: update mock methods if needed
 func (m *mockRepo) CreatePlayerRankingStats(ctx context.Context, stats *PlayerRankingStats) error {
 	return nil
@@ -39,6 +47,10 @@ func (m *mockRepo) CreatePlayerRankingStats(ctx context.Context, stats *PlayerRa
 
 func (m *mockRepo) CreateMatchHistory(ctx context.Context, history *MatchHistory) error {
 	return nil
+}
+
+func (m *mockRepo) GetPlayerRankingStats(ctx context.Context, memberID uuid.UUID) (*PlayerRankingStats, error) {
+	return nil, nil
 }
 
 // test publisher just for testing

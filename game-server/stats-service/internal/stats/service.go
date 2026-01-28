@@ -13,7 +13,7 @@ import (
 // Repository interface defines what the service needs from the repository
 type Repository interface {
 	UpsertPlayerMatchStats(ctx context.Context, params *UpdateStatsParams) (*PlayerMatchStats, error)
-	UpsertPlayerRankingStats(ctx context.Context, params *UpdatePlayerRankingsParams) error
+	UpsertPlayerRankingStats(ctx context.Context, params *UpdatePlayerRankingsParams) (*PlayerRankingStats, error)
 	CreateMatchHistory(ctx context.Context, history *MatchHistory) error
 	GetPlayerMatchStats(ctx context.Context, memberID uuid.UUID) (*PlayerMatchStats, error)
 	GetPlayerRankingStats(ctx context.Context, memberID uuid.UUID) (*PlayerRankingStats, error)
@@ -49,15 +49,44 @@ func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.ProcessMatc
 			"playerResults", playerResults,
 		)
 
+		// -- player stats --
 		err := s.updatePlayerStats(ctx, playerResults)
 		if err != nil {
 			slog.Error("error when updating match stats", "memberID", playerResults.MemberId, "error", err)
 		}
 
-		// TODO: update denormalized ranking table
+		// -- leaderboards --
 		err = s.updateDenormalizedLeaderboard(ctx, playerResults)
 		if err != nil {
 			slog.Error("error when updating match stats", "memberID", playerResults.MemberId, "error", err)
+		}
+
+		// -- match history --
+		sessionId, err := uuid.Parse(req.SessionId)
+		if err != nil {
+			slog.Error("error parsing session id", "sessionId", req.SessionId, "error", err)
+			continue
+		}
+
+		memberId, err := uuid.Parse(playerResults.MemberId)
+		if err != nil {
+			slog.Error("error parsing member id", "memberId", playerResults.MemberId, "error", err)
+			continue
+		}
+
+		matchHistory := &MatchHistory{
+			SessionID:      sessionId,
+			MemberID:       memberId,
+			Win:            playerResults.Win,
+			FinalPosition:  int(playerResults.FinalPosition),
+			Kills:          int(playerResults.Kills),
+			Deaths:         int(playerResults.Deaths),
+			MatchStartedAt: req.MatchStartedAt.AsTime(),
+		}
+
+		err = s.repo.CreateMatchHistory(ctx, matchHistory)
+		if err != nil {
+			slog.Error("error creating match history", "memberID", playerResults.MemberId, "error", err)
 		}
 	}
 
@@ -184,7 +213,13 @@ func (s *service) updateDenormalizedLeaderboard(ctx context.Context, results *pb
 		LastCalculatedAt: time.Now(),
 	}
 
-	s.updateDenormalizedLeaderboard(ctx, statsParam)
+	playerRankingStats, err := s.repo.UpsertPlayerRankingStats(ctx, statsParam)
+
+	if err != nil {
+		return err
+	}
+
+	slog.Debug("after upsert for player ranking stats", "playerRankingStats", playerRankingStats)
 
 	return nil
 }

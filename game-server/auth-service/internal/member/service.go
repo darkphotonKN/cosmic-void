@@ -16,6 +16,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"go.opentelemetry.io/otel/codes"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -83,9 +84,20 @@ func (s *service) GetMember(ctx context.Context, req *pb.GetMemberRequest) (*pb.
 }
 
 func (s *service) CreateMember(ctx context.Context, req *pb.CreateMemberRequest) (*pb.Member, error) {
-	// Hash the password
+	// span for entire function
+	ctx, span := serviceTracer.Start(ctx, "service.CreateMember")
+	defer span.End()
+
+	// span just for password
+	ctx, hashSpan := serviceTracer.Start(ctx, "service.HashPassword")
+
+	// hash the password
 	hashedPw, err := s.HashPassword(req.Password)
+
+	hashSpan.End()
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "password hashing failed")
 		return nil, fmt.Errorf("error hashing password: %w", err)
 	}
 
