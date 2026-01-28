@@ -57,17 +57,14 @@ services:
   # Stores and queries traces
   # Grafana connects here to display trace data
   tempo:
-    image: grafana/tempo:latest
+    image: grafana/tempo:2.3.1
     container_name: tempo
     command: ["-config.file=/etc/tempo.yaml"]
     volumes:
       - ./config/tempo.yaml:/etc/tempo.yaml:ro
-      - tempo-data:/var/tempo
+      - tempo-data:/tmp/tempo
     ports:
-      - "3200:3200" # Tempo API (Grafana connects here)
-      - "4317" # OTLP gRPC (internal, Collector sends here)
-    networks:
-      - observability
+      - "3200:3200" # HTTP
 
   # ============================================================================
   # PROMETHEUS - Metrics storage

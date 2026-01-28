@@ -10,11 +10,8 @@
 # - Lookup by trace_id only
 
 # Grafana Tempo Configuration (single-node dev setup)
-stream_over_http_enabled: true
-
 server:
   http_listen_port: 3200
-  grpc_listen_port: 9095
 
 distributor:
   receivers:
@@ -24,22 +21,18 @@ distributor:
           endpoint: 0.0.0.0:4317
         http:
           endpoint: 0.0.0.0:4318
-  ring:
-    kvstore:
-      store: inmemory
 
 ingester:
   max_block_duration: 5m
-  lifecycler:
-    ring:
-      kvstore:
-        store: inmemory
-      replication_factor: 1
+
+compactor:
+  compaction:
+    block_retention: 1h
 
 storage:
   trace:
     backend: local
     wal:
-      path: /var/tempo/wal
+      path: /tmp/tempo/wal
     local:
-      path: /var/tempo/blocks
+      path: /tmp/tempo/blocks

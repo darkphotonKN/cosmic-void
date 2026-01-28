@@ -16,6 +16,7 @@ type Repository interface {
 	UpsertPlayerRankingStats(ctx context.Context, params *UpdatePlayerRankingsParams) error
 	CreateMatchHistory(ctx context.Context, history *MatchHistory) error
 	GetPlayerMatchStats(ctx context.Context, memberID uuid.UUID) (*PlayerMatchStats, error)
+	GetPlayerRankingStats(ctx context.Context, memberID uuid.UUID) (*PlayerRankingStats, error)
 }
 
 type service struct {
@@ -146,17 +147,44 @@ func (s *service) calculateMatchAverage(ctx context.Context, matchHistory []*Mat
 * Handles setting up and updating the denormalized leaderboard stats.
 **/
 func (s *service) updateDenormalizedLeaderboard(ctx context.Context, results *pb.PlayerMatchResults) error {
-	// TODO: unfinished
+	memberId, err := uuid.Parse(results.MemberId)
+	if err != nil {
+		slog.Info("Errored when attempting to get parse member id into UUID", "err", err)
+		return err
+	}
 
-	statsParam := UpdatePlayerRankingsParams{
-		MemberID:         results.MemberId,
+	stats, err := s.repo.GetPlayerMatchStats(ctx, memberId)
+
+	if err != nil {
+		return err
+	}
+
+	wins := stats.Wins
+	topThree := stats.TimesPlacedTopThree
+	if results.Win {
+		wins += 1
+	}
+	if results.FinalPosition >= 3 {
+		topThree += 1
+	}
+
+	// recalculate rank position
+	rankingStats, err := s.repo.GetPlayerRankingStats(ctx, memberId)
+	// TODO: still working on this
+	slog.Debug("ranking stats", rankingStats)
+	// ranking := rankingStats.RankPosition
+
+	statsParam := &UpdatePlayerRankingsParams{
+		MemberID:         memberId,
 		Username:         results.Username,
-		Wins:             results.Win,
-		TopThrees:        "",
-		Rating:           "",
-		RankPosition:     "",
+		Wins:             wins,
+		TopThrees:        topThree,
+		Rating:           0,
+		RankPosition:     rankingStats.RankPosition,
 		LastCalculatedAt: time.Now(),
 	}
+
+	s.updateDenormalizedLeaderboard(ctx, statsParam)
 
 	return nil
 }

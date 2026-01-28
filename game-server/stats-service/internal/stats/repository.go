@@ -99,7 +99,6 @@ func (r *repository) GetPlayerMatchStats(ctx context.Context, memberID uuid.UUID
 	var playerMatchStats PlayerMatchStats
 
 	err := r.DB.GetContext(ctx, &playerMatchStats, query, memberID)
-
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -161,6 +160,38 @@ func (r *repository) UpsertPlayerRankingStats(ctx context.Context, stats *Update
 	}
 
 	return &updated, nil
+}
+
+func (r *repository) GetPlayerRankingStats(ctx context.Context, memberID uuid.UUID) (*PlayerRankingStats, error) {
+	query := `
+		SELECT
+			id,
+			member_id,
+			username,
+			wins,
+			top_threes,
+			rating,
+			rank_position,
+			last_calculated_at,
+			created_at,
+			updated_at
+		FROM player_ranking_stats
+		WHERE member_id = $1
+	`
+
+	var playerRankingStats PlayerRankingStats
+
+	err := r.DB.GetContext(ctx, &playerRankingStats, query, memberID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		slog.Error("Error getting player ranking stats", "memberID", memberID, "error", err)
+		return nil, err
+	}
+
+	return &playerRankingStats, nil
 }
 
 // CreateMatchHistory creates a new match history record
