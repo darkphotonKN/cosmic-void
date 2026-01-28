@@ -169,6 +169,58 @@ type CreateItemTemplateRequest struct {
 	BaseBuyPrice  *int      `json:"base_buy_price"`
 }
 
+// ArmorWithTemplate represents an armor joined with its item template
+type ArmorWithTemplate struct {
+	// Armor fields
+	ID              uuid.UUID `db:"id"`
+	TypeID          uuid.UUID `db:"type_id"`
+	RarityID        uuid.UUID `db:"rarity_id"`
+	DefenseRating   int       `db:"defense_rating"`
+	Durability      int       `db:"durability"`
+	MagicResistance *int      `db:"magic_resistance"`
+	ArmorSlot       *string   `db:"armor_slot"`
+	Description     *string   `db:"description"`
+	CreatedAt       time.Time `db:"created_at"`
+	UpdatedAt       time.Time `db:"updated_at"`
+
+	// ItemTemplate fields
+	ItemTemplateID uuid.UUID `db:"item_template_id"`
+	ItemName       string    `db:"item_name"`
+	ItemCode       string    `db:"item_code"`
+	IconURL        *string   `db:"icon_url"`
+	IsTradeable    bool      `db:"is_tradeable"`
+	IsDroppable    bool      `db:"is_droppable"`
+	RequiredLevel  int       `db:"required_level"`
+	BaseSellPrice  int       `db:"base_sell_price"`
+	BaseBuyPrice   int       `db:"base_buy_price"`
+}
+
+// ConsumableWithTemplate represents a consumable joined with its item template
+type ConsumableWithTemplate struct {
+	// Consumable fields
+	ID            uuid.UUID `db:"id"`
+	TypeID        uuid.UUID `db:"type_id"`
+	RarityID      uuid.UUID `db:"rarity_id"`
+	HealingAmount *int      `db:"healing_amount"`
+	ManaAmount    *int      `db:"mana_amount"`
+	BuffDuration  *int      `db:"buff_duration"`
+	MaxStackSize  int       `db:"max_stack_size"`
+	Description   *string   `db:"description"`
+	CreatedAt     time.Time `db:"created_at"`
+	UpdatedAt     time.Time `db:"updated_at"`
+
+	// ItemTemplate fields
+	ItemTemplateID uuid.UUID `db:"item_template_id"`
+	ItemName       string    `db:"item_name"`
+	ItemCode       string    `db:"item_code"`
+	IconURL        *string   `db:"icon_url"`
+	IsTradeable    bool      `db:"is_tradeable"`
+	IsDroppable    bool      `db:"is_droppable"`
+	RequiredLevel  int       `db:"required_level"`
+	BaseSellPrice  int       `db:"base_sell_price"`
+	BaseBuyPrice   int       `db:"base_buy_price"`
+}
+
 // WeaponWithTemplate represents a weapon joined with its item template
 // This is used for detailed queries that need both weapon and template information
 type WeaponWithTemplate struct {

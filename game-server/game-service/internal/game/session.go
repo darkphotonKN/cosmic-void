@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/items"
 	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
+	grpcitems "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/items"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
@@ -47,23 +47,15 @@ type Session struct {
 	// TEST: testing only
 	TestMessageSpy chan types.Message
 
+	// item pool (session-level, items are removed once assigned to a container)
+	itemPool            []itemTemplate
+	itemPoolInitialized bool
+
 	// dependency injections
 	sender          SessionSender
 	stateSerializer *serializer.StateSerializer
 	eventEmitter    EventEmitter
-}
-
-var ItemPool = []ItemConfig{
-	{Name: "Health Potion", Quantity: 0},
-	{Name: "Mana Potion", Quantity: 0},
-	{Name: "Gold Coin", Quantity: 0},
-	{Name: "Silver Coin", Quantity: 0},
-	{Name: "Iron Sword", Quantity: 0},
-	{Name: "Wooden Shield", Quantity: 0},
-	{Name: "Magic Scroll", Quantity: 0},
-	{Name: "Ancient Key", Quantity: 0},
-	{Name: "Gemstone", Quantity: 0},
-	{Name: "Mystery Aex", Quantity: 0},
+	itemsClient     grpcitems.ItemsClient
 }
 
 type SessionSender interface {
@@ -77,7 +69,7 @@ type EventEmitter interface {
 	PublishMatchComplete(ctx context.Context, data *commontypes.MatchEndState) error
 }
 
-func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSerializer, em *ecs.EntityManager, eventEmitter EventEmitter) *Session {
+func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSerializer, em *ecs.EntityManager, eventEmitter EventEmitter, itemsClient grpcitems.ItemsClient) *Session {
 	sessionId := uuid.New()
 
 	s := &Session{
@@ -99,6 +91,7 @@ func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSer
 		sender:                   sender,
 		stateSerializer:          serializer,
 		eventEmitter:             eventEmitter,
+		itemsClient:              itemsClient,
 	}
 
 	go s.Start()
@@ -625,15 +618,17 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		// Only open, never close (chest stays open once opened)
 		containerOpenable.IsOpen = true
 
-		// create items on first open
+		// create items on first open by fetching from items-service via gRPC
 		if containerOpenable.HasBeenOpened == false {
 			containerOpenable.HasBeenOpened = true
-			itemIDs := make([]uuid.UUID, 0)
-			count := rand.IntN(4) + 1
-			for i := 0; i < count; i++ {
-				itemID := s.createRandomItem()
-				itemIDs = append(itemIDs, itemID)
+
+			itemIDs, err := s.generateContainerItems()
+
+			if err != nil {
+				fmt.Printf("Error generating container items: %v\n", err)
+				return fmt.Errorf("failed to generate container items: %w", err)
 			}
+
 			itemIDsComponent, hasItemIDs := targetEntity.GetComponent(ecs.ComponentTypeItemIDList)
 			if !hasItemIDs {
 				slog.Error("Failed to retrieve container entity itemIDs component", "targetEntityID", targetEntityID)
@@ -724,6 +719,106 @@ func (s *Session) handleLoot(playerID uuid.UUID, containerEntityID uuid.UUID, lo
 	return nil
 }
 
+// itemTemplate is a unified representation of an item from items-service
+type itemTemplate struct {
+	Name string
+}
+
+/**
+* initItemPool fetches all item templates from items-service via gRPC once
+* and stores them in the session-level item pool.
+**/
+func (s *Session) initItemPool() error {
+	if s.itemsClient == nil {
+		return fmt.Errorf("itemsClient is not initialized")
+	}
+
+	ctx := context.Background()
+	s.itemPool = make([]itemTemplate, 0)
+
+	weapons, err := s.itemsClient.ListWeaponsWithTemplate(ctx)
+	if err != nil {
+		fmt.Printf("Warning: failed to fetch weapons: %v\n", err)
+	} else {
+		for _, w := range weapons.Weapons {
+			s.itemPool = append(s.itemPool, itemTemplate{Name: w.ItemName})
+		}
+	}
+
+	armors, err := s.itemsClient.ListArmorsWithTemplate(ctx)
+	if err != nil {
+		fmt.Printf("Warning: failed to fetch armors: %v\n", err)
+	} else {
+		for _, a := range armors.Armors {
+			s.itemPool = append(s.itemPool, itemTemplate{Name: a.ItemName})
+		}
+	}
+
+	consumables, err := s.itemsClient.ListConsumablesWithTemplate(ctx)
+	if err != nil {
+		fmt.Printf("Warning: failed to fetch consumables: %v\n", err)
+	} else {
+		for _, c := range consumables.Consumables {
+			s.itemPool = append(s.itemPool, itemTemplate{Name: c.ItemName})
+		}
+	}
+
+	if len(s.itemPool) == 0 {
+		return fmt.Errorf("no items available from items-service")
+	}
+
+	s.itemPoolInitialized = true
+	fmt.Printf("Item pool initialized with %d items\n", len(s.itemPool))
+	return nil
+}
+
+/**
+* generateContainerItems picks 1-4 unique items from the session item pool,
+* removes them from the pool, creates item entities, and returns their IDs.
+**/
+func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
+	// Initialize pool on first call
+	if !s.itemPoolInitialized {
+		if err := s.initItemPool(); err != nil {
+			return nil, err
+		}
+	}
+
+	if len(s.itemPool) == 0 {
+		return nil, fmt.Errorf("item pool is empty, no more items available")
+	}
+
+	// Randomly select 1-4 items (capped by remaining pool size)
+	count := rand.IntN(4) + 1
+	if count > len(s.itemPool) {
+		count = len(s.itemPool)
+	}
+
+	// Fisher-Yates shuffle the pool
+	for i := len(s.itemPool) - 1; i > 0; i-- {
+		j := rand.IntN(i + 1)
+		s.itemPool[i], s.itemPool[j] = s.itemPool[j], s.itemPool[i]
+	}
+
+	// Take from the end and shrink the pool
+	selected := make([]itemTemplate, count)
+	copy(selected, s.itemPool[len(s.itemPool)-count:])
+	s.itemPool = s.itemPool[:len(s.itemPool)-count]
+
+	// Create item entities from selected templates
+	itemIDs := make([]uuid.UUID, 0, count)
+	for _, item := range selected {
+		config := ItemConfig{
+			Name:     item.Name,
+			ItemTool: s.itemsClient,
+		}
+		itemID := s.AddItem(config)
+		itemIDs = append(itemIDs, itemID)
+	}
+
+	return itemIDs, nil
+}
+
 /**
 * checks if a target is within 2d cartesian coordinates range of another.
 **/
@@ -742,55 +837,12 @@ func (s *Session) calcWithinDistance(x, y, xTarget, yTarget float64) bool {
 }
 
 /**
-* createRandomItem creates a random item entity and returns its ID
-**/
-func (s *Session) createRandomItem() uuid.UUID {
-	rendomIndex := rand.IntN(10)
-	itemOfPool := ItemPool[rendomIndex]
-	quantity := rand.IntN(10) + 1
-	item := ItemConfig{
-		Name:     itemOfPool.Name,
-		Quantity: quantity,
-	}
-	itemId := s.AddItem(item)
-	return itemId
-}
-
-/**
 * addItem creates an item entity from config and returns its ID
 **/
 func (s *Session) AddItem(itemConfig ItemConfig) uuid.UUID {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	entity := CreateItemEntity(s.EntityManager, itemConfig)
-
-	// Log created entity details
-	slog.Info("Created Item Entity",
-		"entityID", entity.ID,
-		"itemName", itemConfig.Name,
-		"quantity", itemConfig.Quantity)
-
-	// Log entity components
-	if itemComp, hasItem := entity.GetComponent(ecs.ComponentTypeItem); hasItem {
-		item := itemComp.(*components.ItemComponent)
-		slog.Debug("ItemComponent details",
-			"itemName", item.ItemName,
-			"quantity", item.Quantity,
-			"itemToolType", fmt.Sprintf("%T", item.ItemTool))
-
-		// If weapon data, log weapon list
-		if weaponResponse, ok := item.ItemTool.(*pb.ListWeaponsResponse); ok && weaponResponse != nil {
-			slog.Debug("Weapons data", "weaponCount", len(weaponResponse.Weapons))
-			for i, weapon := range weaponResponse.Weapons {
-				slog.Debug("Weapon details",
-					"index", i+1,
-					"name", weapon.ItemName,
-					"attackPower", weapon.AttackPower,
-					"durability", weapon.Durability,
-					"criticalRate", weapon.CriticalRate)
-			}
-		}
-	}
 
 	return entity.ID
 }

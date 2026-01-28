@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v6.32.0
-// source: api/proto/items/items.proto
+// source: common/api/proto/items/items.proto
 
 package items
 
@@ -20,9 +20,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ItemsService_CreateWeapon_FullMethodName              = "/items.ItemsService/CreateWeapon"
-	ItemsService_GetWeaponWithTemplateByID_FullMethodName = "/items.ItemsService/GetWeaponWithTemplateByID"
-	ItemsService_ListWeaponsWithTemplate_FullMethodName   = "/items.ItemsService/ListWeaponsWithTemplate"
+	ItemsService_CreateWeapon_FullMethodName                = "/items.ItemsService/CreateWeapon"
+	ItemsService_GetWeaponWithTemplateByID_FullMethodName   = "/items.ItemsService/GetWeaponWithTemplateByID"
+	ItemsService_ListWeaponsWithTemplate_FullMethodName     = "/items.ItemsService/ListWeaponsWithTemplate"
+	ItemsService_ListArmorsWithTemplate_FullMethodName      = "/items.ItemsService/ListArmorsWithTemplate"
+	ItemsService_ListConsumablesWithTemplate_FullMethodName = "/items.ItemsService/ListConsumablesWithTemplate"
 )
 
 // ItemsServiceClient is the client API for ItemsService service.
@@ -35,6 +37,10 @@ type ItemsServiceClient interface {
 	CreateWeapon(ctx context.Context, in *CreateWeaponRequest, opts ...grpc.CallOption) (*Weapon, error)
 	GetWeaponWithTemplateByID(ctx context.Context, in *GetWeaponRequest, opts ...grpc.CallOption) (*WeaponDetail, error)
 	ListWeaponsWithTemplate(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListWeaponsResponse, error)
+	// Armor operations
+	ListArmorsWithTemplate(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListArmorsResponse, error)
+	// Consumable operations
+	ListConsumablesWithTemplate(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListConsumablesResponse, error)
 }
 
 type itemsServiceClient struct {
@@ -75,6 +81,26 @@ func (c *itemsServiceClient) ListWeaponsWithTemplate(ctx context.Context, in *em
 	return out, nil
 }
 
+func (c *itemsServiceClient) ListArmorsWithTemplate(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListArmorsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListArmorsResponse)
+	err := c.cc.Invoke(ctx, ItemsService_ListArmorsWithTemplate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemsServiceClient) ListConsumablesWithTemplate(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListConsumablesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListConsumablesResponse)
+	err := c.cc.Invoke(ctx, ItemsService_ListConsumablesWithTemplate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ItemsServiceServer is the server API for ItemsService service.
 // All implementations must embed UnimplementedItemsServiceServer
 // for forward compatibility.
@@ -85,6 +111,10 @@ type ItemsServiceServer interface {
 	CreateWeapon(context.Context, *CreateWeaponRequest) (*Weapon, error)
 	GetWeaponWithTemplateByID(context.Context, *GetWeaponRequest) (*WeaponDetail, error)
 	ListWeaponsWithTemplate(context.Context, *emptypb.Empty) (*ListWeaponsResponse, error)
+	// Armor operations
+	ListArmorsWithTemplate(context.Context, *emptypb.Empty) (*ListArmorsResponse, error)
+	// Consumable operations
+	ListConsumablesWithTemplate(context.Context, *emptypb.Empty) (*ListConsumablesResponse, error)
 	mustEmbedUnimplementedItemsServiceServer()
 }
 
@@ -103,6 +133,12 @@ func (UnimplementedItemsServiceServer) GetWeaponWithTemplateByID(context.Context
 }
 func (UnimplementedItemsServiceServer) ListWeaponsWithTemplate(context.Context, *emptypb.Empty) (*ListWeaponsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListWeaponsWithTemplate not implemented")
+}
+func (UnimplementedItemsServiceServer) ListArmorsWithTemplate(context.Context, *emptypb.Empty) (*ListArmorsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListArmorsWithTemplate not implemented")
+}
+func (UnimplementedItemsServiceServer) ListConsumablesWithTemplate(context.Context, *emptypb.Empty) (*ListConsumablesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListConsumablesWithTemplate not implemented")
 }
 func (UnimplementedItemsServiceServer) mustEmbedUnimplementedItemsServiceServer() {}
 func (UnimplementedItemsServiceServer) testEmbeddedByValue()                      {}
@@ -179,6 +215,42 @@ func _ItemsService_ListWeaponsWithTemplate_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ItemsService_ListArmorsWithTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServiceServer).ListArmorsWithTemplate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ItemsService_ListArmorsWithTemplate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServiceServer).ListArmorsWithTemplate(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ItemsService_ListConsumablesWithTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServiceServer).ListConsumablesWithTemplate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ItemsService_ListConsumablesWithTemplate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServiceServer).ListConsumablesWithTemplate(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ItemsService_ServiceDesc is the grpc.ServiceDesc for ItemsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -198,7 +270,15 @@ var ItemsService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "ListWeaponsWithTemplate",
 			Handler:    _ItemsService_ListWeaponsWithTemplate_Handler,
 		},
+		{
+			MethodName: "ListArmorsWithTemplate",
+			Handler:    _ItemsService_ListArmorsWithTemplate_Handler,
+		},
+		{
+			MethodName: "ListConsumablesWithTemplate",
+			Handler:    _ItemsService_ListConsumablesWithTemplate_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "api/proto/items/items.proto",
+	Metadata: "common/api/proto/items/items.proto",
 }

@@ -63,3 +63,29 @@ func (c *Client) ListWeaponsWithTemplate(ctx context.Context) (*pb.ListWeaponsRe
 	weapons, err := client.ListWeaponsWithTemplate(ctx, &emptypb.Empty{})
 	return weapons, err
 }
+
+// ListArmorsWithTemplate lists all armors with template information
+func (c *Client) ListArmorsWithTemplate(ctx context.Context) (*pb.ListArmorsResponse, error) {
+	conn, err := discovery.ServiceConnection(ctx, serviceName, c.registry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to items service: %w", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewItemsServiceClient(conn)
+	armors, err := client.ListArmorsWithTemplate(ctx, &emptypb.Empty{})
+	return armors, err
+}
+
+// ListConsumablesWithTemplate lists all consumables with template information
+func (c *Client) ListConsumablesWithTemplate(ctx context.Context) (*pb.ListConsumablesResponse, error) {
+	conn, err := discovery.ServiceConnection(ctx, serviceName, c.registry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to items service: %w", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewItemsServiceClient(conn)
+	consumables, err := client.ListConsumablesWithTemplate(ctx, &emptypb.Empty{})
+	return consumables, err
+}

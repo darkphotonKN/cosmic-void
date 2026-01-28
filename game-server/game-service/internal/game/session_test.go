@@ -50,7 +50,7 @@ func TestSessionCreation(t *testing.T) {
 	em := ecs.NewEntityManager()
 	stateSerializer := serializer.NewStateSerializer(em)
 	mockEmitter := &mockEventEmitter{}
-	session := NewSession(sender, stateSerializer, em, mockEmitter)
+	session := NewSession(sender, stateSerializer, em, mockEmitter, nil)
 
 	// verify session initialized
 	require.NotNil(t, session, "Session should not be nil")
@@ -72,7 +72,7 @@ func TestSessionAddPlayer(t *testing.T) {
 	em := ecs.NewEntityManager()
 	stateSerializer := serializer.NewStateSerializer(em)
 	mockEmitter := &mockEventEmitter{}
-	session := NewSession(sender, stateSerializer, em, mockEmitter)
+	session := NewSession(sender, stateSerializer, em, mockEmitter, nil)
 	defer session.Shutdown()
 
 	playerID := uuid.New()
@@ -106,7 +106,7 @@ func TestSessionAddMultiplePlayers(t *testing.T) {
 	em := ecs.NewEntityManager()
 	stateSerializer := serializer.NewStateSerializer(em)
 	mockEmitter := &mockEventEmitter{}
-	session := NewSession(sender, stateSerializer, em, mockEmitter)
+	session := NewSession(sender, stateSerializer, em, mockEmitter, nil)
 	defer session.Shutdown()
 
 	player1ID := uuid.New()
@@ -131,7 +131,7 @@ func TestAddPlayerSetsInitialPosition(t *testing.T) {
 	em := ecs.NewEntityManager()
 	stateSerializer := serializer.NewStateSerializer(em)
 	mockEmitter := &mockEventEmitter{}
-	session := NewSession(sender, stateSerializer, em, mockEmitter)
+	session := NewSession(sender, stateSerializer, em, mockEmitter, nil)
 
 	player1ID := uuid.New()
 	username := "Player1"
@@ -194,7 +194,7 @@ func TestHandleInteract(t *testing.T) {
 	em := ecs.NewEntityManager()
 	stateSerializer := serializer.NewStateSerializer(em)
 	mockEmitter := &mockEventEmitter{}
-	session := NewSession(sender, stateSerializer, em, mockEmitter)
+	session := NewSession(sender, stateSerializer, em, mockEmitter, nil)
 
 	player1ID := uuid.New()
 	username := "Player1"
@@ -260,7 +260,7 @@ func TestHandleInteractContainer(t *testing.T) {
 	em := ecs.NewEntityManager()
 	stateSerializer := serializer.NewStateSerializer(em)
 	mockEmitter := &mockEventEmitter{}
-	session := NewSession(sender, stateSerializer, em, mockEmitter)
+	session := NewSession(sender, stateSerializer, em, mockEmitter, nil)
 
 	player1ID := uuid.New()
 	username := "Player1"

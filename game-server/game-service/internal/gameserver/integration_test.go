@@ -100,6 +100,18 @@ func (m *MockItemsClient) ListWeaponsWithTemplate(ctx context.Context) (*itemspb
 	}, nil
 }
 
+func (m *MockItemsClient) ListArmorsWithTemplate(ctx context.Context) (*itemspb.ListArmorsResponse, error) {
+	return &itemspb.ListArmorsResponse{
+		Armors: []*itemspb.ArmorDetail{},
+	}, nil
+}
+
+func (m *MockItemsClient) ListConsumablesWithTemplate(ctx context.Context) (*itemspb.ListConsumablesResponse, error) {
+	return &itemspb.ListConsumablesResponse{
+		Consumables: []*itemspb.ConsumableDetail{},
+	}, nil
+}
+
 type mockQueueService struct {
 	players         []*types.Player
 	matchedChan     chan []*types.Player

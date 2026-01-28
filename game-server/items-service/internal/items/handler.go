@@ -195,3 +195,114 @@ func (h *Handler) ListWeaponsWithTemplate(ctx context.Context, _ *emptypb.Empty)
 		Weapons: pbWeapons,
 	}, nil
 }
+
+// ListArmorsWithTemplate retrieves all armors with their template information (gRPC endpoint)
+func (h *Handler) ListArmorsWithTemplate(ctx context.Context, _ *emptypb.Empty) (*pb.ListArmorsResponse, error) {
+	armors, err := h.service.ListArmorsWithTemplate(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list armors: %v", err)
+	}
+
+	pbArmors := make([]*pb.ArmorDetail, len(armors))
+	for i, armor := range armors {
+		var magicResistance int32
+		if armor.MagicResistance != nil {
+			magicResistance = int32(*armor.MagicResistance)
+		}
+		var armorSlot, description, iconURL string
+		if armor.ArmorSlot != nil {
+			armorSlot = *armor.ArmorSlot
+		}
+		if armor.Description != nil {
+			description = *armor.Description
+		}
+		if armor.IconURL != nil {
+			iconURL = *armor.IconURL
+		}
+
+		pbArmors[i] = &pb.ArmorDetail{
+			Id:              armor.ID.String(),
+			TypeId:          armor.TypeID.String(),
+			RarityId:        armor.RarityID.String(),
+			DefenseRating:   int32(armor.DefenseRating),
+			Durability:      int32(armor.Durability),
+			MagicResistance: magicResistance,
+			ArmorSlot:       armorSlot,
+			Description:     description,
+
+			ItemTemplateId: armor.ItemTemplateID.String(),
+			ItemName:       armor.ItemName,
+			ItemCode:       armor.ItemCode,
+			IconUrl:        iconURL,
+			IsTradeable:    armor.IsTradeable,
+			IsDroppable:    armor.IsDroppable,
+			RequiredLevel:  int32(armor.RequiredLevel),
+			BaseSellPrice:  int32(armor.BaseSellPrice),
+			BaseBuyPrice:   int32(armor.BaseBuyPrice),
+
+			CreatedAt: timestamppb.New(armor.CreatedAt),
+			UpdatedAt: timestamppb.New(armor.UpdatedAt),
+		}
+	}
+
+	return &pb.ListArmorsResponse{
+		Armors: pbArmors,
+	}, nil
+}
+
+// ListConsumablesWithTemplate retrieves all consumables with their template information (gRPC endpoint)
+func (h *Handler) ListConsumablesWithTemplate(ctx context.Context, _ *emptypb.Empty) (*pb.ListConsumablesResponse, error) {
+	consumables, err := h.service.ListConsumablesWithTemplate(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list consumables: %v", err)
+	}
+
+	pbConsumables := make([]*pb.ConsumableDetail, len(consumables))
+	for i, consumable := range consumables {
+		var healingAmount, manaAmount, buffDuration int32
+		if consumable.HealingAmount != nil {
+			healingAmount = int32(*consumable.HealingAmount)
+		}
+		if consumable.ManaAmount != nil {
+			manaAmount = int32(*consumable.ManaAmount)
+		}
+		if consumable.BuffDuration != nil {
+			buffDuration = int32(*consumable.BuffDuration)
+		}
+		var description, iconURL string
+		if consumable.Description != nil {
+			description = *consumable.Description
+		}
+		if consumable.IconURL != nil {
+			iconURL = *consumable.IconURL
+		}
+
+		pbConsumables[i] = &pb.ConsumableDetail{
+			Id:            consumable.ID.String(),
+			TypeId:        consumable.TypeID.String(),
+			RarityId:      consumable.RarityID.String(),
+			HealingAmount: healingAmount,
+			ManaAmount:    manaAmount,
+			BuffDuration:  buffDuration,
+			MaxStackSize:  int32(consumable.MaxStackSize),
+			Description:   description,
+
+			ItemTemplateId: consumable.ItemTemplateID.String(),
+			ItemName:       consumable.ItemName,
+			ItemCode:       consumable.ItemCode,
+			IconUrl:        iconURL,
+			IsTradeable:    consumable.IsTradeable,
+			IsDroppable:    consumable.IsDroppable,
+			RequiredLevel:  int32(consumable.RequiredLevel),
+			BaseSellPrice:  int32(consumable.BaseSellPrice),
+			BaseBuyPrice:   int32(consumable.BaseBuyPrice),
+
+			CreatedAt: timestamppb.New(consumable.CreatedAt),
+			UpdatedAt: timestamppb.New(consumable.UpdatedAt),
+		}
+	}
+
+	return &pb.ListConsumablesResponse{
+		Consumables: pbConsumables,
+	}, nil
+}

@@ -53,7 +53,7 @@ func TestHandleMoveUpdatesPositionIntegration(t *testing.T) {
 	em := ecs.NewEntityManager()
 	stateSerializer := serializer.NewStateSerializer(em)
 	mockEmitter := &mockEventEmitter{}
-	session := NewSession(sender, stateSerializer, em, mockEmitter)
+	session := NewSession(sender, stateSerializer, em, mockEmitter, nil)
 
 	player1ID := uuid.New()
 	username := "Player1"

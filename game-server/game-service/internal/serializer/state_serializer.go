@@ -1,7 +1,8 @@
 package serializer
 
 import (
-	"fmt"
+	"context"
+	"log"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
@@ -19,6 +20,65 @@ type StateSerializer struct {
 
 func NewStateSerializer(em *ecs.EntityManager) *StateSerializer {
 	return &StateSerializer{em: em}
+}
+
+// populateItemDetails fetches item details from items-service via the item's
+// ItemTool gRPC client and populates the ItemState accordingly.
+func populateItemDetails(item *components.ItemComponent, itemState *types.ItemState) {
+	if item.ItemTool == nil {
+		return
+	}
+
+	ctx := context.Background()
+
+	// Try weapons
+	weaponResponse, err := item.ItemTool.ListWeaponsWithTemplate(ctx)
+	if err != nil {
+		log.Printf("Failed to fetch weapons for item %s: %v", item.ItemName, err)
+	} else if weaponResponse != nil {
+		for _, weapon := range weaponResponse.Weapons {
+			if weapon.ItemName == item.ItemName {
+				itemState.AttackPower = weapon.AttackPower
+				itemState.Durability = weapon.Durability
+				itemState.CriticalRate = weapon.CriticalRate
+				itemState.WeaponType = weapon.WeaponType
+				itemState.Description = weapon.Description
+				return
+			}
+		}
+	}
+
+	// Try armors
+	armorResponse, err := item.ItemTool.ListArmorsWithTemplate(ctx)
+	if err != nil {
+		log.Printf("Failed to fetch armors for item %s: %v", item.ItemName, err)
+	} else if armorResponse != nil {
+		for _, armor := range armorResponse.Armors {
+			if armor.ItemName == item.ItemName {
+				itemState.DefenseRating = armor.DefenseRating
+				itemState.ArmorSlot = armor.ArmorSlot
+				itemState.Description = armor.Description
+				return
+			}
+		}
+	}
+
+	// Try consumables
+	consumableResponse, err := item.ItemTool.ListConsumablesWithTemplate(ctx)
+	if err != nil {
+		log.Printf("Failed to fetch consumables for item %s: %v", item.ItemName, err)
+	} else if consumableResponse != nil {
+		for _, consumable := range consumableResponse.Consumables {
+			if consumable.ItemName == item.ItemName {
+				itemState.HealingAmount = consumable.HealingAmount
+				itemState.ManaAmount = consumable.ManaAmount
+				itemState.Description = consumable.Description
+				return
+			}
+		}
+	}
+
+	log.Printf("No matching item details found for: %s", item.ItemName)
 }
 
 func (s *StateSerializer) Serialize(sessionID uuid.UUID, recipientPlayerID uuid.UUID, entities []*ecs.Entity) (*types.ClientGameState, error) {
@@ -51,12 +111,17 @@ func (s *StateSerializer) Serialize(sessionID uuid.UUID, recipientPlayerID uuid.
 				if exists {
 					itemC, _ := itemEntity.GetComponent(ecs.ComponentTypeItem)
 					item := itemC.(*components.ItemComponent)
-					inventory = append(inventory, &types.ItemState{
+
+					itemState := &types.ItemState{
 						ItemID:   itemID,
 						EntityID: itemEntity.ID,
 						Name:     item.ItemName,
-						Quantity: item.Quantity,
-					})
+						Quantity: 1,
+					}
+
+					populateItemDetails(item, itemState)
+
+					inventory = append(inventory, itemState)
 				}
 			}
 			playerState := &types.PlayerState{
@@ -88,8 +153,9 @@ func (s *StateSerializer) Serialize(sessionID uuid.UUID, recipientPlayerID uuid.
 		// -- Doors --
 
 		// -- Containers --
-		_, isContainer := entity.GetComponent(ecs.ComponentTypeContainer)
+		containerComp, isContainer := entity.GetComponent(ecs.ComponentTypeContainer)
 		if isContainer {
+			container := containerComp.(*components.ContainerComponent)
 			tc, _ := entity.GetComponent(ecs.ComponentTypeTransform)
 			transform := tc.(*components.TransformComponent)
 
@@ -109,12 +175,17 @@ func (s *StateSerializer) Serialize(sessionID uuid.UUID, recipientPlayerID uuid.
 					if exists {
 						itemComp, hasItem := itemEntity.GetComponent(ecs.ComponentTypeItem)
 						if hasItem {
-							fmt.Println(itemComp)
-							// item := itemComp.(*components.ItemIDListComponent)
+							item := itemComp.(*components.ItemComponent)
+
 							itemState := &types.ItemState{
 								ItemID:   itemID,
 								EntityID: itemEntity.ID,
+								Name:     item.ItemName,
+								Quantity: 1,
 							}
+
+							populateItemDetails(item, itemState)
+
 							items = append(items, itemState)
 						}
 					}
@@ -122,7 +193,8 @@ func (s *StateSerializer) Serialize(sessionID uuid.UUID, recipientPlayerID uuid.
 			}
 
 			containerState := &types.ContainerState{
-				EntityID: entity.ID,
+				ContainerID: container.ContainerID,
+				EntityID:    entity.ID,
 				Position: &types.Position{
 					X: transform.X,
 					Y: transform.Y,

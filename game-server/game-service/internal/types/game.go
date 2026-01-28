@@ -39,10 +39,19 @@ type DoorState struct {
 }
 
 type ItemState struct {
-	ItemID   uuid.UUID `json:"item_id"`
-	EntityID uuid.UUID `json:"entity_id"`
-	Name     string    `json:"name"`
-	Quantity int       `json:"quantity"`
+	ItemID        uuid.UUID `json:"item_id"`
+	EntityID      uuid.UUID `json:"entity_id"`
+	Name          string    `json:"name"`
+	Quantity      int       `json:"quantity"`
+	AttackPower   int32     `json:"attack_power,omitempty"`   // weapon
+	Durability    int32     `json:"durability,omitempty"`     // weapon
+	CriticalRate  float32   `json:"critical_rate,omitempty"`  // weapon
+	WeaponType    string    `json:"weapon_type,omitempty"`    // weapon
+	DefenseRating int32     `json:"defense_rating,omitempty"` // armor
+	ArmorSlot     string    `json:"armor_slot,omitempty"`     // armor
+	HealingAmount int32     `json:"healing_amount,omitempty"` // consumable
+	ManaAmount    int32     `json:"mana_amount,omitempty"`    // consumable
+	Description   string    `json:"description,omitempty"`    // all types
 }
 type ContainerState struct {
 	ContainerID uuid.UUID    `json:"container_id"`
