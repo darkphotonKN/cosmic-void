@@ -43,6 +43,8 @@ const (
 	ComponentTypeInteractable ComponentType = "Interactable"
 	ComponentTypeOpenable     ComponentType = "Openable"
 	ComponentTypeDialogue     ComponentType = "Dialogue"
+
+	ComponentTypePrice ComponentType = "Price"
 )
 
 type Entity struct {

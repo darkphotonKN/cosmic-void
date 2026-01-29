@@ -10,6 +10,12 @@ service ItemsService {
   rpc CreateWeapon(CreateWeaponRequest) returns (Weapon);
   rpc GetWeaponWithTemplateByID(GetWeaponRequest) returns (WeaponDetail);
   rpc ListWeaponsWithTemplate(google.protobuf.Empty) returns (ListWeaponsResponse);
+
+  // Armor operations
+  rpc ListArmorsWithTemplate(google.protobuf.Empty) returns (ListArmorsResponse);
+
+  // Consumable operations
+  rpc ListConsumablesWithTemplate(google.protobuf.Empty) returns (ListConsumablesResponse);
 }
 
 // ============ Layered Message Definitions ============
@@ -73,4 +79,66 @@ message GetWeaponRequest {
 
 message ListWeaponsResponse {
   repeated WeaponDetail weapons = 1;
+}
+
+// ArmorDetail (armors + item_templates joined)
+message ArmorDetail {
+  // Armor fields
+  string id = 1;
+  string type_id = 2;
+  string rarity_id = 3;
+  int32 defense_rating = 4;
+  int32 durability = 5;
+  int32 magic_resistance = 6;
+  string armor_slot = 7;
+  string description = 8;
+
+  // ItemTemplate fields
+  string item_template_id = 9;
+  string item_name = 10;
+  string item_code = 11;
+  string icon_url = 12;
+  bool is_tradeable = 13;
+  bool is_droppable = 14;
+  int32 required_level = 15;
+  int32 base_sell_price = 16;
+  int32 base_buy_price = 17;
+
+  google.protobuf.Timestamp created_at = 18;
+  google.protobuf.Timestamp updated_at = 19;
+}
+
+message ListArmorsResponse {
+  repeated ArmorDetail armors = 1;
+}
+
+// ConsumableDetail (consumables + item_templates joined)
+message ConsumableDetail {
+  // Consumable fields
+  string id = 1;
+  string type_id = 2;
+  string rarity_id = 3;
+  int32 healing_amount = 4;
+  int32 mana_amount = 5;
+  int32 buff_duration = 6;
+  int32 max_stack_size = 7;
+  string description = 8;
+
+  // ItemTemplate fields
+  string item_template_id = 9;
+  string item_name = 10;
+  string item_code = 11;
+  string icon_url = 12;
+  bool is_tradeable = 13;
+  bool is_droppable = 14;
+  int32 required_level = 15;
+  int32 base_sell_price = 16;
+  int32 base_buy_price = 17;
+
+  google.protobuf.Timestamp created_at = 18;
+  google.protobuf.Timestamp updated_at = 19;
+}
+
+message ListConsumablesResponse {
+  repeated ConsumableDetail consumables = 1;
 }

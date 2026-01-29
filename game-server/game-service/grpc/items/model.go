@@ -16,4 +16,10 @@ type ItemsClient interface {
 
 	// ListWeaponsWithTemplate lists all weapons with template information
 	ListWeaponsWithTemplate(ctx context.Context) (*pb.ListWeaponsResponse, error)
+
+	// ListArmorsWithTemplate lists all armors with template information
+	ListArmorsWithTemplate(ctx context.Context) (*pb.ListArmorsResponse, error)
+
+	// ListConsumablesWithTemplate lists all consumables with template information
+	ListConsumablesWithTemplate(ctx context.Context) (*pb.ListConsumablesResponse, error)
 }

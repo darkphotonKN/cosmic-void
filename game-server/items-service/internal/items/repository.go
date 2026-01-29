@@ -30,6 +30,12 @@ type Repository interface {
 	GetWeaponWithTemplateByID(ctx context.Context, id uuid.UUID) (*WeaponWithTemplate, error)
 	ListWeaponsWithTemplate(ctx context.Context) ([]*WeaponWithTemplate, error)
 
+	// Armor operations with item template (JOIN queries)
+	ListArmorsWithTemplate(ctx context.Context) ([]*ArmorWithTemplate, error)
+
+	// Consumable operations with item template (JOIN queries)
+	ListConsumablesWithTemplate(ctx context.Context) ([]*ConsumableWithTemplate, error)
+
 	// Armor operations
 	CreateArmor(ctx context.Context, armor *Armor) error
 	GetArmorByID(ctx context.Context, id uuid.UUID) (*Armor, error)
@@ -430,6 +436,82 @@ func (r *repository) GetWeaponWithTemplateByID(ctx context.Context, id uuid.UUID
 	}
 
 	return &template, nil
+}
+
+// ListArmorsWithTemplate retrieves all armors with their item template information
+func (r *repository) ListArmorsWithTemplate(ctx context.Context) ([]*ArmorWithTemplate, error) {
+	var armorDetails []*ArmorWithTemplate
+
+	query := `
+		SELECT
+			a.id,
+			a.type_id,
+			a.rarity_id,
+			a.defense_rating,
+			a.durability,
+			a.magic_resistance,
+			a.armor_slot,
+			a.description,
+			a.created_at,
+			a.updated_at,
+			t.id AS item_template_id,
+			t.item_name,
+			t.item_code,
+			t.icon_url,
+			t.is_tradeable,
+			t.is_droppable,
+			t.required_level,
+			t.base_sell_price,
+			t.base_buy_price
+		FROM armors AS a
+		INNER JOIN item_templates AS t ON t.item_id = a.id AND t.item_type = 'armor'
+		ORDER BY a.created_at DESC
+	`
+
+	err := r.DB.SelectContext(ctx, &armorDetails, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list armors with template: %w", err)
+	}
+
+	return armorDetails, nil
+}
+
+// ListConsumablesWithTemplate retrieves all consumables with their item template information
+func (r *repository) ListConsumablesWithTemplate(ctx context.Context) ([]*ConsumableWithTemplate, error) {
+	var consumableDetails []*ConsumableWithTemplate
+
+	query := `
+		SELECT
+			c.id,
+			c.type_id,
+			c.rarity_id,
+			c.healing_amount,
+			c.mana_amount,
+			c.buff_duration,
+			c.max_stack_size,
+			c.description,
+			c.created_at,
+			c.updated_at,
+			t.id AS item_template_id,
+			t.item_name,
+			t.item_code,
+			t.icon_url,
+			t.is_tradeable,
+			t.is_droppable,
+			t.required_level,
+			t.base_sell_price,
+			t.base_buy_price
+		FROM consumables AS c
+		INNER JOIN item_templates AS t ON t.item_id = c.id AND t.item_type = 'consumable'
+		ORDER BY c.created_at DESC
+	`
+
+	err := r.DB.SelectContext(ctx, &consumableDetails, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list consumables with template: %w", err)
+	}
+
+	return consumableDetails, nil
 }
 
 // ListWeaponsWithTemplate retrieves all weapons with their item template information

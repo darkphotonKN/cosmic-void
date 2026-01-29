@@ -2,6 +2,7 @@ package game
 
 import (
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
+	grpcitems "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/items"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/google/uuid"
@@ -69,13 +70,18 @@ func CreateContainerEntity(em *ecs.EntityManager, containerconfig ContainerConfi
 
 type ItemConfig struct {
 	Name     string
-	Quantity int
-	ItemTool interface{}
+	ItemTool grpcitems.ItemsClient
 }
 
-func CreateItemEntity(em *ecs.EntityManager, itemconfig ItemConfig) *ecs.Entity {
+type PriceConfig struct {
+	BaseBuyPrice  int32
+	BaseSellPrice int32
+}
+
+func CreateItemEntity(em *ecs.EntityManager, itemconfig ItemConfig, priceconfig PriceConfig) *ecs.Entity {
 	entity := em.CreateEntity()
-	entity.AddComponent(components.NewItemComponent(itemconfig.Name, itemconfig.Quantity, itemconfig.ItemTool))
+	entity.AddComponent(components.NewItemComponent(itemconfig.Name, itemconfig.ItemTool))
+	entity.AddComponent(components.NewPriceComponent(priceconfig.BaseBuyPrice, priceconfig.BaseSellPrice))
 
 	return entity
 }

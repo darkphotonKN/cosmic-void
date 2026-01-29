@@ -44,6 +44,12 @@ type Service interface {
 	// Weapon operations with item template (JOIN queries)
 	GetWeaponWithTemplateByID(ctx context.Context, id uuid.UUID) (*WeaponWithTemplate, error)
 	ListWeaponsWithTemplate(ctx context.Context) ([]*WeaponWithTemplate, error)
+
+	// Armor operations with item template (JOIN queries)
+	ListArmorsWithTemplate(ctx context.Context) ([]*ArmorWithTemplate, error)
+
+	// Consumable operations with item template (JOIN queries)
+	ListConsumablesWithTemplate(ctx context.Context) ([]*ConsumableWithTemplate, error)
 }
 
 type service struct {
@@ -287,4 +293,12 @@ func (s *service) GetWeaponWithTemplateByID(ctx context.Context, id uuid.UUID) (
 
 func (s *service) ListWeaponsWithTemplate(ctx context.Context) ([]*WeaponWithTemplate, error) {
 	return s.repo.ListWeaponsWithTemplate(ctx)
+}
+
+func (s *service) ListArmorsWithTemplate(ctx context.Context) ([]*ArmorWithTemplate, error) {
+	return s.repo.ListArmorsWithTemplate(ctx)
+}
+
+func (s *service) ListConsumablesWithTemplate(ctx context.Context) ([]*ConsumableWithTemplate, error) {
+	return s.repo.ListConsumablesWithTemplate(ctx)
 }

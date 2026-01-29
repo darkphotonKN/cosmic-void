@@ -1,13 +1,10 @@
 package gameserver
 
 import (
-	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"sync"
 
-	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/items"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	grpcauth "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/auth"
 	grpcitems "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/items"
@@ -153,14 +150,9 @@ func (s *Server) CreateGameSession(players []*types.Player) *game.Session {
 	stateSerializer := serializer.NewStateSerializer(entityManager)
 
 	// create session with message sender
-	newGameSession := game.NewSession(messaging.NewMessageSender(s), stateSerializer, entityManager, s.eventEmitter)
+	newGameSession := game.NewSession(messaging.NewMessageSender(s), stateSerializer, entityManager, s.eventEmitter, s.itemsClient)
 
 	newGameSession.InitialMapObjects()
-	newGameSession.AddItem(game.ItemConfig{
-		Name:     "test",
-		Quantity: 1,
-		ItemTool: s.GetItemsClient(),
-	})
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -303,20 +295,4 @@ func (s *Server) PushMessageToConn(conn *websocket.Conn, msg interface{}) error 
 **/
 func (s *Server) GetAuthClient() grpcauth.AuthClient {
 	return s.authClient
-}
-
-func (s *Server) GetItemsClient() *pb.ListWeaponsResponse {
-	ctx := context.Background()
-	response, err := s.itemsClient.ListWeaponsWithTemplate(ctx)
-
-	if err != nil {
-		return nil
-	}
-
-	if len(response.Weapons) == 0 {
-		log.Println("No weapons found in database")
-		log.Println("Try creating some weapons first using items-service API")
-	}
-
-	return response
 }
