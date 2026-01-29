@@ -141,7 +141,8 @@ func (s *Session) manageClientMessages() {
 
 				// propogate to test
 				s.TestMessageSpy <- message.Message
-			default:
+			case <-s.stopChan:
+				return
 			}
 		}
 	}
@@ -262,6 +263,12 @@ func (s *Session) manageClientMessages() {
 * runs system code to update state of game x times every second.
 **/
 func (s *Session) manageGameLoop() {
+	// TEST: dont run for tests
+	if s.TestMessageSpy != nil {
+		return
+	}
+	// TEST: END test block
+
 	ticker := time.NewTicker((1 * time.Second) / time.Duration(constants.GameFrameRate))
 	defer ticker.Stop()
 

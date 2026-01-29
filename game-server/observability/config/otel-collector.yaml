@@ -30,33 +30,16 @@ processors:
     timeout: 1s
     send_batch_size: 1024
 
-  # Add resource attributes to logs for better filtering
-  resource:
-    attributes:
-      - key: loki.resource.labels
-        value: service.name, service.version
-        action: insert
-
 exporters:
-  # Tempo - receives traces
   otlp/tempo:
     endpoint: tempo:4317
     tls:
       insecure: true
 
-  # Prometheus - receives metrics
   prometheus:
     endpoint: 0.0.0.0:8889
     namespace: otel
 
-  # Loki - receives logs
-  loki:
-    endpoint: http://loki:3100/loki/api/v1/push
-    default_labels_enabled:
-      exporter: false
-      job: true
-
-  # Debug - prints to stdout
   debug:
     verbosity: detailed
 
@@ -68,20 +51,12 @@ service:
   extensions: [health_check]
 
   pipelines:
-    # Traces → Tempo
     traces:
       receivers: [otlp]
       processors: [batch]
       exporters: [otlp/tempo, debug]
 
-    # Metrics → Prometheus
     metrics:
       receivers: [otlp]
       processors: [batch]
       exporters: [prometheus, debug]
-
-    # Logs → Loki (NEW!)
-    logs:
-      receivers: [otlp]
-      processors: [batch, resource]
-      exporters: [loki, debug]

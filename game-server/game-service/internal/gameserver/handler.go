@@ -44,9 +44,6 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 		return
 	}
 
-	// ==========================================
-	// 檢查是否為重連
-	// ==========================================
 	s.mu.RLock()
 	existingPlayer, playerExists := s.players[memberId]
 	s.mu.RUnlock()
@@ -55,8 +52,7 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 	isReconnection := false
 
 	if playerExists {
-		// ✅ 這是重連!重用現有的 player 資料
-		fmt.Printf("🔄 Player %s is reconnecting! (Session: %s, State: %v)\n",
+		fmt.Printf("Player %s is reconnecting! (Session: %s, State: %v)\n",
 			existingPlayer.Username,
 			existingPlayer.CurrentGameSessionId,
 			existingPlayer.ConnectState)
@@ -73,7 +69,7 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 
 	} else {
 		// 新玩家第一次連線
-		fmt.Printf("✨ New player connecting: %s\n", data.Name)
+		fmt.Printf("New player connecting: %s\n", data.Name)
 
 		connected := constants.Connected
 		player = &types.Player{
@@ -103,9 +99,6 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 	// 建立 msgChan
 	s.setupClientWriter(conn)
 
-	// ==========================================
-	// 如果是重連,發送重連成功訊息和遊戲資訊
-	// ==========================================
 	if isReconnection && player.CurrentGameSessionId != uuid.Nil {
 		fmt.Printf("📤 Sending reconnection success message to %s (Session: %s)\n",
 			player.Username, player.CurrentGameSessionId)
@@ -161,10 +154,6 @@ func (s *Server) ServeConnectedPlayer(conn *websocket.Conn) {
 
 			fmt.Printf("\n[WebSocket Error] Player: %s, Error: %v\n", playerInfo, err)
 
-			// ==========================================
-			// 情況 1: 網路斷線 (CloseAbnormalClosure 1006)
-			// ==========================================
-			// 處理:保留狀態,等待 30 秒重連
 			if websocket.IsCloseError(err, websocket.CloseAbnormalClosure) {
 				fmt.Printf("Network disconnection for %s. Keeping state for reconnection...\n", playerInfo)
 
@@ -185,20 +174,12 @@ func (s *Server) ServeConnectedPlayer(conn *websocket.Conn) {
 				return // 退出此 goroutine
 			}
 
-			// ==========================================
-			// 情況 2: 正常關閉 (CloseNormalClosure 1000)
-			// ==========================================
-			// 處理:完全清理所有資源
 			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 				fmt.Printf("Player %s closed connection normally (intentional leave)\n", playerInfo)
 				s.cleanUpClient(conn)
 				return // 退出此 goroutine
 			}
 
-			// ==========================================
-			// 情況 3: 離開頁面 (CloseGoingAway 1001)
-			// ==========================================
-			// 處理:保留狀態,等待 10 秒重連 (可能是頁面重新整理)
 			if websocket.IsCloseError(err, websocket.CloseGoingAway) {
 				fmt.Printf("Player %s navigated away. Keeping state for 10s...\n", playerInfo)
 
@@ -213,10 +194,6 @@ func (s *Server) ServeConnectedPlayer(conn *websocket.Conn) {
 				return
 			}
 
-			// ==========================================
-			// 情況 4: 其他 Unexpected Errors
-			// ==========================================
-			// 處理:視為暫時斷線,等待重連
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				fmt.Printf("Unexpected disconnection for %s. Keeping state...\n", playerInfo)
 
@@ -231,10 +208,6 @@ func (s *Server) ServeConnectedPlayer(conn *websocket.Conn) {
 				return
 			}
 
-			// ==========================================
-			// 情況 5: 其他未知錯誤
-			// ==========================================
-			// 處理:完全清理
 			fmt.Printf("Unknown error for %s: %v. Cleaning up completely.\n", playerInfo, err)
 			s.cleanUpClient(conn)
 			return
@@ -277,12 +250,11 @@ func (s *Server) ServeConnectedPlayer(conn *websocket.Conn) {
 * back to the connected client.
 *
 * NOTE: Gorilla Websocket package only allows ONE CONCURRENT WRITER
-* at a time, meaning its best to utilize *unbuffered* channels to prevent
+* at a time, meaning its best to utilize unbuffered channels to prevent
 * a single client from locking the entire server, and prevent race conditions
 * where multiple writes to the same connection.
 **/
 func (s *Server) setupClientWriter(conn *websocket.Conn) {
-	// 只在 channel 不存在時才創建並啟動 goroutine
 	isNew := s.createMsgChan(conn)
 	if !isNew {
 		return // channel 已存在，不需要重複設置
@@ -358,9 +330,6 @@ func (s *Server) getGameMsgChan(conn *websocket.Conn) (chan interface{}, error) 
 	return channel, nil
 }
 
-/**
-* 標記玩家為重連狀態
-**/
 func (s *Server) markPlayerAsReconnecting(player *types.Player) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -376,9 +345,6 @@ func (s *Server) markPlayerAsReconnecting(player *types.Player) {
 	fmt.Printf("Player %s marked as reconnecting\n", player.Username)
 }
 
-/**
-* 只清理連線,保留玩家資料、session、queue (用於重連情況)
-**/
 func (s *Server) cleanUpConnectionOnly(conn *websocket.Conn) {
 	s.mu.Lock()
 
@@ -412,9 +378,6 @@ func (s *Server) cleanUpConnectionOnly(conn *websocket.Conn) {
 	conn.Close()
 }
 
-/**
-* 處理重連超時 - 如果玩家在指定時間內沒有重連,完全清理資源
-**/
 func (s *Server) handleReconnectionTimeout(playerID uuid.UUID, timeout time.Duration) {
 	fmt.Printf("Reconnection timer started for player %s (timeout: %v)\n", playerID, timeout)
 
@@ -438,9 +401,6 @@ func (s *Server) handleReconnectionTimeout(playerID uuid.UUID, timeout time.Dura
 	}
 }
 
-/**
-* 完全清理玩家 (根據 player ID)
-**/
 func (s *Server) cleanUpPlayerCompletely(playerID uuid.UUID) {
 	s.mu.RLock()
 	player, exists := s.players[playerID]

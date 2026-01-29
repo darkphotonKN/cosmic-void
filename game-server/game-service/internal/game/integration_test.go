@@ -30,6 +30,7 @@ func (m *MessageSender) PushMessageToChannelQueue(
 	playerID uuid.UUID,
 	msg interface{},
 ) error {
+	slog.Debug("Pushing message to channel queue TEST IMPLEMENTATION")
 	return nil
 }
 
@@ -37,6 +38,7 @@ func (m *MessageSender) PushMessageToConn(
 	conn *websocket.Conn,
 	msg interface{},
 ) error {
+	slog.Debug("Push Messagae to Conn")
 	return nil
 }
 
@@ -65,12 +67,15 @@ func TestHandleMoveUpdatesPositionIntegration(t *testing.T) {
 	if !ok {
 		slog.Error("PlayerEntity doesn't exist", "playerEntityID", playerEntityID)
 	}
+	assert.Equal(t, true, ok)
 
 	playerTransformComponent, ok := playerEntity.GetComponent(ecs.ComponentTypeTransform)
 
 	if !ok {
 		slog.Error("Player's Velocity Component doesn't exist", "entityID", playerEntity.ID)
 	}
+
+	assert.NotNil(t, playerTransformComponent)
 
 	component := playerTransformComponent.(*components.TransformComponent)
 	slog.Debug("Player transform coordinates initial", "coordinates", component)
@@ -144,7 +149,5 @@ func TestPublishMatchComplete(t *testing.T) {
 		ContentType:  "application/json",
 		DeliveryMode: amqp.Persistent,
 	})
-
 	// TODO: consume for testing
-
 }
