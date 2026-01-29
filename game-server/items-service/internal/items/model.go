@@ -188,9 +188,11 @@ type ArmorWithTemplate struct {
 	ItemName       string    `db:"item_name"`
 	ItemCode       string    `db:"item_code"`
 	IconURL        *string   `db:"icon_url"`
+	RequiredLevel  int       `db:"required_level"`
+
 	IsTradeable    bool      `db:"is_tradeable"`
 	IsDroppable    bool      `db:"is_droppable"`
-	RequiredLevel  int       `db:"required_level"`
+
 	BaseSellPrice  int       `db:"base_sell_price"`
 	BaseBuyPrice   int       `db:"base_buy_price"`
 }

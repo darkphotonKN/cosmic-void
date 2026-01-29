@@ -721,7 +721,9 @@ func (s *Session) handleLoot(playerID uuid.UUID, containerEntityID uuid.UUID, lo
 
 // itemTemplate is a unified representation of an item from items-service
 type itemTemplate struct {
-	Name string
+	Name          string
+	BaseBuyPrice  int32
+	BaseSellPrice int32
 }
 
 /**
@@ -741,7 +743,11 @@ func (s *Session) initItemPool() error {
 		fmt.Printf("Warning: failed to fetch weapons: %v\n", err)
 	} else {
 		for _, w := range weapons.Weapons {
-			s.itemPool = append(s.itemPool, itemTemplate{Name: w.ItemName})
+			s.itemPool = append(s.itemPool, itemTemplate{
+				Name:          w.ItemName,
+				BaseBuyPrice:  w.BaseBuyPrice,
+				BaseSellPrice: w.BaseSellPrice,
+			})
 		}
 	}
 
@@ -750,7 +756,11 @@ func (s *Session) initItemPool() error {
 		fmt.Printf("Warning: failed to fetch armors: %v\n", err)
 	} else {
 		for _, a := range armors.Armors {
-			s.itemPool = append(s.itemPool, itemTemplate{Name: a.ItemName})
+			s.itemPool = append(s.itemPool, itemTemplate{
+				Name:          a.ItemName,
+				BaseBuyPrice:  a.BaseBuyPrice,
+				BaseSellPrice: a.BaseSellPrice,
+			})
 		}
 	}
 
@@ -759,7 +769,11 @@ func (s *Session) initItemPool() error {
 		fmt.Printf("Warning: failed to fetch consumables: %v\n", err)
 	} else {
 		for _, c := range consumables.Consumables {
-			s.itemPool = append(s.itemPool, itemTemplate{Name: c.ItemName})
+			s.itemPool = append(s.itemPool, itemTemplate{
+				Name:          c.ItemName,
+				BaseBuyPrice:  c.BaseBuyPrice,
+				BaseSellPrice: c.BaseSellPrice,
+			})
 		}
 	}
 
@@ -812,7 +826,12 @@ func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
 			Name:     item.Name,
 			ItemTool: s.itemsClient,
 		}
-		itemID := s.AddItem(config)
+
+		priceConfig := PriceConfig{
+			BaseBuyPrice:  item.BaseBuyPrice,
+			BaseSellPrice: item.BaseSellPrice,
+		}
+		itemID := s.AddItem(config, priceConfig)
 		itemIDs = append(itemIDs, itemID)
 	}
 
@@ -839,10 +858,10 @@ func (s *Session) calcWithinDistance(x, y, xTarget, yTarget float64) bool {
 /**
 * addItem creates an item entity from config and returns its ID
 **/
-func (s *Session) AddItem(itemConfig ItemConfig) uuid.UUID {
+func (s *Session) AddItem(itemConfig ItemConfig, priceConfig PriceConfig) uuid.UUID {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	entity := CreateItemEntity(s.EntityManager, itemConfig)
+	entity := CreateItemEntity(s.EntityManager, itemConfig, priceConfig)
 
 	return entity.ID
 }

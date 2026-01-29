@@ -73,9 +73,15 @@ type ItemConfig struct {
 	ItemTool grpcitems.ItemsClient
 }
 
-func CreateItemEntity(em *ecs.EntityManager, itemconfig ItemConfig) *ecs.Entity {
+type PriceConfig struct {
+	BaseBuyPrice  int32
+	BaseSellPrice int32
+}
+
+func CreateItemEntity(em *ecs.EntityManager, itemconfig ItemConfig, priceconfig PriceConfig) *ecs.Entity {
 	entity := em.CreateEntity()
 	entity.AddComponent(components.NewItemComponent(itemconfig.Name, itemconfig.ItemTool))
+	entity.AddComponent(components.NewPriceComponent(priceconfig.BaseBuyPrice, priceconfig.BaseSellPrice))
 
 	return entity
 }
