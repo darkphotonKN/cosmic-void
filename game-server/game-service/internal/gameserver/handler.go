@@ -275,13 +275,13 @@ func (s *Server) setupClientWriter(conn *websocket.Conn) {
 		defer func() {
 			// ensure we recover from any panics in the writer goroutine
 			if r := recover(); r != nil {
-				fmt.Printf("clientWriter panic recovered: %v\n", r)
+				// fmt.Printf("clientWriter panic recovered: %v\n", r)
 			}
 		}()
 
 		for msg := range msgChan {
 			// TEST: remove after testing
-			fmt.Printf("\nclientWriter writing back to client message:\n\n%+v\n\n", msg)
+			// fmt.Printf("\nclientWriter writing back to client message:\n\n%+v\n\n", msg)
 
 			err := conn.WriteJSON(msg)
 
@@ -291,7 +291,7 @@ func (s *Server) setupClientWriter(conn *websocket.Conn) {
 				return
 			}
 		}
-		fmt.Println("clientWriter goroutine exiting (channel closed)")
+		// fmt.Println("clientWriter goroutine exiting (channel closed)")
 	}()
 
 }

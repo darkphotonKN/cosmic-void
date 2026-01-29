@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:17
+    container_name: cosmic_void_payment_service_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cosmic_void_payment_service_db
+    ports:
+      - "5111:5432"
+    volumes:
+      - payment_db_data:/var/lib/postgresql/data
+    networks:
+      - cosmic-void-network
+
+volumes:
+  payment_db_data:
+
+networks:
+  cosmic-void-network:
+    external: true
+    name: cosmic-void-network

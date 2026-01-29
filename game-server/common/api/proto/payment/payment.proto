@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package payment;
+
+option go_package = "github.com/darkphotonKN/cosmic-void-server/common/api/proto/payment";
+
+// Payment service definition for subscriptions
+service PaymentService {
+  // Create a new customer in Stripe
+  rpc CreateCustomer(CreateCustomerRequest) returns (CreateCustomerResponse) {}
+  // Setup a subscription product in Stripe
+  rpc SetupSubscription(SetupSubscriptionRequest) returns (SetupSubscriptionResponse) {}
+  // Subscribe a customer to a product
+  rpc Subscribe(SubscribeRequest) returns (SubscribeResponse) {}
+  // Get all subscriptions for a customer
+  rpc GetUserSubscriptions(GetUserSubscriptionsRequest) returns (GetUserSubscriptionsResponse) {}
+}
+
+// CreateCustomer
+message CreateCustomerRequest {
+  string user_id = 1;
+  string email = 2;
+}
+
+message CreateCustomerResponse {
+  string customer_id = 1;
+}
+
+// SetupSubscription - creates a subscription product
+message SetupSubscriptionRequest {
+  string name = 1;
+  string description = 2;
+  int64 price = 3; // in cents
+}
+
+message SetupSubscriptionResponse {
+  string product_id = 1;
+  string price_id = 2;
+}
+
+// Subscribe - subscribes a customer to a product
+message SubscribeRequest {
+  string product_id = 1;
+  string customer_id = 2;
+}
+
+message SubscribeResponse {
+  string subscription_id = 1;
+  string client_secret = 2;
+  string status = 3;
+}
+
+// GetUserSubscriptions
+message GetUserSubscriptionsRequest {
+  string customer_id = 1;
+}
+
+message UserSubscriptionInfo {
+  string subscription_id = 1;
+  string product_id = 2;
+  string price_id = 3;
+  string status = 4;
+  int64 current_period_end = 5;
+}
+
+message GetUserSubscriptionsResponse {
+  repeated UserSubscriptionInfo subscriptions = 1;
+}
