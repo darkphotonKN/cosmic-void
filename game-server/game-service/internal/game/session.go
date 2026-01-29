@@ -411,11 +411,12 @@ func (s *Session) GetPlayerIDs() []uuid.UUID {
 * session. Each player receives a personalized view with their player state separated.
 **/
 func (s *Session) broadcastFullState() error {
+	ctx := context.Background()
 	entities := s.EntityManager.GetAllEntities()
 
 	// create and send personalized state for each player
 	for _, playerID := range s.playerEntityIDToPlayerID {
-		clientState, err := s.stateSerializer.Serialize(s.ID, playerID, entities)
+		clientState, err := s.stateSerializer.Serialize(ctx, s.ID, playerID, entities)
 		if err != nil {
 			slog.Error("Failed to serialize state for player", "playerID", playerID, "error", err)
 			continue
@@ -746,6 +747,7 @@ func (s *Session) initItemPool() error {
 	s.itemPool = make([]itemTemplate, 0)
 
 	weapons, err := s.itemsClient.ListWeaponsWithTemplate(ctx)
+	slog.Info("Call ListWeaponsWithTemplate", weapons.Weapons)
 	if err != nil {
 		fmt.Printf("Warning: failed to fetch weapons: %v\n", err)
 	} else {
