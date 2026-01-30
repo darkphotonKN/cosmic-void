@@ -7,10 +7,8 @@ import (
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
-	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // ConsumerService defines what the consumer needs from the service
@@ -90,7 +88,7 @@ func (c *Consumer) consumeMatchCompleted() {
 		// successfully processed
 		msg.Ack(false)
 		slog.Info("Match completed processed successfully",
-			"session_id", event.SessionID,
+			"session_id", event.SessionId,
 			"players_processed", response.PlayersProcessed,
 			"success", response.Success,
 			"message", response.Message,
