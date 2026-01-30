@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/common/broker"
@@ -45,6 +47,8 @@ var (
 )
 
 func main() {
+	// --- logger ---
+	commonhelpers.SetupLogger(environment)
 
 	ctx := context.Background()
 

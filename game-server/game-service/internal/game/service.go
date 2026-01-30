@@ -2,13 +2,15 @@ package game
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
 
+	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats"
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type service struct {
@@ -24,8 +26,27 @@ func NewService(publishCh commonbroker.Publisher) *service {
 func (s *service) PublishMatchComplete(ctx context.Context, data *commontypes.MatchEndState) error {
 	slog.Info("Publishing game match ended.")
 
-	// TODO: update this to protobuf with contract
-	dataJSON, err := json.Marshal(data)
+	// format data for marshalling as protobuf
+	playerMatchRes := make([]*pb.PlayerMatchResults, len(data.PlayerMatchResults))
+
+	for i, player := range data.PlayerMatchResults {
+		playerMatchRes[i] = &pb.PlayerMatchResults{
+			MemberId:      player.MemberID,
+			Username:      player.Username,
+			Win:           player.Win,
+			FinalPosition: player.FinalPosition,
+			Kills:         player.Kills,
+			Deaths:        player.Deaths,
+		}
+	}
+
+	// marshal to protobuf
+	protoData, err := proto.Marshal(&pb.ProcessMatchCompletedRequest{
+		SessionId:      string(data.SessionID.String()),
+		MatchStartedAt: timestamppb.New(data.MatchStartedAt),
+		MatchEndedAt:   timestamppb.New(data.MatchEndedAt),
+		Players:        playerMatchRes,
+	})
 
 	err = s.publishCh.PublishWithContext(
 		ctx,
@@ -33,7 +54,7 @@ func (s *service) PublishMatchComplete(ctx context.Context, data *commontypes.Ma
 		"",
 		commonbroker.Message{
 			ContentType:  "application/json",
-			Body:         dataJSON,
+			Body:         protoData,
 			DeliveryMode: amqp.Persistent,
 		})
 

@@ -144,6 +144,10 @@ func (s *Session) manageClientMessages() {
 	for {
 		select {
 		case msg := <-s.MessageCh:
+			if s.TestMessageSpy != nil {
+				return
+			}
+
 			slog.Debug("Incoming message to game session", "sessionID", s.ID, "message", msg)
 
 			switch constants.Action(msg.Message.Action) {

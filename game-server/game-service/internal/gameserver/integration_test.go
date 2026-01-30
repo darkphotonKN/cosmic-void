@@ -165,6 +165,7 @@ func TestServerHubSessionIntegration(t *testing.T) {
 		ID:       uuid.New(),
 		Username: "TestPlayer1",
 	}
+
 	player2 := &types.Player{
 		ID:       uuid.New(),
 		Username: "TestPlayer2",

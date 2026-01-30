@@ -2,7 +2,6 @@ package stats
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"log/slog"
 
@@ -10,6 +9,7 @@ import (
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -58,8 +58,8 @@ func (c *Consumer) consumeMatchCompleted() {
 	}
 
 	for msg := range msgs {
-		var event commontypes.MatchEndState
-		if err := json.Unmarshal(msg.Body, &event); err != nil {
+		var event pb.ProcessMatchCompletedRequest
+		if err := proto.Unmarshal(msg.Body, &event); err != nil {
 			slog.Error("Failed to parse match completed event", "error", err)
 			msg.Nack(false, false)
 			continue
@@ -68,30 +68,13 @@ func (c *Consumer) consumeMatchCompleted() {
 		slog.Info("Unmarshalled MatchEndState extracted from event.", "event type", commonconstants.GameMatchEndedEvent, "event data", event)
 
 		ctx := context.Background()
-		req := &pb.ProcessMatchCompletedRequest{
-			SessionId:      event.SessionID.String(),
-			MatchStartedAt: timestamppb.New(event.MatchStartedAt),
-			MatchEndedAt:   timestamppb.New(event.MatchEndedAt),
-			Players:        make([]*pb.PlayerMatchResults, len(event.PlayerMatchResults)),
-		}
 
-		for i, player := range event.PlayerMatchResults {
-			req.Players[i] = &pb.PlayerMatchResults{
-				MemberId:      player.MemberID,
-				Username:      player.Username,
-				Win:           player.Win,
-				FinalPosition: player.FinalPosition,
-				Kills:         player.Kills,
-				Deaths:        player.Deaths,
-			}
-		}
-
-		response, err := c.service.ProcessMatchCompleted(ctx, req)
+		response, err := c.service.ProcessMatchCompleted(ctx, &event)
 
 		if err != nil {
 			slog.Error("Failed to process match completed",
 				"error", err,
-				"session_id", event.SessionID,
+				"session_id", event.SessionId,
 			)
 
 			// retry if error is transient
