@@ -736,23 +736,29 @@ type itemTemplate struct {
 
 /**
 * initItemPool fetches all item templates from items-service via gRPC once
-* and stores them in the session-level item pool.
+* and fills the pool according to configured ratios (weapons, armors, consumables).
 **/
 func (s *Session) initItemPool() error {
+	ctx := context.Background()
+	ctx, span := gameItemPoolTracer.Start(ctx, "game.initItemPool")
+	defer span.End()
+
 	if s.itemsClient == nil {
 		return fmt.Errorf("itemsClient is not initialized")
 	}
 
-	ctx := context.Background()
-	s.itemPool = make([]itemTemplate, 0)
+	// Step 1: Fetch all templates from items-service
+	weaponTemplates := []itemTemplate{}
+	armorTemplates := []itemTemplate{}
+	consumableTemplates := []itemTemplate{}
 
+	// Fetch weapons
 	weapons, err := s.itemsClient.ListWeaponsWithTemplate(ctx)
-	slog.Info("Call ListWeaponsWithTemplate", weapons.Weapons)
 	if err != nil {
 		fmt.Printf("Warning: failed to fetch weapons: %v\n", err)
 	} else {
 		for _, w := range weapons.Weapons {
-			s.itemPool = append(s.itemPool, itemTemplate{
+			weaponTemplates = append(weaponTemplates, itemTemplate{
 				Name:          w.ItemName,
 				BaseBuyPrice:  w.BaseBuyPrice,
 				BaseSellPrice: w.BaseSellPrice,
@@ -760,12 +766,13 @@ func (s *Session) initItemPool() error {
 		}
 	}
 
+	// Fetch armors
 	armors, err := s.itemsClient.ListArmorsWithTemplate(ctx)
 	if err != nil {
 		fmt.Printf("Warning: failed to fetch armors: %v\n", err)
 	} else {
 		for _, a := range armors.Armors {
-			s.itemPool = append(s.itemPool, itemTemplate{
+			armorTemplates = append(armorTemplates, itemTemplate{
 				Name:          a.ItemName,
 				BaseBuyPrice:  a.BaseBuyPrice,
 				BaseSellPrice: a.BaseSellPrice,
@@ -773,12 +780,13 @@ func (s *Session) initItemPool() error {
 		}
 	}
 
+	// Fetch consumables
 	consumables, err := s.itemsClient.ListConsumablesWithTemplate(ctx)
 	if err != nil {
 		fmt.Printf("Warning: failed to fetch consumables: %v\n", err)
 	} else {
 		for _, c := range consumables.Consumables {
-			s.itemPool = append(s.itemPool, itemTemplate{
+			consumableTemplates = append(consumableTemplates, itemTemplate{
 				Name:          c.ItemName,
 				BaseBuyPrice:  c.BaseBuyPrice,
 				BaseSellPrice: c.BaseSellPrice,
@@ -786,12 +794,45 @@ func (s *Session) initItemPool() error {
 		}
 	}
 
+	// Step 2: Calculate quantities based on ratios
+	weaponCount := (constants.ItemPoolSize * constants.WeaponRatio) / 100
+	armorCount := (constants.ItemPoolSize * constants.ArmorRatio) / 100
+	consumableCount := (constants.ItemPoolSize * constants.ConsumableRatio) / 100
+
+	// Step 3: Fill pool by ratio with random selection
+	s.itemPool = make([]itemTemplate, 0, constants.ItemPoolSize)
+
+	// Add weapons
+	for i := 0; i < weaponCount && len(weaponTemplates) > 0; i++ {
+		randomIndex := rand.IntN(len(weaponTemplates))
+		s.itemPool = append(s.itemPool, weaponTemplates[randomIndex])
+	}
+
+	// Add armors
+	for i := 0; i < armorCount && len(armorTemplates) > 0; i++ {
+		randomIndex := rand.IntN(len(armorTemplates))
+		s.itemPool = append(s.itemPool, armorTemplates[randomIndex])
+	}
+
+	// Add consumables
+	for i := 0; i < consumableCount && len(consumableTemplates) > 0; i++ {
+		randomIndex := rand.IntN(len(consumableTemplates))
+		s.itemPool = append(s.itemPool, consumableTemplates[randomIndex])
+	}
+
+	// Step 4: Shuffle the entire pool (so items are mixed, not grouped by type)
+	for i := len(s.itemPool) - 1; i > 0; i-- {
+		j := rand.IntN(i + 1)
+		s.itemPool[i], s.itemPool[j] = s.itemPool[j], s.itemPool[i]
+	}
+
 	if len(s.itemPool) == 0 {
 		return fmt.Errorf("no items available from items-service")
 	}
 
 	s.itemPoolInitialized = true
-	fmt.Printf("Item pool initialized with %d items\n", len(s.itemPool))
+	fmt.Printf("Item pool initialized with %d items (weapons: %d, armors: %d, consumables: %d)\n",
+		len(s.itemPool), weaponCount, armorCount, consumableCount)
 	return nil
 }
 

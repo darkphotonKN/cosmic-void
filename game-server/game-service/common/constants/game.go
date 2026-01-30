@@ -52,6 +52,14 @@ const InitialPlayerY float64 = 400
 // game loop
 const GameFrameRate int = 30
 
+// Item Pool Configuration
+const ItemPoolSize int = 40 // Total number of item slots in the pool
+
+// Item type ratios (must sum to 100)
+const WeaponRatio int = 40     // 40% weapons
+const ArmorRatio int = 35      // 35% armors
+const ConsumableRatio int = 25 // 25% consumables
+
 type ConnectState string
 
 const (
