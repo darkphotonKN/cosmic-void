@@ -154,8 +154,14 @@ func (s *Session) manageClientMessages() {
 				parsedPayload, err := msg.Message.ParsePayload()
 
 				if err != nil {
-					// TODO: respond to client error
 					slog.Error("Failed to parse payload - types don't match", "payload", parsedPayload, "error", err)
+					// Get playerID from payload if possible, otherwise skip sending error to specific player
+					if playerIDStr, ok := msg.Message.Payload["player_id"].(string); ok {
+						if playerID, parseErr := uuid.Parse(playerIDStr); parseErr == nil {
+							s.sendErrorToPlayer(playerID, msg.Message.Action, "無法解析移動請求")
+						}
+					}
+					continue
 				}
 
 				movePayload := parsedPayload.(types.PlayerSessionMovePayload)
@@ -166,7 +172,8 @@ func (s *Session) manageClientMessages() {
 				playerID, err := uuid.Parse(movePayload.PlayerID)
 				if err != nil {
 					slog.Error("Invalid PlayerID from session payload", "playerID", movePayload.PlayerID, "error", err)
-					// TODO: respond to client error
+					// Cannot send error to player since we don't have valid playerID
+					continue
 				}
 				s.handleMove(playerID, movePayload.Vx, movePayload.Vy)
 
@@ -176,7 +183,13 @@ func (s *Session) manageClientMessages() {
 				parsedPayload, err := msg.Message.ParsePayload()
 
 				if err != nil {
-					// TODO respond to client error
+					slog.Error("Failed to parse interact payload", "error", err)
+					if playerIDStr, ok := msg.Message.Payload["player_id"].(string); ok {
+						if playerID, parseErr := uuid.Parse(playerIDStr); parseErr == nil {
+							s.sendErrorToPlayer(playerID, msg.Message.Action, "無法解析互動請求")
+						}
+					}
+					continue
 				}
 
 				interactPayload := parsedPayload.(types.PlayerSessionInteractPayload)
@@ -186,14 +199,15 @@ func (s *Session) manageClientMessages() {
 
 				if err != nil {
 					slog.Error("Invalid PlayerID from session payload", "playerID", interactPayload.PlayerID, "error", err)
-					// TODO: respond to client error
+					continue
 				}
 
 				entityIDUUID, err := uuid.Parse(interactPayload.EntityID)
 
 				if err != nil {
 					slog.Error("Invalid EntityID from session payload", "entityID", interactPayload.EntityID, "error", err)
-					// TODO: respond to client error
+					s.sendErrorToPlayer(playerID, msg.Message.Action, "無效的目標物件")
+					continue
 				}
 
 				err = s.handleInteract(playerID, entityIDUUID)
@@ -207,7 +221,13 @@ func (s *Session) manageClientMessages() {
 				parsedPayload, err := msg.Message.ParsePayload()
 
 				if err != nil {
-					// TODO respond to client error
+					slog.Error("Failed to parse loot payload", "error", err)
+					if playerIDStr, ok := msg.Message.Payload["player_id"].(string); ok {
+						if playerID, parseErr := uuid.Parse(playerIDStr); parseErr == nil {
+							s.sendErrorToPlayer(playerID, msg.Message.Action, "無法解析拾取請求")
+						}
+					}
+					continue
 				}
 
 				lootPayload := parsedPayload.(types.PlayerSessionLootPayload)
@@ -217,15 +237,18 @@ func (s *Session) manageClientMessages() {
 
 				if err != nil {
 					slog.Error("Invalid PlayerID from session payload", "playerID", lootPayload.PlayerID, "error", err)
-					// TODO: respond to client error
+					continue
 				}
 
 				containerEntityID, err := uuid.Parse(lootPayload.ContainerEntityID)
 
 				if err != nil {
-
-					slog.Error("Invalid ContainerEntityID from session payload", "containerEntityID", lootPayload.ContainerEntityID, "error", err)
-					// TODO: respond to client error
+					slog.Error("Invalid ContainerEntityID from session payload",
+						"containerEntityID", lootPayload.ContainerEntityID,
+						"playerID", playerID,
+						"error", err)
+					s.sendErrorToPlayer(playerID, msg.Message.Action, "無效的容器目標")
+					continue
 				}
 
 				itemEntityIDUUIDs := []uuid.UUID{}
@@ -552,8 +575,8 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		isWithinDistance := s.calcWithinDistance(playerTransform.X, playerTransform.Y, doorTransform.X, doorTransform.Y)
 
 		if !isWithinDistance {
-			// TODO: add return message to client
 			slog.Debug("Door entity out of range for interaction", "targetID", targetEntityID, "playerID", playerID)
+			s.sendErrorToPlayer(playerID, string(constants.ActionInteract), "距離太遠，無法互動")
 			return ErrOutOfRange
 		}
 
@@ -609,8 +632,8 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		// validate is within distance from player
 		isWithinDistance := s.calcWithinDistance(playerTransform.X, playerTransform.Y, containerTransform.X, containerTransform.Y)
 		if !isWithinDistance {
-			// TODO: add return message to client
 			slog.Debug("Container entity out of range for interaction", "targetID", targetEntityID, "playerID", playerID)
+			s.sendErrorToPlayer(playerID, string(constants.ActionInteract), "距離太遠，無法互動")
 			return ErrOutOfRange
 		}
 		// trigger containers swap in openable state via its OpenableComponent
@@ -886,6 +909,20 @@ func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
 	}
 
 	return itemIDs, nil
+}
+
+/**
+* sendErrorToPlayer sends a structured error message to a specific player.
+* It provides user-friendly messages to the client.
+**/
+func (s *Session) sendErrorToPlayer(playerID uuid.UUID, action string, userMessage string) {
+	s.sender.SendMessageToPlayer(playerID, types.Message{
+		Action: action,
+		Payload: map[string]interface{}{
+			"success": false,
+			"message": userMessage,
+		},
+	})
 }
 
 /**
