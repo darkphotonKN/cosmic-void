@@ -3,9 +3,12 @@ package items
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Repository interface {
@@ -192,6 +195,7 @@ func (r *repository) ListItemRarities(ctx context.Context) ([]*ItemRarity, error
 // ==========================================
 
 func (r *repository) CreateWeapon(ctx context.Context, weapon *Weapon) error {
+
 	weapon.ID = uuid.New()
 
 	query := `
@@ -364,6 +368,11 @@ func (r *repository) CreateItemTemplate(ctx context.Context, template *ItemTempl
 }
 
 func (r *repository) GetItemTemplateByID(ctx context.Context, id uuid.UUID) (*ItemTemplate, error) {
+	ctx, span := itemRepositoryTracer.Start(ctx, "Repo.GetItemTemplateByID", trace.WithAttributes(
+		attribute.String("item.id", id.String()),
+	))
+
+	defer span.End()
 	var template ItemTemplate
 
 	query := `SELECT * FROM item_templates WHERE id = $1`
@@ -372,7 +381,7 @@ func (r *repository) GetItemTemplateByID(ctx context.Context, id uuid.UUID) (*It
 	if err != nil {
 		return nil, fmt.Errorf("failed to get item template: %w", err)
 	}
-
+	slog.Info("Debug GetItemTemplateByID")
 	return &template, nil
 }
 
@@ -440,6 +449,11 @@ func (r *repository) GetWeaponWithTemplateByID(ctx context.Context, id uuid.UUID
 
 // ListArmorsWithTemplate retrieves all armors with their item template information
 func (r *repository) ListArmorsWithTemplate(ctx context.Context) ([]*ArmorWithTemplate, error) {
+	ctx, span := itemRepositoryTracer.Start(ctx, "Repo.ListArmorsWithTemplate")
+	defer span.End()
+
+	slog.Info("[TRACE] ListArmorsWithTemplate called")
+
 	var armorDetails []*ArmorWithTemplate
 
 	query := `
@@ -478,6 +492,11 @@ func (r *repository) ListArmorsWithTemplate(ctx context.Context) ([]*ArmorWithTe
 
 // ListConsumablesWithTemplate retrieves all consumables with their item template information
 func (r *repository) ListConsumablesWithTemplate(ctx context.Context) ([]*ConsumableWithTemplate, error) {
+	ctx, span := itemRepositoryTracer.Start(ctx, "Repo.ListConsumablesWithTemplate")
+	defer span.End()
+
+	slog.Info("[TRACE] ListConsumablesWithTemplate called")
+
 	var consumableDetails []*ConsumableWithTemplate
 
 	query := `
@@ -516,6 +535,11 @@ func (r *repository) ListConsumablesWithTemplate(ctx context.Context) ([]*Consum
 
 // ListWeaponsWithTemplate retrieves all weapons with their item template information
 func (r *repository) ListWeaponsWithTemplate(ctx context.Context) ([]*WeaponWithTemplate, error) {
+	ctx, span := itemRepositoryTracer.Start(ctx, "Repo.ListWeaponsWithTemplate")
+	defer span.End()
+
+	slog.Info("[TRACE] ListWeaponsWithTemplate called")
+
 	var weaponDetails []*WeaponWithTemplate
 
 	query := `
