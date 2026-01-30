@@ -166,7 +166,7 @@ func (s *Session) manageClientMessages() {
 				playerID, err := uuid.Parse(movePayload.PlayerID)
 				if err != nil {
 					slog.Error("Invalid PlayerID from session payload", "playerID", movePayload.PlayerID, "error", err)
-					// TODO: respond to client error
+					// TODO: respond to the client error
 				}
 				s.handleMove(playerID, movePayload.Vx, movePayload.Vy)
 
@@ -176,7 +176,7 @@ func (s *Session) manageClientMessages() {
 				parsedPayload, err := msg.Message.ParsePayload()
 
 				if err != nil {
-					// TODO respond to client error
+					// TODO: respond to client the error
 				}
 
 				interactPayload := parsedPayload.(types.PlayerSessionInteractPayload)
@@ -186,14 +186,14 @@ func (s *Session) manageClientMessages() {
 
 				if err != nil {
 					slog.Error("Invalid PlayerID from session payload", "playerID", interactPayload.PlayerID, "error", err)
-					// TODO: respond to client error
+					// TODO: respond to client the error
 				}
 
 				entityIDUUID, err := uuid.Parse(interactPayload.EntityID)
 
 				if err != nil {
 					slog.Error("Invalid EntityID from session payload", "entityID", interactPayload.EntityID, "error", err)
-					// TODO: respond to client error
+					// TODO: respond to client the error
 				}
 
 				err = s.handleInteract(playerID, entityIDUUID)
@@ -256,18 +256,18 @@ func (s *Session) manageClientMessages() {
 * runs system code to update state of game x times every second.
 **/
 func (s *Session) manageGameLoop() {
-	// TEST: dont run for tests
-	if s.TestMessageSpy != nil {
-		return
-	}
-	// TEST: END test block
-
 	ticker := time.NewTicker((1 * time.Second) / time.Duration(constants.GameFrameRate))
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
+			// TEST: dont run for tests
+			if s.TestMessageSpy != nil {
+				return
+			}
+			// TEST: END test block
+
 			entities := s.EntityManager.GetAllEntities()
 
 			// movement

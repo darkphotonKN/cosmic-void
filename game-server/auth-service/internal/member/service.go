@@ -90,11 +90,10 @@ func (s *service) CreateMember(ctx context.Context, req *pb.CreateMemberRequest)
 
 	// span just for password
 	ctx, hashSpan := serviceTracer.Start(ctx, "service.HashPassword")
-
 	// hash the password
 	hashedPw, err := s.HashPassword(req.Password)
-
 	hashSpan.End()
+
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "password hashing failed")
