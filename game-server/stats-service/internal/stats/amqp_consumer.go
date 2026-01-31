@@ -127,7 +127,7 @@ func SetupAMQPInfrastructure(channel *amqp.Channel) error {
 	err = channel.QueueBind(
 		commonconstants.StatsGameMatchEndedQueue, // queue name
 		commonconstants.GameMatchEnded,           // routing key
-		commonconstants.StatsGameMatchEndedQueue, // exchange
+		commonconstants.GameEventsExchange,       // exchange
 		false,                                    // no-wait
 		nil,                                      // args
 	)

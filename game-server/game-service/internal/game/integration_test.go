@@ -99,7 +99,7 @@ func TestHandleMoveUpdatesPositionIntegration(t *testing.T) {
 /**
 * test integration between match publish and event
 **/
-func TestPublishMatchComplete(t *testing.T) {
+func TestPublishMatchCompleteIntegration(t *testing.T) {
 	// create test data player match results
 	matchEndData := &commontypes.MatchEndState{
 		SessionID:      uuid.MustParse("550e8400-e29b-41d4-a716-446655440001"),
@@ -129,7 +129,7 @@ func TestPublishMatchComplete(t *testing.T) {
 
 	ch, close := broker.Connect(amqpUser, amqpPassword, amqpHost, amqpPort)
 
-	broker.DeclareExchange(ch, commonconstants.GameMatchEndedEvent, "fanout")
+	broker.DeclareExchange(ch, commonconstants.GameEventsExchange, "topic")
 
 	defer func() {
 		close()
@@ -144,10 +144,11 @@ func TestPublishMatchComplete(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	service.publishCh.PublishWithContext(context.Background(), commonconstants.GameMatchEndedEvent, "fanout", commonbroker.Message{
+	service.publishCh.PublishWithContext(context.Background(), commonconstants.GameEventsExchange, commonconstants.GameMatchEnded, commonbroker.Message{
 		Body:         dataJSON,
 		ContentType:  "application/json",
 		DeliveryMode: amqp.Persistent,
 	})
+
 	// TODO: consume for testing
 }
