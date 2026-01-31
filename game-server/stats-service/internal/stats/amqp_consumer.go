@@ -28,8 +28,6 @@ func NewConsumer(service ConsumerService, channel *amqp.Channel) *Consumer {
 	}
 }
 
-const statsMatchEndedQueue = "stats.game.match.ended"
-
 // Listen starts consuming messages from the configured queues
 func (c *Consumer) Listen() {
 	// Start consuming match completed events
@@ -41,13 +39,13 @@ func (c *Consumer) Listen() {
 // consumeMatchCompleted handles match completion events
 func (c *Consumer) consumeMatchCompleted() {
 	msgs, err := c.channel.Consume(
-		statsMatchEndedQueue, // queue name
-		"",                   // consumer
-		false,                // auto-ack (set to false for manual ack)
-		false,                // exclusive
-		false,                // no-local
-		false,                // no-wait
-		nil,                  // args
+		commonconstants.StatsGameMatchEndedQueue, // queue name
+		"",                                       // consumer
+		false,                                    // auto-ack
+		false,                                    // exclusive
+		false,                                    // no-local
+		false,                                    // no-wait
+		nil,                                      // args
 	)
 
 	if err != nil {
@@ -63,7 +61,7 @@ func (c *Consumer) consumeMatchCompleted() {
 			continue
 		}
 
-		slog.Info("Unmarshalled MatchEndState extracted from event.", "event type", commonconstants.GameMatchEndedEvent, "event data", event)
+		slog.Info("Unmarshalled MatchEndState extracted from event.", "event type", commonconstants.GameMatchEnded, "event data", event)
 
 		ctx := context.Background()
 
@@ -99,13 +97,13 @@ func (c *Consumer) consumeMatchCompleted() {
 // Helper method to set up AMQP exchange and bindings
 func SetupAMQPInfrastructure(channel *amqp.Channel) error {
 	err := channel.ExchangeDeclare(
-		commonconstants.GameMatchEndedEvent, // exchange name
-		"fanout",                            // exchange type
-		true,                                // durable
-		false,                               // auto-deleted
-		false,                               // internal
-		false,                               // no-wait
-		nil,                                 // arguments
+		commonconstants.GameEventsExchange, // exchange name
+		"topic",                            // exchange type
+		true,                               // durable
+		false,                              // auto-deleted
+		false,                              // internal
+		false,                              // no-wait
+		nil,                                // arguments
 	)
 	if err != nil {
 		return err
@@ -113,12 +111,12 @@ func SetupAMQPInfrastructure(channel *amqp.Channel) error {
 
 	// Declare the queue
 	_, err = channel.QueueDeclare(
-		statsMatchEndedQueue, // queue name
-		true,                 // durable
-		false,                // delete when unused
-		false,                // exclusive
-		false,                // no-wait
-		nil,                  // arguments
+		commonconstants.StatsGameMatchEndedQueue, // queue name
+		true,                                     // durable
+		false,                                    // delete when unused
+		false,                                    // exclusive
+		false,                                    // no-wait
+		nil,                                      // arguments
 	)
 	if err != nil {
 		slog.Error("Failed to declare queue", "error", err)
@@ -127,11 +125,11 @@ func SetupAMQPInfrastructure(channel *amqp.Channel) error {
 
 	// Bind the queue to the exchange
 	err = channel.QueueBind(
-		statsMatchEndedQueue,                // queue name
-		"match.completed",                   // routing key
-		commonconstants.GameMatchEndedEvent, // exchange
-		false,                               // no-wait
-		nil,                                 // args
+		commonconstants.StatsGameMatchEndedQueue, // queue name
+		commonconstants.GameMatchEnded,           // routing key
+		commonconstants.StatsGameMatchEndedQueue, // exchange
+		false,                                    // no-wait
+		nil,                                      // args
 	)
 	if err != nil {
 		return err

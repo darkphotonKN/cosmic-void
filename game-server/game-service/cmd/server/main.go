@@ -123,7 +123,7 @@ func main() {
 		ch.Close()
 	}()
 
-	broker.DeclareExchange(ch, commonconstants.GameMatchEndedEvent, "fanout")
+	broker.DeclareExchange(ch, commonconstants.GameEventsExchange, "topic")
 
 	// TODO: Initialize your services and handlers
 	// repo := yourpackage.NewRepository(db)
