@@ -200,11 +200,12 @@ func (s *service) updateDenormalizedLeaderboard(ctx context.Context, results *pb
 	// recalculate rank position
 	rankingStats, err := s.repo.GetPlayerRankingStats(ctx, memberId)
 
-	// TODO: still working on this
 	slog.Debug("getting ranking stats from GetPlayerRankingStats", "rankingStats", rankingStats)
 
-	ranking := defult
-	ranking := rankingStats.RankPosition
+	var ranking *int
+	if rankingStats != nil {
+		ranking = rankingStats.RankPosition
+	}
 
 	statsParam := &UpdatePlayerRankingsParams{
 		MemberID:         memberId,
@@ -212,7 +213,7 @@ func (s *service) updateDenormalizedLeaderboard(ctx context.Context, results *pb
 		Wins:             wins,
 		TopThrees:        topThree,
 		Rating:           0,
-		RankPosition:     rankingStats.RankPosition,
+		RankPosition:     ranking,
 		LastCalculatedAt: time.Now(),
 	}
 
