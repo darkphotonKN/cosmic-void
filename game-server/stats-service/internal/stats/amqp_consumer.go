@@ -55,6 +55,13 @@ func (c *Consumer) consumeMatchCompleted() {
 
 	for msg := range msgs {
 		var event pb.ProcessMatchCompletedRequest
+
+		slog.Debug("Raw message received",
+			"body_length", len(msg.Body),
+			"content_type", msg.ContentType,
+			"body_preview", string(msg.Body[:min(100, len(msg.Body))]),
+		)
+
 		if err := proto.Unmarshal(msg.Body, &event); err != nil {
 			slog.Error("Failed to parse match completed event", "error", err)
 			msg.Nack(false, false)

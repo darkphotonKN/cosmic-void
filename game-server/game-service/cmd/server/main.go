@@ -45,10 +45,10 @@ var (
 )
 
 func main() {
+	ctx := context.Background()
+
 	// --- logger ---
 	commonhelpers.SetupLogger(environment)
-
-	ctx := context.Background()
 
 	// --- observability ---
 	shutdown, err := commontelemetry.Init(ctx, commontelemetry.Config{
@@ -61,6 +61,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer shutdown(ctx)
+
 	// --- database setup ---
 
 	db := config.InitDB()

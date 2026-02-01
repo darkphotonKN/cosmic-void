@@ -2,7 +2,6 @@ package game
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
 	"testing"
 	"time"
@@ -17,7 +16,6 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/serializer"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
 
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
@@ -140,15 +138,7 @@ func TestPublishMatchCompleteIntegration(t *testing.T) {
 	publishCh := commonbroker.NewAmqpPublisher(ch) // use adapter
 	service := NewService(publishCh)
 
-	dataJSON, err := json.Marshal(matchEndData)
-
-	assert.NoError(t, err)
-
-	service.publishCh.PublishWithContext(context.Background(), commonconstants.GameEventsExchange, commonconstants.GameMatchEnded, commonbroker.Message{
-		Body:         dataJSON,
-		ContentType:  "application/json",
-		DeliveryMode: amqp.Persistent,
-	})
+	service.PublishMatchComplete(context.Background(), matchEndData)
 
 	// TODO: consume for testing
 }

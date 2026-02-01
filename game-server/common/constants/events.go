@@ -15,6 +15,7 @@ Exchange         {service}.{domain}.{resource}.{action}     stats.game.match.end
 /**
 * Exchange
 * NOTE: try to keep these one per domain
+* {domain}.events
 **/
 const (
 	GameEventsExchange = "game.events"
@@ -23,6 +24,7 @@ const (
 /**
 * Message Broker Events
 * NOTE: also acting as Routing Keys
+* {resource}.{action}
 **/
 const (
 	// example
@@ -39,7 +41,7 @@ const (
 
 /**
 * Queue Names
-* NOTE: service.domain.event
+* NOTE: {service}.{domain}.{resource}.{action}
 **/
 const (
 	StatsGameMatchEndedQueue = "stats.game.match.ended"

@@ -50,10 +50,10 @@ func (s *service) PublishMatchComplete(ctx context.Context, data *commontypes.Ma
 
 	err = s.publishCh.PublishWithContext(
 		ctx,
-		commonconstants.GameEventsExchange, // domain level
+		commonconstants.GameEventsExchange,
 		commonconstants.GameMatchEnded,
 		commonbroker.Message{
-			ContentType:  "application/json",
+			ContentType:  "application/protobuf",
 			Body:         protoData,
 			DeliveryMode: amqp.Persistent,
 		})
