@@ -24,8 +24,6 @@ func NewService(publishCh commonbroker.Publisher) *service {
 }
 
 func (s *service) PublishMatchComplete(ctx context.Context, data *commontypes.MatchEndState) error {
-	slog.Info("Publishing game match ended.")
-
 	// format data for marshalling as protobuf
 	playerMatchRes := make([]*pb.PlayerMatchResults, len(data.PlayerMatchResults))
 

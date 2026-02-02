@@ -42,8 +42,6 @@ func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.ProcessMatc
 		"match_ended_at", req.MatchEndedAt.AsTime(),
 	)
 
-	// TODO: implement seperate updates to relevant tables
-
 	for _, playerResults := range req.Players {
 		slog.Info("Player match outcome",
 			"playerResults", playerResults,
