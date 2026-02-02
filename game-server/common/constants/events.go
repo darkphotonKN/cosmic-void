@@ -1,7 +1,30 @@
 package commonconstants
 
 /**
+NOTE: for those joining my project for the first time, follow this rule:
+
+Simple rule:
+
+Constant      |    Pattern                             |    Example
+Exchange         {domain}.events                            game.events
+Routing Key      {resource}.{action}                        match.ended
+Exchange         {service}.{domain}.{resource}.{action}     stats.game.match.ended
+
+**/
+
+/**
+* Exchange
+* NOTE: try to keep these one per domain
+* {domain}.events
+**/
+const (
+	GameEventsExchange = "game.events"
+)
+
+/**
 * Message Broker Events
+* NOTE: also acting as Routing Keys
+* {resource}.{action}
 **/
 const (
 	// example
@@ -13,7 +36,15 @@ const (
 	PasswordResetEvent  = "member.password.reset" // when password reset is requested
 
 	// Game Events
-	GameMatchEndedEvent = "game.match.ended" // match ended
+	GameMatchEnded = "match.ended" // match ended
+)
+
+/**
+* Queue Names
+* NOTE: {service}.{domain}.{resource}.{action}
+**/
+const (
+	StatsGameMatchEndedQueue = "stats.game.match.ended"
 )
 
 /**

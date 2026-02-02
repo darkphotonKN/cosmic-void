@@ -70,10 +70,12 @@ func (r *repository) UpsertPlayerMatchStats(ctx context.Context, params *UpdateS
 
 	var updated PlayerMatchStats
 
-	err = rows.StructScan(&updated)
+	if rows.Next() {
+		err = rows.StructScan(&updated)
 
-	if err != nil {
-		return nil, commonutils.AnalyzeDBErr(err)
+		if err != nil {
+			return nil, commonutils.AnalyzeDBErr(err)
+		}
 	}
 
 	return &updated, nil

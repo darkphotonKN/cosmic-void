@@ -54,3 +54,13 @@ scrape_configs:
   - job_name: "game-service"
     static_configs:
       - targets: ["host.docker.internal:8082"]
+
+  # STATS SERVICE
+  - job_name: "stats-service"
+    static_configs:
+      - targets: ["host.docker.internal:8083"]
+
+  # ITEM SERVICE
+  - job_name: "item-service"
+    static_configs:
+      - targets: ["host.docker.internal:7013"]

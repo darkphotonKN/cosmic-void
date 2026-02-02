@@ -45,8 +45,10 @@ var (
 )
 
 func main() {
-
 	ctx := context.Background()
+
+	// --- logger ---
+	commonhelpers.SetupLogger(environment)
 
 	// --- observability ---
 	shutdown, err := commontelemetry.Init(ctx, commontelemetry.Config{
@@ -59,6 +61,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer shutdown(ctx)
+
 	// --- database setup ---
 
 	db := config.InitDB()
@@ -121,7 +124,7 @@ func main() {
 		ch.Close()
 	}()
 
-	broker.DeclareExchange(ch, commonconstants.GameMatchEndedEvent, "fanout")
+	broker.DeclareExchange(ch, commonconstants.GameEventsExchange, "topic")
 
 	// TODO: Initialize your services and handlers
 	// repo := yourpackage.NewRepository(db)

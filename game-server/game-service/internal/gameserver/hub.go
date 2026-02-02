@@ -2,6 +2,7 @@ package gameserver
 
 import (
 	"fmt"
+	"log/slog"
 	"sync"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
@@ -72,8 +73,9 @@ func (h *messageHub) Run() {
 			if gameActions[messageAction] {
 				sessionID, err := clientPackage.Message.GetSessionID()
 
+				slog.Debug("debug sessionID clientPackage GetSessionID", "sessionID", sessionID)
+
 				if err != nil {
-					// 傳入 conn 作為參數
 					err := "invalid or missing session ID in payload"
 					h.sender.SendMessageToConn(clientPackage.Conn, types.Message{
 						Action: clientPackage.Message.Action,
@@ -88,7 +90,6 @@ func (h *messageHub) Run() {
 				session, exists := h.sessionManager.GetGameSession(sessionID)
 
 				if !exists {
-					// 傳入 conn 作為參數
 					err := "Game session not found"
 					h.sender.SendMessageToConn(clientPackage.Conn, types.Message{
 						Action: clientPackage.Message.Action,
@@ -97,7 +98,7 @@ func (h *messageHub) Run() {
 						},
 						Error: &err,
 					})
-					fmt.Printf("\ngame doesn't exist for this player, message: %+v\n\n", clientPackage.Message)
+					slog.Error("Game doesn't exist for this player", "message", clientPackage.Message)
 					continue
 				}
 

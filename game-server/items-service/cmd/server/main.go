@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net"
 	"time"
@@ -11,19 +10,21 @@ import (
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
+	commontelemetry "github.com/darkphotonKN/cosmic-void-server/common/telemetry"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/darkphotonKN/cosmic-void-server/items-service/config"
-	"github.com/darkphotonKN/cosmic-void-server/items-service/internal/items"
-	"github.com/google/uuid"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
 )
 
 var (
-	serviceName = "items"
-	grpcAddr    = commonhelpers.GetEnvString("GRPC_ITEMS_ADDR", "7013")
-	consulAddr  = commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
+	serviceName       = "items"
+	environment       = commonhelpers.GetEnvString("ENVIRONMENT", "development")
+	collectorEndpoint = commonhelpers.GetEnvString("COLLECTOR_ENDPOINT", "localhost:4317")
+	grpcAddr          = commonhelpers.GetEnvString("GRPC_ITEMS_ADDR", "7013")
+	consulAddr        = commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
+	serviceVersion    = commonhelpers.GetEnvString("SERVICE_VERSION", "1.0.0")
 
 	amqpUser     = commonhelpers.GetEnvString("RABBITMQ_USER", "guest")
 	amqpPassword = commonhelpers.GetEnvString("RABBITMQ_PASS", "guest")
@@ -42,12 +43,24 @@ func main() {
 
 	ctx := context.Background()
 
-	// test
-	repo := items.NewRepository(db)
-	testItemId := uuid.MustParse("aa0e8400-e29b-41d4-a716-446655440001")
+	// --- observability ---
+	shutdown, err := commontelemetry.Init(ctx, commontelemetry.Config{
+		ServiceName:       serviceName,
+		ServiceVersion:    serviceVersion,
+		Environment:       environment,
+		CollectorEndpoint: collectorEndpoint,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer shutdown(ctx)
 
-	itemData, err := repo.GetItemTemplateByID(ctx, testItemId)
-	fmt.Println("here %v:", itemData)
+	// test
+	// repo := items.NewRepository(db)
+	// testItemId := uuid.MustParse("aa0e8400-e29b-41d4-a716-446655440001")
+
+	// itemData, err := repo.GetItemTemplateByID(ctx, testItemId)
+	// slog.Info("Debugging get item template", "itemData", itemData)
 	// end test
 
 	instanceID := discovery.GenerateInstanceID(serviceName)
@@ -81,7 +94,7 @@ func main() {
 	ch, close := broker.Connect(amqpUser, amqpPassword, amqpHost, amqpPort)
 
 	// Only declare the exchange we actually consume from
-	broker.DeclareExchange(ch, commonconstants.GameMatchEndedEvent, "fanout")
+	broker.DeclareExchange(ch, commonconstants.GameEventsExchange, "topic")
 
 	defer func() {
 		close()

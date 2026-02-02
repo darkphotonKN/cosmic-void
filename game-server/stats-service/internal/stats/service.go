@@ -58,7 +58,7 @@ func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.ProcessMatc
 		// -- leaderboards --
 		err = s.updateDenormalizedLeaderboard(ctx, playerResults)
 		if err != nil {
-			slog.Error("error when updating match stats", "memberID", playerResults.MemberId, "error", err)
+			slog.Error("error when updating leaderboard stats", "memberID", playerResults.MemberId, "error", err)
 		}
 
 		// -- match history --
@@ -200,9 +200,12 @@ func (s *service) updateDenormalizedLeaderboard(ctx context.Context, results *pb
 	// recalculate rank position
 	rankingStats, err := s.repo.GetPlayerRankingStats(ctx, memberId)
 
-	// TODO: still working on this
 	slog.Debug("getting ranking stats from GetPlayerRankingStats", "rankingStats", rankingStats)
-	// ranking := rankingStats.RankPosition
+
+	var ranking *int
+	if rankingStats != nil {
+		ranking = rankingStats.RankPosition
+	}
 
 	statsParam := &UpdatePlayerRankingsParams{
 		MemberID:         memberId,
@@ -210,7 +213,7 @@ func (s *service) updateDenormalizedLeaderboard(ctx context.Context, results *pb
 		Wins:             wins,
 		TopThrees:        topThree,
 		Rating:           0,
-		RankPosition:     rankingStats.RankPosition,
+		RankPosition:     ranking,
 		LastCalculatedAt: time.Now(),
 	}
 

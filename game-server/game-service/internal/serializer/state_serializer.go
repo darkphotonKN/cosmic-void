@@ -24,12 +24,10 @@ func NewStateSerializer(em *ecs.EntityManager) *StateSerializer {
 
 // populateItemDetails fetches item details from items-service via the item's
 // ItemTool gRPC client and populates the ItemState accordingly.
-func populateItemDetails(item *components.ItemComponent, itemState *types.ItemState) {
+func populateItemDetails(ctx context.Context, item *components.ItemComponent, itemState *types.ItemState) {
 	if item.ItemTool == nil {
 		return
 	}
-
-	ctx := context.Background()
 
 	// Try weapons
 	weaponResponse, err := item.ItemTool.ListWeaponsWithTemplate(ctx)
@@ -81,7 +79,7 @@ func populateItemDetails(item *components.ItemComponent, itemState *types.ItemSt
 	log.Printf("No matching item details found for: %s", item.ItemName)
 }
 
-func (s *StateSerializer) Serialize(sessionID uuid.UUID, recipientPlayerID uuid.UUID, entities []*ecs.Entity) (*types.ClientGameState, error) {
+func (s *StateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, recipientPlayerID uuid.UUID, entities []*ecs.Entity) (*types.ClientGameState, error) {
 	state := &types.ClientGameState{
 		SessionID:     sessionID,
 		CurrentPlayer: nil,
@@ -119,7 +117,7 @@ func (s *StateSerializer) Serialize(sessionID uuid.UUID, recipientPlayerID uuid.
 						Quantity: 1,
 					}
 
-					populateItemDetails(item, itemState)
+					populateItemDetails(ctx, item, itemState)
 
 					inventory = append(inventory, itemState)
 				}
@@ -184,7 +182,7 @@ func (s *StateSerializer) Serialize(sessionID uuid.UUID, recipientPlayerID uuid.
 								Quantity: 1,
 							}
 
-							populateItemDetails(item, itemState)
+							populateItemDetails(ctx, item, itemState)
 
 							items = append(items, itemState)
 						}

@@ -144,6 +144,10 @@ func (s *Session) manageClientMessages() {
 	for {
 		select {
 		case msg := <-s.MessageCh:
+			if s.TestMessageSpy != nil {
+				return
+			}
+
 			slog.Debug("Incoming message to game session", "sessionID", s.ID, "message", msg)
 
 			switch constants.Action(msg.Message.Action) {
@@ -154,8 +158,14 @@ func (s *Session) manageClientMessages() {
 				parsedPayload, err := msg.Message.ParsePayload()
 
 				if err != nil {
-					// TODO: respond to client error
 					slog.Error("Failed to parse payload - types don't match", "payload", parsedPayload, "error", err)
+					// Get playerID from payload if possible, otherwise skip sending error to specific player
+					if playerIDStr, ok := msg.Message.Payload["player_id"].(string); ok {
+						if playerID, parseErr := uuid.Parse(playerIDStr); parseErr == nil {
+							s.sendErrorToPlayer(playerID, msg.Message.Action, "無法解析移動請求")
+						}
+					}
+					continue
 				}
 
 				movePayload := parsedPayload.(types.PlayerSessionMovePayload)
@@ -166,7 +176,8 @@ func (s *Session) manageClientMessages() {
 				playerID, err := uuid.Parse(movePayload.PlayerID)
 				if err != nil {
 					slog.Error("Invalid PlayerID from session payload", "playerID", movePayload.PlayerID, "error", err)
-					// TODO: respond to client error
+					// Cannot send error to player since we don't have valid playerID
+					continue
 				}
 				s.handleMove(playerID, movePayload.Vx, movePayload.Vy)
 
@@ -176,7 +187,13 @@ func (s *Session) manageClientMessages() {
 				parsedPayload, err := msg.Message.ParsePayload()
 
 				if err != nil {
-					// TODO respond to client error
+					slog.Error("Failed to parse interact payload", "error", err)
+					if playerIDStr, ok := msg.Message.Payload["player_id"].(string); ok {
+						if playerID, parseErr := uuid.Parse(playerIDStr); parseErr == nil {
+							s.sendErrorToPlayer(playerID, msg.Message.Action, "無法解析互動請求")
+						}
+					}
+					continue
 				}
 
 				interactPayload := parsedPayload.(types.PlayerSessionInteractPayload)
@@ -186,14 +203,15 @@ func (s *Session) manageClientMessages() {
 
 				if err != nil {
 					slog.Error("Invalid PlayerID from session payload", "playerID", interactPayload.PlayerID, "error", err)
-					// TODO: respond to client error
+					continue
 				}
 
 				entityIDUUID, err := uuid.Parse(interactPayload.EntityID)
 
 				if err != nil {
 					slog.Error("Invalid EntityID from session payload", "entityID", interactPayload.EntityID, "error", err)
-					// TODO: respond to client error
+					s.sendErrorToPlayer(playerID, msg.Message.Action, "無效的目標物件")
+					continue
 				}
 
 				err = s.handleInteract(playerID, entityIDUUID)
@@ -207,7 +225,13 @@ func (s *Session) manageClientMessages() {
 				parsedPayload, err := msg.Message.ParsePayload()
 
 				if err != nil {
-					// TODO respond to client error
+					slog.Error("Failed to parse loot payload", "error", err)
+					if playerIDStr, ok := msg.Message.Payload["player_id"].(string); ok {
+						if playerID, parseErr := uuid.Parse(playerIDStr); parseErr == nil {
+							s.sendErrorToPlayer(playerID, msg.Message.Action, "無法解析拾取請求")
+						}
+					}
+					continue
 				}
 
 				lootPayload := parsedPayload.(types.PlayerSessionLootPayload)
@@ -217,15 +241,18 @@ func (s *Session) manageClientMessages() {
 
 				if err != nil {
 					slog.Error("Invalid PlayerID from session payload", "playerID", lootPayload.PlayerID, "error", err)
-					// TODO: respond to client error
+					continue
 				}
 
 				containerEntityID, err := uuid.Parse(lootPayload.ContainerEntityID)
 
 				if err != nil {
-
-					slog.Error("Invalid ContainerEntityID from session payload", "containerEntityID", lootPayload.ContainerEntityID, "error", err)
-					// TODO: respond to client error
+					slog.Error("Invalid ContainerEntityID from session payload",
+						"containerEntityID", lootPayload.ContainerEntityID,
+						"playerID", playerID,
+						"error", err)
+					s.sendErrorToPlayer(playerID, msg.Message.Action, "無效的容器目標")
+					continue
 				}
 
 				itemEntityIDUUIDs := []uuid.UUID{}
@@ -256,18 +283,18 @@ func (s *Session) manageClientMessages() {
 * runs system code to update state of game x times every second.
 **/
 func (s *Session) manageGameLoop() {
-	// TEST: dont run for tests
-	if s.TestMessageSpy != nil {
-		return
-	}
-	// TEST: END test block
-
 	ticker := time.NewTicker((1 * time.Second) / time.Duration(constants.GameFrameRate))
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
+			// TEST: dont run for tests
+			if s.TestMessageSpy != nil {
+				return
+			}
+			// TEST: END test block
+
 			entities := s.EntityManager.GetAllEntities()
 
 			// movement
@@ -411,11 +438,12 @@ func (s *Session) GetPlayerIDs() []uuid.UUID {
 * session. Each player receives a personalized view with their player state separated.
 **/
 func (s *Session) broadcastFullState() error {
+	ctx := context.Background()
 	entities := s.EntityManager.GetAllEntities()
 
 	// create and send personalized state for each player
 	for _, playerID := range s.playerEntityIDToPlayerID {
-		clientState, err := s.stateSerializer.Serialize(s.ID, playerID, entities)
+		clientState, err := s.stateSerializer.Serialize(ctx, s.ID, playerID, entities)
 		if err != nil {
 			slog.Error("Failed to serialize state for player", "playerID", playerID, "error", err)
 			continue
@@ -551,8 +579,8 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		isWithinDistance := s.calcWithinDistance(playerTransform.X, playerTransform.Y, doorTransform.X, doorTransform.Y)
 
 		if !isWithinDistance {
-			// TODO: add return message to client
 			slog.Debug("Door entity out of range for interaction", "targetID", targetEntityID, "playerID", playerID)
+			s.sendErrorToPlayer(playerID, string(constants.ActionInteract), "距離太遠，無法互動")
 			return ErrOutOfRange
 		}
 
@@ -608,8 +636,8 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		// validate is within distance from player
 		isWithinDistance := s.calcWithinDistance(playerTransform.X, playerTransform.Y, containerTransform.X, containerTransform.Y)
 		if !isWithinDistance {
-			// TODO: add return message to client
 			slog.Debug("Container entity out of range for interaction", "targetID", targetEntityID, "playerID", playerID)
+			s.sendErrorToPlayer(playerID, string(constants.ActionInteract), "距離太遠，無法互動")
 			return ErrOutOfRange
 		}
 		// trigger containers swap in openable state via its OpenableComponent
@@ -735,22 +763,29 @@ type itemTemplate struct {
 
 /**
 * initItemPool fetches all item templates from items-service via gRPC once
-* and stores them in the session-level item pool.
+* and fills the pool according to configured ratios (weapons, armors, consumables).
 **/
 func (s *Session) initItemPool() error {
+	ctx := context.Background()
+	ctx, span := gameItemPoolTracer.Start(ctx, "game.initItemPool")
+	defer span.End()
+
 	if s.itemsClient == nil {
 		return fmt.Errorf("itemsClient is not initialized")
 	}
 
-	ctx := context.Background()
-	s.itemPool = make([]itemTemplate, 0)
+	// Step 1: Fetch all templates from items-service
+	weaponTemplates := []itemTemplate{}
+	armorTemplates := []itemTemplate{}
+	consumableTemplates := []itemTemplate{}
 
+	// Fetch weapons
 	weapons, err := s.itemsClient.ListWeaponsWithTemplate(ctx)
 	if err != nil {
 		fmt.Printf("Warning: failed to fetch weapons: %v\n", err)
 	} else {
 		for _, w := range weapons.Weapons {
-			s.itemPool = append(s.itemPool, itemTemplate{
+			weaponTemplates = append(weaponTemplates, itemTemplate{
 				Name:          w.ItemName,
 				BaseBuyPrice:  w.BaseBuyPrice,
 				BaseSellPrice: w.BaseSellPrice,
@@ -758,12 +793,13 @@ func (s *Session) initItemPool() error {
 		}
 	}
 
+	// Fetch armors
 	armors, err := s.itemsClient.ListArmorsWithTemplate(ctx)
 	if err != nil {
 		fmt.Printf("Warning: failed to fetch armors: %v\n", err)
 	} else {
 		for _, a := range armors.Armors {
-			s.itemPool = append(s.itemPool, itemTemplate{
+			armorTemplates = append(armorTemplates, itemTemplate{
 				Name:          a.ItemName,
 				BaseBuyPrice:  a.BaseBuyPrice,
 				BaseSellPrice: a.BaseSellPrice,
@@ -771,12 +807,13 @@ func (s *Session) initItemPool() error {
 		}
 	}
 
+	// Fetch consumables
 	consumables, err := s.itemsClient.ListConsumablesWithTemplate(ctx)
 	if err != nil {
 		fmt.Printf("Warning: failed to fetch consumables: %v\n", err)
 	} else {
 		for _, c := range consumables.Consumables {
-			s.itemPool = append(s.itemPool, itemTemplate{
+			consumableTemplates = append(consumableTemplates, itemTemplate{
 				Name:          c.ItemName,
 				BaseBuyPrice:  c.BaseBuyPrice,
 				BaseSellPrice: c.BaseSellPrice,
@@ -784,12 +821,45 @@ func (s *Session) initItemPool() error {
 		}
 	}
 
+	// Step 2: Calculate quantities based on ratios
+	weaponCount := (constants.ItemPoolSize * constants.WeaponRatio) / 100
+	armorCount := (constants.ItemPoolSize * constants.ArmorRatio) / 100
+	consumableCount := (constants.ItemPoolSize * constants.ConsumableRatio) / 100
+
+	// Step 3: Fill pool by ratio with random selection
+	s.itemPool = make([]itemTemplate, 0, constants.ItemPoolSize)
+
+	// Add weapons
+	for i := 0; i < weaponCount && len(weaponTemplates) > 0; i++ {
+		randomIndex := rand.IntN(len(weaponTemplates))
+		s.itemPool = append(s.itemPool, weaponTemplates[randomIndex])
+	}
+
+	// Add armors
+	for i := 0; i < armorCount && len(armorTemplates) > 0; i++ {
+		randomIndex := rand.IntN(len(armorTemplates))
+		s.itemPool = append(s.itemPool, armorTemplates[randomIndex])
+	}
+
+	// Add consumables
+	for i := 0; i < consumableCount && len(consumableTemplates) > 0; i++ {
+		randomIndex := rand.IntN(len(consumableTemplates))
+		s.itemPool = append(s.itemPool, consumableTemplates[randomIndex])
+	}
+
+	// Step 4: Shuffle the entire pool (so items are mixed, not grouped by type)
+	for i := len(s.itemPool) - 1; i > 0; i-- {
+		j := rand.IntN(i + 1)
+		s.itemPool[i], s.itemPool[j] = s.itemPool[j], s.itemPool[i]
+	}
+
 	if len(s.itemPool) == 0 {
 		return fmt.Errorf("no items available from items-service")
 	}
 
 	s.itemPoolInitialized = true
-	fmt.Printf("Item pool initialized with %d items\n", len(s.itemPool))
+	fmt.Printf("Item pool initialized with %d items (weapons: %d, armors: %d, consumables: %d)\n",
+		len(s.itemPool), weaponCount, armorCount, consumableCount)
 	return nil
 }
 
@@ -843,6 +913,20 @@ func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
 	}
 
 	return itemIDs, nil
+}
+
+/**
+* sendErrorToPlayer sends a structured error message to a specific player.
+* It provides user-friendly messages to the client.
+**/
+func (s *Session) sendErrorToPlayer(playerID uuid.UUID, action string, userMessage string) {
+	s.sender.SendMessageToPlayer(playerID, types.Message{
+		Action: action,
+		Payload: map[string]interface{}{
+			"success": false,
+			"message": userMessage,
+		},
+	})
 }
 
 /**
