@@ -80,6 +80,8 @@ func (c *Consumer) consumeMatchCompleted() {
 				"session_id", event.SessionId,
 			)
 
+			// TODO: check retry count in header
+
 			// retry if error is transient
 			if errors.Is(err, commonconstants.ErrTransient) {
 				msg.Nack(false, true)

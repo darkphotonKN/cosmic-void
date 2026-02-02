@@ -94,7 +94,7 @@ func main() {
 	ch, close := broker.Connect(amqpUser, amqpPassword, amqpHost, amqpPort)
 
 	// Only declare the exchange we actually consume from
-	broker.DeclareExchange(ch, commonconstants.GameMatchEndedEvent, "fanout")
+	broker.DeclareExchange(ch, commonconstants.GameEventsExchange, "fanout")
 
 	defer func() {
 		close()
