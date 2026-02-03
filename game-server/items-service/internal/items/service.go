@@ -3,8 +3,8 @@ package items
 import (
 	"context"
 
+	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	"github.com/google/uuid"
-	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type Service interface {
@@ -54,10 +54,10 @@ type Service interface {
 
 type service struct {
 	repo      Repository
-	publishCh *amqp.Channel
+	publishCh commonbroker.Publisher
 }
 
-func NewService(repo Repository, publishCh *amqp.Channel) Service {
+func NewService(repo Repository, publishCh commonbroker.Publisher) Service {
 	return &service{
 		repo:      repo,
 		publishCh: publishCh,
