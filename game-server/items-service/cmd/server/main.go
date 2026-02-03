@@ -100,8 +100,8 @@ func main() {
 	// setup endpoint for metrics collection
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
-		log.Println("Metrics server started on :8082")
-		http.ListenAndServe(":8082", nil)
+		log.Println("Metrics server started on :7013")
+		http.ListenAndServe(":7013", nil)
 	}()
 
 	ch, close := broker.Connect(amqpUser, amqpPassword, amqpHost, amqpPort)
