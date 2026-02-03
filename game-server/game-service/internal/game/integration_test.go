@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"testing"
 	"time"
@@ -112,18 +113,18 @@ func TestPublishMatchCompleteIntegration(t *testing.T) {
 			{
 				MemberID:      testMemberIDOne,
 				Username:      "testplayer1",
-				Win:           true,
-				FinalPosition: 1,
-				Kills:         8,
-				Deaths:        2,
+				Win:           false,
+				FinalPosition: 2,
+				Kills:         3,
+				Deaths:        1,
 			},
 			{
 				MemberID:      testMemberIDTwo,
 				Username:      "test2",
-				Win:           false,
-				FinalPosition: 2,
-				Kills:         6,
-				Deaths:        3,
+				Win:           true,
+				FinalPosition: 1,
+				Kills:         10,
+				Deaths:        0,
 			},
 		},
 	}
@@ -139,17 +140,47 @@ func TestPublishMatchCompleteIntegration(t *testing.T) {
 		ch.Close()
 	}()
 
+	testQueue := fmt.Sprintf("%s.test", commonconstants.StatsGameMatchEndedQueue)
+
+	// queue setup
+	_, err := ch.QueueDeclare(
+		testQueue, // queue name
+		true,      // durable
+		false,     // delete when unused
+		false,     // exclusive
+		false,     // no-wait
+		nil,       // arguments
+	)
+	if err != nil {
+		slog.Error("Failed to declare queue", "error", err)
+		assert.NoError(t, err)
+	}
+
+	// bind the queue to the exchange
+	err = ch.QueueBind(
+		testQueue,                          // queue name
+		commonconstants.GameMatchEnded,     // routing key
+		commonconstants.GameEventsExchange, // exchange
+		false,                              // no-wait
+		nil,                                // args
+	)
+	if err != nil {
+		slog.Error("Failed to bind queue to exchange", "error", err)
+		assert.NoError(t, err)
+	}
+
 	// service setup
 	publishCh := commonbroker.NewAmqpPublisher(ch) // use adapter
 	service := NewService(publishCh)
 
 	service.PublishMatchComplete(context.Background(), matchEndData)
 
-	msgs, err := ch.Consume(commonconstants.StatsGameMatchEndedQueue, "", false, false, false, false, nil)
+	msgs, err := ch.Consume(testQueue, "", false, false, false, false, nil)
 
 	assert.NoError(t, err)
 
-	for msg := range msgs {
+	select {
+	case msg := <-msgs:
 		var data pb.ProcessMatchCompletedRequest
 
 		if err := proto.Unmarshal(msg.Body, &data); err != nil {
@@ -158,17 +189,20 @@ func TestPublishMatchCompleteIntegration(t *testing.T) {
 			msg.Nack(false, false)
 
 			assert.NoError(t, err)
-			continue
 		}
 
 		// check each player from consumed results
 		for _, player := range data.Players {
 			if player.MemberId == testMemberIDOne {
-				assert.Equal(t, player.Win, true)
+				assert.Equal(t, player.Win, false)
 			}
 			if player.MemberId == testMemberIDTwo {
 				assert.Equal(t, player.Win, true)
 			}
 		}
+
+	// for timeout
+	case <-time.After(time.Second * 5):
+		t.Fatal("Timed out when waiting for consuming message for testing publish match complete.")
 	}
 }
