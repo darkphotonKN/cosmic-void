@@ -10,17 +10,17 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type Repository struct {
+type repository struct {
 	db *sqlx.DB
 }
 
-func NewRepository(db *sqlx.DB) *Repository {
-	return &Repository{
+func NewRepository(db *sqlx.DB) *repository {
+	return &repository{
 		db: db,
 	}
 }
 
-func (r *Repository) Create(ctx context.Context, createNotification *CreateNotification) (*Notification, error) {
+func (r *repository) Create(ctx context.Context, createNotification *CreateNotification) (*Notification, error) {
 	now := time.Now()
 	notificationModel := &Notification{
 		ID:               uuid.New(),
@@ -68,7 +68,7 @@ func (r *Repository) Create(ctx context.Context, createNotification *CreateNotif
 
 }
 
-func (r *Repository) GetByUserID(ctx context.Context, request *QueryNotifications) ([]Notification, error) {
+func (r *repository) GetByUserID(ctx context.Context, request *QueryNotifications) ([]Notification, error) {
 
 	query := `
 	SELECT id, user_id, notification_type, event_type, title, message, data, read, sent, sent_at, created_at, updated_at
@@ -100,4 +100,18 @@ func (r *Repository) GetByUserID(ctx context.Context, request *QueryNotification
 
 	return notifications, nil
 
+}
+
+func (r *repository) Update(ctx context.Context, request *UpdateNotification) error {
+	query := `
+	UPDATE notifications
+	SET read = :read
+	WHERE id = :id
+	AND user_id = :user_id
+	`
+	_, err := r.db.NamedExec(query, request)
+	if err != nil {
+		return commonutils.AnalyzeDBErr(err)
+	}
+	return nil
 }
