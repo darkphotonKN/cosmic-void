@@ -11,6 +11,7 @@ import (
 
 	"github.com/darkphotonKN/cosmic-void-server/auth-service/internal/auth"
 	"github.com/darkphotonKN/cosmic-void-server/auth-service/internal/models"
+	"github.com/darkphotonKN/cosmic-void-server/auth-service/internal/upload"
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
@@ -22,9 +23,10 @@ import (
 )
 
 type service struct {
-	Repo      Repository
-	publishCh *amqp.Channel
-	cache     cache.Cache
+	Repo          Repository
+	publishCh     *amqp.Channel
+	cache         cache.Cache
+	uploadService upload.Service
 }
 
 type Repository interface {
@@ -35,13 +37,15 @@ type Repository interface {
 	GetById(ctx context.Context, id uuid.UUID) (*models.Member, error)
 	GetMemberByEmail(ctx context.Context, email string) (*models.Member, error)
 	CreateDefaultMembers(ctx context.Context, members []CreateDefaultMember) error
+	UpdateAvatarURL(ctx context.Context, memberID uuid.UUID, avatarURL string) error
 }
 
-func NewService(repo Repository, ch *amqp.Channel, cacheService cache.Cache) *service {
+func NewService(repo Repository, ch *amqp.Channel, cacheService cache.Cache, uploadService upload.Service) *service {
 	return &service{
-		Repo:      repo,
-		publishCh: ch,
-		cache:     cacheService,
+		Repo:          repo,
+		publishCh:     ch,
+		cache:         cacheService,
+		uploadService: uploadService,
 	}
 }
 
@@ -50,7 +54,7 @@ func memberToProto(m *models.Member) *pb.Member {
 		return nil
 	}
 
-	return &pb.Member{
+	protoMember := &pb.Member{
 		Id:            m.ID.String(),
 		Name:          m.Name,
 		Email:         m.Email,
@@ -59,6 +63,13 @@ func memberToProto(m *models.Member) *pb.Member {
 		CreatedAt:     timestamppb.New(m.CreatedAt),
 		UpdatedAt:     timestamppb.New(m.UpdatedAt),
 	}
+
+	// Include avatar_url if it exists
+	if m.AvatarURL != nil {
+		protoMember.AvatarUrl = *m.AvatarURL
+	}
+
+	return protoMember
 }
 
 func stringToInt(s string) int {
@@ -313,4 +324,80 @@ func (s *service) CreateDefaultMembers(members []CreateDefaultMember) error {
 	}
 
 	return s.Repo.CreateDefaultMembers(context.Background(), hashedPwMembers)
+}
+
+// UpdateAvatarURL updates the member's avatar URL
+func (s *service) UpdateAvatarURL(ctx context.Context, memberID uuid.UUID, avatarURL string) error {
+	return s.Repo.UpdateAvatarURL(ctx, memberID, avatarURL)
+}
+
+// RequestAvatarUpload handles avatar upload request via gRPC
+func (s *service) RequestAvatarUpload(ctx context.Context, req *pb.RequestAvatarUploadRequest) (*pb.RequestAvatarUploadResponse, error) {
+	if s.uploadService == nil {
+		return nil, fmt.Errorf("avatar upload service is not configured")
+	}
+
+	memberID, err := uuid.Parse(req.MemberId)
+	if err != nil {
+		return nil, fmt.Errorf("invalid member ID: %w", err)
+	}
+
+	// Call the upload service to get presigned URL
+	uploadReq, err := s.uploadService.RequestAvatarUpload(ctx, memberID, req.Filename)
+	if err != nil {
+		return nil, fmt.Errorf("requesting avatar upload: %w", err)
+	}
+
+	// Convert to protobuf response
+	return &pb.RequestAvatarUploadResponse{
+		UploadId:             uploadReq.UploadID.String(),
+		PresignedUrl:         uploadReq.PresignedURL,
+		S3Key:                uploadReq.S3Key,
+		ExpiresAt:            timestamppb.New(uploadReq.ExpiresAt),
+		MaxFileSize:          uploadReq.MaxFileSize,
+		AllowedContentTypes:  uploadReq.AllowedContentTypes,
+	}, nil
+}
+
+// ConfirmAvatarUpload handles avatar upload confirmation via gRPC
+func (s *service) ConfirmAvatarUpload(ctx context.Context, req *pb.ConfirmAvatarUploadRequest) (*pb.ConfirmAvatarUploadResponse, error) {
+	if s.uploadService == nil {
+		return nil, fmt.Errorf("avatar upload service is not configured")
+	}
+
+	uploadID, err := uuid.Parse(req.UploadId)
+	if err != nil {
+		return nil, fmt.Errorf("invalid upload ID: %w", err)
+	}
+
+	// Call the upload service to confirm upload
+	err = s.uploadService.ConfirmAvatarUpload(ctx, uploadID)
+	if err != nil {
+		return &pb.ConfirmAvatarUploadResponse{
+			Success: false,
+			Message: fmt.Sprintf("Failed to confirm upload: %v", err),
+		}, nil
+	}
+
+	// Get the member to retrieve the updated avatar URL
+	memberID, err := uuid.Parse(req.MemberId)
+	if err != nil {
+		return nil, fmt.Errorf("invalid member ID: %w", err)
+	}
+
+	member, err := s.Repo.GetById(ctx, memberID)
+	if err != nil {
+		return nil, fmt.Errorf("retrieving member: %w", err)
+	}
+
+	avatarURL := ""
+	if member.AvatarURL != nil {
+		avatarURL = *member.AvatarURL
+	}
+
+	return &pb.ConfirmAvatarUploadResponse{
+		Success:   true,
+		Message:   "Avatar upload confirmed successfully",
+		AvatarUrl: avatarURL,
+	}, nil
 }

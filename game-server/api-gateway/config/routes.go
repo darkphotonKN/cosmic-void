@@ -68,6 +68,10 @@ func SetupRouter(registry discovery.Registry, db *sqlx.DB) *gin.Engine {
 	memberRoutes.PATCH("/update-password", authHandler.UpdatePasswordMemberHandler)
 	memberRoutes.PATCH("/update-info", authHandler.UpdateInfoMemberHandler)
 
+	// Avatar Upload Routes (authenticated)
+	memberRoutes.POST("/avatar/upload-request", authHandler.RequestAvatarUploadHandler)
+	memberRoutes.POST("/avatar/confirm", authHandler.ConfirmAvatarUploadHandler)
+
 	// --- STATS MICROSERVICE ---
 
 	statsClient := stats.NewClient(registry)

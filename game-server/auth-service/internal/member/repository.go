@@ -150,3 +150,23 @@ func (r *repository) CreateDefaultMembers(ctx context.Context, members []CreateD
 
 	return nil
 }
+
+func (r *repository) UpdateAvatarURL(ctx context.Context, memberID uuid.UUID, avatarURL string) error {
+	query := `UPDATE members SET avatar_url = $2 WHERE id = $1`
+
+	result, err := r.DB.ExecContext(ctx, query, memberID, avatarURL)
+	if err != nil {
+		return commonhelpers.AnalyzeDBErr(err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check affected rows: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("no member found with id: %v", memberID)
+	}
+
+	return nil
+}

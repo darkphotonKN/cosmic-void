@@ -105,3 +105,31 @@ func (c *Client) ValidateToken(ctx context.Context, req *pb.ValidateTokenRequest
 	response, err := client.ValidateToken(ctx, req)
 	return response, err
 }
+
+func (c *Client) RequestAvatarUpload(ctx context.Context, req *pb.RequestAvatarUploadRequest) (*pb.RequestAvatarUploadResponse, error) {
+	conn, err := discovery.ServiceConnection(ctx, serviceName, c.registry)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to auth service: %w", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewAuthServiceClient(conn)
+
+	response, err := client.RequestAvatarUpload(ctx, req)
+	return response, err
+}
+
+func (c *Client) ConfirmAvatarUpload(ctx context.Context, req *pb.ConfirmAvatarUploadRequest) (*pb.ConfirmAvatarUploadResponse, error) {
+	conn, err := discovery.ServiceConnection(ctx, serviceName, c.registry)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to auth service: %w", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewAuthServiceClient(conn)
+
+	response, err := client.ConfirmAvatarUpload(ctx, req)
+	return response, err
+}

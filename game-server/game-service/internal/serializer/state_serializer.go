@@ -3,6 +3,7 @@ package serializer
 import (
 	"context"
 	"log"
+	"log/slog"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
@@ -189,6 +190,8 @@ func (s *StateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, re
 					}
 				}
 			}
+
+			slog.Debug("items after extracting and formatting from entity", "items", items)
 
 			containerState := &types.ContainerState{
 				ContainerID: container.ContainerID,
