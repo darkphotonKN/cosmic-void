@@ -5,38 +5,11 @@ option go_package = "github.com/darkphotonKN/cosmic-void-server/common/api/proto
 
 // StatsService external API for stats
 service StatsService {
-  // Single entry point process entire match result
-  rpc ProcessMatchCompleted(ProcessMatchCompletedRequest) returns (ProcessMatchCompletedResponse);
-  
   // Read operations (for other services or client)
   rpc GetPlayerMatchStats(GetPlayerMatchStatsRequest) returns (PlayerMatchStats);
   rpc GetPlayerRankingStats(GetPlayerRankingStatsRequest) returns (PlayerRankingStats);
   rpc GetMatchHistory(GetMatchHistoryRequest) returns (GetMatchHistoryResponse);
   rpc GetLeaderboard(GetLeaderboardRequest) returns (GetLeaderboardResponse);
-}
-
-// ============ Process Match (from gameservice) ============
-
-message ProcessMatchCompletedRequest {
-  string session_id = 1;
-  google.protobuf.Timestamp match_started_at = 2;
-  google.protobuf.Timestamp match_ended_at = 3;
-  repeated PlayerMatchResults players = 5;
-}
-
-message PlayerMatchResults {
-  string member_id = 1;
-  string username = 2;
-  bool win = 3;
-  int32 final_position = 4;
-  int32 kills = 5;
-  int32 deaths = 6;
-}
-
-message ProcessMatchCompletedResponse {
-  bool success = 1;
-  string message = 2;
-  int32 players_processed = 3;
 }
 
 // ============ Read Operations ============

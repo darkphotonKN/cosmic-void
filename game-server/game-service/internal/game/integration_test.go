@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats"
+	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 
 	"github.com/darkphotonKN/cosmic-void-server/common/broker"
@@ -181,7 +181,7 @@ func TestPublishMatchCompleteIntegration(t *testing.T) {
 
 	select {
 	case msg := <-msgs:
-		var data pb.ProcessMatchCompletedRequest
+		var data pb.MatchEndedEvent
 
 		if err := proto.Unmarshal(msg.Body, &data); err != nil {
 			slog.Error("Failed to parse match completed event", "error", err)

@@ -7,3 +7,4 @@ gen:
 		api/proto/game/game.proto \
 		api/proto/stats/stats.proto \
 		api/proto/items/items.proto \
+		api/proto/events/game.proto \

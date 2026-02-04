@@ -19,7 +19,6 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	StatsService_ProcessMatchCompleted_FullMethodName = "/stats.StatsService/ProcessMatchCompleted"
 	StatsService_GetPlayerMatchStats_FullMethodName   = "/stats.StatsService/GetPlayerMatchStats"
 	StatsService_GetPlayerRankingStats_FullMethodName = "/stats.StatsService/GetPlayerRankingStats"
 	StatsService_GetMatchHistory_FullMethodName       = "/stats.StatsService/GetMatchHistory"
@@ -32,8 +31,6 @@ const (
 //
 // StatsService external API for stats
 type StatsServiceClient interface {
-	// Single entry point process entire match result
-	ProcessMatchCompleted(ctx context.Context, in *ProcessMatchCompletedRequest, opts ...grpc.CallOption) (*ProcessMatchCompletedResponse, error)
 	// Read operations (for other services or client)
 	GetPlayerMatchStats(ctx context.Context, in *GetPlayerMatchStatsRequest, opts ...grpc.CallOption) (*PlayerMatchStats, error)
 	GetPlayerRankingStats(ctx context.Context, in *GetPlayerRankingStatsRequest, opts ...grpc.CallOption) (*PlayerRankingStats, error)
@@ -47,16 +44,6 @@ type statsServiceClient struct {
 
 func NewStatsServiceClient(cc grpc.ClientConnInterface) StatsServiceClient {
 	return &statsServiceClient{cc}
-}
-
-func (c *statsServiceClient) ProcessMatchCompleted(ctx context.Context, in *ProcessMatchCompletedRequest, opts ...grpc.CallOption) (*ProcessMatchCompletedResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ProcessMatchCompletedResponse)
-	err := c.cc.Invoke(ctx, StatsService_ProcessMatchCompleted_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *statsServiceClient) GetPlayerMatchStats(ctx context.Context, in *GetPlayerMatchStatsRequest, opts ...grpc.CallOption) (*PlayerMatchStats, error) {
@@ -105,8 +92,6 @@ func (c *statsServiceClient) GetLeaderboard(ctx context.Context, in *GetLeaderbo
 //
 // StatsService external API for stats
 type StatsServiceServer interface {
-	// Single entry point process entire match result
-	ProcessMatchCompleted(context.Context, *ProcessMatchCompletedRequest) (*ProcessMatchCompletedResponse, error)
 	// Read operations (for other services or client)
 	GetPlayerMatchStats(context.Context, *GetPlayerMatchStatsRequest) (*PlayerMatchStats, error)
 	GetPlayerRankingStats(context.Context, *GetPlayerRankingStatsRequest) (*PlayerRankingStats, error)
@@ -122,9 +107,6 @@ type StatsServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedStatsServiceServer struct{}
 
-func (UnimplementedStatsServiceServer) ProcessMatchCompleted(context.Context, *ProcessMatchCompletedRequest) (*ProcessMatchCompletedResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ProcessMatchCompleted not implemented")
-}
 func (UnimplementedStatsServiceServer) GetPlayerMatchStats(context.Context, *GetPlayerMatchStatsRequest) (*PlayerMatchStats, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPlayerMatchStats not implemented")
 }
@@ -156,24 +138,6 @@ func RegisterStatsServiceServer(s grpc.ServiceRegistrar, srv StatsServiceServer)
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&StatsService_ServiceDesc, srv)
-}
-
-func _StatsService_ProcessMatchCompleted_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ProcessMatchCompletedRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(StatsServiceServer).ProcessMatchCompleted(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: StatsService_ProcessMatchCompleted_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(StatsServiceServer).ProcessMatchCompleted(ctx, req.(*ProcessMatchCompletedRequest))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _StatsService_GetPlayerMatchStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -255,10 +219,6 @@ var StatsService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "stats.StatsService",
 	HandlerType: (*StatsServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "ProcessMatchCompleted",
-			Handler:    _StatsService_ProcessMatchCompleted_Handler,
-		},
 		{
 			MethodName: "GetPlayerMatchStats",
 			Handler:    _StatsService_GetPlayerMatchStats_Handler,

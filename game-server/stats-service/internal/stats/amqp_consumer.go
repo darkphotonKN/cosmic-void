@@ -5,7 +5,7 @@ import (
 	"errors"
 	"log/slog"
 
-	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats"
+	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/protobuf/proto"
@@ -13,7 +13,7 @@ import (
 
 // ConsumerService defines what the consumer needs from the service
 type ConsumerService interface {
-	ProcessMatchCompleted(ctx context.Context, req *pb.ProcessMatchCompletedRequest) (*pb.ProcessMatchCompletedResponse, error)
+	ProcessMatchCompleted(ctx context.Context, req *pb.MatchEndedEvent) (*ProcessMatchCompletedResponse, error)
 }
 
 type Consumer struct {
@@ -54,7 +54,7 @@ func (c *Consumer) consumeMatchCompleted() {
 	}
 
 	for msg := range msgs {
-		var event pb.ProcessMatchCompletedRequest
+		var event pb.MatchEndedEvent
 
 		slog.Debug("Raw message received",
 			"body_length", len(msg.Body),
@@ -96,7 +96,6 @@ func (c *Consumer) consumeMatchCompleted() {
 		msg.Ack(false)
 		slog.Info("Match completed processed successfully",
 			"session_id", event.SessionId,
-			"players_processed", response.PlayersProcessed,
 			"success", response.Success,
 			"message", response.Message,
 		)

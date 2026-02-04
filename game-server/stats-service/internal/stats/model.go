@@ -71,3 +71,9 @@ type UpdatePlayerRankingsParams struct {
 	RankPosition     *int      `db:"rank_position"`
 	LastCalculatedAt time.Time `db:"last_calculated_at"`
 }
+
+type ProcessMatchCompletedResponse struct {
+	SessionID string
+	Success   bool
+	Message   string
+}

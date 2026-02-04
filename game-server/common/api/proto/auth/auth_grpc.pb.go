@@ -27,6 +27,8 @@ const (
 	AuthService_UpdateMemberInfo_FullMethodName     = "/auth.AuthService/UpdateMemberInfo"
 	AuthService_UpdateMemberPassword_FullMethodName = "/auth.AuthService/UpdateMemberPassword"
 	AuthService_ValidateToken_FullMethodName        = "/auth.AuthService/ValidateToken"
+	AuthService_RequestAvatarUpload_FullMethodName  = "/auth.AuthService/RequestAvatarUpload"
+	AuthService_ConfirmAvatarUpload_FullMethodName  = "/auth.AuthService/ConfirmAvatarUpload"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -47,6 +49,10 @@ type AuthServiceClient interface {
 	UpdateMemberPassword(ctx context.Context, in *UpdatePasswordRequest, opts ...grpc.CallOption) (*UpdatePasswordResponse, error)
 	// Validate token
 	ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error)
+	// Request avatar upload
+	RequestAvatarUpload(ctx context.Context, in *RequestAvatarUploadRequest, opts ...grpc.CallOption) (*RequestAvatarUploadResponse, error)
+	// Confirm avatar upload
+	ConfirmAvatarUpload(ctx context.Context, in *ConfirmAvatarUploadRequest, opts ...grpc.CallOption) (*ConfirmAvatarUploadResponse, error)
 }
 
 type authServiceClient struct {
@@ -117,6 +123,26 @@ func (c *authServiceClient) ValidateToken(ctx context.Context, in *ValidateToken
 	return out, nil
 }
 
+func (c *authServiceClient) RequestAvatarUpload(ctx context.Context, in *RequestAvatarUploadRequest, opts ...grpc.CallOption) (*RequestAvatarUploadResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RequestAvatarUploadResponse)
+	err := c.cc.Invoke(ctx, AuthService_RequestAvatarUpload_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) ConfirmAvatarUpload(ctx context.Context, in *ConfirmAvatarUploadRequest, opts ...grpc.CallOption) (*ConfirmAvatarUploadResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConfirmAvatarUploadResponse)
+	err := c.cc.Invoke(ctx, AuthService_ConfirmAvatarUpload_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
@@ -135,6 +161,10 @@ type AuthServiceServer interface {
 	UpdateMemberPassword(context.Context, *UpdatePasswordRequest) (*UpdatePasswordResponse, error)
 	// Validate token
 	ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error)
+	// Request avatar upload
+	RequestAvatarUpload(context.Context, *RequestAvatarUploadRequest) (*RequestAvatarUploadResponse, error)
+	// Confirm avatar upload
+	ConfirmAvatarUpload(context.Context, *ConfirmAvatarUploadRequest) (*ConfirmAvatarUploadResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -162,6 +192,12 @@ func (UnimplementedAuthServiceServer) UpdateMemberPassword(context.Context, *Upd
 }
 func (UnimplementedAuthServiceServer) ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ValidateToken not implemented")
+}
+func (UnimplementedAuthServiceServer) RequestAvatarUpload(context.Context, *RequestAvatarUploadRequest) (*RequestAvatarUploadResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequestAvatarUpload not implemented")
+}
+func (UnimplementedAuthServiceServer) ConfirmAvatarUpload(context.Context, *ConfirmAvatarUploadRequest) (*ConfirmAvatarUploadResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ConfirmAvatarUpload not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -292,6 +328,42 @@ func _AuthService_ValidateToken_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_RequestAvatarUpload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestAvatarUploadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).RequestAvatarUpload(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_RequestAvatarUpload_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).RequestAvatarUpload(ctx, req.(*RequestAvatarUploadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_ConfirmAvatarUpload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConfirmAvatarUploadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ConfirmAvatarUpload(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_ConfirmAvatarUpload_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ConfirmAvatarUpload(ctx, req.(*ConfirmAvatarUploadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -322,6 +394,14 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ValidateToken",
 			Handler:    _AuthService_ValidateToken_Handler,
+		},
+		{
+			MethodName: "RequestAvatarUpload",
+			Handler:    _AuthService_RequestAvatarUpload_Handler,
+		},
+		{
+			MethodName: "ConfirmAvatarUpload",
+			Handler:    _AuthService_ConfirmAvatarUpload_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
