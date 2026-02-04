@@ -87,7 +87,7 @@ func main() {
 	if err != nil {
 		log.Printf("Warning: S3 client initialization failed: %v", err)
 		log.Println("Avatar upload functionality will be disabled")
-		// Continue without S3 - avatar uploads will not work but service runs
+		// Continue without S3 avatar uploads will not work but service runs
 		s3Client = nil
 	}
 
