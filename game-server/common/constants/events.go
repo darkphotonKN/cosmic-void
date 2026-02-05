@@ -45,6 +45,7 @@ const (
 **/
 const (
 	StatsGameMatchEndedQueue = "stats.game.match.ended"
+  NotificationMemberSignedUpQueue = "notification.auth.member.signedup"
 )
 
 /**

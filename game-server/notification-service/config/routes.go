@@ -4,9 +4,10 @@ import (
 	"log/slog"
 	"net"
 
-	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/items"
-	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
-	"github.com/darkphotonKN/cosmic-void-server/items-service/internal/items"
+	// TODO: Uncomment after proto is generated
+	// pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/notification"
+
+	"github.com/darkphotonKN/cosmic-void-server/notification-service/internal/notification"
 	"github.com/jmoiron/sqlx"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/grpc"
@@ -15,20 +16,20 @@ import (
 // SetupServices initializes all services and their dependencies
 func SetupServices(db *sqlx.DB, amqpChannel *amqp.Channel) *grpc.Server {
 	// Create repository
-	repo := items.NewRepository(db)
+	repo := notification.NewRepository(db)
 
 	// Create service with repository and AMQP channel
-	publishCh := commonbroker.NewAmqpPublisher(amqpChannel)
-	service := items.NewService(repo, publishCh)
+	// publishCh := commonbroker.NewAmqpPublisher(amqpChannel)
+	service := notification.NewService(repo)
 
 	// Create gRPC handler with service
-	handler := items.NewHandler(service)
+	handler := notification.NewHandler(service)
 
 	// Create AMQP consumer with service
-	consumer := items.NewConsumer(service, amqpChannel)
+	consumer := notification.NewConsumer(service, amqpChannel)
 
 	// Set up AMQP infrastructure
-	if err := items.SetupAMQPInfrastructure(amqpChannel); err != nil {
+	if err := notification.SetupAMQPInfrastructure(amqpChannel); err != nil {
 		slog.Error("Failed to setup AMQP infrastructure", "error", err)
 	}
 
@@ -38,10 +39,11 @@ func SetupServices(db *sqlx.DB, amqpChannel *amqp.Channel) *grpc.Server {
 	// Create gRPC server
 	grpcServer := grpc.NewServer()
 
-	// Register items service with gRPC server
-	pb.RegisterItemsServiceServer(grpcServer, handler)
+	// TODO: Register notification service with gRPC server after proto is generated
+	// pb.RegisterNotificationServiceServer(grpcServer, handler)
+	_ = handler // Prevent unused variable error
 
-	slog.Info("Items service initialized successfully")
+	slog.Info("Notification service initialized successfully")
 
 	return grpcServer
 }
