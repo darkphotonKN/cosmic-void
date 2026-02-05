@@ -92,6 +92,7 @@ func (s *service) GetMember(ctx context.Context, req *pb.GetMemberRequest) (*pb.
 }
 
 func (s *service) CreateMember(ctx context.Context, req *pb.CreateMemberRequest) (*pb.Member, error) {
+
 	// span for entire function
 	ctx, span := serviceTracer.Start(ctx, "service.CreateMember")
 	defer span.End()

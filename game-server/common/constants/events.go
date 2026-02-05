@@ -19,6 +19,7 @@ Exchange         {service}.{domain}.{resource}.{action}     stats.game.match.end
 **/
 const (
 	GameEventsExchange = "game.events"
+	AuthEventsExchange = "auth.events"
 )
 
 /**
@@ -44,8 +45,8 @@ const (
 * NOTE: {service}.{domain}.{resource}.{action}
 **/
 const (
-	StatsGameMatchEndedQueue = "stats.game.match.ended"
-  NotificationMemberSignedUpQueue = "notification.auth.member.signedup"
+	StatsGameMatchEndedQueue        = "stats.game.match.ended"
+	NotificationMemberSignedUpQueue = "notification.auth.member.signedup"
 )
 
 /**

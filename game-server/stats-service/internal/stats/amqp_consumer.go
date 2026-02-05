@@ -84,6 +84,7 @@ func (c *Consumer) consumeMatchCompleted() {
 
 			// retry if error is transient
 			if errors.Is(err, commonconstants.ErrTransient) {
+
 				msg.Nack(false, true)
 			} else {
 				msg.Nack(false, false) // TODO: setup DLQ

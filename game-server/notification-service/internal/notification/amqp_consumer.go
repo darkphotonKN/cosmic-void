@@ -81,13 +81,13 @@ func (c *Consumer) consumeMemberSignedUp() {
 func SetupAMQPInfrastructure(channel *amqp.Channel) error {
 	// TODO: Declare exchanges for auth events
 	err := channel.ExchangeDeclare(
-		"auth.events", // exchange name
-		"topic",       // exchange type
-		true,          // durable
-		false,         // auto-deleted
-		false,         // internal
-		false,         // no-wait
-		nil,           // arguments
+		commonconstants.AuthEventsExchange, // exchange name
+		"topic",                            // exchange type
+		true,                               // durable
+		false,                              // auto-deleted
+		false,                              // internal
+		false,                              // no-wait
+		nil,                                // arguments
 	)
 	if err != nil {
 		slog.Error("Failed to declare exchange", "error", err)
@@ -103,15 +103,17 @@ func SetupAMQPInfrastructure(channel *amqp.Channel) error {
 		false, // no-wait
 		nil,   // arguments
 	)
+
 	if err != nil {
 		slog.Error("Failed to declare queue", "error", err)
 		return err
 	}
+
 	// QueueBind
 	err = channel.QueueBind(
 		commonconstants.NotificationMemberSignedUpQueue, // queue name
 		commonconstants.MemberSignedUpEvent,             // routing key
-		"auth.events",                                   // exchange
+		commonconstants.AuthEventsExchange,              // exchange
 		false,                                           // no-wait
 		nil,                                             // args
 	)
