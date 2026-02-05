@@ -4,10 +4,8 @@ import (
 	"context"
 	"log/slog"
 
-	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
+	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/google/uuid"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type Repository interface {
@@ -17,52 +15,50 @@ type Repository interface {
 }
 
 type Service struct {
-	repo      Repository
-	publishCh commonbroker.Publisher
+	repo Repository
 }
 
-func NewService(repo Repository, publishCh commonbroker.Publisher) *Service {
+func NewService(repo Repository) *Service {
 	return &Service{
-		repo:      repo,
-		publishCh: publishCh,
+		repo: repo,
 	}
 }
 
-func (s *Service) Create(ctx context.Context, notification *UserCreateNotification) (*Notification, error) {
-	if notification.Title == "" {
-		slog.Warn("notification creation failed: missing title",
-			"user_id", notification.UserID,
-			"type", notification.EventType,
-		)
-		return nil, status.Errorf(codes.InvalidArgument, "Name field is required")
-	}
-
-	id, err := uuid.Parse(notification.UserID)
+func (s *Service) ProcessMemberSignedUp(ctx context.Context, payload *commonconstants.MemberSignedUpEventPayload) error {
+	id, err := uuid.Parse(payload.UserID)
 	if err != nil {
 		slog.Warn("invalid member UUID format",
-			"user_id", notification.UserID,
+			"user_id", payload.UserID,
 			"err", err,
 		)
-		return nil, err
+		return err
+	}
+	templateData := map[string]any{
+		"Name":  payload.Name,
+		"Email": payload.Email,
+	}
+	title, message, notificationType, err := RenderTemplate("member.signedup", templateData)
+
+	if err != nil {
+		slog.Error("Failed to render template", "error", err)
+		return err
 	}
 
 	createNotification := &CreateNotification{
 		UserID:           id,
-		NotificationType: notification.NotificationType,
-		EventType:        notification.EventType,
-		Title:            notification.Title,
-		Message:          notification.Message,
-		Data:             notification.Data,
+		NotificationType: notificationType,
+		EventType:        "member.signedup",
+		Title:            title,
+		Message:          message,
+		Data:             templateData,
 	}
 
-	newNotification, err := s.repo.Create(ctx, createNotification)
+	_, err = s.repo.Create(ctx, createNotification)
 	if err != nil {
 		slog.Warn("Error occurred when creating new notification",
-			"user_id", notification.UserID,
+			"user_id", payload.UserID,
 			"err", err,
 		)
-		return nil, err
 	}
-
-	return newNotification, nil
+	return err
 }

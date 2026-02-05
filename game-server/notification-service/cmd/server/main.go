@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/common/broker"
-	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
 	commontelemetry "github.com/darkphotonKN/cosmic-void-server/common/telemetry"
@@ -87,9 +86,6 @@ func main() {
 
 	ch, close := broker.Connect(amqpUser, amqpPassword, amqpHost, amqpPort)
 
-	// Only declare the exchange we actually consume from
-	broker.DeclareExchange(ch, commonconstants.GameEventsExchange, "topic")
-
 	defer func() {
 		close()
 		ch.Close()
@@ -98,7 +94,7 @@ func main() {
 	// Use the new config setup to initialize all services
 	grpcServer = config.SetupServices(db, ch)
 
-	log.Printf("grpc Items Server started on PORT: %s\n", grpcAddr)
+	log.Printf("Notification Server started on PORT: %s\n", grpcAddr)
 
 	if err := grpcServer.Serve(listener); err != nil {
 		log.Fatal("Can't connect to grpc server. Error:", err.Error())

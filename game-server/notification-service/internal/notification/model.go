@@ -43,13 +43,3 @@ type UpdateNotification struct {
 	UserID uuid.UUID `json:"user_id" db:"user_id"`
 	Read   bool      `json:"read" db:"read"`
 }
-
-// Service
-type UserCreateNotification struct {
-	UserID           string         `json:"user_id" db:"user_id"`
-	NotificationType string         `json:"notification_type" db:"notification_type"`
-	EventType        string         `json:"event_type" db:"event_type"`
-	Title            string         `json:"title" db:"title"`
-	Message          string         `json:"message" db:"message"`
-	Data             map[string]any `json:"data" db:"data"`
-}

@@ -6,7 +6,7 @@ import (
 
 	// TODO: Uncomment after proto is generated
 	// pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/notification"
-	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
+
 	"github.com/darkphotonKN/cosmic-void-server/notification-service/internal/notification"
 	"github.com/jmoiron/sqlx"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -19,8 +19,8 @@ func SetupServices(db *sqlx.DB, amqpChannel *amqp.Channel) *grpc.Server {
 	repo := notification.NewRepository(db)
 
 	// Create service with repository and AMQP channel
-	publishCh := commonbroker.NewAmqpPublisher(amqpChannel)
-	service := notification.NewService(repo, publishCh)
+	// publishCh := commonbroker.NewAmqpPublisher(amqpChannel)
+	service := notification.NewService(repo)
 
 	// Create gRPC handler with service
 	handler := notification.NewHandler(service)
