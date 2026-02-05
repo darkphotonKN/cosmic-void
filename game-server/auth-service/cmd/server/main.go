@@ -153,29 +153,28 @@ func main() {
 	}()
 
 	// --- upload service setup ---
+
+	// --- member service setup ---
+	memberRepo := member.NewRepository(db)
+	memberService := member.NewService(memberRepo, ch, cacheService)
+	memberHandler := member.NewHandler(memberService)
+
 	var uploadService upload.Service
 	if s3Client != nil {
 		uploadRepo := upload.NewRepository(db)
 		logger := slog.Default()
 
-		// Create a temporary member service for upload service
-		memberRepo := member.NewRepository(db)
-		tempMemberService := member.NewService(memberRepo, ch, cacheService, nil) // Pass nil for upload service initially
-
 		uploadService = upload.NewService(
 			uploadRepo,
 			s3Client,
-			tempMemberService,
+			memberService,
 			s3Config.BucketName,
 			s3Config.CDNUrl,
 			logger,
 		)
-	}
 
-	// --- member service setup ---
-	memberRepo := member.NewRepository(db)
-	memberService := member.NewService(memberRepo, ch, cacheService, uploadService)
-	memberHandler := member.NewHandler(memberService)
+		uploadHandler := member.NewUploadHandler(uploadService)
+	}
 
 	// consumer := member.NewConsumer(service, ch)
 	// start goroutine and listen to events from message broker

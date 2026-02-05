@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:7001";
@@ -24,6 +24,7 @@ const ParticleAnimation = () => {
 };
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const setAuth = useAuthStore((state) => state.setAuth);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -70,7 +71,9 @@ export default function LoginPage() {
         memberInfo: result.member_info,
       });
 
-      router.push("/game");
+      // Redirect to the intended destination or default to game
+      const redirectTo = searchParams.get("redirect") || "/game";
+      router.push(redirectTo);
     } catch (err) {
       setError("Connection error. Please try again.");
     } finally {

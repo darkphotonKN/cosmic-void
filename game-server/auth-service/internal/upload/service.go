@@ -30,12 +30,6 @@ type MemberService interface {
 	UpdateAvatarURL(ctx context.Context, memberID uuid.UUID, avatarURL string) error
 }
 
-// Service interface defines business logic operations
-type Service interface {
-	RequestAvatarUpload(ctx context.Context, memberID uuid.UUID, filename string) (*UploadRequest, error)
-	ConfirmAvatarUpload(ctx context.Context, uploadID uuid.UUID) error
-}
-
 // service implements Service interface
 type service struct {
 	repo          Repository
@@ -54,7 +48,7 @@ func NewService(
 	bucketName string,
 	cdnURL string,
 	logger *slog.Logger,
-) Service {
+) *service {
 	return &service{
 		repo:          repo,
 		s3Client:      s3Client,
