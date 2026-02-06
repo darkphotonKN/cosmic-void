@@ -2,6 +2,7 @@ package s3
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -55,7 +56,7 @@ func (c *AWSClient) HeadObject(ctx context.Context, key string) (*ObjectMetadata
 	result, err := c.client.HeadObject(ctx, input)
 	if err != nil {
 		var nsk *types.NoSuchKey
-		if aws.As(err, &nsk) {
+		if errors.As(err, &nsk) {
 			return nil, fmt.Errorf("object not found: %w", err)
 		}
 		return nil, fmt.Errorf("retrieving object metadata: %w", err)
@@ -63,7 +64,7 @@ func (c *AWSClient) HeadObject(ctx context.Context, key string) (*ObjectMetadata
 
 	metadata := &ObjectMetadata{
 		Key:         key,
-		Size:        aws.ToInt64(result.ContentLength),
+		Size:        aws.ToInt64(&result.ContentLength),
 		ContentType: aws.ToString(result.ContentType),
 	}
 
@@ -73,4 +74,3 @@ func (c *AWSClient) HeadObject(ctx context.Context, key string) (*ObjectMetadata
 
 	return metadata, nil
 }
-

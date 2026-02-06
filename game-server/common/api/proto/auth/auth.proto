@@ -7,6 +7,8 @@ option go_package = "github.com/darkphotonKN/community-builds-microservice/auth-
 import "google/protobuf/timestamp.proto";
 
 // Auth service definition
+
+// used for Member related methods
 service AuthService {
   // Login member
   rpc LoginMember(LoginRequest) returns (LoginResponse) {}
@@ -20,10 +22,12 @@ service AuthService {
   rpc UpdateMemberPassword(UpdatePasswordRequest) returns (UpdatePasswordResponse) {}
   // Validate token
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse) {}
-  // Request avatar upload
-  rpc RequestAvatarUpload(RequestAvatarUploadRequest) returns (RequestAvatarUploadResponse) {}
-  // Confirm avatar upload
-  rpc ConfirmAvatarUpload(ConfirmAvatarUploadRequest) returns (ConfirmAvatarUploadResponse) {}
+}
+
+// used for Upload methods 
+service UploadService {
+    rpc RequestAvatarUpload(RequestAvatarUploadRequest) returns (RequestAvatarUploadResponse);
+    rpc ConfirmAvatarUpload(ConfirmAvatarUploadRequest) returns (ConfirmAvatarUploadResponse);
 }
 
 // Member message represents a user in the system

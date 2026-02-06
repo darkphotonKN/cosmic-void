@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/darkphotonKN/cosmic-void-server/auth-service/internal/s3"
 	"github.com/google/uuid"
 )
 
@@ -14,7 +15,7 @@ import (
 // Following ISP - service owns its interface
 type S3Client interface {
 	GeneratePresignedUploadURL(ctx context.Context, key string, contentType string, expires time.Duration) (string, error)
-	HeadObject(ctx context.Context, key string) (*ObjectMetadata, error)
+	HeadObject(ctx context.Context, key string) (*s3.ObjectMetadata, error)
 }
 
 // ObjectMetadata contains metadata about an S3 object
@@ -190,4 +191,3 @@ func (s *service) getContentType(ext string) string {
 		return ""
 	}
 }
-

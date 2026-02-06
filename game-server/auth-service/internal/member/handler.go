@@ -20,8 +20,6 @@ type Service interface {
 	UpdateMemberPassword(ctx context.Context, req *pb.UpdatePasswordRequest) (*pb.UpdatePasswordResponse, error)
 	ValidateToken(ctx context.Context, req *pb.ValidateTokenRequest) (*pb.ValidateTokenResponse, error)
 	CreateDefaultMembers(members []CreateDefaultMember) error
-	RequestAvatarUpload(ctx context.Context, req *pb.RequestAvatarUploadRequest) (*pb.RequestAvatarUploadResponse, error)
-	ConfirmAvatarUpload(ctx context.Context, req *pb.ConfirmAvatarUploadRequest) (*pb.ConfirmAvatarUploadResponse, error)
 }
 
 func NewHandler(service Service) *Handler {
@@ -53,14 +51,4 @@ func (s *Handler) UpdateMemberPassword(ctx context.Context, req *pb.UpdatePasswo
 
 func (s *Handler) ValidateToken(ctx context.Context, req *pb.ValidateTokenRequest) (*pb.ValidateTokenResponse, error) {
 	return s.service.ValidateToken(ctx, req)
-}
-
-func (s *Handler) RequestAvatarUpload(ctx context.Context, req *pb.RequestAvatarUploadRequest) (*pb.RequestAvatarUploadResponse, error) {
-	slog.Info("Requesting avatar upload", "member_id", req.MemberId, "filename", req.Filename)
-	return s.service.RequestAvatarUpload(ctx, req)
-}
-
-func (s *Handler) ConfirmAvatarUpload(ctx context.Context, req *pb.ConfirmAvatarUploadRequest) (*pb.ConfirmAvatarUploadResponse, error) {
-	slog.Info("Confirming avatar upload", "member_id", req.MemberId, "upload_id", req.UploadId)
-	return s.service.ConfirmAvatarUpload(ctx, req)
 }

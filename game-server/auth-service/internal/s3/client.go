@@ -22,3 +22,4 @@ type Client interface {
 	// HeadObject retrieves object metadata without downloading the object
 	HeadObject(ctx context.Context, key string) (*ObjectMetadata, error)
 }
+

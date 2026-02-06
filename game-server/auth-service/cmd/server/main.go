@@ -159,12 +159,11 @@ func main() {
 	memberService := member.NewService(memberRepo, ch, cacheService)
 	memberHandler := member.NewHandler(memberService)
 
-	var uploadService upload.Service
 	if s3Client != nil {
 		uploadRepo := upload.NewRepository(db)
 		logger := slog.Default()
 
-		uploadService = upload.NewService(
+		uploadService := upload.NewService(
 			uploadRepo,
 			s3Client,
 			memberService,
@@ -173,7 +172,8 @@ func main() {
 			logger,
 		)
 
-		uploadHandler := member.NewUploadHandler(uploadService)
+		uploadHandler := upload.NewHandler(uploadService)
+
 	}
 
 	// consumer := member.NewConsumer(service, ch)
