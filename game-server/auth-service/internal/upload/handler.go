@@ -13,9 +13,7 @@ type Handler struct {
 }
 
 type Service interface {
-	// RequestAvatarUpload(ctx context.Context, memberID uuid.UUID, filename string) (*UploadRequest, error)
 	RequestAvatarUpload(ctx context.Context, req *pb.RequestAvatarUploadRequest) (*pb.RequestAvatarUploadResponse, error)
-	// ConfirmAvatarUpload(ctx context.Context, uploadID uuid.UUID) error
 	ConfirmAvatarUpload(ctx context.Context, req *pb.ConfirmAvatarUploadRequest) (*pb.ConfirmAvatarUploadResponse, error)
 }
 

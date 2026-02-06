@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/auth-service/internal/s3"
+	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // S3Client interface defines what the upload service needs from S3
@@ -61,9 +63,9 @@ func NewService(
 }
 
 // RequestAvatarUpload creates a presigned URL for avatar upload
-func (s *service) RequestAvatarUpload(ctx context.Context, memberID uuid.UUID, filename string) (*UploadRequest, error) {
+func (s *service) RequestAvatarUpload(ctx context.Context, req *pb.RequestAvatarUploadRequest) (*pb.RequestAvatarUploadResponse, error) {
 	// Validate file extension
-	ext := filepath.Ext(filename)
+	ext := filepath.Ext(req.Filename)
 	contentType := s.getContentType(ext)
 	if contentType == "" {
 		return nil, fmt.Errorf("unsupported file type: %s", ext)
@@ -72,7 +74,7 @@ func (s *service) RequestAvatarUpload(ctx context.Context, memberID uuid.UUID, f
 	// Generate unique S3 key
 	timestamp := time.Now().Unix()
 	randomID := uuid.New().String()[:8]
-	s3Key := fmt.Sprintf("avatars/%s/%d_%s%s", memberID.String(), timestamp, randomID, ext)
+	s3Key := fmt.Sprintf("avatars/%s/%d_%s%s", req.MemberId, timestamp, randomID, ext)
 
 	// Generate presigned URL
 	expiresIn := 5 * time.Minute
@@ -81,12 +83,19 @@ func (s *service) RequestAvatarUpload(ctx context.Context, memberID uuid.UUID, f
 		return nil, fmt.Errorf("generating presigned URL: %w", err)
 	}
 
+	memberId, err := uuid.Parse(req.MemberId)
+
+	if err != nil {
+		slog.Error("Error when parsing memberId from proto request into uuid.", "err", err)
+		return nil, err
+	}
+
 	// Create upload record
 	uploadID := uuid.New()
 	expiresAt := time.Now().Add(expiresIn)
 	upload := &AvatarUpload{
 		ID:                    uploadID,
-		MemberID:              memberID,
+		MemberID:              memberId,
 		S3Key:                 s3Key,
 		UploadStatus:          StatusPending,
 		ContentType:           &contentType,
@@ -99,55 +108,64 @@ func (s *service) RequestAvatarUpload(ctx context.Context, memberID uuid.UUID, f
 
 	s.logger.InfoContext(ctx, "avatar upload requested",
 		slog.String("upload_id", uploadID.String()),
-		slog.String("member_id", memberID.String()),
+		slog.String("member_id", req.MemberId),
 		slog.String("s3_key", s3Key),
 	)
 
-	return &UploadRequest{
-		UploadID:     uploadID,
-		PresignedURL: presignedURL,
+	res := &pb.RequestAvatarUploadResponse{
+		UploadId:     uploadID.String(),
+		PresignedUrl: presignedURL,
 		S3Key:        s3Key,
-		ExpiresAt:    expiresAt,
+		ExpiresAt:    timestamppb.New(expiresAt),
 		MaxFileSize:  MaxAvatarSize,
 		AllowedContentTypes: []string{
 			ContentTypeJPEG,
 			ContentTypePNG,
 			ContentTypeWEBP,
 		},
-	}, nil
+	}
+
+	return res, nil
 }
 
 // ConfirmAvatarUpload confirms successful upload and updates member avatar URL
-func (s *service) ConfirmAvatarUpload(ctx context.Context, uploadID uuid.UUID) error {
-	// Get upload record
-	upload, err := s.repo.GetUploadByID(ctx, uploadID)
+func (s *service) ConfirmAvatarUpload(ctx context.Context, req *pb.ConfirmAvatarUploadRequest) (*pb.ConfirmAvatarUploadResponse, error) {
+	uploadId, err := uuid.Parse(req.UploadId)
+
 	if err != nil {
-		return fmt.Errorf("retrieving upload: %w", err)
+		slog.Error("Error when parsing memberId from proto request into uuid.", "err", err)
+		return nil, err
+	}
+
+	// Get upload record
+	upload, err := s.repo.GetUploadByID(ctx, uploadId)
+	if err != nil {
+		return nil, fmt.Errorf("retrieving upload: %w", err)
 	}
 
 	// Check if already processed
 	if upload.UploadStatus != StatusPending {
-		return fmt.Errorf("upload already processed with status: %s", upload.UploadStatus)
+		return nil, fmt.Errorf("upload already processed with status: %s", upload.UploadStatus)
 	}
 
 	// Verify object exists in S3
 	metadata, err := s.s3Client.HeadObject(ctx, upload.S3Key)
 	if err != nil {
 		// Mark as failed
-		_ = s.repo.UpdateUploadStatus(ctx, uploadID, StatusFailed)
-		return fmt.Errorf("verifying S3 object: %w", err)
+		_ = s.repo.UpdateUploadStatus(ctx, uploadId, StatusFailed)
+		return nil, fmt.Errorf("verifying S3 object: %w", err)
 	}
 
 	// Validate file size
 	if metadata.Size > MaxAvatarSize {
-		_ = s.repo.UpdateUploadStatus(ctx, uploadID, StatusFailed)
-		return fmt.Errorf("file size %d exceeds maximum %d", metadata.Size, MaxAvatarSize)
+		_ = s.repo.UpdateUploadStatus(ctx, uploadId, StatusFailed)
+		return nil, fmt.Errorf("file size %d exceeds maximum %d", metadata.Size, MaxAvatarSize)
 	}
 
 	// Update upload record with file metadata
 	upload.FileSize = &metadata.Size
-	if err := s.repo.UpdateUploadStatus(ctx, uploadID, StatusUploaded); err != nil {
-		return fmt.Errorf("updating upload status: %w", err)
+	if err := s.repo.UpdateUploadStatus(ctx, uploadId, StatusUploaded); err != nil {
+		return nil, fmt.Errorf("updating upload status: %w", err)
 	}
 
 	// Generate avatar URL (use CDN if configured, otherwise S3 URL)
@@ -160,22 +178,26 @@ func (s *service) ConfirmAvatarUpload(ctx context.Context, uploadID uuid.UUID) e
 
 	// Update member avatar URL
 	if err := s.memberService.UpdateAvatarURL(ctx, upload.MemberID, avatarURL); err != nil {
-		return fmt.Errorf("updating member avatar URL: %w", err)
+		return nil, fmt.Errorf("updating member avatar URL: %w", err)
 	}
 
 	// Mark as synced
-	if err := s.repo.UpdateUploadStatus(ctx, uploadID, StatusSynced); err != nil {
-		return fmt.Errorf("marking upload as synced: %w", err)
+	if err := s.repo.UpdateUploadStatus(ctx, uploadId, StatusSynced); err != nil {
+		return nil, fmt.Errorf("marking upload as synced: %w", err)
 	}
 
 	s.logger.InfoContext(ctx, "avatar upload confirmed",
-		slog.String("upload_id", uploadID.String()),
+		slog.String("upload_id", uploadId.String()),
 		slog.String("member_id", upload.MemberID.String()),
 		slog.String("avatar_url", avatarURL),
 		slog.Int64("file_size", metadata.Size),
 	)
 
-	return nil
+	return &pb.ConfirmAvatarUploadResponse{
+		Success:   true,
+		Message:   "Avatar was confirmed to be uploaded.",
+		AvatarUrl: avatarURL,
+	}, nil
 }
 
 // getContentType returns content type based on file extension
