@@ -2,6 +2,7 @@ package auth
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
@@ -321,6 +322,8 @@ type RequestAvatarUploadRequest struct {
 }
 
 func (h *Handler) RequestAvatarUploadHandler(c *gin.Context) {
+	slog.Debug("checking incoming avatar upload request", "request body", c.Request.Body)
+
 	// Get the user ID string from context (set by auth middleware)
 	userIdStr, exists := c.Get("userIdStr")
 	if !exists {

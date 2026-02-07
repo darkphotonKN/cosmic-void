@@ -89,3 +89,4 @@ func SetupRouter(registry discovery.Registry, db *sqlx.DB) *gin.Engine {
 
 	return router
 }
+

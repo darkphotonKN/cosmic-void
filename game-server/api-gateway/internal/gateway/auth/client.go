@@ -114,7 +114,7 @@ func (c *Client) RequestAvatarUpload(ctx context.Context, req *pb.RequestAvatarU
 	}
 	defer conn.Close()
 
-	client := pb.NewAuthServiceClient(conn)
+	client := pb.NewUploadServiceClient(conn)
 
 	response, err := client.RequestAvatarUpload(ctx, req)
 	return response, err
@@ -128,7 +128,7 @@ func (c *Client) ConfirmAvatarUpload(ctx context.Context, req *pb.ConfirmAvatarU
 	}
 	defer conn.Close()
 
-	client := pb.NewAuthServiceClient(conn)
+	client := pb.NewUploadServiceClient(conn)
 
 	response, err := client.ConfirmAvatarUpload(ctx, req)
 	return response, err

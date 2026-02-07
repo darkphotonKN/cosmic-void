@@ -8,7 +8,7 @@ import (
 )
 
 type Handler struct {
-	pb.UnimplementedAuthServiceServer
+	pb.UnimplementedUploadServiceServer
 	service Service
 }
 

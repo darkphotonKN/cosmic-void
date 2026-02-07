@@ -64,7 +64,7 @@ func (c *AWSClient) HeadObject(ctx context.Context, key string) (*ObjectMetadata
 
 	metadata := &ObjectMetadata{
 		Key:         key,
-		Size:        aws.ToInt64(&result.ContentLength),
+		Size:        aws.ToInt64(result.ContentLength),
 		ContentType: aws.ToString(result.ContentType),
 	}
 

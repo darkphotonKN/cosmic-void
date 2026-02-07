@@ -68,6 +68,7 @@ func (s *service) RequestAvatarUpload(ctx context.Context, req *pb.RequestAvatar
 	ext := filepath.Ext(req.Filename)
 	contentType := s.getContentType(ext)
 	if contentType == "" {
+		slog.Error("Attempted upload with unsupported file type.")
 		return nil, fmt.Errorf("unsupported file type: %s", ext)
 	}
 
@@ -79,7 +80,9 @@ func (s *service) RequestAvatarUpload(ctx context.Context, req *pb.RequestAvatar
 	// Generate presigned URL
 	expiresIn := 5 * time.Minute
 	presignedURL, err := s.s3Client.GeneratePresignedUploadURL(ctx, s3Key, contentType, expiresIn)
+
 	if err != nil {
+		slog.Error("Error when attempting to generate presigned upload url", "err", err)
 		return nil, fmt.Errorf("generating presigned URL: %w", err)
 	}
 

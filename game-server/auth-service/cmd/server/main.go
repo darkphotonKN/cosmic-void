@@ -152,13 +152,12 @@ func main() {
 		ch.Close()
 	}()
 
-	// --- upload service setup ---
-
 	// --- member service setup ---
 	memberRepo := member.NewRepository(db)
 	memberService := member.NewService(memberRepo, ch, cacheService)
 	memberHandler := member.NewHandler(memberService)
 
+	// --- upload service setup ---
 	if s3Client != nil {
 		uploadRepo := upload.NewRepository(db)
 		logger := slog.Default()
@@ -173,7 +172,7 @@ func main() {
 		)
 
 		uploadHandler := upload.NewHandler(uploadService)
-
+		pb.RegisterUploadServiceServer(grpcServer, uploadHandler)
 	}
 
 	// consumer := member.NewConsumer(service, ch)
