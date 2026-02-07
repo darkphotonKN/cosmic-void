@@ -9,7 +9,12 @@ import (
 
 	"github.com/darkphotonKN/cosmic-void-server/auth-service/internal/s3"
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
+	pbevents "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
+	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
+	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/google/uuid"
+	amqp "github.com/rabbitmq/amqp091-go"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -41,6 +46,7 @@ type service struct {
 	bucketName    string
 	cdnURL        string // Optional CDN URL for serving images
 	logger        *slog.Logger
+	publishCh     commonbroker.Publisher
 }
 
 // NewService creates a new upload service
@@ -51,6 +57,7 @@ func NewService(
 	bucketName string,
 	cdnURL string,
 	logger *slog.Logger,
+	pubishCh commonbroker.Publisher,
 ) *service {
 	return &service{
 		repo:          repo,
@@ -59,6 +66,7 @@ func NewService(
 		bucketName:    bucketName,
 		cdnURL:        cdnURL,
 		logger:        logger,
+		publishCh:     pubishCh,
 	}
 }
 
@@ -194,6 +202,25 @@ func (s *service) ConfirmAvatarUpload(ctx context.Context, req *pb.ConfirmAvatar
 		slog.String("member_id", upload.MemberID.String()),
 		slog.String("avatar_url", avatarURL),
 		slog.Int64("file_size", metadata.Size),
+	)
+
+	// confirmed, fire off amqp event for profile sync (dernormalized ranking leaderboard tables)
+	//
+	// message MemberProfileUpdatedEvent {
+	//     string member_id = 1;
+	//     string username = 2;
+	//     string avatar_url = 3;
+	// }
+
+	// TODO: finish marshal and payload
+	protoData, err := proto.Marshal(pbevents.)
+
+	s.publishCh.PublishWithContext(ctx, commonconstants.AuthEventsExchange, commonconstants.MemberUpdatedAvatar,
+		commonbroker.Message{
+			ContentType:  "application/protobuf",
+			Body:         protoData,
+			DeliveryMode: amqp.Persistent,
+		},
 	)
 
 	return &pb.ConfirmAvatarUploadResponse{

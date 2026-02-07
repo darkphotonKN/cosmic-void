@@ -36,6 +36,8 @@ const (
 	MemberSignedInEvent = "member.signedin"       // when user signs into their account
 	PasswordResetEvent  = "member.password.reset" // when password reset is requested
 
+	MemberUpdatedProfile = "member.updatedavatar"
+
 	// Game Events
 	GameMatchEnded = "match.ended" // match ended
 )

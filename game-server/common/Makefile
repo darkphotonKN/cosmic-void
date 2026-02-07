@@ -8,3 +8,4 @@ gen:
 		api/proto/stats/stats.proto \
 		api/proto/items/items.proto \
 		api/proto/events/game.proto \
+		api/proto/events/auth.proto \

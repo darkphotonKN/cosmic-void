@@ -12,6 +12,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/auth-service/internal/upload"
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
 	"github.com/darkphotonKN/cosmic-void-server/common/broker"
+	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
@@ -158,6 +159,7 @@ func main() {
 	memberHandler := member.NewHandler(memberService)
 
 	// --- upload service setup ---
+	publishCh := commonbroker.NewAmqpPublisher(ch)
 	if s3Client != nil {
 		uploadRepo := upload.NewRepository(db)
 		logger := slog.Default()
@@ -169,6 +171,7 @@ func main() {
 			s3Config.BucketName,
 			s3Config.CDNUrl,
 			logger,
+			publishCh,
 		)
 
 		uploadHandler := upload.NewHandler(uploadService)
