@@ -225,3 +225,24 @@ func (s *service) updateDenormalizedLeaderboard(ctx context.Context, results *pb
 
 	return nil
 }
+
+/**
+* Updates the player rankings leaderboard.
+**/
+func (s *service) UpdatePlayerRankings(ctx context.Context, updateData *pb.MemberProfileUpdatedEvent) error {
+	memberIdUUID, err := uuid.Parse(updateData.MemberId)
+	if err != nil {
+		slog.Error("error when parsing updateData.MemberId as uuid", "memberID", updateData.MemberId, "error", err)
+	}
+	_, err = s.repo.UpsertPlayerRankingStats(ctx, &UpdatePlayerRankingsParams{
+		MemberID:  memberIdUUID,
+		AvatarUrl: updateData.AvatarUrl,
+	})
+
+	if err != nil {
+		slog.Error("error when updating player rankings", "memberID", updateData.MemberId, "error", err)
+		return err
+	}
+
+	return nil
+}

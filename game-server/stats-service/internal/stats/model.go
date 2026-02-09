@@ -67,6 +67,7 @@ type UpdatePlayerRankingsParams struct {
 	Username         string    `db:"username"`
 	Wins             int       `db:"wins"`
 	TopThrees        int       `db:"top_threes"`
+	AvatarUrl        string    `db:"avatar_url"`
 	Rating           int       `db:"rating"`
 	RankPosition     *int      `db:"rank_position"`
 	LastCalculatedAt time.Time `db:"last_calculated_at"`

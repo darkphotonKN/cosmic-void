@@ -14,6 +14,7 @@ import (
 // ConsumerService defines what the consumer needs from the service
 type ConsumerService interface {
 	ProcessMatchCompleted(ctx context.Context, req *pb.MatchEndedEvent) (*ProcessMatchCompletedResponse, error)
+	UpdatePlayerRankings(ctx context.Context, updateData *pb.MemberProfileUpdatedEvent) error
 }
 
 type Consumer struct {
@@ -64,6 +65,13 @@ func (c *Consumer) consumeProfileUpdated() {
 
 		slog.Debug("after member profile updated data unmarshal",
 			"memberUpdated", memberUpdated)
+
+		err := c.service.UpdatePlayerRankings(context.Background(), &memberUpdated)
+
+		if err != nil {
+			slog.Error("Failed to update member profile data after consuming memberProfileUpdatedEvent event", "error", err)
+			continue
+		}
 	}
 
 }
