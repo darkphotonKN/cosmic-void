@@ -68,12 +68,23 @@ func (c *Consumer) consumeProfileUpdated() {
 
 		err := c.service.UpdatePlayerRankings(context.Background(), &memberUpdated)
 
-		if err != nil {
+		if errors.Is(err, commonconstants.ErrTransient) {
+			msg.Nack(false, true)
+			continue
+		} else if err != nil {
 			slog.Error("Failed to update member profile data after consuming memberProfileUpdatedEvent event", "error", err)
+			msg.Nack(false, false)
 			continue
 		}
-	}
 
+		msg.Ack(false)
+
+		slog.Info("PlayerRankings updated successfully following member profile update",
+			"member_id", memberUpdated.MemberId,
+			"success", true,
+			"message", "PlayerRankings updated successfully following member profile update",
+		)
+	}
 }
 
 // consumeMatchCompleted handles match completion events
@@ -124,7 +135,6 @@ func (c *Consumer) consumeMatchCompleted() {
 
 			// retry if error is transient
 			if errors.Is(err, commonconstants.ErrTransient) {
-
 				msg.Nack(false, true)
 			} else {
 				msg.Nack(false, false) // TODO: setup DLQ
@@ -211,6 +221,7 @@ func SetupAMQPInfrastructure(channel *amqp.Channel) error {
 		false, // no-wait
 		nil,   // arguments
 	)
+
 	if err != nil {
 		slog.Error("Failed to declare queue", "error", err)
 		return err

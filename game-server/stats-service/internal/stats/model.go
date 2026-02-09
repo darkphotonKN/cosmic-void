@@ -27,6 +27,7 @@ type PlayerRankingStats struct {
 	Username         string    `db:"username" json:"username"`
 	Wins             int       `db:"wins" json:"wins"`
 	TopThrees        int       `db:"top_threes" json:"top_threes"`
+	AvatarUrl        string    `db:"avatar_url" json:"avatar_url"`
 	Rating           int       `db:"rating" json:"rating"`
 	RankPosition     *int      `db:"rank_position" json:"rank_position"`
 	LastCalculatedAt time.Time `db:"last_calculated_at" json:"last_calculated_at"`

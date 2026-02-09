@@ -117,11 +117,16 @@ func (r *repository) UpsertPlayerRankingStats(ctx context.Context, stats *Update
 
 	query := `
 		INSERT INTO player_ranking_stats (
-			member_id, username, wins, top_threes,
+			member_id, username, wins, top_threes, avatar_url,
 			rating, rank_position
 		) VALUES (
-			:member_id, :username, :wins, :top_threes, :avatar_url
-			:rating, :rank_position
+			:member_id, 
+			:username,
+			:wins,
+			:top_threes,
+			:avatar_url,
+			:rating,
+			:rank_position
 		)
 		ON CONFLICT (member_id)
 		DO UPDATE SET
