@@ -42,6 +42,7 @@ func main() {
 		Environment:       environment,
 		CollectorEndpoint: collectorEndpoint,
 	})
+
 	if err != nil {
 		log.Fatal(err)
 	}

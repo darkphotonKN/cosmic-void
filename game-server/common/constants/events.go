@@ -36,7 +36,7 @@ const (
 	MemberSignedInEvent = "member.signedin"       // when user signs into their account
 	PasswordResetEvent  = "member.password.reset" // when password reset is requested
 
-	MemberUpdatedProfile = "member.updatedavatar"
+	MemberProfileUpdated = "profile.updated"
 
 	// Game Events
 	GameMatchEnded = "match.ended" // match ended
@@ -48,6 +48,7 @@ const (
 **/
 const (
 	StatsGameMatchEndedQueue        = "stats.game.match.ended"
+	StatsAuthProfileUpdatedQueue    = "stats.auth.profile.updated"
 	NotificationMemberSignedUpQueue = "notification.auth.member.signedup"
 )
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import { apiClient } from "@/utils/api";
@@ -24,16 +24,13 @@ export default function ProfilePage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/login?redirect=/profile");
-    }
-  }, [isAuthenticated, router]);
-
-  // Don't render if not authenticated
+  // Don't render if not authenticated (middleware handles redirect)
   if (!isAuthenticated || !memberInfo) {
-    return null;
+    return (
+      <div className="profile-loading">
+        <div className="loading-spinner"></div>
+      </div>
+    );
   }
 
   const handleAvatarClick = () => {

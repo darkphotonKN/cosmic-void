@@ -35,7 +35,7 @@ type Repository interface {
 	GetById(ctx context.Context, id uuid.UUID) (*models.Member, error)
 	GetMemberByEmail(ctx context.Context, email string) (*models.Member, error)
 	CreateDefaultMembers(ctx context.Context, members []CreateDefaultMember) error
-	UpdateAvatarURL(ctx context.Context, memberID uuid.UUID, avatarURL string) error
+	UpdateAvatarURL(ctx context.Context, memberID uuid.UUID, avatarURL string) (*models.Member, error)
 }
 
 func NewService(repo Repository, ch *amqp.Channel, cacheService cache.Cache) *service {
@@ -325,6 +325,6 @@ func (s *service) CreateDefaultMembers(members []CreateDefaultMember) error {
 }
 
 // UpdateAvatarURL updates the member's avatar URL
-func (s *service) UpdateAvatarURL(ctx context.Context, memberID uuid.UUID, avatarURL string) error {
+func (s *service) UpdateAvatarURL(ctx context.Context, memberID uuid.UUID, avatarURL string) (*models.Member, error) {
 	return s.Repo.UpdateAvatarURL(ctx, memberID, avatarURL)
 }

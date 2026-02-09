@@ -32,8 +32,40 @@ func NewConsumer(service ConsumerService, channel *amqp.Channel) *Consumer {
 func (c *Consumer) Listen() {
 	// Start consuming match completed events
 	go c.consumeMatchCompleted()
+	go c.consumeProfileUpdated()
 
 	slog.Info("Stats consumer listening for events...")
+}
+
+func (c *Consumer) consumeProfileUpdated() {
+	msgs, err := c.channel.Consume(
+		commonconstants.StatsAuthProfileUpdatedQueue,
+		"",
+		false,
+		false,
+		false,
+		false,
+		nil,
+	)
+
+	if err != nil {
+		slog.Error("Failed to register consumer", "error", err)
+		return
+	}
+
+	for msg := range msgs {
+		var memberUpdated pb.MemberProfileUpdatedEvent
+
+		if err := proto.Unmarshal(msg.Body, &memberUpdated); err != nil {
+			slog.Error("Failed to parse member profile updated event", "error", err)
+			msg.Nack(false, false)
+			continue
+		}
+
+		slog.Debug("after member profile updated data unmarshal",
+			"memberUpdated", memberUpdated)
+	}
+
 }
 
 // consumeMatchCompleted handles match completion events
@@ -118,6 +150,8 @@ func SetupAMQPInfrastructure(channel *amqp.Channel) error {
 		return err
 	}
 
+	// --- Game Match Ended ---
+
 	// Declare the queue
 	_, err = channel.QueueDeclare(
 		commonconstants.StatsGameMatchEndedQueue, // queue name
@@ -139,6 +173,34 @@ func SetupAMQPInfrastructure(channel *amqp.Channel) error {
 		commonconstants.GameEventsExchange,       // exchange
 		false,                                    // no-wait
 		nil,                                      // args
+	)
+	if err != nil {
+		return err
+	}
+
+	// --- Member Profile Update ---
+
+	// Declare the queue
+	_, err = channel.QueueDeclare(
+		commonconstants.StatsAuthProfileUpdatedQueue, // queue name
+		true,  // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil,   // arguments
+	)
+	if err != nil {
+		slog.Error("Failed to declare queue", "error", err)
+		return err
+	}
+
+	// Bind the queue to the exchange
+	err = channel.QueueBind(
+		commonconstants.StatsAuthProfileUpdatedQueue, // queue name
+		commonconstants.MemberProfileUpdated,         // routing key
+		commonconstants.AuthEventsExchange,           // exchange
+		false,                                        // no-wait
+		nil,                                          // args
 	)
 	if err != nil {
 		return err

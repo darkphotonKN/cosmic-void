@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/darkphotonKN/cosmic-void-server/auth-service/internal/models"
 	"github.com/darkphotonKN/cosmic-void-server/auth-service/internal/s3"
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
 	pbevents "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
@@ -35,7 +36,7 @@ type ObjectMetadata struct {
 
 // MemberService interface defines what the upload service needs from member service
 type MemberService interface {
-	UpdateAvatarURL(ctx context.Context, memberID uuid.UUID, avatarURL string) error
+	UpdateAvatarURL(ctx context.Context, memberID uuid.UUID, avatarURL string) (*models.Member, error)
 }
 
 // service implements Service interface
@@ -187,10 +188,16 @@ func (s *service) ConfirmAvatarUpload(ctx context.Context, req *pb.ConfirmAvatar
 		avatarURL = fmt.Sprintf("https://%s.s3.amazonaws.com/%s", s.bucketName, upload.S3Key)
 	}
 
+	// TODO: transaction
+	// commonutils.ExecTx(ctx, )
+
 	// Update member avatar URL
-	if err := s.memberService.UpdateAvatarURL(ctx, upload.MemberID, avatarURL); err != nil {
+	updatedMember, err := s.memberService.UpdateAvatarURL(ctx, upload.MemberID, avatarURL)
+	if err != nil {
 		return nil, fmt.Errorf("updating member avatar URL: %w", err)
 	}
+
+	s.logger.Debug("after UpdateAvatarURL call", "updatedMember", updatedMember)
 
 	// Mark as synced
 	if err := s.repo.UpdateUploadStatus(ctx, uploadId, StatusSynced); err != nil {
@@ -213,9 +220,13 @@ func (s *service) ConfirmAvatarUpload(ctx context.Context, req *pb.ConfirmAvatar
 	// }
 
 	// TODO: finish marshal and payload
-	protoData, err := proto.Marshal(pbevents.)
+	protoData, err := proto.Marshal(&pbevents.MemberProfileUpdatedEvent{
+		MemberId:  upload.MemberID.String(),
+		Username:  updatedMember.Name,
+		AvatarUrl: avatarURL,
+	})
 
-	s.publishCh.PublishWithContext(ctx, commonconstants.AuthEventsExchange, commonconstants.MemberUpdatedAvatar,
+	s.publishCh.PublishWithContext(ctx, commonconstants.AuthEventsExchange, commonconstants.MemberProfileUpdated,
 		commonbroker.Message{
 			ContentType:  "application/protobuf",
 			Body:         protoData,
