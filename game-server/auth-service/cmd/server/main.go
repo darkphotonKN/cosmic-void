@@ -50,6 +50,9 @@ var (
 func main() {
 	ctx := context.Background()
 
+	// --- logger ---
+	commonhelpers.SetupLogger(environment)
+
 	// --- observability ---
 	shutdown, err := commontelemetry.Init(ctx, commontelemetry.Config{
 		ServiceName:       serviceName,

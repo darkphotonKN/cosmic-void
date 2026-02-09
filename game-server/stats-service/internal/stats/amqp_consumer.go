@@ -137,6 +137,9 @@ func (c *Consumer) consumeMatchCompleted() {
 
 // Helper method to set up AMQP exchange and bindings
 func SetupAMQPInfrastructure(channel *amqp.Channel) error {
+
+	// --- Game Match Ended ---
+
 	err := channel.ExchangeDeclare(
 		commonconstants.GameEventsExchange, // exchange name
 		"topic",                            // exchange type
@@ -149,8 +152,6 @@ func SetupAMQPInfrastructure(channel *amqp.Channel) error {
 	if err != nil {
 		return err
 	}
-
-	// --- Game Match Ended ---
 
 	// Declare the queue
 	_, err = channel.QueueDeclare(
@@ -179,6 +180,19 @@ func SetupAMQPInfrastructure(channel *amqp.Channel) error {
 	}
 
 	// --- Member Profile Update ---
+
+	err = channel.ExchangeDeclare(
+		commonconstants.AuthEventsExchange, // exchange name
+		"topic",                            // exchange type
+		true,                               // durable
+		false,                              // auto-deleted
+		false,                              // internal
+		false,                              // no-wait
+		nil,                                // arguments
+	)
+	if err != nil {
+		return err
+	}
 
 	// Declare the queue
 	_, err = channel.QueueDeclare(
