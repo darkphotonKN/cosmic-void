@@ -49,12 +49,12 @@ func NewMessageHub(sessionManager SessionManager, sender *messaging.MessageSende
 * to other parts of game.
 **/
 func (h *messageHub) Run() {
-	fmt.Printf("\nInitializing message hub...\n\n")
+	slog.Info("Initializing message hub.")
 
 	for {
 		select {
 		case clientPackage := <-h.sessionManager.GetServerChan():
-			fmt.Printf("\nincoming message: %+v\n\n", clientPackage.Message)
+			slog.Info("incoming message.", "message", clientPackage.Message)
 
 			// handle message based on action
 			var gameActions map[constants.Action]bool = map[constants.Action]bool{

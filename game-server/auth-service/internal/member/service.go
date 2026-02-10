@@ -35,6 +35,7 @@ type Repository interface {
 	GetById(ctx context.Context, id uuid.UUID) (*models.Member, error)
 	GetMemberByEmail(ctx context.Context, email string) (*models.Member, error)
 	CreateDefaultMembers(ctx context.Context, members []CreateDefaultMember) error
+	UpdateAvatarURL(ctx context.Context, memberID uuid.UUID, avatarURL string) (*models.Member, error)
 }
 
 func NewService(repo Repository, ch *amqp.Channel, cacheService cache.Cache) *service {
@@ -50,7 +51,7 @@ func memberToProto(m *models.Member) *pb.Member {
 		return nil
 	}
 
-	return &pb.Member{
+	protoMember := &pb.Member{
 		Id:            m.ID.String(),
 		Name:          m.Name,
 		Email:         m.Email,
@@ -59,6 +60,13 @@ func memberToProto(m *models.Member) *pb.Member {
 		CreatedAt:     timestamppb.New(m.CreatedAt),
 		UpdatedAt:     timestamppb.New(m.UpdatedAt),
 	}
+
+	// Include avatar_url if it exists
+	if m.AvatarURL != nil {
+		protoMember.AvatarUrl = *m.AvatarURL
+	}
+
+	return protoMember
 }
 
 func stringToInt(s string) int {
@@ -84,6 +92,7 @@ func (s *service) GetMember(ctx context.Context, req *pb.GetMemberRequest) (*pb.
 }
 
 func (s *service) CreateMember(ctx context.Context, req *pb.CreateMemberRequest) (*pb.Member, error) {
+
 	// span for entire function
 	ctx, span := serviceTracer.Start(ctx, "service.CreateMember")
 	defer span.End()
@@ -313,4 +322,9 @@ func (s *service) CreateDefaultMembers(members []CreateDefaultMember) error {
 	}
 
 	return s.Repo.CreateDefaultMembers(context.Background(), hashedPwMembers)
+}
+
+// UpdateAvatarURL updates the member's avatar URL
+func (s *service) UpdateAvatarURL(ctx context.Context, memberID uuid.UUID, avatarURL string) (*models.Member, error) {
+	return s.Repo.UpdateAvatarURL(ctx, memberID, avatarURL)
 }

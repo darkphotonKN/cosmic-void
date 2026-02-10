@@ -23,7 +23,7 @@ func InitDB() *sqlx.DB {
 		port     = getEnvAsInt("DB_PORT", 5432)
 		user     = getEnvAsString("DB_USER", "postgres")
 		password = getEnvAsString("DB_PASSWORD", "password")
-		dbname   = getEnvAsString("DB_NAME", "stats_db")
+		dbname   = getEnvAsString("DB_NAME", "items_db")
 	)
 
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",

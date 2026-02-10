@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net"
+	"net/http"
 	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/common/broker"
@@ -15,16 +16,19 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/items-service/config"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 )
 
 var (
-	serviceName       = "items"
+	// observability
 	environment       = commonhelpers.GetEnvString("ENVIRONMENT", "development")
 	collectorEndpoint = commonhelpers.GetEnvString("COLLECTOR_ENDPOINT", "localhost:4317")
-	grpcAddr          = commonhelpers.GetEnvString("GRPC_ITEMS_ADDR", "7013")
-	consulAddr        = commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
-	serviceVersion    = commonhelpers.GetEnvString("SERVICE_VERSION", "1.0.0")
+
+	serviceName    = "items"
+	grpcAddr       = commonhelpers.GetEnvString("GRPC_ITEMS_ADDR", "7013")
+	consulAddr     = commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
+	serviceVersion = commonhelpers.GetEnvString("SERVICE_VERSION", "1.0.0")
 
 	amqpUser     = commonhelpers.GetEnvString("RABBITMQ_USER", "guest")
 	amqpPassword = commonhelpers.GetEnvString("RABBITMQ_PASS", "guest")
@@ -90,6 +94,15 @@ func main() {
 		)
 	}
 	defer listener.Close()
+
+	// --- metrics ---
+
+	// setup endpoint for metrics collection
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		log.Println("Metrics server started on :7013")
+		http.ListenAndServe(":7013", nil)
+	}()
 
 	ch, close := broker.Connect(amqpUser, amqpPassword, amqpHost, amqpPort)
 

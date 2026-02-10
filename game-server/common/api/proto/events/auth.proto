@@ -1,0 +1,12 @@
+syntax = "proto3";
+package events;
+
+option go_package = "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events";
+
+// Events published by auth-service
+
+message MemberProfileUpdatedEvent {
+    string member_id = 1;
+    string username = 2;
+    string avatar_url = 3;
+}

@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats"
+	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	"github.com/google/uuid"
 )
@@ -35,14 +35,12 @@ func NewService(repo Repository, publishCh commonbroker.Publisher) *service {
 * Runs all the relevant processes after a match is completed, updating the
 * relavant tables.
 **/
-func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.ProcessMatchCompletedRequest) (*pb.ProcessMatchCompletedResponse, error) {
+func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.MatchEndedEvent) (*ProcessMatchCompletedResponse, error) {
 	slog.Info("Processing match completed",
 		"session_id", req.SessionId,
 		"match_started_at", req.MatchStartedAt.AsTime(),
 		"match_ended_at", req.MatchEndedAt.AsTime(),
 	)
-
-	// TODO: implement seperate updates to relevant tables
 
 	for _, playerResults := range req.Players {
 		slog.Info("Player match outcome",
@@ -92,13 +90,13 @@ func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.ProcessMatc
 
 	// TODO: call auth service for player information
 
-	return &pb.ProcessMatchCompletedResponse{
+	return &ProcessMatchCompletedResponse{
 		Success: true,
 		Message: "Match data processed successfully",
 	}, nil
 }
 
-func (s *service) updatePlayerStats(ctx context.Context, player *pb.PlayerMatchResults) error {
+func (s *service) updatePlayerStats(ctx context.Context, player *pb.PlayerMatchResult) error {
 	memberId, err := uuid.Parse(player.MemberId)
 	if err != nil {
 		slog.Info("Errored when attempting to get parse member id into UUID", "err", err)
@@ -175,7 +173,7 @@ func (s *service) calculateMatchAverage(ctx context.Context, matchHistory []*Mat
 /**
 * Handles setting up and updating the denormalized leaderboard stats.
 **/
-func (s *service) updateDenormalizedLeaderboard(ctx context.Context, results *pb.PlayerMatchResults) error {
+func (s *service) updateDenormalizedLeaderboard(ctx context.Context, results *pb.PlayerMatchResult) error {
 	memberId, err := uuid.Parse(results.MemberId)
 	if err != nil {
 		slog.Info("Errored when attempting to get parse member id into UUID", "err", err)
@@ -224,6 +222,27 @@ func (s *service) updateDenormalizedLeaderboard(ctx context.Context, results *pb
 	}
 
 	slog.Debug("after upsert for player ranking stats", "playerRankingStats", playerRankingStats)
+
+	return nil
+}
+
+/**
+* Updates the player rankings leaderboard.
+**/
+func (s *service) UpdatePlayerRankings(ctx context.Context, updateData *pb.MemberProfileUpdatedEvent) error {
+	memberIdUUID, err := uuid.Parse(updateData.MemberId)
+	if err != nil {
+		slog.Error("error when parsing updateData.MemberId as uuid", "memberID", updateData.MemberId, "error", err)
+	}
+	_, err = s.repo.UpsertPlayerRankingStats(ctx, &UpdatePlayerRankingsParams{
+		MemberID:  memberIdUUID,
+		AvatarUrl: updateData.AvatarUrl,
+	})
+
+	if err != nil {
+		slog.Error("error when updating player rankings", "memberID", updateData.MemberId, "error", err)
+		return err
+	}
 
 	return nil
 }

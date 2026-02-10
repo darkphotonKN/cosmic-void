@@ -19,7 +19,7 @@ const (
 )
 
 /**
-* The abstracted interface to provide decouploing between services using the MB to
+* The abstracted interface to provide decoupling between services using the MB to
 * publish messages in order to easily swap them out for testing.
 **/
 type Publisher interface {

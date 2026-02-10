@@ -1,0 +1,23 @@
+syntax = "proto3";
+package events;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events";
+
+// events published by game-service
+message MatchEndedEvent {
+  string session_id = 1;
+  google.protobuf.Timestamp match_started_at = 2;
+  google.protobuf.Timestamp match_ended_at = 3;
+  repeated PlayerMatchResult players = 4;
+}
+
+message PlayerMatchResult {
+    string member_id = 1;
+    string username = 2;
+    bool win = 3;
+    int32 final_position = 4;
+    int32 kills = 5;
+    int32 deaths = 6;
+}

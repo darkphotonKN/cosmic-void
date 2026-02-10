@@ -306,3 +306,89 @@ func (h *Handler) ListConsumablesWithTemplate(ctx context.Context, _ *emptypb.Em
 		Consumables: pbConsumables,
 	}, nil
 }
+
+// CreateItemTemplate creates a new item template (gRPC endpoint)
+// This will also send an event to RabbitMQ for notification-service
+func (h *Handler) CreateItemTemplate(ctx context.Context, req *pb.CreateItemTemplateRequest) (*pb.ItemTemplate, error) {
+	// Parse UUIDs
+	typeID, err := uuid.Parse(req.TypeId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid type_id: %v", err)
+	}
+
+	rarityID, err := uuid.Parse(req.RarityId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid rarity_id: %v", err)
+	}
+
+	itemID, err := uuid.Parse(req.ItemId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid item_id: %v", err)
+	}
+
+	// Build service request with optional fields
+	createReq := &CreateItemTemplateRequest{
+		UserId:   req.UserId, // From JWT in API Gateway
+		ItemName: req.ItemName,
+		ItemCode: req.ItemCode,
+		TypeID:   typeID,
+		RarityID: rarityID,
+		ItemType: req.ItemType,
+		ItemID:   itemID,
+	}
+
+	// Handle optional fields
+	if req.IconUrl != nil {
+		createReq.IconURL = req.IconUrl
+	}
+	if req.IsTradeable != nil {
+		createReq.IsTradeable = req.IsTradeable
+	}
+	if req.IsDroppable != nil {
+		createReq.IsDroppable = req.IsDroppable
+	}
+	if req.RequiredLevel != nil {
+		reqLevel := int(*req.RequiredLevel)
+		createReq.RequiredLevel = &reqLevel
+	}
+	if req.BaseSellPrice != nil {
+		sellPrice := int(*req.BaseSellPrice)
+		createReq.BaseSellPrice = &sellPrice
+	}
+	if req.BaseBuyPrice != nil {
+		buyPrice := int(*req.BaseBuyPrice)
+		createReq.BaseBuyPrice = &buyPrice
+	}
+
+	// Call service (will send RabbitMQ event)
+	template, err := h.service.CreateItemTemplate(ctx, createReq)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create item template: %v", err)
+	}
+
+	// Convert to proto message
+	var iconURL string
+	if template.IconURL != nil {
+		iconURL = *template.IconURL
+	}
+
+	return &pb.ItemTemplate{
+		Id:             template.ID.String(),
+		ItemName:       template.ItemName,
+		ItemCode:       template.ItemCode,
+		TypeId:         template.TypeID.String(),
+		RarityId:       template.RarityID.String(),
+		ItemType:       template.ItemType,
+		ItemId:         template.ItemID.String(),
+		IconUrl:        iconURL,
+		IsTradeable:    template.IsTradeable,
+		IsDroppable:    template.IsDroppable,
+		RequiredLevel:  int32(template.RequiredLevel),
+		BaseSellPrice:  int32(template.BaseSellPrice),
+		BaseBuyPrice:   int32(template.BaseBuyPrice),
+		CreatedAt:      timestamppb.New(template.CreatedAt),
+		UpdatedAt:      timestamppb.New(template.UpdatedAt),
+	}, nil
+}
+
+

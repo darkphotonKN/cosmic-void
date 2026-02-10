@@ -7,6 +7,7 @@ interface MemberInfo {
   email: string;
   status: number;
   average_rating: number;
+  avatar_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -21,6 +22,7 @@ interface AuthState {
     refreshToken: string;
     memberInfo: MemberInfo;
   }) => void;
+  updateMemberInfo: (memberInfo: Partial<MemberInfo>) => void;
   logout: () => void;
 }
 
@@ -38,6 +40,12 @@ export const useAuthStore = create<AuthState>()(
           memberInfo: data.memberInfo,
           isAuthenticated: true,
         }),
+      updateMemberInfo: (updates) =>
+        set((state) => ({
+          memberInfo: state.memberInfo
+            ? { ...state.memberInfo, ...updates }
+            : null,
+        })),
       logout: () =>
         set({
           accessToken: null,
@@ -48,6 +56,6 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "auth-storage",
-    }
-  )
+    },
+  ),
 );

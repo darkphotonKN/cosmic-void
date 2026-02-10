@@ -19,6 +19,8 @@ Exchange         {service}.{domain}.{resource}.{action}     stats.game.match.end
 **/
 const (
 	GameEventsExchange = "game.events"
+	AuthEventsExchange = "auth.events"
+	ItemEventsExchange = "item.events"
 )
 
 /**
@@ -35,8 +37,13 @@ const (
 	MemberSignedInEvent = "member.signedin"       // when user signs into their account
 	PasswordResetEvent  = "member.password.reset" // when password reset is requested
 
+	MemberProfileUpdated = "profile.updated"
+
 	// Game Events
 	GameMatchEnded = "match.ended" // match ended
+
+	// Item Events
+	ItemCreated = "item.created"
 )
 
 /**
@@ -44,7 +51,10 @@ const (
 * NOTE: {service}.{domain}.{resource}.{action}
 **/
 const (
-	StatsGameMatchEndedQueue = "stats.game.match.ended"
+	StatsGameMatchEndedQueue        = "stats.game.match.ended"
+	StatsAuthProfileUpdatedQueue    = "stats.auth.profile.updated"
+	NotificationMemberSignedUpQueue = "notification.auth.member.signedup"
+	NotificationItemCreatedQueue = "notification.item.item.created"
 )
 
 /**

@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats"
+	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
@@ -24,13 +24,11 @@ func NewService(publishCh commonbroker.Publisher) *service {
 }
 
 func (s *service) PublishMatchComplete(ctx context.Context, data *commontypes.MatchEndState) error {
-	slog.Info("Publishing game match ended.")
-
 	// format data for marshalling as protobuf
-	playerMatchRes := make([]*pb.PlayerMatchResults, len(data.PlayerMatchResults))
+	playerMatchRes := make([]*pb.PlayerMatchResult, len(data.PlayerMatchResults))
 
 	for i, player := range data.PlayerMatchResults {
-		playerMatchRes[i] = &pb.PlayerMatchResults{
+		playerMatchRes[i] = &pb.PlayerMatchResult{
 			MemberId:      player.MemberID,
 			Username:      player.Username,
 			Win:           player.Win,
@@ -41,7 +39,7 @@ func (s *service) PublishMatchComplete(ctx context.Context, data *commontypes.Ma
 	}
 
 	// marshal to protobuf
-	protoData, err := proto.Marshal(&pb.ProcessMatchCompletedRequest{
+	protoData, err := proto.Marshal(&pb.MatchEndedEvent{
 		SessionId:      string(data.SessionID.String()),
 		MatchStartedAt: timestamppb.New(data.MatchStartedAt),
 		MatchEndedAt:   timestamppb.New(data.MatchEndedAt),

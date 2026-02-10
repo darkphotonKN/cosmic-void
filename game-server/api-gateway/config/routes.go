@@ -6,6 +6,8 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/api-gateway/internal/auth"
 	authService "github.com/darkphotonKN/cosmic-void-server/api-gateway/internal/gateway/auth"
 	"github.com/darkphotonKN/cosmic-void-server/api-gateway/internal/gateway/example"
+	"github.com/darkphotonKN/cosmic-void-server/api-gateway/internal/gateway/item"
+	"github.com/darkphotonKN/cosmic-void-server/api-gateway/internal/gateway/notification"
 	"github.com/darkphotonKN/cosmic-void-server/api-gateway/internal/gateway/stats"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/gin-contrib/cors"
@@ -68,6 +70,10 @@ func SetupRouter(registry discovery.Registry, db *sqlx.DB) *gin.Engine {
 	memberRoutes.PATCH("/update-password", authHandler.UpdatePasswordMemberHandler)
 	memberRoutes.PATCH("/update-info", authHandler.UpdateInfoMemberHandler)
 
+	// Avatar Upload Routes (authenticated)
+	memberRoutes.POST("/avatar/upload-request", authHandler.RequestAvatarUploadHandler)
+	memberRoutes.POST("/avatar/confirm", authHandler.ConfirmAvatarUploadHandler)
+
 	// --- STATS MICROSERVICE ---
 
 	statsClient := stats.NewClient(registry)
@@ -82,6 +88,26 @@ func SetupRouter(registry discovery.Registry, db *sqlx.DB) *gin.Engine {
 	// gameHandler := game.NewHandler(gameClient)
 	// gameRoutes := api.Group("/game")
 	// gameRoutes.GET("/items", gameHandler.GetItemsHandler)
+
+	// --- NOTIFICATION MICROSERVICE ---
+
+	notificationClient := notification.NewClient(registry)
+	notificationHandler := notification.NewHandler(notificationClient)
+	notificationRoutes := api.Group("/notification")
+	notificationRoutes.Use(auth.AuthMiddleware())
+	notificationRoutes.GET("/player/:playerID", notificationHandler.GetNotificationsByUserIDHandler)
+
+	// --- ITEMS MICROSERVICE ---
+
+	itemClient := item.NewClient(registry)
+	itemHandler := item.NewHandler(itemClient)
+
+	itemRoutes := api.Group("/items")
+	// Private Routes - require authentication
+	itemRoutes.Use(auth.AuthMiddleware())
+	itemRoutes.POST("/weapon", itemHandler.CreateWeaponHandler)
+	itemRoutes.GET("/weapons", itemHandler.ListWeaponsWithTemplateHandler)
+	itemRoutes.POST("/template", itemHandler.CreateItemTemplateHandler) // 創建物品模板 - 會發送通知
 
 	return router
 }

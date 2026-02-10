@@ -61,8 +61,6 @@ func (s *MessageSender) BroadcastToPlayerList(players []uuid.UUID, msg types.Mes
 // state response specific helpers
 
 func (s *MessageSender) SendStateToPlayer(playerID uuid.UUID, clientState *types.ClientGameState) error {
-	// fmt.Println("Sending message to player:", playerID)
-
 	return s.dispatcher.PushMessageToChannelQueue(playerID, clientState)
 }
 

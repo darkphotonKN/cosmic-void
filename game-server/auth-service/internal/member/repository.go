@@ -150,3 +150,21 @@ func (r *repository) CreateDefaultMembers(ctx context.Context, members []CreateD
 
 	return nil
 }
+
+func (r *repository) UpdateAvatarURL(ctx context.Context, memberID uuid.UUID, avatarURL string) (*models.Member, error) {
+	var member models.Member
+
+	query := `UPDATE 
+							members 
+						SET avatar_url = $2 
+						WHERE id = $1
+						RETURNING *`
+
+	err := r.DB.GetContext(ctx, &member, query, memberID, avatarURL)
+
+	if err != nil {
+		return nil, commonhelpers.AnalyzeDBErr(err)
+	}
+
+	return &member, nil
+}

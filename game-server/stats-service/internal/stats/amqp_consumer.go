@@ -5,7 +5,7 @@ import (
 	"errors"
 	"log/slog"
 
-	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats"
+	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/protobuf/proto"
@@ -13,7 +13,8 @@ import (
 
 // ConsumerService defines what the consumer needs from the service
 type ConsumerService interface {
-	ProcessMatchCompleted(ctx context.Context, req *pb.ProcessMatchCompletedRequest) (*pb.ProcessMatchCompletedResponse, error)
+	ProcessMatchCompleted(ctx context.Context, req *pb.MatchEndedEvent) (*ProcessMatchCompletedResponse, error)
+	UpdatePlayerRankings(ctx context.Context, updateData *pb.MemberProfileUpdatedEvent) error
 }
 
 type Consumer struct {
@@ -32,8 +33,58 @@ func NewConsumer(service ConsumerService, channel *amqp.Channel) *Consumer {
 func (c *Consumer) Listen() {
 	// Start consuming match completed events
 	go c.consumeMatchCompleted()
+	go c.consumeProfileUpdated()
 
 	slog.Info("Stats consumer listening for events...")
+}
+
+func (c *Consumer) consumeProfileUpdated() {
+	msgs, err := c.channel.Consume(
+		commonconstants.StatsAuthProfileUpdatedQueue,
+		"",
+		false,
+		false,
+		false,
+		false,
+		nil,
+	)
+
+	if err != nil {
+		slog.Error("Failed to register consumer", "error", err)
+		return
+	}
+
+	for msg := range msgs {
+		var memberUpdated pb.MemberProfileUpdatedEvent
+
+		if err := proto.Unmarshal(msg.Body, &memberUpdated); err != nil {
+			slog.Error("Failed to parse member profile updated event", "error", err)
+			msg.Nack(false, false)
+			continue
+		}
+
+		slog.Debug("after member profile updated data unmarshal",
+			"memberUpdated", memberUpdated)
+
+		err := c.service.UpdatePlayerRankings(context.Background(), &memberUpdated)
+
+		if errors.Is(err, commonconstants.ErrTransient) {
+			msg.Nack(false, true)
+			continue
+		} else if err != nil {
+			slog.Error("Failed to update member profile data after consuming memberProfileUpdatedEvent event", "error", err)
+			msg.Nack(false, false)
+			continue
+		}
+
+		msg.Ack(false)
+
+		slog.Info("PlayerRankings updated successfully following member profile update",
+			"member_id", memberUpdated.MemberId,
+			"success", true,
+			"message", "PlayerRankings updated successfully following member profile update",
+		)
+	}
 }
 
 // consumeMatchCompleted handles match completion events
@@ -54,7 +105,7 @@ func (c *Consumer) consumeMatchCompleted() {
 	}
 
 	for msg := range msgs {
-		var event pb.ProcessMatchCompletedRequest
+		var event pb.MatchEndedEvent
 
 		slog.Debug("Raw message received",
 			"body_length", len(msg.Body),
@@ -80,6 +131,8 @@ func (c *Consumer) consumeMatchCompleted() {
 				"session_id", event.SessionId,
 			)
 
+			// TODO: check retry count in header
+
 			// retry if error is transient
 			if errors.Is(err, commonconstants.ErrTransient) {
 				msg.Nack(false, true)
@@ -94,7 +147,6 @@ func (c *Consumer) consumeMatchCompleted() {
 		msg.Ack(false)
 		slog.Info("Match completed processed successfully",
 			"session_id", event.SessionId,
-			"players_processed", response.PlayersProcessed,
 			"success", response.Success,
 			"message", response.Message,
 		)
@@ -103,6 +155,9 @@ func (c *Consumer) consumeMatchCompleted() {
 
 // Helper method to set up AMQP exchange and bindings
 func SetupAMQPInfrastructure(channel *amqp.Channel) error {
+
+	// --- Game Match Ended ---
+
 	err := channel.ExchangeDeclare(
 		commonconstants.GameEventsExchange, // exchange name
 		"topic",                            // exchange type
@@ -137,6 +192,48 @@ func SetupAMQPInfrastructure(channel *amqp.Channel) error {
 		commonconstants.GameEventsExchange,       // exchange
 		false,                                    // no-wait
 		nil,                                      // args
+	)
+	if err != nil {
+		return err
+	}
+
+	// --- Member Profile Update ---
+
+	err = channel.ExchangeDeclare(
+		commonconstants.AuthEventsExchange, // exchange name
+		"topic",                            // exchange type
+		true,                               // durable
+		false,                              // auto-deleted
+		false,                              // internal
+		false,                              // no-wait
+		nil,                                // arguments
+	)
+	if err != nil {
+		return err
+	}
+
+	// Declare the queue
+	_, err = channel.QueueDeclare(
+		commonconstants.StatsAuthProfileUpdatedQueue, // queue name
+		true,  // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil,   // arguments
+	)
+
+	if err != nil {
+		slog.Error("Failed to declare queue", "error", err)
+		return err
+	}
+
+	// Bind the queue to the exchange
+	err = channel.QueueBind(
+		commonconstants.StatsAuthProfileUpdatedQueue, // queue name
+		commonconstants.MemberProfileUpdated,         // routing key
+		commonconstants.AuthEventsExchange,           // exchange
+		false,                                        // no-wait
+		nil,                                          // args
 	)
 	if err != nil {
 		return err

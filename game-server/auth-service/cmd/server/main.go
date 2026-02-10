@@ -9,8 +9,10 @@ import (
 
 	"github.com/darkphotonKN/cosmic-void-server/auth-service/config"
 	"github.com/darkphotonKN/cosmic-void-server/auth-service/internal/member"
+	"github.com/darkphotonKN/cosmic-void-server/auth-service/internal/upload"
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
 	"github.com/darkphotonKN/cosmic-void-server/common/broker"
+	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
@@ -22,6 +24,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
+
+	"log/slog"
 )
 
 var (
@@ -46,6 +50,9 @@ var (
 func main() {
 	ctx := context.Background()
 
+	// --- logger ---
+	commonhelpers.SetupLogger(environment)
+
 	// --- observability ---
 	shutdown, err := commontelemetry.Init(ctx, commontelemetry.Config{
 		ServiceName:       serviceName,
@@ -53,9 +60,11 @@ func main() {
 		Environment:       environment,
 		CollectorEndpoint: collectorEndpoint,
 	})
+
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	defer shutdown(ctx)
 
 	// --- database setup ---
@@ -77,6 +86,16 @@ func main() {
 	}
 	defer config.CloseRedis()
 	cacheService := cache.NewRedisCache(config.GetClient())
+
+	// --- S3 setup ---
+	s3Config := config.LoadS3Config()
+	s3Client, err := config.InitS3Client(ctx, s3Config)
+	if err != nil {
+		log.Printf("Warning: S3 client initialization failed: %v", err)
+		log.Println("Avatar upload functionality will be disabled")
+		// Continue without S3 avatar uploads will not work but service runs
+		s3Client = nil
+	}
 
 	// --- service discovery setup ---
 
@@ -139,17 +158,38 @@ func main() {
 		ch.Close()
 	}()
 
-	repo := member.NewRepository(db)
-	service := member.NewService(repo, ch, cacheService)
-	handler := member.NewHandler(service)
+	// --- member service setup ---
+	memberRepo := member.NewRepository(db)
+	memberService := member.NewService(memberRepo, ch, cacheService)
+	memberHandler := member.NewHandler(memberService)
+
+	// --- upload service setup ---
+	publishCh := commonbroker.NewAmqpPublisher(ch)
+	if s3Client != nil {
+		uploadRepo := upload.NewRepository(db)
+		logger := slog.Default()
+
+		uploadService := upload.NewService(
+			uploadRepo,
+			s3Client,
+			memberService,
+			s3Config.BucketName,
+			s3Config.CDNUrl,
+			logger,
+			publishCh,
+		)
+
+		uploadHandler := upload.NewHandler(uploadService)
+		pb.RegisterUploadServiceServer(grpcServer, uploadHandler)
+	}
 
 	// consumer := member.NewConsumer(service, ch)
 	// start goroutine and listen to events from message broker
 	// consumer.Listen()
 
-	pb.RegisterAuthServiceServer(grpcServer, handler)
+	pb.RegisterAuthServiceServer(grpcServer, memberHandler)
 
-	log.Printf("grpc Order Server started on PORT: %s\n", grpcAddr)
+	log.Printf("grpc Auth Server started on PORT: %s\n", grpcAddr)
 
 	if err := grpcServer.Serve(listener); err != nil {
 		log.Fatal("Can't connect to grpc server. Error:", err.Error())

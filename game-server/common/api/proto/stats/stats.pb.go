@@ -22,218 +22,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type ProcessMatchCompletedRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	SessionId      string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	MatchStartedAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=match_started_at,json=matchStartedAt,proto3" json:"match_started_at,omitempty"`
-	MatchEndedAt   *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=match_ended_at,json=matchEndedAt,proto3" json:"match_ended_at,omitempty"`
-	Players        []*PlayerMatchResults  `protobuf:"bytes,5,rep,name=players,proto3" json:"players,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *ProcessMatchCompletedRequest) Reset() {
-	*x = ProcessMatchCompletedRequest{}
-	mi := &file_api_proto_stats_stats_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ProcessMatchCompletedRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ProcessMatchCompletedRequest) ProtoMessage() {}
-
-func (x *ProcessMatchCompletedRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_stats_stats_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ProcessMatchCompletedRequest.ProtoReflect.Descriptor instead.
-func (*ProcessMatchCompletedRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_stats_stats_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *ProcessMatchCompletedRequest) GetSessionId() string {
-	if x != nil {
-		return x.SessionId
-	}
-	return ""
-}
-
-func (x *ProcessMatchCompletedRequest) GetMatchStartedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.MatchStartedAt
-	}
-	return nil
-}
-
-func (x *ProcessMatchCompletedRequest) GetMatchEndedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.MatchEndedAt
-	}
-	return nil
-}
-
-func (x *ProcessMatchCompletedRequest) GetPlayers() []*PlayerMatchResults {
-	if x != nil {
-		return x.Players
-	}
-	return nil
-}
-
-type PlayerMatchResults struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	MemberId      string                 `protobuf:"bytes,1,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
-	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
-	Win           bool                   `protobuf:"varint,3,opt,name=win,proto3" json:"win,omitempty"`
-	FinalPosition int32                  `protobuf:"varint,4,opt,name=final_position,json=finalPosition,proto3" json:"final_position,omitempty"`
-	Kills         int32                  `protobuf:"varint,5,opt,name=kills,proto3" json:"kills,omitempty"`
-	Deaths        int32                  `protobuf:"varint,6,opt,name=deaths,proto3" json:"deaths,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *PlayerMatchResults) Reset() {
-	*x = PlayerMatchResults{}
-	mi := &file_api_proto_stats_stats_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PlayerMatchResults) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PlayerMatchResults) ProtoMessage() {}
-
-func (x *PlayerMatchResults) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_stats_stats_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PlayerMatchResults.ProtoReflect.Descriptor instead.
-func (*PlayerMatchResults) Descriptor() ([]byte, []int) {
-	return file_api_proto_stats_stats_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *PlayerMatchResults) GetMemberId() string {
-	if x != nil {
-		return x.MemberId
-	}
-	return ""
-}
-
-func (x *PlayerMatchResults) GetUsername() string {
-	if x != nil {
-		return x.Username
-	}
-	return ""
-}
-
-func (x *PlayerMatchResults) GetWin() bool {
-	if x != nil {
-		return x.Win
-	}
-	return false
-}
-
-func (x *PlayerMatchResults) GetFinalPosition() int32 {
-	if x != nil {
-		return x.FinalPosition
-	}
-	return 0
-}
-
-func (x *PlayerMatchResults) GetKills() int32 {
-	if x != nil {
-		return x.Kills
-	}
-	return 0
-}
-
-func (x *PlayerMatchResults) GetDeaths() int32 {
-	if x != nil {
-		return x.Deaths
-	}
-	return 0
-}
-
-type ProcessMatchCompletedResponse struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Success          bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	Message          string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
-	PlayersProcessed int32                  `protobuf:"varint,3,opt,name=players_processed,json=playersProcessed,proto3" json:"players_processed,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
-}
-
-func (x *ProcessMatchCompletedResponse) Reset() {
-	*x = ProcessMatchCompletedResponse{}
-	mi := &file_api_proto_stats_stats_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ProcessMatchCompletedResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ProcessMatchCompletedResponse) ProtoMessage() {}
-
-func (x *ProcessMatchCompletedResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_stats_stats_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ProcessMatchCompletedResponse.ProtoReflect.Descriptor instead.
-func (*ProcessMatchCompletedResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_stats_stats_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *ProcessMatchCompletedResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-
-func (x *ProcessMatchCompletedResponse) GetMessage() string {
-	if x != nil {
-		return x.Message
-	}
-	return ""
-}
-
-func (x *ProcessMatchCompletedResponse) GetPlayersProcessed() int32 {
-	if x != nil {
-		return x.PlayersProcessed
-	}
-	return 0
-}
-
 type GetPlayerMatchStatsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	MemberId      string                 `protobuf:"bytes,1,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
@@ -243,7 +31,7 @@ type GetPlayerMatchStatsRequest struct {
 
 func (x *GetPlayerMatchStatsRequest) Reset() {
 	*x = GetPlayerMatchStatsRequest{}
-	mi := &file_api_proto_stats_stats_proto_msgTypes[3]
+	mi := &file_api_proto_stats_stats_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -255,7 +43,7 @@ func (x *GetPlayerMatchStatsRequest) String() string {
 func (*GetPlayerMatchStatsRequest) ProtoMessage() {}
 
 func (x *GetPlayerMatchStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_stats_stats_proto_msgTypes[3]
+	mi := &file_api_proto_stats_stats_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -268,7 +56,7 @@ func (x *GetPlayerMatchStatsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPlayerMatchStatsRequest.ProtoReflect.Descriptor instead.
 func (*GetPlayerMatchStatsRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_stats_stats_proto_rawDescGZIP(), []int{3}
+	return file_api_proto_stats_stats_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *GetPlayerMatchStatsRequest) GetMemberId() string {
@@ -296,7 +84,7 @@ type PlayerMatchStats struct {
 
 func (x *PlayerMatchStats) Reset() {
 	*x = PlayerMatchStats{}
-	mi := &file_api_proto_stats_stats_proto_msgTypes[4]
+	mi := &file_api_proto_stats_stats_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -308,7 +96,7 @@ func (x *PlayerMatchStats) String() string {
 func (*PlayerMatchStats) ProtoMessage() {}
 
 func (x *PlayerMatchStats) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_stats_stats_proto_msgTypes[4]
+	mi := &file_api_proto_stats_stats_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -321,7 +109,7 @@ func (x *PlayerMatchStats) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerMatchStats.ProtoReflect.Descriptor instead.
 func (*PlayerMatchStats) Descriptor() ([]byte, []int) {
-	return file_api_proto_stats_stats_proto_rawDescGZIP(), []int{4}
+	return file_api_proto_stats_stats_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *PlayerMatchStats) GetId() string {
@@ -403,7 +191,7 @@ type GetPlayerRankingStatsRequest struct {
 
 func (x *GetPlayerRankingStatsRequest) Reset() {
 	*x = GetPlayerRankingStatsRequest{}
-	mi := &file_api_proto_stats_stats_proto_msgTypes[5]
+	mi := &file_api_proto_stats_stats_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -415,7 +203,7 @@ func (x *GetPlayerRankingStatsRequest) String() string {
 func (*GetPlayerRankingStatsRequest) ProtoMessage() {}
 
 func (x *GetPlayerRankingStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_stats_stats_proto_msgTypes[5]
+	mi := &file_api_proto_stats_stats_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -428,7 +216,7 @@ func (x *GetPlayerRankingStatsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPlayerRankingStatsRequest.ProtoReflect.Descriptor instead.
 func (*GetPlayerRankingStatsRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_stats_stats_proto_rawDescGZIP(), []int{5}
+	return file_api_proto_stats_stats_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *GetPlayerRankingStatsRequest) GetMemberId() string {
@@ -456,7 +244,7 @@ type PlayerRankingStats struct {
 
 func (x *PlayerRankingStats) Reset() {
 	*x = PlayerRankingStats{}
-	mi := &file_api_proto_stats_stats_proto_msgTypes[6]
+	mi := &file_api_proto_stats_stats_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -468,7 +256,7 @@ func (x *PlayerRankingStats) String() string {
 func (*PlayerRankingStats) ProtoMessage() {}
 
 func (x *PlayerRankingStats) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_stats_stats_proto_msgTypes[6]
+	mi := &file_api_proto_stats_stats_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -481,7 +269,7 @@ func (x *PlayerRankingStats) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerRankingStats.ProtoReflect.Descriptor instead.
 func (*PlayerRankingStats) Descriptor() ([]byte, []int) {
-	return file_api_proto_stats_stats_proto_rawDescGZIP(), []int{6}
+	return file_api_proto_stats_stats_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *PlayerRankingStats) GetId() string {
@@ -565,7 +353,7 @@ type GetMatchHistoryRequest struct {
 
 func (x *GetMatchHistoryRequest) Reset() {
 	*x = GetMatchHistoryRequest{}
-	mi := &file_api_proto_stats_stats_proto_msgTypes[7]
+	mi := &file_api_proto_stats_stats_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -577,7 +365,7 @@ func (x *GetMatchHistoryRequest) String() string {
 func (*GetMatchHistoryRequest) ProtoMessage() {}
 
 func (x *GetMatchHistoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_stats_stats_proto_msgTypes[7]
+	mi := &file_api_proto_stats_stats_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -590,7 +378,7 @@ func (x *GetMatchHistoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMatchHistoryRequest.ProtoReflect.Descriptor instead.
 func (*GetMatchHistoryRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_stats_stats_proto_rawDescGZIP(), []int{7}
+	return file_api_proto_stats_stats_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GetMatchHistoryRequest) GetMemberId() string {
@@ -624,7 +412,7 @@ type GetMatchHistoryResponse struct {
 
 func (x *GetMatchHistoryResponse) Reset() {
 	*x = GetMatchHistoryResponse{}
-	mi := &file_api_proto_stats_stats_proto_msgTypes[8]
+	mi := &file_api_proto_stats_stats_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -636,7 +424,7 @@ func (x *GetMatchHistoryResponse) String() string {
 func (*GetMatchHistoryResponse) ProtoMessage() {}
 
 func (x *GetMatchHistoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_stats_stats_proto_msgTypes[8]
+	mi := &file_api_proto_stats_stats_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -649,7 +437,7 @@ func (x *GetMatchHistoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMatchHistoryResponse.ProtoReflect.Descriptor instead.
 func (*GetMatchHistoryResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_stats_stats_proto_rawDescGZIP(), []int{8}
+	return file_api_proto_stats_stats_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetMatchHistoryResponse) GetMatches() []*MatchHistory {
@@ -686,7 +474,7 @@ type MatchHistory struct {
 
 func (x *MatchHistory) Reset() {
 	*x = MatchHistory{}
-	mi := &file_api_proto_stats_stats_proto_msgTypes[9]
+	mi := &file_api_proto_stats_stats_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -698,7 +486,7 @@ func (x *MatchHistory) String() string {
 func (*MatchHistory) ProtoMessage() {}
 
 func (x *MatchHistory) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_stats_stats_proto_msgTypes[9]
+	mi := &file_api_proto_stats_stats_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -711,7 +499,7 @@ func (x *MatchHistory) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MatchHistory.ProtoReflect.Descriptor instead.
 func (*MatchHistory) Descriptor() ([]byte, []int) {
-	return file_api_proto_stats_stats_proto_rawDescGZIP(), []int{9}
+	return file_api_proto_stats_stats_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *MatchHistory) GetId() string {
@@ -808,7 +596,7 @@ type GetLeaderboardRequest struct {
 
 func (x *GetLeaderboardRequest) Reset() {
 	*x = GetLeaderboardRequest{}
-	mi := &file_api_proto_stats_stats_proto_msgTypes[10]
+	mi := &file_api_proto_stats_stats_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -820,7 +608,7 @@ func (x *GetLeaderboardRequest) String() string {
 func (*GetLeaderboardRequest) ProtoMessage() {}
 
 func (x *GetLeaderboardRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_stats_stats_proto_msgTypes[10]
+	mi := &file_api_proto_stats_stats_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -833,7 +621,7 @@ func (x *GetLeaderboardRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetLeaderboardRequest.ProtoReflect.Descriptor instead.
 func (*GetLeaderboardRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_stats_stats_proto_rawDescGZIP(), []int{10}
+	return file_api_proto_stats_stats_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetLeaderboardRequest) GetLimit() int32 {
@@ -860,7 +648,7 @@ type GetLeaderboardResponse struct {
 
 func (x *GetLeaderboardResponse) Reset() {
 	*x = GetLeaderboardResponse{}
-	mi := &file_api_proto_stats_stats_proto_msgTypes[11]
+	mi := &file_api_proto_stats_stats_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -872,7 +660,7 @@ func (x *GetLeaderboardResponse) String() string {
 func (*GetLeaderboardResponse) ProtoMessage() {}
 
 func (x *GetLeaderboardResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_stats_stats_proto_msgTypes[11]
+	mi := &file_api_proto_stats_stats_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -885,7 +673,7 @@ func (x *GetLeaderboardResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetLeaderboardResponse.ProtoReflect.Descriptor instead.
 func (*GetLeaderboardResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_stats_stats_proto_rawDescGZIP(), []int{11}
+	return file_api_proto_stats_stats_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetLeaderboardResponse) GetPlayers() []*PlayerRankingStats {
@@ -1015,50 +803,42 @@ func file_api_proto_stats_stats_proto_rawDescGZIP() []byte {
 	return file_api_proto_stats_stats_proto_rawDescData
 }
 
-var file_api_proto_stats_stats_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_api_proto_stats_stats_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_api_proto_stats_stats_proto_goTypes = []any{
-	(*ProcessMatchCompletedRequest)(nil),  // 0: stats.ProcessMatchCompletedRequest
-	(*PlayerMatchResults)(nil),            // 1: stats.PlayerMatchResults
-	(*ProcessMatchCompletedResponse)(nil), // 2: stats.ProcessMatchCompletedResponse
-	(*GetPlayerMatchStatsRequest)(nil),    // 3: stats.GetPlayerMatchStatsRequest
-	(*PlayerMatchStats)(nil),              // 4: stats.PlayerMatchStats
-	(*GetPlayerRankingStatsRequest)(nil),  // 5: stats.GetPlayerRankingStatsRequest
-	(*PlayerRankingStats)(nil),            // 6: stats.PlayerRankingStats
-	(*GetMatchHistoryRequest)(nil),        // 7: stats.GetMatchHistoryRequest
-	(*GetMatchHistoryResponse)(nil),       // 8: stats.GetMatchHistoryResponse
-	(*MatchHistory)(nil),                  // 9: stats.MatchHistory
-	(*GetLeaderboardRequest)(nil),         // 10: stats.GetLeaderboardRequest
-	(*GetLeaderboardResponse)(nil),        // 11: stats.GetLeaderboardResponse
-	(*timestamppb.Timestamp)(nil),         // 12: google.protobuf.Timestamp
+	(*GetPlayerMatchStatsRequest)(nil),   // 0: stats.GetPlayerMatchStatsRequest
+	(*PlayerMatchStats)(nil),             // 1: stats.PlayerMatchStats
+	(*GetPlayerRankingStatsRequest)(nil), // 2: stats.GetPlayerRankingStatsRequest
+	(*PlayerRankingStats)(nil),           // 3: stats.PlayerRankingStats
+	(*GetMatchHistoryRequest)(nil),       // 4: stats.GetMatchHistoryRequest
+	(*GetMatchHistoryResponse)(nil),      // 5: stats.GetMatchHistoryResponse
+	(*MatchHistory)(nil),                 // 6: stats.MatchHistory
+	(*GetLeaderboardRequest)(nil),        // 7: stats.GetLeaderboardRequest
+	(*GetLeaderboardResponse)(nil),       // 8: stats.GetLeaderboardResponse
+	(*timestamppb.Timestamp)(nil),        // 9: google.protobuf.Timestamp
 }
 var file_api_proto_stats_stats_proto_depIdxs = []int32{
-	12, // 0: stats.ProcessMatchCompletedRequest.match_started_at:type_name -> google.protobuf.Timestamp
-	12, // 1: stats.ProcessMatchCompletedRequest.match_ended_at:type_name -> google.protobuf.Timestamp
-	1,  // 2: stats.ProcessMatchCompletedRequest.players:type_name -> stats.PlayerMatchResults
-	12, // 3: stats.PlayerMatchStats.created_at:type_name -> google.protobuf.Timestamp
-	12, // 4: stats.PlayerMatchStats.updated_at:type_name -> google.protobuf.Timestamp
-	12, // 5: stats.PlayerRankingStats.last_calculated_at:type_name -> google.protobuf.Timestamp
-	12, // 6: stats.PlayerRankingStats.created_at:type_name -> google.protobuf.Timestamp
-	12, // 7: stats.PlayerRankingStats.updated_at:type_name -> google.protobuf.Timestamp
-	9,  // 8: stats.GetMatchHistoryResponse.matches:type_name -> stats.MatchHistory
-	12, // 9: stats.MatchHistory.match_started_at:type_name -> google.protobuf.Timestamp
-	12, // 10: stats.MatchHistory.created_at:type_name -> google.protobuf.Timestamp
-	6,  // 11: stats.GetLeaderboardResponse.players:type_name -> stats.PlayerRankingStats
-	0,  // 12: stats.StatsService.ProcessMatchCompleted:input_type -> stats.ProcessMatchCompletedRequest
-	3,  // 13: stats.StatsService.GetPlayerMatchStats:input_type -> stats.GetPlayerMatchStatsRequest
-	5,  // 14: stats.StatsService.GetPlayerRankingStats:input_type -> stats.GetPlayerRankingStatsRequest
-	7,  // 15: stats.StatsService.GetMatchHistory:input_type -> stats.GetMatchHistoryRequest
-	10, // 16: stats.StatsService.GetLeaderboard:input_type -> stats.GetLeaderboardRequest
-	2,  // 17: stats.StatsService.ProcessMatchCompleted:output_type -> stats.ProcessMatchCompletedResponse
-	4,  // 18: stats.StatsService.GetPlayerMatchStats:output_type -> stats.PlayerMatchStats
-	6,  // 19: stats.StatsService.GetPlayerRankingStats:output_type -> stats.PlayerRankingStats
-	8,  // 20: stats.StatsService.GetMatchHistory:output_type -> stats.GetMatchHistoryResponse
-	11, // 21: stats.StatsService.GetLeaderboard:output_type -> stats.GetLeaderboardResponse
-	17, // [17:22] is the sub-list for method output_type
-	12, // [12:17] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	9,  // 0: stats.PlayerMatchStats.created_at:type_name -> google.protobuf.Timestamp
+	9,  // 1: stats.PlayerMatchStats.updated_at:type_name -> google.protobuf.Timestamp
+	9,  // 2: stats.PlayerRankingStats.last_calculated_at:type_name -> google.protobuf.Timestamp
+	9,  // 3: stats.PlayerRankingStats.created_at:type_name -> google.protobuf.Timestamp
+	9,  // 4: stats.PlayerRankingStats.updated_at:type_name -> google.protobuf.Timestamp
+	6,  // 5: stats.GetMatchHistoryResponse.matches:type_name -> stats.MatchHistory
+	9,  // 6: stats.MatchHistory.match_started_at:type_name -> google.protobuf.Timestamp
+	9,  // 7: stats.MatchHistory.created_at:type_name -> google.protobuf.Timestamp
+	3,  // 8: stats.GetLeaderboardResponse.players:type_name -> stats.PlayerRankingStats
+	0,  // 9: stats.StatsService.GetPlayerMatchStats:input_type -> stats.GetPlayerMatchStatsRequest
+	2,  // 10: stats.StatsService.GetPlayerRankingStats:input_type -> stats.GetPlayerRankingStatsRequest
+	4,  // 11: stats.StatsService.GetMatchHistory:input_type -> stats.GetMatchHistoryRequest
+	7,  // 12: stats.StatsService.GetLeaderboard:input_type -> stats.GetLeaderboardRequest
+	1,  // 13: stats.StatsService.GetPlayerMatchStats:output_type -> stats.PlayerMatchStats
+	3,  // 14: stats.StatsService.GetPlayerRankingStats:output_type -> stats.PlayerRankingStats
+	5,  // 15: stats.StatsService.GetMatchHistory:output_type -> stats.GetMatchHistoryResponse
+	8,  // 16: stats.StatsService.GetLeaderboard:output_type -> stats.GetLeaderboardResponse
+	13, // [13:17] is the sub-list for method output_type
+	9,  // [9:13] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_api_proto_stats_stats_proto_init() }
@@ -1066,17 +846,17 @@ func file_api_proto_stats_stats_proto_init() {
 	if File_api_proto_stats_stats_proto != nil {
 		return
 	}
+	file_api_proto_stats_stats_proto_msgTypes[3].OneofWrappers = []any{}
+	file_api_proto_stats_stats_proto_msgTypes[4].OneofWrappers = []any{}
 	file_api_proto_stats_stats_proto_msgTypes[6].OneofWrappers = []any{}
 	file_api_proto_stats_stats_proto_msgTypes[7].OneofWrappers = []any{}
-	file_api_proto_stats_stats_proto_msgTypes[9].OneofWrappers = []any{}
-	file_api_proto_stats_stats_proto_msgTypes[10].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_proto_stats_stats_proto_rawDesc), len(file_api_proto_stats_stats_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

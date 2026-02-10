@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"testing"
 
-	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats"
+	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
 	"github.com/google/uuid"
@@ -75,7 +75,7 @@ func TestUpdatePlayerStats_IncrementWin(t *testing.T) {
 	repo := &mockRepo{}
 	service := NewService(repo, &TestPublisher{})
 
-	playerStats := &pb.PlayerMatchResults{
+	playerStats := &pb.PlayerMatchResult{
 		MemberId:      uuid.MustParse("550e8400-e29b-41d4-a716-446655440001").String(),
 		Username:      "Obiwon2002",
 		Win:           true,

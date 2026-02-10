@@ -33,7 +33,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// Auth service definition
+// used for Member related methods
 type AuthServiceClient interface {
 	// Login member
 	LoginMember(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
@@ -121,7 +121,7 @@ func (c *authServiceClient) ValidateToken(ctx context.Context, in *ValidateToken
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
 //
-// Auth service definition
+// used for Member related methods
 type AuthServiceServer interface {
 	// Login member
 	LoginMember(context.Context, *LoginRequest) (*LoginResponse, error)
@@ -322,6 +322,150 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ValidateToken",
 			Handler:    _AuthService_ValidateToken_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "api/proto/auth/auth.proto",
+}
+
+const (
+	UploadService_RequestAvatarUpload_FullMethodName = "/auth.UploadService/RequestAvatarUpload"
+	UploadService_ConfirmAvatarUpload_FullMethodName = "/auth.UploadService/ConfirmAvatarUpload"
+)
+
+// UploadServiceClient is the client API for UploadService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// used for Upload methods
+type UploadServiceClient interface {
+	RequestAvatarUpload(ctx context.Context, in *RequestAvatarUploadRequest, opts ...grpc.CallOption) (*RequestAvatarUploadResponse, error)
+	ConfirmAvatarUpload(ctx context.Context, in *ConfirmAvatarUploadRequest, opts ...grpc.CallOption) (*ConfirmAvatarUploadResponse, error)
+}
+
+type uploadServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewUploadServiceClient(cc grpc.ClientConnInterface) UploadServiceClient {
+	return &uploadServiceClient{cc}
+}
+
+func (c *uploadServiceClient) RequestAvatarUpload(ctx context.Context, in *RequestAvatarUploadRequest, opts ...grpc.CallOption) (*RequestAvatarUploadResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RequestAvatarUploadResponse)
+	err := c.cc.Invoke(ctx, UploadService_RequestAvatarUpload_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *uploadServiceClient) ConfirmAvatarUpload(ctx context.Context, in *ConfirmAvatarUploadRequest, opts ...grpc.CallOption) (*ConfirmAvatarUploadResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConfirmAvatarUploadResponse)
+	err := c.cc.Invoke(ctx, UploadService_ConfirmAvatarUpload_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// UploadServiceServer is the server API for UploadService service.
+// All implementations must embed UnimplementedUploadServiceServer
+// for forward compatibility.
+//
+// used for Upload methods
+type UploadServiceServer interface {
+	RequestAvatarUpload(context.Context, *RequestAvatarUploadRequest) (*RequestAvatarUploadResponse, error)
+	ConfirmAvatarUpload(context.Context, *ConfirmAvatarUploadRequest) (*ConfirmAvatarUploadResponse, error)
+	mustEmbedUnimplementedUploadServiceServer()
+}
+
+// UnimplementedUploadServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedUploadServiceServer struct{}
+
+func (UnimplementedUploadServiceServer) RequestAvatarUpload(context.Context, *RequestAvatarUploadRequest) (*RequestAvatarUploadResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequestAvatarUpload not implemented")
+}
+func (UnimplementedUploadServiceServer) ConfirmAvatarUpload(context.Context, *ConfirmAvatarUploadRequest) (*ConfirmAvatarUploadResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ConfirmAvatarUpload not implemented")
+}
+func (UnimplementedUploadServiceServer) mustEmbedUnimplementedUploadServiceServer() {}
+func (UnimplementedUploadServiceServer) testEmbeddedByValue()                       {}
+
+// UnsafeUploadServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to UploadServiceServer will
+// result in compilation errors.
+type UnsafeUploadServiceServer interface {
+	mustEmbedUnimplementedUploadServiceServer()
+}
+
+func RegisterUploadServiceServer(s grpc.ServiceRegistrar, srv UploadServiceServer) {
+	// If the following call pancis, it indicates UnimplementedUploadServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&UploadService_ServiceDesc, srv)
+}
+
+func _UploadService_RequestAvatarUpload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestAvatarUploadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UploadServiceServer).RequestAvatarUpload(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UploadService_RequestAvatarUpload_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UploadServiceServer).RequestAvatarUpload(ctx, req.(*RequestAvatarUploadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UploadService_ConfirmAvatarUpload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConfirmAvatarUploadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UploadServiceServer).ConfirmAvatarUpload(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UploadService_ConfirmAvatarUpload_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UploadServiceServer).ConfirmAvatarUpload(ctx, req.(*ConfirmAvatarUploadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// UploadService_ServiceDesc is the grpc.ServiceDesc for UploadService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var UploadService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "auth.UploadService",
+	HandlerType: (*UploadServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "RequestAvatarUpload",
+			Handler:    _UploadService_RequestAvatarUpload_Handler,
+		},
+		{
+			MethodName: "ConfirmAvatarUpload",
+			Handler:    _UploadService_ConfirmAvatarUpload_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

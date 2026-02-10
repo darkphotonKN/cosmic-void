@@ -51,6 +51,7 @@ func SetupRouter(db *sqlx.DB, registry discovery.Registry, ch *amqp.Channel) *gi
 	// wrap with adapter to allow amqp rabbit mq channel to
 	// conform to our abstraction
 	publishCh := commonbroker.NewAmqpPublisher(ch)
+
 	gameService := game.NewService(publishCh)
 	server := gameserver.NewServer(authClient, queueService, gameService, itemsClient)
 

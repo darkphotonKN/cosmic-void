@@ -7,6 +7,8 @@ option go_package = "github.com/darkphotonKN/community-builds-microservice/auth-
 import "google/protobuf/timestamp.proto";
 
 // Auth service definition
+
+// used for Member related methods
 service AuthService {
   // Login member
   rpc LoginMember(LoginRequest) returns (LoginResponse) {}
@@ -22,6 +24,12 @@ service AuthService {
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse) {}
 }
 
+// used for Upload methods 
+service UploadService {
+    rpc RequestAvatarUpload(RequestAvatarUploadRequest) returns (RequestAvatarUploadResponse);
+    rpc ConfirmAvatarUpload(ConfirmAvatarUploadRequest) returns (ConfirmAvatarUploadResponse);
+}
+
 // Member message represents a user in the system
 message Member {
   string id = 1;
@@ -31,6 +39,7 @@ message Member {
   float average_rating = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
+  string avatar_url = 8;
 }
 
 // Login request
@@ -90,4 +99,33 @@ message ValidateTokenRequest {
 message ValidateTokenResponse {
   bool valid = 1;
   string member_id = 2;
+}
+
+// Request avatar upload request
+message RequestAvatarUploadRequest {
+  string member_id = 1;
+  string filename = 2;
+}
+
+// Request avatar upload response
+message RequestAvatarUploadResponse {
+  string upload_id = 1;
+  string presigned_url = 2;
+  string s3_key = 3;
+  google.protobuf.Timestamp expires_at = 4;
+  int64 max_file_size = 5;
+  repeated string allowed_content_types = 6;
+}
+
+// Confirm avatar upload request
+message ConfirmAvatarUploadRequest {
+  string member_id = 1;
+  string upload_id = 2;
+}
+
+// Confirm avatar upload response
+message ConfirmAvatarUploadResponse {
+  bool success = 1;
+  string message = 2;
+  string avatar_url = 3;
 }

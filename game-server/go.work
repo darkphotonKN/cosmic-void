@@ -9,4 +9,5 @@ use (
 	./payment-service
 	./stats-service
 	./items-service
+	./notification-service
 )

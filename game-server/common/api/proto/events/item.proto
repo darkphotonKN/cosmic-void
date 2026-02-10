@@ -1,0 +1,13 @@
+syntax = "proto3";
+package events;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events";
+
+
+message ItemCreatedEvent {
+  string user_id = 1;
+  string name = 2;
+  string item_type = 3;
+}

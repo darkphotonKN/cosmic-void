@@ -2,9 +2,13 @@ package items
 
 import (
 	"context"
+	"log/slog"
 
+	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
+	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
+	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/google/uuid"
-	amqp "github.com/rabbitmq/amqp091-go"
+	"google.golang.org/protobuf/proto"
 )
 
 type Service interface {
@@ -54,10 +58,10 @@ type Service interface {
 
 type service struct {
 	repo      Repository
-	publishCh *amqp.Channel
+	publishCh commonbroker.Publisher
 }
 
-func NewService(repo Repository, publishCh *amqp.Channel) Service {
+func NewService(repo Repository, publishCh commonbroker.Publisher) Service {
 	return &service{
 		repo:      repo,
 		publishCh: publishCh,
@@ -268,6 +272,26 @@ func (s *service) CreateItemTemplate(ctx context.Context, req *CreateItemTemplat
 		return nil, err
 	}
 
+	// Send message to RabbitMQ
+	protoData, err := proto.Marshal(&pb.ItemCreatedEvent{
+		UserId:   req.UserId,  // User ID from authenticated request
+		Name:     req.ItemName,
+		ItemType: req.ItemType,
+	})
+
+	if err != nil {
+		slog.Error("Error publishing game match end event", "error", err)
+		return nil, err
+	}
+
+	if err := s.publishCh.PublishWithContext(ctx, commonconstants.ItemEventsExchange, commonconstants.ItemCreated, commonbroker.Message{
+		ContentType:  "application/protobuf",
+		Body:         protoData,
+		DeliveryMode: commonbroker.Persistent,
+	}); err != nil {
+		return nil, err
+	}
+
 	return template, nil
 }
 
@@ -302,3 +326,5 @@ func (s *service) ListArmorsWithTemplate(ctx context.Context) ([]*ArmorWithTempl
 func (s *service) ListConsumablesWithTemplate(ctx context.Context) ([]*ConsumableWithTemplate, error) {
 	return s.repo.ListConsumablesWithTemplate(ctx)
 }
+
+//
