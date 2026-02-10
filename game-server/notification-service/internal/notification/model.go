@@ -43,3 +43,23 @@ type UpdateNotification struct {
 	UserID uuid.UUID `json:"user_id" db:"user_id"`
 	Read   bool      `json:"read" db:"read"`
 }
+
+// service
+
+type GetNotificationRequest struct {
+	UserID string `json:"user_id" db:"user_id"`
+	Limit  *int   `json:"limit" db:"limit"`
+	Offset *int   `json:"offset" db:"offset"`
+}
+
+type NotificationList struct {
+	UserID  uuid.UUID      `json:"user_id" db:"user_id"`
+	Title   string         `json:"title" db:"title"`
+	Message string         `json:"message" db:"message"`
+	Data    map[string]any `json:"data" db:"data"`
+}
+
+type NotificationListResponse struct {
+	Notifications []Notification `json:"notifications"`
+	Total         int            `json:"total"`
+}

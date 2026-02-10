@@ -16,6 +16,9 @@ service ItemsService {
 
   // Consumable operations
   rpc ListConsumablesWithTemplate(google.protobuf.Empty) returns (ListConsumablesResponse);
+
+  // ItemTemplate operations
+  rpc CreateItemTemplate(CreateItemTemplateRequest) returns (ItemTemplate);
 }
 
 // ============ Layered Message Definitions ============
@@ -141,4 +144,41 @@ message ConsumableDetail {
 
 message ListConsumablesResponse {
   repeated ConsumableDetail consumables = 1;
+}
+
+// ItemTemplate (unified item template)
+message ItemTemplate {
+  string id = 1;
+  string item_name = 2;
+  string item_code = 3;
+  string type_id = 4;
+  string rarity_id = 5;
+  string item_type = 6;  // 'weapon', 'armor', 'consumable'
+  string item_id = 7;    // references weapon/armor/consumable id
+  string icon_url = 8;
+  bool is_tradeable = 9;
+  bool is_droppable = 10;
+  int32 required_level = 11;
+  int32 base_sell_price = 12;
+  int32 base_buy_price = 13;
+  google.protobuf.Timestamp created_at = 14;
+  google.protobuf.Timestamp updated_at = 15;
+}
+
+// CreateItemTemplateRequest for creating item templates
+// Note: user_id will be extracted from JWT token in API Gateway
+message CreateItemTemplateRequest {
+  string user_id = 1;         // Admin user ID (from JWT)
+  string item_name = 2;
+  string item_code = 3;
+  string type_id = 4;
+  string rarity_id = 5;
+  string item_type = 6;       // 'weapon', 'armor', 'consumable'
+  string item_id = 7;         // references weapon/armor/consumable id
+  optional string icon_url = 8;
+  optional bool is_tradeable = 9;
+  optional bool is_droppable = 10;
+  optional int32 required_level = 11;
+  optional int32 base_sell_price = 12;
+  optional int32 base_buy_price = 13;
 }
