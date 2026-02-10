@@ -68,10 +68,13 @@ func (c *Consumer) consumeProfileUpdated() {
 
 		err := c.service.UpdatePlayerRankings(context.Background(), &memberUpdated)
 
-		if errors.Is(err, commonconstants.ErrTransient) {
-			msg.Nack(false, true)
-			continue
-		} else if err != nil {
+		if err != nil {
+			if errors.Is(err, commonconstants.ErrTransient) {
+				slog.Warn("Transient error, retrying", "error", err, "member_id", memberUpdated.MemberId)
+				msg.Nack(false, true)
+				continue
+			}
+
 			slog.Error("Failed to update member profile data after consuming memberProfileUpdatedEvent event", "error", err)
 			msg.Nack(false, false)
 			continue
