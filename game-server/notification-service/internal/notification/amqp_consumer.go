@@ -3,6 +3,7 @@ package notification
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
@@ -55,6 +56,7 @@ func (c *Consumer) consumeItemCreated() {
 	slog.Info("Started consuming item.created events")
 
 	for msg := range msgs {
+		slog.Info("Start ItemCreatedEvent")
 		var payload pb.ItemCreatedEvent
 		if err := proto.Unmarshal(msg.Body, &payload); err != nil {
 			slog.Error("Failed to parse event", "error", err)
@@ -67,9 +69,16 @@ func (c *Consumer) consumeItemCreated() {
 		)
 
 		ctx := context.Background()
-		if err := c.service.ProcessItemCreated(ctx, &payload); err != nil {
-			slog.Error("Failed to process event", "error", err)
-			msg.Nack(false, true) // RabbitMQ：處理失敗，請重試（requeue）
+
+		err := c.service.ProcessItemCreated(ctx, &payload)
+
+		if errors.Is(err, commonconstants.ErrTransient) {
+			slog.Error("Failed to process event due to transient error", "error", err)
+			msg.Nack(false, true)
+			continue
+		} else if err != nil {
+			slog.Error("Failed to update notification data after consuming ItemCreatedEvent event", "error", err)
+			msg.Nack(false, false)
 			continue
 		}
 

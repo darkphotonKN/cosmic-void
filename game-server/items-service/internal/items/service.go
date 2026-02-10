@@ -151,6 +151,22 @@ func (s *service) CreateWeapon(ctx context.Context, req *CreateWeaponRequest) (*
 		return nil, err
 	}
 
+	// Send message to RabbitMQ
+	protoData, _ := proto.Marshal(&pb.ItemCreatedEvent{
+		UserId:   "f3db2c74-0a53-4631-b91b-761035d8be70", // User ID from authenticated request
+		Name:     "",
+		ItemType: *req.WeaponType,
+	})
+	slog.Info("PublishWithContext")
+	if err := s.publishCh.PublishWithContext(ctx, commonconstants.ItemEventsExchange, commonconstants.ItemCreated, commonbroker.Message{
+		ContentType:  "application/protobuf",
+		Body:         protoData,
+		DeliveryMode: commonbroker.Persistent,
+	}); err != nil {
+		slog.Info("errrrrrrrrrr")
+		return nil, err
+	}
+
 	return weapon, nil
 }
 
@@ -274,7 +290,7 @@ func (s *service) CreateItemTemplate(ctx context.Context, req *CreateItemTemplat
 
 	// Send message to RabbitMQ
 	protoData, err := proto.Marshal(&pb.ItemCreatedEvent{
-		UserId:   req.UserId,  // User ID from authenticated request
+		UserId:   req.UserId, // User ID from authenticated request
 		Name:     req.ItemName,
 		ItemType: req.ItemType,
 	})
@@ -283,12 +299,13 @@ func (s *service) CreateItemTemplate(ctx context.Context, req *CreateItemTemplat
 		slog.Error("Error publishing game match end event", "error", err)
 		return nil, err
 	}
-
+	slog.Info("PublishWithContext")
 	if err := s.publishCh.PublishWithContext(ctx, commonconstants.ItemEventsExchange, commonconstants.ItemCreated, commonbroker.Message{
 		ContentType:  "application/protobuf",
 		Body:         protoData,
 		DeliveryMode: commonbroker.Persistent,
 	}); err != nil {
+		slog.Info("errrrrrrrrrr")
 		return nil, err
 	}
 

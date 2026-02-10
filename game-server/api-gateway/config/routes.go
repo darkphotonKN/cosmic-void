@@ -95,7 +95,7 @@ func SetupRouter(registry discovery.Registry, db *sqlx.DB) *gin.Engine {
 	notificationHandler := notification.NewHandler(notificationClient)
 	notificationRoutes := api.Group("/notification")
 	notificationRoutes.Use(auth.AuthMiddleware())
-	notificationRoutes.GET("/player/:playerID", notificationHandler.GetNotificationsByUserIDHandler)
+	notificationRoutes.GET("/", notificationHandler.GetNotificationsByUserIDHandler)
 
 	// --- ITEMS MICROSERVICE ---
 
