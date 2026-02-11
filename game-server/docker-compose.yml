@@ -26,6 +26,232 @@ services:
     networks:
       - cosmic-void-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: cosmic-void-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cosmic-void-network
+
+  # Auth Service Database
+  auth-service-db:
+    image: postgres:17
+    container_name: cosmic_void_auth_service_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cosmic_void_auth_service_db
+    ports:
+      - "5103:5432"
+    volumes:
+      - cosmic_void_auth_service_pgdata:/var/lib/postgresql/data
+    networks:
+      - cosmic-void-network
+
+  auth-service-test-db:
+    image: postgres:17
+    container_name: cosmic_void_auth_service_test_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cosmic_void_auth_service_test_db
+    ports:
+      - "6103:5432"
+    volumes:
+      - cosmic_void_auth_service_test_pgdata:/var/lib/postgresql/data
+    restart: "no"
+    networks:
+      - cosmic-void-network
+
+  # Game Service Database
+  game-service-db:
+    image: postgres:17
+    container_name: cosmic_void_game_service_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cosmic_void_game_service_db
+    ports:
+      - "5030:5432"
+    volumes:
+      - cosmic_void_game_service_pgdata:/var/lib/postgresql/data
+    networks:
+      - cosmic-void-network
+
+  game-service-test-db:
+    image: postgres:17
+    container_name: cosmic_void_game_service_test_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cosmic_void_game_service_test_db
+    ports:
+      - "6004:5432"
+    volumes:
+      - cosmic_void_game_service_test_pgdata:/var/lib/postgresql/data
+    restart: "no"
+    networks:
+      - cosmic-void-network
+
+  # Stats Service Database
+  stats-service-db:
+    image: postgres:17
+    container_name: cosmic_void_stats_service_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cosmic_void_stats_service_db
+    ports:
+      - "5110:5432"
+    volumes:
+      - cosmic_void_stats_service_pgdata:/var/lib/postgresql/data
+    networks:
+      - cosmic-void-network
+
+  stats-service-test-db:
+    image: postgres:17
+    container_name: cosmic_void_stats_service_test_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cosmic_void_stats_service_test_db
+    ports:
+      - "6110:5432"
+    volumes:
+      - cosmic_void_stats_service_test_pgdata:/var/lib/postgresql/data
+    restart: "no"
+    networks:
+      - cosmic-void-network
+
+  # Items Service Database
+  items-service-db:
+    image: postgres:17
+    container_name: cosmic_void_items_service_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cosmic_void_items_service_db
+    ports:
+      - "5104:5432"
+    volumes:
+      - cosmic_void_items_service_pgdata:/var/lib/postgresql/data
+    networks:
+      - cosmic-void-network
+
+  items-service-test-db:
+    image: postgres:17
+    container_name: cosmic_void_items_service_test_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cosmic_void_items_service_test_db
+    ports:
+      - "6104:5432"
+    volumes:
+      - cosmic_void_items_service_test_pgdata:/var/lib/postgresql/data
+    restart: "no"
+    networks:
+      - cosmic-void-network
+
+  # Notification Service Database
+  notification-service-db:
+    image: postgres:17
+    container_name: cosmic_void_notification_service_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cosmic_void_notification_service_db
+    ports:
+      - "5101:5432"
+    volumes:
+      - cosmic_void_notification_service_pgdata:/var/lib/postgresql/data
+    networks:
+      - cosmic-void-network
+
+  notification-service-test-db:
+    image: postgres:17
+    container_name: cosmic_void_notification_service_test_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cosmic_void_notification_service_test_db
+    ports:
+      - "6101:5432"
+    volumes:
+      - cosmic_void_notification_service_test_pgdata:/var/lib/postgresql/data
+    restart: "no"
+    networks:
+      - cosmic-void-network
+
+  # API Gateway Database
+  api-gateway-db:
+    image: postgres:17
+    container_name: cosmic_void_api_gateway_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cosmic_void_api_gateway_db
+    ports:
+      - "5107:5432"
+    volumes:
+      - cosmic_void_api_gateway_pgdata:/var/lib/postgresql/data
+    networks:
+      - cosmic-void-network
+
+  api-gateway-test-db:
+    image: postgres:17
+    container_name: cosmic_void_api_gateway_test_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cosmic_void_api_gateway_test_db
+    ports:
+      - "6107:5432"
+    volumes:
+      - cosmic_void_api_gateway_test_pgdata:/var/lib/postgresql/data
+    restart: "no"
+    networks:
+      - cosmic-void-network
+
+  # Example Service Database
+  example-service-db:
+    image: postgres:17
+    container_name: cosmic_void_example_service_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cosmic_void_example_service_db
+    ports:
+      - "5177:5432"
+    volumes:
+      - cosmic_void_example_service_pgdata:/var/lib/postgresql/data
+    networks:
+      - cosmic-void-network
+
+  example-service-test-db:
+    image: postgres:17
+    container_name: cosmic_void_example_service_test_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cosmic_void_example_service_test_db
+    ports:
+      - "6177:5432"
+    volumes:
+      - cosmic_void_example_service_test_pgdata:/var/lib/postgresql/data
+    restart: "no"
+    networks:
+      - cosmic-void-network
+
 networks:
   cosmic-void-network:
     name: cosmic-void-network
@@ -33,3 +259,25 @@ networks:
 volumes:
   cosmic-void-consul-data:
   cosmic-void-rabbitmq-data:
+  redis_data:
+  # Auth Service volumes
+  cosmic_void_auth_service_pgdata:
+  cosmic_void_auth_service_test_pgdata:
+  # Game Service volumes
+  cosmic_void_game_service_pgdata:
+  cosmic_void_game_service_test_pgdata:
+  # Stats Service volumes
+  cosmic_void_stats_service_pgdata:
+  cosmic_void_stats_service_test_pgdata:
+  # Items Service volumes
+  cosmic_void_items_service_pgdata:
+  cosmic_void_items_service_test_pgdata:
+  # Notification Service volumes
+  cosmic_void_notification_service_pgdata:
+  cosmic_void_notification_service_test_pgdata:
+  # API Gateway volumes
+  cosmic_void_api_gateway_pgdata:
+  cosmic_void_api_gateway_test_pgdata:
+  # Example Service volumes
+  cosmic_void_example_service_pgdata:
+  cosmic_void_example_service_test_pgdata:

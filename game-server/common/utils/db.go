@@ -16,7 +16,7 @@ import (
 * with the initiation, passing, and error checking of that transaction.
 **/
 func ExecTx(ctx context.Context, db *sqlx.DB, fn func(tx *sqlx.Tx) error) (err error) {
-	tx, txBeginErr := db.Beginx()
+	tx, txBeginErr := db.BeginTxx(ctx, nil)
 
 	if txBeginErr != nil {
 		fmt.Printf("Error when attempting to start transaction: %v\n", txBeginErr)

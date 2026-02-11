@@ -13,7 +13,9 @@ import (
 	pbevents "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
+	commonutils "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -36,7 +38,17 @@ type ObjectMetadata struct {
 
 // MemberService interface defines what the upload service needs from member service
 type MemberService interface {
-	UpdateAvatarURL(ctx context.Context, memberID uuid.UUID, avatarURL string) (*models.Member, error)
+	UpdateAvatarURLTx(ctx context.Context, tx *sqlx.Tx, memberID uuid.UUID, avatarURL string) (*models.Member, error)
+}
+
+// Repository interface defines data access operations
+// Following ISP - service defines what it needs from repository
+type Repository interface {
+	CreateUpload(ctx context.Context, upload *AvatarUpload) error
+	GetUploadByID(ctx context.Context, id uuid.UUID) (*AvatarUpload, error)
+	UpdateUploadStatus(ctx context.Context, id uuid.UUID, status string) error
+	UpdateUploadStatusTx(ctx context.Context, tx *sqlx.Tx, id uuid.UUID, status string) error
+	GetPendingUploadsByMember(ctx context.Context, memberID uuid.UUID) ([]*AvatarUpload, error)
 }
 
 // service implements Service interface
@@ -48,6 +60,7 @@ type service struct {
 	cdnURL        string // Optional CDN URL for serving images
 	logger        *slog.Logger
 	publishCh     commonbroker.Publisher
+	db            *sqlx.DB
 }
 
 // NewService creates a new upload service
@@ -59,6 +72,7 @@ func NewService(
 	cdnURL string,
 	logger *slog.Logger,
 	pubishCh commonbroker.Publisher,
+	db *sqlx.DB,
 ) *service {
 	return &service{
 		repo:          repo,
@@ -68,6 +82,7 @@ func NewService(
 		cdnURL:        cdnURL,
 		logger:        logger,
 		publishCh:     pubishCh,
+		db:            db,
 	}
 }
 
@@ -188,20 +203,30 @@ func (s *service) ConfirmAvatarUpload(ctx context.Context, req *pb.ConfirmAvatar
 		avatarURL = fmt.Sprintf("https://%s.s3.amazonaws.com/%s", s.bucketName, upload.S3Key)
 	}
 
-	// TODO: transaction
-	// commonutils.ExecTx(ctx, )
+	var updatedMember *models.Member
 
-	// Update member avatar URL
-	updatedMember, err := s.memberService.UpdateAvatarURL(ctx, upload.MemberID, avatarURL)
+	err = commonutils.ExecTx(ctx, s.db, func(tx *sqlx.Tx) error {
+		// Update member avatar URL
+		res, err := s.memberService.UpdateAvatarURLTx(ctx, tx, upload.MemberID, avatarURL)
+		if err != nil {
+			return fmt.Errorf("updating member avatar URL: %w", err)
+		}
+
+		s.logger.Debug("after UpdateAvatarURL call", "updatedMember", updatedMember)
+
+		// Mark as synced
+		if err := s.repo.UpdateUploadStatusTx(ctx, tx, uploadId, StatusSynced); err != nil {
+			return fmt.Errorf("marking upload as synced: %w", err)
+		}
+
+		// everything succeeded, update outerscope return values
+		updatedMember = res
+
+		return nil
+	})
+
 	if err != nil {
-		return nil, fmt.Errorf("updating member avatar URL: %w", err)
-	}
-
-	s.logger.Debug("after UpdateAvatarURL call", "updatedMember", updatedMember)
-
-	// Mark as synced
-	if err := s.repo.UpdateUploadStatus(ctx, uploadId, StatusSynced); err != nil {
-		return nil, fmt.Errorf("marking upload as synced: %w", err)
+		return nil, fmt.Errorf("confirming avatar upload: %w", err)
 	}
 
 	s.logger.InfoContext(ctx, "avatar upload confirmed",
@@ -212,14 +237,7 @@ func (s *service) ConfirmAvatarUpload(ctx context.Context, req *pb.ConfirmAvatar
 	)
 
 	// confirmed, fire off amqp event for profile sync (dernormalized ranking leaderboard tables)
-	//
-	// message MemberProfileUpdatedEvent {
-	//     string member_id = 1;
-	//     string username = 2;
-	//     string avatar_url = 3;
-	// }
 
-	// TODO: finish marshal and payload
 	protoData, err := proto.Marshal(&pbevents.MemberProfileUpdatedEvent{
 		MemberId:  upload.MemberID.String(),
 		Username:  updatedMember.Name,

@@ -27,12 +27,20 @@ services:
     restart: "no"
 
   redis:
-    image: redis:latest
+    image: redis:7-alpine
+    container_name: cosmic-void-redis
     ports:
-      - "6388:6379"
+      - "6379:6379"
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cosmic-void-network
 
 volumes:
   cosmic_void_notification_service_pgdata:

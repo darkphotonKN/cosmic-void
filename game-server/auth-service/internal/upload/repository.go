@@ -9,22 +9,13 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// Repository interface defines data access operations
-// Following ISP - service defines what it needs from repository
-type Repository interface {
-	CreateUpload(ctx context.Context, upload *AvatarUpload) error
-	GetUploadByID(ctx context.Context, id uuid.UUID) (*AvatarUpload, error)
-	UpdateUploadStatus(ctx context.Context, id uuid.UUID, status string) error
-	GetPendingUploadsByMember(ctx context.Context, memberID uuid.UUID) ([]*AvatarUpload, error)
-}
-
 // repository implements Repository interface
 type repository struct {
 	db *sqlx.DB
 }
 
 // NewRepository creates a new repository instance
-func NewRepository(db *sqlx.DB) Repository {
+func NewRepository(db *sqlx.DB) *repository {
 	return &repository{
 		db: db,
 	}
@@ -94,6 +85,30 @@ func (r *repository) UpdateUploadStatus(ctx context.Context, id uuid.UUID, statu
 	return nil
 }
 
+// UpdateUploadStatus updates the status of an upload
+func (r *repository) UpdateUploadStatusTx(ctx context.Context, tx *sqlx.Tx, id uuid.UUID, status string) error {
+	query := `
+		UPDATE avatar_uploads
+		SET upload_status = $2, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1`
+
+	result, err := tx.ExecContext(ctx, query, id, status)
+	if err != nil {
+		return fmt.Errorf("updating upload status: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("upload not found")
+	}
+
+	return nil
+}
+
 // GetPendingUploadsByMember retrieves pending uploads for a member
 func (r *repository) GetPendingUploadsByMember(ctx context.Context, memberID uuid.UUID) ([]*AvatarUpload, error) {
 	var uploads []*AvatarUpload
@@ -112,4 +127,3 @@ func (r *repository) GetPendingUploadsByMember(ctx context.Context, memberID uui
 
 	return uploads, nil
 }
-

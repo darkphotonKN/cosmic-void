@@ -177,6 +177,7 @@ func main() {
 			s3Config.CDNUrl,
 			logger,
 			publishCh,
+			db,
 		)
 
 		uploadHandler := upload.NewHandler(uploadService)

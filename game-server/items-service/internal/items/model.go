@@ -170,6 +170,81 @@ type CreateItemTemplateRequest struct {
 	BaseBuyPrice  *int      `json:"base_buy_price"`
 }
 
+// CreateCompleteWeaponRequest represents the request to create a complete weapon with template
+type CreateCompleteWeaponRequest struct {
+	// User info
+	UserId string `json:"user_id" binding:"required"`
+
+	// Template fields (common attributes)
+	ItemName      string  `json:"item_name" binding:"required"`
+	ItemCode      string  `json:"item_code" binding:"required"`
+	IconURL       *string `json:"icon_url"`
+	IsTradeable   *bool   `json:"is_tradeable"`
+	IsDroppable   *bool   `json:"is_droppable"`
+	RequiredLevel *int    `json:"required_level"`
+	BaseSellPrice *int    `json:"base_sell_price"`
+	BaseBuyPrice  *int    `json:"base_buy_price"`
+
+	// Weapon-specific fields
+	TypeID       uuid.UUID `json:"type_id" binding:"required"`
+	RarityID     uuid.UUID `json:"rarity_id" binding:"required"`
+	AttackPower  int       `json:"attack_power" binding:"required,gte=0"`
+	Durability   int       `json:"durability" binding:"required,gte=0"`
+	CriticalRate *float64  `json:"critical_rate"`
+	WeaponType   *string   `json:"weapon_type"`
+	Description  *string   `json:"description"`
+}
+
+// CreateCompleteArmorRequest represents the request to create a complete armor with template
+type CreateCompleteArmorRequest struct {
+	// User info
+	UserId string `json:"user_id" binding:"required"`
+
+	// Template fields (common attributes)
+	ItemName      string  `json:"item_name" binding:"required"`
+	ItemCode      string  `json:"item_code" binding:"required"`
+	IconURL       *string `json:"icon_url"`
+	IsTradeable   *bool   `json:"is_tradeable"`
+	IsDroppable   *bool   `json:"is_droppable"`
+	RequiredLevel *int    `json:"required_level"`
+	BaseSellPrice *int    `json:"base_sell_price"`
+	BaseBuyPrice  *int    `json:"base_buy_price"`
+
+	// Armor-specific fields
+	TypeID          uuid.UUID `json:"type_id" binding:"required"`
+	RarityID        uuid.UUID `json:"rarity_id" binding:"required"`
+	DefenseRating   int       `json:"defense_rating" binding:"required,gte=0"`
+	Durability      int       `json:"durability" binding:"required,gte=0"`
+	MagicResistance *int      `json:"magic_resistance"`
+	ArmorSlot       *string   `json:"armor_slot"`
+	Description     *string   `json:"description"`
+}
+
+// CreateCompleteConsumableRequest represents the request to create a complete consumable with template
+type CreateCompleteConsumableRequest struct {
+	// User info
+	UserId string `json:"user_id" binding:"required"`
+
+	// Template fields (common attributes)
+	ItemName      string  `json:"item_name" binding:"required"`
+	ItemCode      string  `json:"item_code" binding:"required"`
+	IconURL       *string `json:"icon_url"`
+	IsTradeable   *bool   `json:"is_tradeable"`
+	IsDroppable   *bool   `json:"is_droppable"`
+	RequiredLevel *int    `json:"required_level"`
+	BaseSellPrice *int    `json:"base_sell_price"`
+	BaseBuyPrice  *int    `json:"base_buy_price"`
+
+	// Consumable-specific fields
+	TypeID        uuid.UUID `json:"type_id" binding:"required"`
+	RarityID      uuid.UUID `json:"rarity_id" binding:"required"`
+	HealingAmount *int      `json:"healing_amount"`
+	ManaAmount    *int      `json:"mana_amount"`
+	BuffDuration  *int      `json:"buff_duration"`
+	MaxStackSize  int       `json:"max_stack_size" binding:"required,gt=0"`
+	Description   *string   `json:"description"`
+}
+
 // ArmorWithTemplate represents an armor joined with its item template
 type ArmorWithTemplate struct {
 	// Armor fields

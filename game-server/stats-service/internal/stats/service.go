@@ -7,7 +7,9 @@ import (
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
+	commonutils "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
 )
 
 // Repository interface defines what the service needs from the repository
@@ -22,12 +24,14 @@ type Repository interface {
 type service struct {
 	repo      Repository
 	publishCh commonbroker.Publisher
+	db        *sqlx.DB
 }
 
-func NewService(repo Repository, publishCh commonbroker.Publisher) *service {
+func NewService(repo Repository, publishCh commonbroker.Publisher, db *sqlx.DB) *service {
 	return &service{
 		repo:      repo,
 		publishCh: publishCh,
+		db:        db,
 	}
 }
 
@@ -47,44 +51,61 @@ func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.MatchEndedE
 			"playerResults", playerResults,
 		)
 
-		// -- player stats --
-		err := s.updatePlayerStats(ctx, playerResults)
-		if err != nil {
-			slog.Error("error when updating match stats", "memberID", playerResults.MemberId, "error", err)
-		}
+		// wrap transaction for business critical sync up between players match
+		// history and their personal stats
+		err := commonutils.ExecTx(ctx, s.db, func(tx *sqlx.Tx) error {
+			// -- player stats --
+			err := s.updatePlayerStats(ctx, playerResults)
+			if err != nil {
+				slog.Error("error when updating match stats", "memberID", playerResults.MemberId, "error", err)
+				return err
+			}
 
-		// -- leaderboards --
-		err = s.updateDenormalizedLeaderboard(ctx, playerResults)
-		if err != nil {
-			slog.Error("error when updating leaderboard stats", "memberID", playerResults.MemberId, "error", err)
-		}
+			// -- leaderboards --
+			err = s.updateDenormalizedLeaderboard(ctx, playerResults)
+			if err != nil {
+				slog.Error("error when updating leaderboard stats", "memberID", playerResults.MemberId, "error", err)
+				return err
+			}
 
-		// -- match history --
-		sessionId, err := uuid.Parse(req.SessionId)
+			// -- match history --
+			sessionId, err := uuid.Parse(req.SessionId)
+			if err != nil {
+				slog.Error("error parsing session id", "sessionId", req.SessionId, "error", err)
+				return err
+			}
+
+			memberId, err := uuid.Parse(playerResults.MemberId)
+			if err != nil {
+				slog.Error("error parsing member id", "memberId", playerResults.MemberId, "error", err)
+				return err
+			}
+
+			matchHistory := &MatchHistory{
+				SessionID:      sessionId,
+				MemberID:       memberId,
+				Win:            playerResults.Win,
+				FinalPosition:  int(playerResults.FinalPosition),
+				Kills:          int(playerResults.Kills),
+				Deaths:         int(playerResults.Deaths),
+				MatchStartedAt: req.MatchStartedAt.AsTime(),
+			}
+
+			err = s.repo.CreateMatchHistory(ctx, matchHistory)
+			if err != nil {
+				slog.Error("error creating match history", "memberID", playerResults.MemberId, "error", err)
+				return err
+			}
+
+			return nil
+		})
+
+		// transaction errored, continue to next player
+		// (roll back automagically handled in helper already)
 		if err != nil {
-			slog.Error("error parsing session id", "sessionId", req.SessionId, "error", err)
+			slog.Error("error occured during match processing transaction, rolledback.",
+				"error", err)
 			continue
-		}
-
-		memberId, err := uuid.Parse(playerResults.MemberId)
-		if err != nil {
-			slog.Error("error parsing member id", "memberId", playerResults.MemberId, "error", err)
-			continue
-		}
-
-		matchHistory := &MatchHistory{
-			SessionID:      sessionId,
-			MemberID:       memberId,
-			Win:            playerResults.Win,
-			FinalPosition:  int(playerResults.FinalPosition),
-			Kills:          int(playerResults.Kills),
-			Deaths:         int(playerResults.Deaths),
-			MatchStartedAt: req.MatchStartedAt.AsTime(),
-		}
-
-		err = s.repo.CreateMatchHistory(ctx, matchHistory)
-		if err != nil {
-			slog.Error("error creating match history", "memberID", playerResults.MemberId, "error", err)
 		}
 	}
 

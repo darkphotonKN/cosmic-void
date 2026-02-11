@@ -168,3 +168,24 @@ func (r *repository) UpdateAvatarURL(ctx context.Context, memberID uuid.UUID, av
 
 	return &member, nil
 }
+
+/**
+* Same as UpdateAvatarURL but in a transaction
+**/
+func (r *repository) UpdateAvatarURLTx(ctx context.Context, tx *sqlx.Tx, memberID uuid.UUID, avatarURL string) (*models.Member, error) {
+	var member models.Member
+
+	query := `UPDATE 
+							members 
+						SET avatar_url = $2 
+						WHERE id = $1
+						RETURNING *`
+
+	err := tx.GetContext(ctx, &member, query, memberID, avatarURL)
+
+	if err != nil {
+		return nil, commonhelpers.AnalyzeDBErr(err)
+	}
+
+	return &member, nil
+}

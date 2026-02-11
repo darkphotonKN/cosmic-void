@@ -15,6 +15,7 @@ import (
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
 	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.opentelemetry.io/otel/codes"
 	"golang.org/x/crypto/bcrypt"
@@ -36,6 +37,7 @@ type Repository interface {
 	GetMemberByEmail(ctx context.Context, email string) (*models.Member, error)
 	CreateDefaultMembers(ctx context.Context, members []CreateDefaultMember) error
 	UpdateAvatarURL(ctx context.Context, memberID uuid.UUID, avatarURL string) (*models.Member, error)
+	UpdateAvatarURLTx(ctx context.Context, tx *sqlx.Tx, memberID uuid.UUID, avatarURL string) (*models.Member, error)
 }
 
 func NewService(repo Repository, ch *amqp.Channel, cacheService cache.Cache) *service {
@@ -327,4 +329,9 @@ func (s *service) CreateDefaultMembers(members []CreateDefaultMember) error {
 // UpdateAvatarURL updates the member's avatar URL
 func (s *service) UpdateAvatarURL(ctx context.Context, memberID uuid.UUID, avatarURL string) (*models.Member, error) {
 	return s.Repo.UpdateAvatarURL(ctx, memberID, avatarURL)
+}
+
+// UpdateAvatarURL updates the member's avatar URL
+func (s *service) UpdateAvatarURLTx(ctx context.Context, tx *sqlx.Tx, memberID uuid.UUID, avatarURL string) (*models.Member, error) {
+	return s.Repo.UpdateAvatarURLTx(ctx, tx, memberID, avatarURL)
 }
