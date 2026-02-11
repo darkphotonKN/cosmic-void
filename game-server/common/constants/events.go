@@ -22,6 +22,7 @@ const (
 	AuthEventsExchange = "auth.events"
 	ItemEventsExchange = "item.events"
 	DlxEventsExchange  = "dlx.exchange"
+	RetryExchange      = "retry.exchange"
 )
 
 /**
