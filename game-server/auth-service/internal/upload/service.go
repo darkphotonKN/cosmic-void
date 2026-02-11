@@ -237,12 +237,6 @@ func (s *service) ConfirmAvatarUpload(ctx context.Context, req *pb.ConfirmAvatar
 	)
 
 	// confirmed, fire off amqp event for profile sync (dernormalized ranking leaderboard tables)
-	//
-	// message MemberProfileUpdatedEvent {
-	//     string member_id = 1;
-	//     string username = 2;
-	//     string avatar_url = 3;
-	// }
 
 	protoData, err := proto.Marshal(&pbevents.MemberProfileUpdatedEvent{
 		MemberId:  upload.MemberID.String(),
