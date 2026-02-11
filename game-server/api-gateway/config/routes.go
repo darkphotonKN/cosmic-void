@@ -105,9 +105,22 @@ func SetupRouter(registry discovery.Registry, db *sqlx.DB) *gin.Engine {
 	itemRoutes := api.Group("/items")
 	// Private Routes - require authentication
 	itemRoutes.Use(auth.AuthMiddleware())
+
+	// --- Legacy/Advanced APIs (creates weapon/armor/consumable separately) ---
 	itemRoutes.POST("/weapon", itemHandler.CreateWeaponHandler)
+	itemRoutes.POST("/template", itemHandler.CreateItemTemplateHandler) // Creates template only (sends notification)
+
+	// Complete item operations (creates both specific item + template, sends notification)
+	itemRoutes.POST("/complete-weapon", itemHandler.CreateCompleteWeaponHandler)
+	itemRoutes.POST("/complete-armor", itemHandler.CreateCompleteArmorHandler)
+	itemRoutes.POST("/complete-consumable", itemHandler.CreateCompleteConsumableHandler)
+
+	// --- Query APIs ---
 	itemRoutes.GET("/weapons", itemHandler.ListWeaponsWithTemplateHandler)
-	itemRoutes.POST("/template", itemHandler.CreateItemTemplateHandler) // 創建物品模板 - 會發送通知
+
+	// --- Dropdown Options (for frontend forms) ---
+	itemRoutes.GET("/types", itemHandler.ListItemTypesHandler)
+	itemRoutes.GET("/rarities", itemHandler.ListItemRaritiesHandler)
 
 	return router
 }
