@@ -2,9 +2,13 @@ package items
 
 import (
 	"context"
+	"log/slog"
 
+	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
+	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/proto"
 )
 
 type Service interface {
@@ -50,6 +54,11 @@ type Service interface {
 
 	// Consumable operations with item template (JOIN queries)
 	ListConsumablesWithTemplate(ctx context.Context) ([]*ConsumableWithTemplate, error)
+
+	// Complete item operations (creates both specific item + template in one transaction)
+	CreateCompleteWeapon(ctx context.Context, req *CreateCompleteWeaponRequest) (*WeaponWithTemplate, error)
+	CreateCompleteArmor(ctx context.Context, req *CreateCompleteArmorRequest) (*ArmorWithTemplate, error)
+	CreateCompleteConsumable(ctx context.Context, req *CreateCompleteConsumableRequest) (*ConsumableWithTemplate, error)
 }
 
 type service struct {
@@ -146,6 +155,9 @@ func (s *service) CreateWeapon(ctx context.Context, req *CreateWeaponRequest) (*
 	if err := s.repo.CreateWeapon(ctx, weapon); err != nil {
 		return nil, err
 	}
+
+	// Note: No notification sent here.
+	// Notifications are sent when CreateItemTemplate is called (either directly or via CreateCompleteWeapon)
 
 	return weapon, nil
 }
@@ -268,6 +280,27 @@ func (s *service) CreateItemTemplate(ctx context.Context, req *CreateItemTemplat
 		return nil, err
 	}
 
+	// Send message to RabbitMQ
+	protoData, err := proto.Marshal(&pb.ItemCreatedEvent{
+		UserId:   req.UserId, // User ID from authenticated request
+		Name:     req.ItemName,
+		ItemType: req.ItemType,
+	})
+
+	if err != nil {
+		slog.Error("Error publishing game match end event", "error", err)
+		return nil, err
+	}
+	slog.Info("CreateItemTemplate PublishWithContext")
+	if err := s.publishCh.PublishWithContext(ctx, commonconstants.ItemEventsExchange, commonconstants.ItemCreated, commonbroker.Message{
+		ContentType:  "application/protobuf",
+		Body:         protoData,
+		DeliveryMode: commonbroker.Persistent,
+	}); err != nil {
+		slog.Info("CreateItemTemplate error")
+		return nil, err
+	}
+
 	return template, nil
 }
 
@@ -302,3 +335,227 @@ func (s *service) ListArmorsWithTemplate(ctx context.Context) ([]*ArmorWithTempl
 func (s *service) ListConsumablesWithTemplate(ctx context.Context) ([]*ConsumableWithTemplate, error) {
 	return s.repo.ListConsumablesWithTemplate(ctx)
 }
+
+// ==========================================
+// Complete Item Creation Methods
+// (Creates both specific item + template, sends notification)
+// ==========================================
+
+func (s *service) CreateCompleteWeapon(ctx context.Context, req *CreateCompleteWeaponRequest) (*WeaponWithTemplate, error) {
+	// Step 1: Create the weapon with specific attributes
+	weaponReq := &CreateWeaponRequest{
+		TypeID:       req.TypeID,
+		RarityID:     req.RarityID,
+		AttackPower:  req.AttackPower,
+		Durability:   req.Durability,
+		CriticalRate: req.CriticalRate,
+		WeaponType:   req.WeaponType,
+		Description:  req.Description,
+	}
+
+	weapon, err := s.CreateWeapon(ctx, weaponReq)
+	if err != nil {
+		slog.Error("Failed to create weapon", "error", err)
+		return nil, err
+	}
+
+	// Step 2: Create the item template with common attributes
+	templateReq := &CreateItemTemplateRequest{
+		UserId:        req.UserId,
+		ItemName:      req.ItemName,
+		ItemCode:      req.ItemCode,
+		TypeID:        req.TypeID,
+		RarityID:      req.RarityID,
+		ItemType:      "weapon",
+		ItemID:        weapon.ID,
+		IconURL:       req.IconURL,
+		IsTradeable:   req.IsTradeable,
+		IsDroppable:   req.IsDroppable,
+		RequiredLevel: req.RequiredLevel,
+		BaseSellPrice: req.BaseSellPrice,
+		BaseBuyPrice:  req.BaseBuyPrice,
+	}
+
+	template, err := s.CreateItemTemplate(ctx, templateReq)
+	if err != nil {
+		slog.Error("Failed to create item template for weapon", "weapon_id", weapon.ID, "error", err)
+		// TODO: Consider rollback weapon creation here
+		return nil, err
+	}
+
+	slog.Info("Complete weapon created successfully",
+		"weapon_id", weapon.ID,
+		"template_id", template.ID,
+		"item_name", template.ItemName,
+	)
+
+	// Step 3: Return the combined result
+	return &WeaponWithTemplate{
+		ID:           weapon.ID,
+		TypeID:       weapon.TypeID,
+		RarityID:     weapon.RarityID,
+		AttackPower:  weapon.AttackPower,
+		Durability:   weapon.Durability,
+		CriticalRate: weapon.CriticalRate,
+		WeaponType:   weapon.WeaponType,
+		Description:  weapon.Description,
+		CreatedAt:    weapon.CreatedAt,
+		UpdatedAt:    weapon.UpdatedAt,
+		// Template fields
+		ItemTemplateID: template.ID,
+		ItemName:       template.ItemName,
+		ItemCode:       template.ItemCode,
+		IconURL:        template.IconURL,
+		IsTradeable:    template.IsTradeable,
+		IsDroppable:    template.IsDroppable,
+		RequiredLevel:  template.RequiredLevel,
+		BaseSellPrice:  template.BaseSellPrice,
+		BaseBuyPrice:   template.BaseBuyPrice,
+	}, nil
+}
+
+func (s *service) CreateCompleteArmor(ctx context.Context, req *CreateCompleteArmorRequest) (*ArmorWithTemplate, error) {
+	// Step 1: Create the armor with specific attributes
+	armorReq := &CreateArmorRequest{
+		TypeID:          req.TypeID,
+		RarityID:        req.RarityID,
+		DefenseRating:   req.DefenseRating,
+		Durability:      req.Durability,
+		MagicResistance: req.MagicResistance,
+		ArmorSlot:       req.ArmorSlot,
+		Description:     req.Description,
+	}
+
+	armor, err := s.CreateArmor(ctx, armorReq)
+	if err != nil {
+		slog.Error("Failed to create armor", "error", err)
+		return nil, err
+	}
+
+	// Step 2: Create the item template with common attributes
+	templateReq := &CreateItemTemplateRequest{
+		UserId:        req.UserId,
+		ItemName:      req.ItemName,
+		ItemCode:      req.ItemCode,
+		TypeID:        req.TypeID,
+		RarityID:      req.RarityID,
+		ItemType:      "armor",
+		ItemID:        armor.ID,
+		IconURL:       req.IconURL,
+		IsTradeable:   req.IsTradeable,
+		IsDroppable:   req.IsDroppable,
+		RequiredLevel: req.RequiredLevel,
+		BaseSellPrice: req.BaseSellPrice,
+		BaseBuyPrice:  req.BaseBuyPrice,
+	}
+
+	template, err := s.CreateItemTemplate(ctx, templateReq)
+	if err != nil {
+		slog.Error("Failed to create item template for armor", "armor_id", armor.ID, "error", err)
+		return nil, err
+	}
+
+	slog.Info("Complete armor created successfully",
+		"armor_id", armor.ID,
+		"template_id", template.ID,
+		"item_name", template.ItemName,
+	)
+
+	// Step 3: Return the combined result
+	return &ArmorWithTemplate{
+		ID:              armor.ID,
+		TypeID:          armor.TypeID,
+		RarityID:        armor.RarityID,
+		DefenseRating:   armor.DefenseRating,
+		Durability:      armor.Durability,
+		MagicResistance: armor.MagicResistance,
+		ArmorSlot:       armor.ArmorSlot,
+		Description:     armor.Description,
+		CreatedAt:       armor.CreatedAt,
+		UpdatedAt:       armor.UpdatedAt,
+		// Template fields
+		ItemTemplateID: template.ID,
+		ItemName:       template.ItemName,
+		ItemCode:       template.ItemCode,
+		IconURL:        template.IconURL,
+		IsTradeable:    template.IsTradeable,
+		IsDroppable:    template.IsDroppable,
+		RequiredLevel:  template.RequiredLevel,
+		BaseSellPrice:  template.BaseSellPrice,
+		BaseBuyPrice:   template.BaseBuyPrice,
+	}, nil
+}
+
+func (s *service) CreateCompleteConsumable(ctx context.Context, req *CreateCompleteConsumableRequest) (*ConsumableWithTemplate, error) {
+	// Step 1: Create the consumable with specific attributes
+	consumableReq := &CreateConsumableRequest{
+		TypeID:        req.TypeID,
+		RarityID:      req.RarityID,
+		HealingAmount: req.HealingAmount,
+		ManaAmount:    req.ManaAmount,
+		BuffDuration:  req.BuffDuration,
+		MaxStackSize:  req.MaxStackSize,
+		Description:   req.Description,
+	}
+
+	consumable, err := s.CreateConsumable(ctx, consumableReq)
+	if err != nil {
+		slog.Error("Failed to create consumable", "error", err)
+		return nil, err
+	}
+
+	// Step 2: Create the item template with common attributes
+	templateReq := &CreateItemTemplateRequest{
+		UserId:        req.UserId,
+		ItemName:      req.ItemName,
+		ItemCode:      req.ItemCode,
+		TypeID:        req.TypeID,
+		RarityID:      req.RarityID,
+		ItemType:      "consumable",
+		ItemID:        consumable.ID,
+		IconURL:       req.IconURL,
+		IsTradeable:   req.IsTradeable,
+		IsDroppable:   req.IsDroppable,
+		RequiredLevel: req.RequiredLevel,
+		BaseSellPrice: req.BaseSellPrice,
+		BaseBuyPrice:  req.BaseBuyPrice,
+	}
+
+	template, err := s.CreateItemTemplate(ctx, templateReq)
+	if err != nil {
+		slog.Error("Failed to create item template for consumable", "consumable_id", consumable.ID, "error", err)
+		return nil, err
+	}
+
+	slog.Info("Complete consumable created successfully",
+		"consumable_id", consumable.ID,
+		"template_id", template.ID,
+		"item_name", template.ItemName,
+	)
+
+	// Step 3: Return the combined result
+	return &ConsumableWithTemplate{
+		ID:            consumable.ID,
+		TypeID:        consumable.TypeID,
+		RarityID:      consumable.RarityID,
+		HealingAmount: consumable.HealingAmount,
+		ManaAmount:    consumable.ManaAmount,
+		BuffDuration:  consumable.BuffDuration,
+		MaxStackSize:  consumable.MaxStackSize,
+		Description:   consumable.Description,
+		CreatedAt:     consumable.CreatedAt,
+		UpdatedAt:     consumable.UpdatedAt,
+		// Template fields
+		ItemTemplateID: template.ID,
+		ItemName:       template.ItemName,
+		ItemCode:       template.ItemCode,
+		IconURL:        template.IconURL,
+		IsTradeable:    template.IsTradeable,
+		IsDroppable:    template.IsDroppable,
+		RequiredLevel:  template.RequiredLevel,
+		BaseSellPrice:  template.BaseSellPrice,
+		BaseBuyPrice:   template.BaseBuyPrice,
+	}, nil
+}
+
+//

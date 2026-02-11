@@ -6,6 +6,8 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/api-gateway/internal/auth"
 	authService "github.com/darkphotonKN/cosmic-void-server/api-gateway/internal/gateway/auth"
 	"github.com/darkphotonKN/cosmic-void-server/api-gateway/internal/gateway/example"
+	"github.com/darkphotonKN/cosmic-void-server/api-gateway/internal/gateway/item"
+	"github.com/darkphotonKN/cosmic-void-server/api-gateway/internal/gateway/notification"
 	"github.com/darkphotonKN/cosmic-void-server/api-gateway/internal/gateway/stats"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/gin-contrib/cors"
@@ -87,6 +89,38 @@ func SetupRouter(registry discovery.Registry, db *sqlx.DB) *gin.Engine {
 	// gameRoutes := api.Group("/game")
 	// gameRoutes.GET("/items", gameHandler.GetItemsHandler)
 
+	// --- NOTIFICATION MICROSERVICE ---
+
+	notificationClient := notification.NewClient(registry)
+	notificationHandler := notification.NewHandler(notificationClient)
+	notificationRoutes := api.Group("/notification")
+	notificationRoutes.Use(auth.AuthMiddleware())
+	notificationRoutes.GET("/", notificationHandler.GetNotificationsByUserIDHandler)
+
+	// --- ITEMS MICROSERVICE ---
+
+	itemClient := item.NewClient(registry)
+	itemHandler := item.NewHandler(itemClient)
+
+	itemRoutes := api.Group("/items")
+	// Private Routes - require authentication
+	itemRoutes.Use(auth.AuthMiddleware())
+
+	// --- Legacy/Advanced APIs (creates weapon/armor/consumable separately) ---
+	itemRoutes.POST("/weapon", itemHandler.CreateWeaponHandler)
+	itemRoutes.POST("/template", itemHandler.CreateItemTemplateHandler) // Creates template only (sends notification)
+
+	// Complete item operations (creates both specific item + template, sends notification)
+	itemRoutes.POST("/complete-weapon", itemHandler.CreateCompleteWeaponHandler)
+	itemRoutes.POST("/complete-armor", itemHandler.CreateCompleteArmorHandler)
+	itemRoutes.POST("/complete-consumable", itemHandler.CreateCompleteConsumableHandler)
+
+	// --- Query APIs ---
+	itemRoutes.GET("/weapons", itemHandler.ListWeaponsWithTemplateHandler)
+
+	// --- Dropdown Options (for frontend forms) ---
+	itemRoutes.GET("/types", itemHandler.ListItemTypesHandler)
+	itemRoutes.GET("/rarities", itemHandler.ListItemRaritiesHandler)
+
 	return router
 }
-

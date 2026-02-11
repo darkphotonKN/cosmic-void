@@ -306,3 +306,444 @@ func (h *Handler) ListConsumablesWithTemplate(ctx context.Context, _ *emptypb.Em
 		Consumables: pbConsumables,
 	}, nil
 }
+
+// CreateItemTemplate creates a new item template (gRPC endpoint)
+// This will also send an event to RabbitMQ for notification-service
+func (h *Handler) CreateItemTemplate(ctx context.Context, req *pb.CreateItemTemplateRequest) (*pb.ItemTemplate, error) {
+	// Parse UUIDs
+	typeID, err := uuid.Parse(req.TypeId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid type_id: %v", err)
+	}
+
+	rarityID, err := uuid.Parse(req.RarityId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid rarity_id: %v", err)
+	}
+
+	itemID, err := uuid.Parse(req.ItemId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid item_id: %v", err)
+	}
+
+	// Build service request with optional fields
+	createReq := &CreateItemTemplateRequest{
+		UserId:   req.UserId,
+		ItemName: req.ItemName,
+		ItemCode: req.ItemCode,
+		TypeID:   typeID,
+		RarityID: rarityID,
+		ItemType: req.ItemType,
+		ItemID:   itemID,
+	}
+
+	// Handle optional fields
+	if req.IconUrl != nil {
+		createReq.IconURL = req.IconUrl
+	}
+	if req.IsTradeable != nil {
+		createReq.IsTradeable = req.IsTradeable
+	}
+	if req.IsDroppable != nil {
+		createReq.IsDroppable = req.IsDroppable
+	}
+	if req.RequiredLevel != nil {
+		reqLevel := int(*req.RequiredLevel)
+		createReq.RequiredLevel = &reqLevel
+	}
+	if req.BaseSellPrice != nil {
+		sellPrice := int(*req.BaseSellPrice)
+		createReq.BaseSellPrice = &sellPrice
+	}
+	if req.BaseBuyPrice != nil {
+		buyPrice := int(*req.BaseBuyPrice)
+		createReq.BaseBuyPrice = &buyPrice
+	}
+
+	// Call service (will send RabbitMQ event)
+	template, err := h.service.CreateItemTemplate(ctx, createReq)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create item template: %v", err)
+	}
+
+	// Convert to proto message
+	var iconURL string
+	if template.IconURL != nil {
+		iconURL = *template.IconURL
+	}
+
+	return &pb.ItemTemplate{
+		Id:            template.ID.String(),
+		ItemName:      template.ItemName,
+		ItemCode:      template.ItemCode,
+		TypeId:        template.TypeID.String(),
+		RarityId:      template.RarityID.String(),
+		ItemType:      template.ItemType,
+		ItemId:        template.ItemID.String(),
+		IconUrl:       iconURL,
+		IsTradeable:   template.IsTradeable,
+		IsDroppable:   template.IsDroppable,
+		RequiredLevel: int32(template.RequiredLevel),
+		BaseSellPrice: int32(template.BaseSellPrice),
+		BaseBuyPrice:  int32(template.BaseBuyPrice),
+		CreatedAt:     timestamppb.New(template.CreatedAt),
+		UpdatedAt:     timestamppb.New(template.UpdatedAt),
+	}, nil
+}
+
+// CreateCompleteWeapon creates a complete weapon (weapon + template) in one operation
+// This will automatically send an event to RabbitMQ for notification-service
+func (h *Handler) CreateCompleteWeapon(ctx context.Context, req *pb.CreateCompleteWeaponRequest) (*pb.WeaponDetail, error) {
+	// Parse UUIDs
+	typeID, err := uuid.Parse(req.TypeId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid type_id: %v", err)
+	}
+
+	rarityID, err := uuid.Parse(req.RarityId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid rarity_id: %v", err)
+	}
+
+	// Build service request
+	critRate := float64(req.CriticalRate)
+	createReq := &CreateCompleteWeaponRequest{
+		UserId:        req.UserId,
+		ItemName:      req.ItemName,
+		ItemCode:      req.ItemCode,
+		TypeID:        typeID,
+		RarityID:      rarityID,
+		AttackPower:   int(req.AttackPower),
+		Durability:    int(req.Durability),
+		CriticalRate:  &critRate,
+		WeaponType:    &req.WeaponType,
+		Description:   &req.Description,
+	}
+
+	// Handle optional template fields
+	if req.IconUrl != nil {
+		createReq.IconURL = req.IconUrl
+	}
+	if req.IsTradeable != nil {
+		createReq.IsTradeable = req.IsTradeable
+	}
+	if req.IsDroppable != nil {
+		createReq.IsDroppable = req.IsDroppable
+	}
+	if req.RequiredLevel != nil {
+		reqLevel := int(*req.RequiredLevel)
+		createReq.RequiredLevel = &reqLevel
+	}
+	if req.BaseSellPrice != nil {
+		sellPrice := int(*req.BaseSellPrice)
+		createReq.BaseSellPrice = &sellPrice
+	}
+	if req.BaseBuyPrice != nil {
+		buyPrice := int(*req.BaseBuyPrice)
+		createReq.BaseBuyPrice = &buyPrice
+	}
+
+	// Call service (will create weapon, create template, send RabbitMQ event)
+	weaponWithTemplate, err := h.service.CreateCompleteWeapon(ctx, createReq)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create complete weapon: %v", err)
+	}
+
+	// Convert to proto message
+	var critRatePb float32
+	if weaponWithTemplate.CriticalRate != nil {
+		critRatePb = float32(*weaponWithTemplate.CriticalRate)
+	}
+	var weaponType, description, iconURL string
+	if weaponWithTemplate.WeaponType != nil {
+		weaponType = *weaponWithTemplate.WeaponType
+	}
+	if weaponWithTemplate.Description != nil {
+		description = *weaponWithTemplate.Description
+	}
+	if weaponWithTemplate.IconURL != nil {
+		iconURL = *weaponWithTemplate.IconURL
+	}
+
+	return &pb.WeaponDetail{
+		// Weapon fields
+		Id:           weaponWithTemplate.ID.String(),
+		TypeId:       weaponWithTemplate.TypeID.String(),
+		RarityId:     weaponWithTemplate.RarityID.String(),
+		AttackPower:  int32(weaponWithTemplate.AttackPower),
+		Durability:   int32(weaponWithTemplate.Durability),
+		CriticalRate: critRatePb,
+		WeaponType:   weaponType,
+		Description:  description,
+
+		// ItemTemplate fields
+		ItemTemplateId: weaponWithTemplate.ItemTemplateID.String(),
+		ItemName:       weaponWithTemplate.ItemName,
+		ItemCode:       weaponWithTemplate.ItemCode,
+		IconUrl:        iconURL,
+		IsTradeable:    weaponWithTemplate.IsTradeable,
+		IsDroppable:    weaponWithTemplate.IsDroppable,
+		RequiredLevel:  int32(weaponWithTemplate.RequiredLevel),
+		BaseSellPrice:  int32(weaponWithTemplate.BaseSellPrice),
+		BaseBuyPrice:   int32(weaponWithTemplate.BaseBuyPrice),
+
+		CreatedAt: timestamppb.New(weaponWithTemplate.CreatedAt),
+		UpdatedAt: timestamppb.New(weaponWithTemplate.UpdatedAt),
+	}, nil
+}
+
+// CreateCompleteArmor creates a complete armor (armor + template) in one operation
+func (h *Handler) CreateCompleteArmor(ctx context.Context, req *pb.CreateCompleteArmorRequest) (*pb.ArmorDetail, error) {
+	// Parse UUIDs
+	typeID, err := uuid.Parse(req.TypeId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid type_id: %v", err)
+	}
+
+	rarityID, err := uuid.Parse(req.RarityId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid rarity_id: %v", err)
+	}
+
+	// Build service request
+	magicRes := int(req.MagicResistance)
+	createReq := &CreateCompleteArmorRequest{
+		UserId:          req.UserId,
+		ItemName:        req.ItemName,
+		ItemCode:        req.ItemCode,
+		TypeID:          typeID,
+		RarityID:        rarityID,
+		DefenseRating:   int(req.DefenseRating),
+		Durability:      int(req.Durability),
+		MagicResistance: &magicRes,
+		ArmorSlot:       &req.ArmorSlot,
+		Description:     &req.Description,
+	}
+
+	// Handle optional template fields
+	if req.IconUrl != nil {
+		createReq.IconURL = req.IconUrl
+	}
+	if req.IsTradeable != nil {
+		createReq.IsTradeable = req.IsTradeable
+	}
+	if req.IsDroppable != nil {
+		createReq.IsDroppable = req.IsDroppable
+	}
+	if req.RequiredLevel != nil {
+		reqLevel := int(*req.RequiredLevel)
+		createReq.RequiredLevel = &reqLevel
+	}
+	if req.BaseSellPrice != nil {
+		sellPrice := int(*req.BaseSellPrice)
+		createReq.BaseSellPrice = &sellPrice
+	}
+	if req.BaseBuyPrice != nil {
+		buyPrice := int(*req.BaseBuyPrice)
+		createReq.BaseBuyPrice = &buyPrice
+	}
+
+	// Call service
+	armorWithTemplate, err := h.service.CreateCompleteArmor(ctx, createReq)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create complete armor: %v", err)
+	}
+
+	// Convert to proto message
+	var magicResPb int32
+	if armorWithTemplate.MagicResistance != nil {
+		magicResPb = int32(*armorWithTemplate.MagicResistance)
+	}
+	var armorSlot, description, iconURL string
+	if armorWithTemplate.ArmorSlot != nil {
+		armorSlot = *armorWithTemplate.ArmorSlot
+	}
+	if armorWithTemplate.Description != nil {
+		description = *armorWithTemplate.Description
+	}
+	if armorWithTemplate.IconURL != nil {
+		iconURL = *armorWithTemplate.IconURL
+	}
+
+	return &pb.ArmorDetail{
+		Id:              armorWithTemplate.ID.String(),
+		TypeId:          armorWithTemplate.TypeID.String(),
+		RarityId:        armorWithTemplate.RarityID.String(),
+		DefenseRating:   int32(armorWithTemplate.DefenseRating),
+		Durability:      int32(armorWithTemplate.Durability),
+		MagicResistance: magicResPb,
+		ArmorSlot:       armorSlot,
+		Description:     description,
+
+		ItemTemplateId: armorWithTemplate.ItemTemplateID.String(),
+		ItemName:       armorWithTemplate.ItemName,
+		ItemCode:       armorWithTemplate.ItemCode,
+		IconUrl:        iconURL,
+		IsTradeable:    armorWithTemplate.IsTradeable,
+		IsDroppable:    armorWithTemplate.IsDroppable,
+		RequiredLevel:  int32(armorWithTemplate.RequiredLevel),
+		BaseSellPrice:  int32(armorWithTemplate.BaseSellPrice),
+		BaseBuyPrice:   int32(armorWithTemplate.BaseBuyPrice),
+
+		CreatedAt: timestamppb.New(armorWithTemplate.CreatedAt),
+		UpdatedAt: timestamppb.New(armorWithTemplate.UpdatedAt),
+	}, nil
+}
+
+// CreateCompleteConsumable creates a complete consumable (consumable + template) in one operation
+func (h *Handler) CreateCompleteConsumable(ctx context.Context, req *pb.CreateCompleteConsumableRequest) (*pb.ConsumableDetail, error) {
+	// Parse UUIDs
+	typeID, err := uuid.Parse(req.TypeId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid type_id: %v", err)
+	}
+
+	rarityID, err := uuid.Parse(req.RarityId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid rarity_id: %v", err)
+	}
+
+	// Build service request
+	healingAmt := int(req.HealingAmount)
+	manaAmt := int(req.ManaAmount)
+	buffDur := int(req.BuffDuration)
+	createReq := &CreateCompleteConsumableRequest{
+		UserId:        req.UserId,
+		ItemName:      req.ItemName,
+		ItemCode:      req.ItemCode,
+		TypeID:        typeID,
+		RarityID:      rarityID,
+		HealingAmount: &healingAmt,
+		ManaAmount:    &manaAmt,
+		BuffDuration:  &buffDur,
+		MaxStackSize:  int(req.MaxStackSize),
+		Description:   &req.Description,
+	}
+
+	// Handle optional template fields
+	if req.IconUrl != nil {
+		createReq.IconURL = req.IconUrl
+	}
+	if req.IsTradeable != nil {
+		createReq.IsTradeable = req.IsTradeable
+	}
+	if req.IsDroppable != nil {
+		createReq.IsDroppable = req.IsDroppable
+	}
+	if req.RequiredLevel != nil {
+		reqLevel := int(*req.RequiredLevel)
+		createReq.RequiredLevel = &reqLevel
+	}
+	if req.BaseSellPrice != nil {
+		sellPrice := int(*req.BaseSellPrice)
+		createReq.BaseSellPrice = &sellPrice
+	}
+	if req.BaseBuyPrice != nil {
+		buyPrice := int(*req.BaseBuyPrice)
+		createReq.BaseBuyPrice = &buyPrice
+	}
+
+	// Call service
+	consumableWithTemplate, err := h.service.CreateCompleteConsumable(ctx, createReq)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create complete consumable: %v", err)
+	}
+
+	// Convert to proto message
+	var healingAmtPb, manaAmtPb, buffDurPb int32
+	if consumableWithTemplate.HealingAmount != nil {
+		healingAmtPb = int32(*consumableWithTemplate.HealingAmount)
+	}
+	if consumableWithTemplate.ManaAmount != nil {
+		manaAmtPb = int32(*consumableWithTemplate.ManaAmount)
+	}
+	if consumableWithTemplate.BuffDuration != nil {
+		buffDurPb = int32(*consumableWithTemplate.BuffDuration)
+	}
+	var description, iconURL string
+	if consumableWithTemplate.Description != nil {
+		description = *consumableWithTemplate.Description
+	}
+	if consumableWithTemplate.IconURL != nil {
+		iconURL = *consumableWithTemplate.IconURL
+	}
+
+	return &pb.ConsumableDetail{
+		Id:            consumableWithTemplate.ID.String(),
+		TypeId:        consumableWithTemplate.TypeID.String(),
+		RarityId:      consumableWithTemplate.RarityID.String(),
+		HealingAmount: healingAmtPb,
+		ManaAmount:    manaAmtPb,
+		BuffDuration:  buffDurPb,
+		MaxStackSize:  int32(consumableWithTemplate.MaxStackSize),
+		Description:   description,
+
+		ItemTemplateId: consumableWithTemplate.ItemTemplateID.String(),
+		ItemName:       consumableWithTemplate.ItemName,
+		ItemCode:       consumableWithTemplate.ItemCode,
+		IconUrl:        iconURL,
+		IsTradeable:    consumableWithTemplate.IsTradeable,
+		IsDroppable:    consumableWithTemplate.IsDroppable,
+		RequiredLevel:  int32(consumableWithTemplate.RequiredLevel),
+		BaseSellPrice:  int32(consumableWithTemplate.BaseSellPrice),
+		BaseBuyPrice:   int32(consumableWithTemplate.BaseBuyPrice),
+
+		CreatedAt: timestamppb.New(consumableWithTemplate.CreatedAt),
+		UpdatedAt: timestamppb.New(consumableWithTemplate.UpdatedAt),
+	}, nil
+}
+
+// ListItemTypes returns all item types (gRPC endpoint)
+func (h *Handler) ListItemTypes(ctx context.Context, req *emptypb.Empty) (*pb.ListItemTypesResponse, error) {
+	// Call service to get all item types
+	itemTypes, err := h.service.ListItemTypes(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list item types: %v", err)
+	}
+
+	// Convert to protobuf
+	pbItemTypes := make([]*pb.ItemType, 0, len(itemTypes))
+	for _, itemType := range itemTypes {
+		var description string
+		if itemType.Description != nil {
+			description = *itemType.Description
+		}
+
+		pbItemTypes = append(pbItemTypes, &pb.ItemType{
+			Id:          itemType.ID.String(),
+			Name:        itemType.Name,
+			Description: description,
+			CreatedAt:   timestamppb.New(itemType.CreatedAt),
+			UpdatedAt:   timestamppb.New(itemType.UpdatedAt),
+		})
+	}
+
+	return &pb.ListItemTypesResponse{
+		ItemTypes: pbItemTypes,
+	}, nil
+}
+
+// ListItemRarities returns all item rarities (gRPC endpoint)
+func (h *Handler) ListItemRarities(ctx context.Context, req *emptypb.Empty) (*pb.ListItemRaritiesResponse, error) {
+	// Call service to get all item rarities
+	rarities, err := h.service.ListItemRarities(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list item rarities: %v", err)
+	}
+
+	// Convert to protobuf
+	pbRarities := make([]*pb.ItemRarity, 0, len(rarities))
+	for _, rarity := range rarities {
+		pbRarities = append(pbRarities, &pb.ItemRarity{
+			Id:          rarity.ID.String(),
+			Name:        rarity.RarityName,
+			Description: "", // ItemRarity doesn't have a description field in DB
+			CreatedAt:   timestamppb.New(rarity.CreatedAt),
+			UpdatedAt:   timestamppb.New(rarity.UpdatedAt),
+		})
+	}
+
+	return &pb.ListItemRaritiesResponse{
+		ItemRarities: pbRarities,
+	}, nil
+}

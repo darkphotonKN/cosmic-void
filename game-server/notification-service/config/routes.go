@@ -4,9 +4,7 @@ import (
 	"log/slog"
 	"net"
 
-	// TODO: Uncomment after proto is generated
-	// pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/notification"
-
+	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/notification"
 	"github.com/darkphotonKN/cosmic-void-server/notification-service/internal/notification"
 	"github.com/jmoiron/sqlx"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -39,9 +37,8 @@ func SetupServices(db *sqlx.DB, amqpChannel *amqp.Channel) *grpc.Server {
 	// Create gRPC server
 	grpcServer := grpc.NewServer()
 
-	// TODO: Register notification service with gRPC server after proto is generated
-	// pb.RegisterNotificationServiceServer(grpcServer, handler)
-	_ = handler // Prevent unused variable error
+	// Register notification service with gRPC server
+	pb.RegisterNotificationServiceServer(grpcServer, handler)
 
 	slog.Info("Notification service initialized successfully")
 

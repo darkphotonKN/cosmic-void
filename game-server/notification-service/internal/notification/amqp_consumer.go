@@ -3,16 +3,20 @@ package notification
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 
+	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"google.golang.org/protobuf/proto"
 )
 
 // ConsumerService defines what the consumer needs from the service
 // This interface specifies methods that will be called when processing events
 type ConsumerService interface {
 	ProcessMemberSignedUp(ctx context.Context, payload *commonconstants.MemberSignedUpEventPayload) error
+	ProcessItemCreated(ctx context.Context, payload *pb.ItemCreatedEvent) error
 }
 
 type Consumer struct {
@@ -30,7 +34,62 @@ func NewConsumer(service ConsumerService, channel *amqp.Channel) *Consumer {
 // Listen starts consuming messages from the configured queues
 func (c *Consumer) Listen() {
 	go c.consumeMemberSignedUp()
+	go c.consumeItemCreated()
 	slog.Info("Notification consumer listening for events...")
+}
+
+func (c *Consumer) consumeItemCreated() {
+	msgs, err := c.channel.Consume(
+		commonconstants.NotificationItemCreatedQueue, // queue name
+		"",    // consumer
+		false, // auto-ack
+		false, // exclusive
+		false, // no-local
+		false, // no-wait
+		nil,   // args
+	)
+	if err != nil {
+		slog.Error("Failed to register consumer", "error", err)
+		return
+	}
+
+	slog.Info("Started consuming item.created events")
+
+	for msg := range msgs {
+		slog.Info("Start ItemCreatedEvent")
+		var payload pb.ItemCreatedEvent
+		if err := proto.Unmarshal(msg.Body, &payload); err != nil {
+			slog.Error("Failed to parse event", "error", err)
+			msg.Nack(false, false) // RabbitMQ：處理失敗，不要重試
+			continue
+		}
+		slog.Info("Received member signed up event",
+			"item_type", payload.ItemType,
+			"name", payload.Name,
+		)
+
+		ctx := context.Background()
+
+		err := c.service.ProcessItemCreated(ctx, &payload)
+
+		if errors.Is(err, commonconstants.ErrTransient) {
+			slog.Error("Failed to process event due to transient error", "error", err)
+			msg.Nack(false, true)
+			continue
+		} else if err != nil {
+			slog.Error("Failed to update notification data after consuming ItemCreatedEvent event", "error", err)
+			msg.Nack(false, false)
+			continue
+		}
+
+		// successfully processed (ACK)
+		msg.Ack(false)
+		slog.Info("Item Created notification created successfully",
+			"user_id", payload.UserId,
+			"name", payload.Name,
+			"type_id", payload.ItemType,
+		)
+	}
 }
 
 func (c *Consumer) consumeMemberSignedUp() {
@@ -79,7 +138,7 @@ func (c *Consumer) consumeMemberSignedUp() {
 }
 
 func SetupAMQPInfrastructure(channel *amqp.Channel) error {
-	// TODO: Declare exchanges for auth events
+	// Declare auth.events exchange
 	err := channel.ExchangeDeclare(
 		commonconstants.AuthEventsExchange, // exchange name
 		"topic",                            // exchange type
@@ -90,11 +149,26 @@ func SetupAMQPInfrastructure(channel *amqp.Channel) error {
 		nil,                                // arguments
 	)
 	if err != nil {
-		slog.Error("Failed to declare exchange", "error", err)
+		slog.Error("Failed to declare auth exchange", "error", err)
 		return err
 	}
 
-	// TODO: Declare queues and bindings
+	// Declare item.events exchange
+	err = channel.ExchangeDeclare(
+		commonconstants.ItemEventsExchange, // exchange name
+		"topic",                            // exchange type
+		true,                               // durable
+		false,                              // auto-deleted
+		false,                              // internal
+		false,                              // no-wait
+		nil,                                // arguments
+	)
+	if err != nil {
+		slog.Error("Failed to declare item exchange", "error", err)
+		return err
+	}
+
+	// Declare notification.auth.member.signedup queue
 	_, err = channel.QueueDeclare(
 		commonconstants.NotificationMemberSignedUpQueue, // queue name
 		true,  // durable
@@ -103,13 +177,12 @@ func SetupAMQPInfrastructure(channel *amqp.Channel) error {
 		false, // no-wait
 		nil,   // arguments
 	)
-
 	if err != nil {
-		slog.Error("Failed to declare queue", "error", err)
+		slog.Error("Failed to declare member signedup queue", "error", err)
 		return err
 	}
 
-	// QueueBind
+	// Bind member.signedup queue to auth.events exchange
 	err = channel.QueueBind(
 		commonconstants.NotificationMemberSignedUpQueue, // queue name
 		commonconstants.MemberSignedUpEvent,             // routing key
@@ -118,7 +191,34 @@ func SetupAMQPInfrastructure(channel *amqp.Channel) error {
 		nil,                                             // args
 	)
 	if err != nil {
-		slog.Error("Failed to bind queue", "error", err)
+		slog.Error("Failed to bind member signedup queue", "error", err)
+		return err
+	}
+
+	// Declare notification.item.item.created queue
+	_, err = channel.QueueDeclare(
+		commonconstants.NotificationItemCreatedQueue, // queue name
+		true,  // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil,   // arguments
+	)
+	if err != nil {
+		slog.Error("Failed to declare item created queue", "error", err)
+		return err
+	}
+
+	// Bind item.created queue to item.events exchange
+	err = channel.QueueBind(
+		commonconstants.NotificationItemCreatedQueue, // queue name
+		commonconstants.ItemCreated,                  // routing key
+		commonconstants.ItemEventsExchange,           // exchange
+		false,                                        // no-wait
+		nil,                                          // args
+	)
+	if err != nil {
+		slog.Error("Failed to bind item created queue", "error", err)
 		return err
 	}
 
