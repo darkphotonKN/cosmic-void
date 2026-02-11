@@ -6,46 +6,36 @@ import (
 	"log/slog"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
+	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/protobuf/proto"
 )
 
 type Consumer struct {
-	service Service
-	channel *amqp.Channel
+	service   Service
+	publishCh commonbroker.Publisher
 }
 
-func NewConsumer(service Service, channel *amqp.Channel) *Consumer {
+func NewConsumer(service Service, publishCh commonbroker.Publisher) *Consumer {
 	return &Consumer{
-		service: service,
-		channel: channel,
+		service:   service,
+		publishCh: publishCh,
 	}
 }
 
 func (c *Consumer) SetupConsumer() error {
 	// Declare topic exchange
-	err := c.channel.ExchangeDeclare(
+	err := c.publishCh.ExchangeDeclare(
 		commonconstants.AuthEventsExchange,
 		"topic",
-		true,
-		false,
-		false,
-		false,
-		nil,
 	)
 	if err != nil {
 		return err
 	}
 
 	// Declare queue
-	_, err = c.channel.QueueDeclare(
+	_, err = c.publishCh.QueueDeclare(
 		commonconstants.StatsAuthQueue,
-		true,
-		false,
-		false,
-		false,
-		nil,
 	)
 	if err != nil {
 		slog.Error("Failed to declare auth RPC queue", "error", err)
@@ -59,12 +49,10 @@ func (c *Consumer) SetupConsumer() error {
 	}
 
 	for _, key := range routingKeys {
-		err = c.channel.QueueBind(
+		err = c.publishCh.QueueBind(
 			commonconstants.StatsAuthQueue,
 			key,
 			commonconstants.AuthEventsExchange,
-			false,
-			nil,
 		)
 		if err != nil {
 			slog.Error("Failed to bind routing key", "key", key, "error", err)
@@ -86,14 +74,9 @@ func (c *Consumer) Listen() {
 }
 
 func (c *Consumer) consumeRequests() {
-	msgs, err := c.channel.Consume(
+	msgs, err := c.publishCh.Consume(
 		commonconstants.StatsAuthQueue,
-		"",
 		false, // manual ack
-		false,
-		false,
-		false,
-		nil,
 	)
 	if err != nil {
 		slog.Error("Failed to register auth RPC consumer", "error", err)
@@ -105,7 +88,7 @@ func (c *Consumer) consumeRequests() {
 	}
 }
 
-func (c *Consumer) handleRequest(msg amqp.Delivery) {
+func (c *Consumer) handleRequest(msg commonbroker.Delivery) {
 	ctx := context.Background()
 
 	slog.Info("Received auth RPC request",
@@ -127,7 +110,7 @@ func (c *Consumer) handleRequest(msg amqp.Delivery) {
 	default:
 		slog.Warn("Unknown routing key for auth RPC", "routing_key", msg.RoutingKey)
 		c.replyError(msg, "unknown routing key: "+msg.RoutingKey)
-		msg.Ack(false)
+		msg.Acknowledger.Ack(false)
 		return
 	}
 
@@ -137,13 +120,13 @@ func (c *Consumer) handleRequest(msg amqp.Delivery) {
 			"error", rpcErr,
 		)
 		c.replyError(msg, rpcErr.Error())
-		msg.Ack(false)
+		msg.Acknowledger.Ack(false)
 		return
 	}
 
 	// Publish success response to reply queue
-	err := c.channel.PublishWithContext(ctx, "", msg.ReplyTo, false, false,
-		amqp.Publishing{
+	err := c.publishCh.PublishWithContext(ctx, "", msg.ReplyTo,
+		commonbroker.Message{
 			ContentType:   "application/protobuf",
 			Body:          responseBody,
 			CorrelationId: msg.CorrelationId,
@@ -152,7 +135,7 @@ func (c *Consumer) handleRequest(msg amqp.Delivery) {
 		slog.Error("Failed to publish RPC reply", "error", err)
 	}
 
-	msg.Ack(false)
+	msg.Acknowledger.Ack(false)
 	slog.Info("Auth RPC request processed successfully",
 		"routing_key", msg.RoutingKey,
 		"correlation_id", msg.CorrelationId,
@@ -196,13 +179,13 @@ func (c *Consumer) handleLoginMember(ctx context.Context, body []byte) ([]byte, 
 }
 
 // replyError sends an error response back to the reply queue.
-func (c *Consumer) replyError(msg amqp.Delivery, errMsg string) {
+func (c *Consumer) replyError(msg commonbroker.Delivery, errMsg string) {
 	ctx := context.Background()
-	err := c.channel.PublishWithContext(ctx, "", msg.ReplyTo, false, false,
-		amqp.Publishing{
+	err := c.publishCh.PublishWithContext(ctx, "", msg.ReplyTo,
+		commonbroker.Message{
 			ContentType:   "application/protobuf",
 			CorrelationId: msg.CorrelationId,
-			Headers: amqp.Table{
+			Headers: map[string]interface{}{
 				"x-error-code":    int32(1),
 				"x-error-message": errMsg,
 			},

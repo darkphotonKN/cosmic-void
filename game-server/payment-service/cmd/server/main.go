@@ -86,7 +86,7 @@ func main() {
 	// Initialize layers
 	repo := payment.NewRepository(db)
 	processor := payment.NewStripeProcessor()
-	svc := payment.NewService(repo, processor, ch)
+	svc := payment.NewService(repo, processor, ch, registry)
 	handler := payment.NewHandler(svc)
 
 	pb.RegisterPaymentServiceServer(grpcServer, handler)

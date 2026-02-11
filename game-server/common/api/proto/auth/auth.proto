@@ -22,6 +22,10 @@ service AuthService {
   rpc UpdateMemberPassword(UpdatePasswordRequest) returns (UpdatePasswordResponse) {}
   // Validate token
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse) {}
+  // Set Stripe customer ID for a member
+  rpc SetStripeCustomerID(SetStripeCustomerIDRequest) returns (SetStripeCustomerIDResponse) {}
+  // Get Stripe customer ID for a member
+  rpc GetStripeCustomerID(GetStripeCustomerIDRequest) returns (GetStripeCustomerIDResponse) {}
 }
 
 // used for Upload methods 
@@ -99,6 +103,27 @@ message ValidateTokenRequest {
 message ValidateTokenResponse {
   bool valid = 1;
   string member_id = 2;
+}
+
+// Set Stripe customer ID request
+message SetStripeCustomerIDRequest {
+  string member_id = 1;
+  string stripe_customer_id = 2;
+}
+
+// Set Stripe customer ID response
+message SetStripeCustomerIDResponse {
+  bool success = 1;
+}
+
+// Get Stripe customer ID request
+message GetStripeCustomerIDRequest {
+  string member_id = 1;
+}
+
+// Get Stripe customer ID response
+message GetStripeCustomerIDResponse {
+  string stripe_customer_id = 1;
 }
 
 // Request avatar upload request

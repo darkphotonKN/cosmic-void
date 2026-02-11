@@ -12,13 +12,18 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"go.opentelemetry.io/otel"
 )
 
 /**
 * Handles all the management and maintenance of connections with client
 **/
+var tracer = otel.Tracer("game-service")
 
 func (s *Server) HandleWebSocketConnection(c *gin.Context) {
+	ctx := c.Request.Context()
+	ctx, span := tracer.Start(ctx, "service.HandleWebSocketConnection")
+	defer span.End()
 	userIdStr, ok := c.Get("userIdStr")
 	fmt.Printf("User ID: %s\n", userIdStr)
 	if !ok {

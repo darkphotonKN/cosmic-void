@@ -154,9 +154,9 @@ func (r *repository) CreateDefaultMembers(ctx context.Context, members []CreateD
 func (r *repository) UpdateAvatarURL(ctx context.Context, memberID uuid.UUID, avatarURL string) (*models.Member, error) {
 	var member models.Member
 
-	query := `UPDATE 
-							members 
-						SET avatar_url = $2 
+	query := `UPDATE
+							members
+						SET avatar_url = $2
 						WHERE id = $1
 						RETURNING *`
 
@@ -188,4 +188,26 @@ func (r *repository) UpdateAvatarURLTx(ctx context.Context, tx *sqlx.Tx, memberI
 	}
 
 	return &member, nil
+}
+
+func (r *repository) GetStripeCustomerID(ctx context.Context, memberID uuid.UUID) (string, error) {
+	var customerID *string
+	query := `SELECT stripe_customer_id FROM members WHERE id = $1`
+	err := r.DB.GetContext(ctx, &customerID, query, memberID)
+	if err != nil {
+		return "", commonhelpers.AnalyzeDBErr(err)
+	}
+	if customerID == nil {
+		return "", nil
+	}
+	return *customerID, nil
+}
+
+func (r *repository) SetStripeCustomerID(ctx context.Context, memberID uuid.UUID, customerID string) error {
+	query := `UPDATE members SET stripe_customer_id = $2 WHERE id = $1`
+	_, err := r.DB.ExecContext(ctx, query, memberID, customerID)
+	if err != nil {
+		return commonhelpers.AnalyzeDBErr(err)
+	}
+	return nil
 }

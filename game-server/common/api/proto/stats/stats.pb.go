@@ -694,24 +694,7 @@ var File_api_proto_stats_stats_proto protoreflect.FileDescriptor
 
 const file_api_proto_stats_stats_proto_rawDesc = "" +
 	"\n" +
-	"\x1bapi/proto/stats/stats.proto\x12\x05stats\x1a\x1fgoogle/protobuf/timestamp.proto\"\xfa\x01\n" +
-	"\x1cProcessMatchCompletedRequest\x12\x1d\n" +
-	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x12D\n" +
-	"\x10match_started_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x0ematchStartedAt\x12@\n" +
-	"\x0ematch_ended_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\fmatchEndedAt\x123\n" +
-	"\aplayers\x18\x05 \x03(\v2\x19.stats.PlayerMatchResultsR\aplayers\"\xb4\x01\n" +
-	"\x12PlayerMatchResults\x12\x1b\n" +
-	"\tmember_id\x18\x01 \x01(\tR\bmemberId\x12\x1a\n" +
-	"\busername\x18\x02 \x01(\tR\busername\x12\x10\n" +
-	"\x03win\x18\x03 \x01(\bR\x03win\x12%\n" +
-	"\x0efinal_position\x18\x04 \x01(\x05R\rfinalPosition\x12\x14\n" +
-	"\x05kills\x18\x05 \x01(\x05R\x05kills\x12\x16\n" +
-	"\x06deaths\x18\x06 \x01(\x05R\x06deaths\"\x80\x01\n" +
-	"\x1dProcessMatchCompletedResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\x12+\n" +
-	"\x11players_processed\x18\x03 \x01(\x05R\x10playersProcessed\"9\n" +
+	"\x1bapi/proto/stats/stats.proto\x12\x05stats\x1a\x1fgoogle/protobuf/timestamp.proto\"9\n" +
 	"\x1aGetPlayerMatchStatsRequest\x12\x1b\n" +
 	"\tmember_id\x18\x01 \x01(\tR\bmemberId\"\xe7\x02\n" +
 	"\x10PlayerMatchStats\x12\x0e\n" +
@@ -783,9 +766,8 @@ const file_api_proto_stats_stats_proto_rawDesc = "" +
 	"\x16GetLeaderboardResponse\x123\n" +
 	"\aplayers\x18\x01 \x03(\v2\x19.stats.PlayerRankingStatsR\aplayers\x12\x1f\n" +
 	"\vtotal_count\x18\x02 \x01(\x05R\n" +
-	"totalCount2\xbf\x03\n" +
-	"\fStatsService\x12b\n" +
-	"\x15ProcessMatchCompleted\x12#.stats.ProcessMatchCompletedRequest\x1a$.stats.ProcessMatchCompletedResponse\x12Q\n" +
+	"totalCount2\xdb\x02\n" +
+	"\fStatsService\x12Q\n" +
 	"\x13GetPlayerMatchStats\x12!.stats.GetPlayerMatchStatsRequest\x1a\x17.stats.PlayerMatchStats\x12W\n" +
 	"\x15GetPlayerRankingStats\x12#.stats.GetPlayerRankingStatsRequest\x1a\x19.stats.PlayerRankingStats\x12P\n" +
 	"\x0fGetMatchHistory\x12\x1d.stats.GetMatchHistoryRequest\x1a\x1e.stats.GetMatchHistoryResponse\x12M\n" +

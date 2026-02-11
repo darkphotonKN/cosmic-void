@@ -12,6 +12,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/auth-service/internal/auth"
 	"github.com/darkphotonKN/cosmic-void-server/auth-service/internal/models"
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
+	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
 	"github.com/google/uuid"
@@ -24,7 +25,7 @@ import (
 
 type service struct {
 	Repo      Repository
-	publishCh *amqp.Channel
+	publishCh commonbroker.Publisher
 	cache     cache.Cache
 }
 
@@ -38,12 +39,14 @@ type Repository interface {
 	CreateDefaultMembers(ctx context.Context, members []CreateDefaultMember) error
 	UpdateAvatarURL(ctx context.Context, memberID uuid.UUID, avatarURL string) (*models.Member, error)
 	UpdateAvatarURLTx(ctx context.Context, tx *sqlx.Tx, memberID uuid.UUID, avatarURL string) (*models.Member, error)
+	GetStripeCustomerID(ctx context.Context, memberID uuid.UUID) (string, error)
+	SetStripeCustomerID(ctx context.Context, memberID uuid.UUID, customerID string) error
 }
 
-func NewService(repo Repository, ch *amqp.Channel, cacheService cache.Cache) *service {
+func NewService(repo Repository, publishCh commonbroker.Publisher, cacheService cache.Cache) *service {
 	return &service{
 		Repo:      repo,
-		publishCh: ch,
+		publishCh: publishCh,
 		cache:     cacheService,
 	}
 }
@@ -135,9 +138,7 @@ func (s *service) CreateMember(ctx context.Context, req *pb.CreateMemberRequest)
 		ctx,
 		commonconstants.MemberSignedUpEvent,
 		"",
-		false,
-		false,
-		amqp.Publishing{
+		commonbroker.Message{
 			ContentType: "application/json",
 			Body:        marshalledPayload,
 			// persist message
@@ -334,4 +335,33 @@ func (s *service) UpdateAvatarURL(ctx context.Context, memberID uuid.UUID, avata
 // UpdateAvatarURL updates the member's avatar URL
 func (s *service) UpdateAvatarURLTx(ctx context.Context, tx *sqlx.Tx, memberID uuid.UUID, avatarURL string) (*models.Member, error) {
 	return s.Repo.UpdateAvatarURLTx(ctx, tx, memberID, avatarURL)
+}
+
+// SetStripeCustomerID saves a Stripe customer ID for the member
+func (s *service) SetStripeCustomerID(ctx context.Context, req *pb.SetStripeCustomerIDRequest) (*pb.SetStripeCustomerIDResponse, error) {
+	memberID, err := uuid.Parse(req.MemberId)
+	if err != nil {
+		return nil, fmt.Errorf("invalid member UUID: %w", err)
+	}
+
+	if err := s.Repo.SetStripeCustomerID(ctx, memberID, req.StripeCustomerId); err != nil {
+		return nil, err
+	}
+
+	return &pb.SetStripeCustomerIDResponse{Success: true}, nil
+}
+
+// GetStripeCustomerID retrieves the Stripe customer ID for a member
+func (s *service) GetStripeCustomerID(ctx context.Context, req *pb.GetStripeCustomerIDRequest) (*pb.GetStripeCustomerIDResponse, error) {
+	memberID, err := uuid.Parse(req.MemberId)
+	if err != nil {
+		return nil, fmt.Errorf("invalid member UUID: %w", err)
+	}
+
+	customerID, err := s.Repo.GetStripeCustomerID(ctx, memberID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.GetStripeCustomerIDResponse{StripeCustomerId: customerID}, nil
 }

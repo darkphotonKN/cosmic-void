@@ -69,6 +69,14 @@ class ApiClient {
     });
   }
 
+  // Subscribe to a product (backend auto-creates Stripe customer)
+  async subscribe(productId: string, email: string) {
+    return this.request("/api/payment/subscribe", {
+      method: "POST",
+      body: { product_id: productId, email },
+    });
+  }
+
   // Upload file directly to S3
   async uploadToS3(presignedUrl: string, file: File) {
     const response = await fetch(presignedUrl, {

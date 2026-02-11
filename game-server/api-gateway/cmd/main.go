@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/api-gateway/config"
+	"github.com/darkphotonKN/cosmic-void-server/common/broker"
+	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
 	commontelemetry "github.com/darkphotonKN/cosmic-void-server/common/telemetry"
@@ -26,6 +28,12 @@ var (
 	// grpc
 	httpAddr   = commonhelpers.GetEnvString("PORT", "7001")
 	consulAddr = commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
+
+	// rabbitmq
+	amqpUser     = commonhelpers.GetEnvString("RABBITMQ_USER", "guest")
+	amqpPassword = commonhelpers.GetEnvString("RABBITMQ_PASS", "guest")
+	amqpHost     = commonhelpers.GetEnvString("RABBITMQ_HOST", "localhost")
+	amqpPort     = commonhelpers.GetEnvString("RABBITMQ_PORT", "5672")
 )
 
 /**
@@ -78,8 +86,16 @@ func main() {
 
 	defer registry.Deregister(ctx, instanceID, serviceName)
 
+	// --- message broker - rabbit mq ---
+	ch, closeCh := broker.Connect(amqpUser, amqpPassword, amqpHost, amqpPort)
+	broker.DeclareExchange(ch, commonconstants.AuthEventsExchange, "topic")
+	defer func() {
+		closeCh()
+		ch.Close()
+	}()
+
 	// --- router setup ---
-	router := config.SetupRouter(registry)
+	router := config.SetupRouter(registry, ch)
 
 	// -- start server --
 	if err := router.Run(fmt.Sprintf(":%s", httpAddr)); err != nil {
