@@ -21,6 +21,7 @@ const (
 	GameEventsExchange = "game.events"
 	AuthEventsExchange = "auth.events"
 	ItemEventsExchange = "item.events"
+	DlxEventsExchange  = "dlx.exchange"
 )
 
 /**
@@ -44,6 +45,10 @@ const (
 
 	// Item Events
 	ItemCreated = "item.created"
+
+	//Notification Event
+	NotificationItemCreatedFailed    = "notification.item.created.failed"
+	NotificationMemberSignedupFailed = "notification.member.signedup.failed"
 )
 
 /**
@@ -54,7 +59,8 @@ const (
 	StatsGameMatchEndedQueue        = "stats.game.match.ended"
 	StatsAuthProfileUpdatedQueue    = "stats.auth.profile.updated"
 	NotificationMemberSignedUpQueue = "notification.auth.member.signedup"
-	NotificationItemCreatedQueue = "notification.item.item.created"
+	NotificationItemCreatedQueue    = "notification.item.item.created"
+	NotificationDlqQueue            = "notification.dlq"
 )
 
 /**
