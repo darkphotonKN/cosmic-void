@@ -12,13 +12,12 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/jmoiron/sqlx"
 )
 
 /**
 * Sets up API prefix route and all routers.
 **/
-func SetupRouter(registry discovery.Registry, db *sqlx.DB) *gin.Engine {
+func SetupRouter(registry discovery.Registry) *gin.Engine {
 	router := gin.Default()
 
 	// NOTE: debugging middleware

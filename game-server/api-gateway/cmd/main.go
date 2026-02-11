@@ -48,9 +48,7 @@ func main() {
 	}
 
 	defer shutdown(ctx)
-	// --- database setup ---
-	db := config.InitDB()
-	defer db.Close()
+	// --- database setup removed - api gateway is stateless ---
 
 	// --- service discovery setup ---
 
@@ -81,7 +79,7 @@ func main() {
 	defer registry.Deregister(ctx, instanceID, serviceName)
 
 	// --- router setup ---
-	router := config.SetupRouter(registry, db)
+	router := config.SetupRouter(registry)
 
 	// -- start server --
 	if err := router.Run(fmt.Sprintf(":%s", httpAddr)); err != nil {
