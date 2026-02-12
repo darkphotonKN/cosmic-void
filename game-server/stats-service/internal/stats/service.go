@@ -295,12 +295,17 @@ func (s *service) GetLeaderboard(ctx context.Context, req *pbstats.GetLeaderboar
 
 	playerRankingsProto := make([]*pbstats.PlayerRankingStats, len(playerRankings))
 
-	for _, playerRanking := range playerRankings {
-		playerRankingsProto := &pbstats.PlayerMatchStats{
-			Id:       playerRanking.ID.String(),
-			MemberId: playerRanking.MemberID.String(),
-			Wins:     int32(playerRanking.Wins),
+	for index, playerRanking := range playerRankings {
+		playerRankingProto := &pbstats.PlayerRankingStats{
+			Id:        playerRanking.ID.String(),
+			Wins:      int32(playerRanking.Wins),
+			Username:  playerRanking.Username,
+			TopThrees: int32(playerRanking.TopThrees),
+			AvatarUrl: playerRanking.AvatarUrl,
+			Rating:    int32(playerRanking.Rating),
 		}
+
+		playerRankingsProto[index] = playerRankingProto
 	}
 
 	res := pbstats.GetLeaderboardResponse{

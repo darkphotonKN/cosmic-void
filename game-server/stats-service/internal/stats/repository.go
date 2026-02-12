@@ -170,6 +170,10 @@ func (r *repository) UpsertPlayerRankingStats(ctx context.Context, stats *Update
 	return &updated, nil
 }
 
+func (r *repository) GetPlayerRankings(ctx context.Context, params *GetPlayerRankings) ([]*PlayerRankingStats, error) {
+	return nil, nil
+}
+
 func (r *repository) GetPlayerRankingStats(ctx context.Context, memberID uuid.UUID) (*PlayerRankingStats, error) {
 	query := `
 		SELECT
