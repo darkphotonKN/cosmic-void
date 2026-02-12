@@ -85,3 +85,18 @@ func (h *Handler) GetUserSubscriptions(ctx context.Context, req *pb.GetUserSubsc
 		Subscriptions: subscriptions,
 	}, nil
 }
+
+func (h *Handler) ProcessWebhook(ctx context.Context, req *pb.ProcessWebhookRequest) (*pb.ProcessWebhookResponse, error) {
+	if err := h.service.ProcessWebhookEvent(ctx, req.Payload, req.StripeSignature); err != nil {
+		return &pb.ProcessWebhookResponse{Success: false}, err
+	}
+	return &pb.ProcessWebhookResponse{Success: true}, nil
+}
+
+func (h *Handler) CheckPermission(ctx context.Context, req *pb.CheckPermissionRequest) (*pb.CheckPermissionResponse, error) {
+	hasPermission, err := h.service.CheckPermission(ctx, req.UserId)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.CheckPermissionResponse{HasPermission: hasPermission}, nil
+}

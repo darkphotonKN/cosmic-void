@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import { apiClient } from "@/utils/api";
@@ -19,7 +19,7 @@ const stripePromise = loadStripe(
 const PLAN = {
   name: "Cosmic Void Pro",
   productId: "prod_TxVD6tpLpq1NFf",
-  price: "$9.99",
+  price: "$10.00",
   interval: "month",
   features: [
     "Unlimited match history",
@@ -42,6 +42,37 @@ function CheckoutForm({
   const stripe = useStripe();
   const elements = useElements();
   const [confirming, setConfirming] = useState(false);
+  const [polling, setPolling] = useState(false);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startPolling = useCallback(() => {
+    setPolling(true);
+    let attempts = 0;
+    const maxAttempts = 12; // 12 * 5s = 60s
+
+    pollingRef.current = setInterval(async () => {
+      attempts++;
+      try {
+        const res = await apiClient.checkSubscriptionPermission();
+        if (res.has_permission) {
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          setPolling(false);
+          onSuccess("Subscription confirmed! You now have Pro access.");
+          return;
+        }
+      } catch {
+        // ignore polling errors, keep trying
+      }
+
+      if (attempts >= maxAttempts) {
+        if (pollingRef.current) clearInterval(pollingRef.current);
+        setPolling(false);
+        onSuccess(
+          "Payment received! Please refresh the page to see your subscription status.",
+        );
+      }
+    }, 5000);
+  }, [onSuccess]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,8 +92,8 @@ function CheckoutForm({
       onError(error.message || "Payment failed");
       setConfirming(false);
     } else {
-      onSuccess("Payment confirmed! Your subscription is now active.");
       setConfirming(false);
+      startPolling();
     }
   };
 
@@ -83,20 +114,26 @@ function CheckoutForm({
           }}
         />
       </div>
-      <button
-        type="submit"
-        disabled={!stripe || confirming}
-        className="sub-btn-primary sub-btn-full"
-      >
-        {confirming ? (
-          <span className="sub-btn-loading">
-            <span className="sub-btn-spinner" />
-            Confirming...
-          </span>
-        ) : (
-          "Confirm Payment"
-        )}
-      </button>
+      {polling ? (
+        <div className="sub-inline-message sub-info">
+          <span className="sub-btn-spinner" /> Confirming subscription...
+        </div>
+      ) : (
+        <button
+          type="submit"
+          disabled={!stripe || confirming}
+          className="sub-btn-primary sub-btn-full"
+        >
+          {confirming ? (
+            <span className="sub-btn-loading">
+              <span className="sub-btn-spinner" />
+              Confirming...
+            </span>
+          ) : (
+            "Confirm Payment"
+          )}
+        </button>
+      )}
     </form>
   );
 }
@@ -109,6 +146,21 @@ export default function SubscriptionPage() {
   const [clientSecret, setClientSecret] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [hasPermission, setHasPermission] = useState(false);
+  const [checkingPermission, setCheckingPermission] = useState(true);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    apiClient
+      .checkSubscriptionPermission()
+      .then((res) => {
+        if (res.has_permission) {
+          setHasPermission(true);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setCheckingPermission(false));
+  }, [isAuthenticated]);
 
   if (!isAuthenticated || !memberInfo) {
     return (
@@ -143,9 +195,6 @@ export default function SubscriptionPage() {
       <div className="sub-bg" />
 
       <div className="sub-header">
-        <button onClick={() => router.push("/game")} className="sub-back-btn">
-          &larr; Back to Game
-        </button>
         <h1 className="sub-title">Subscription</h1>
       </div>
 
@@ -173,7 +222,21 @@ export default function SubscriptionPage() {
           ))}
         </ul>
 
-        {!clientSecret ? (
+        {checkingPermission ? (
+          <div
+            className="sub-btn-primary sub-btn-full"
+            style={{ textAlign: "center", opacity: 0.6 }}
+          >
+            <span className="sub-btn-loading">
+              <span className="sub-btn-spinner" />
+              Loading...
+            </span>
+          </div>
+        ) : hasPermission ? (
+          <div className="sub-inline-message sub-success">
+            You are subscribed to Cosmic Void Pro!
+          </div>
+        ) : !clientSecret ? (
           <button
             onClick={handleSubscribe}
             disabled={subscribing}
@@ -221,7 +284,10 @@ export default function SubscriptionPage() {
           >
             <CheckoutForm
               clientSecret={clientSecret}
-              onSuccess={setSuccess}
+              onSuccess={(msg) => {
+                setSuccess(msg);
+                setHasPermission(true);
+              }}
               onError={setError}
             />
           </Elements>

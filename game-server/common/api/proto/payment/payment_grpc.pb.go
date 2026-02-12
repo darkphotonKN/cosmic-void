@@ -23,6 +23,8 @@ const (
 	PaymentService_SetupSubscription_FullMethodName    = "/payment.PaymentService/SetupSubscription"
 	PaymentService_Subscribe_FullMethodName            = "/payment.PaymentService/Subscribe"
 	PaymentService_GetUserSubscriptions_FullMethodName = "/payment.PaymentService/GetUserSubscriptions"
+	PaymentService_ProcessWebhook_FullMethodName       = "/payment.PaymentService/ProcessWebhook"
+	PaymentService_CheckPermission_FullMethodName      = "/payment.PaymentService/CheckPermission"
 )
 
 // PaymentServiceClient is the client API for PaymentService service.
@@ -39,6 +41,10 @@ type PaymentServiceClient interface {
 	Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (*SubscribeResponse, error)
 	// Get all subscriptions for a customer
 	GetUserSubscriptions(ctx context.Context, in *GetUserSubscriptionsRequest, opts ...grpc.CallOption) (*GetUserSubscriptionsResponse, error)
+	// Process Stripe webhook event
+	ProcessWebhook(ctx context.Context, in *ProcessWebhookRequest, opts ...grpc.CallOption) (*ProcessWebhookResponse, error)
+	// Check if a user has an active subscription permission
+	CheckPermission(ctx context.Context, in *CheckPermissionRequest, opts ...grpc.CallOption) (*CheckPermissionResponse, error)
 }
 
 type paymentServiceClient struct {
@@ -89,6 +95,26 @@ func (c *paymentServiceClient) GetUserSubscriptions(ctx context.Context, in *Get
 	return out, nil
 }
 
+func (c *paymentServiceClient) ProcessWebhook(ctx context.Context, in *ProcessWebhookRequest, opts ...grpc.CallOption) (*ProcessWebhookResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ProcessWebhookResponse)
+	err := c.cc.Invoke(ctx, PaymentService_ProcessWebhook_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *paymentServiceClient) CheckPermission(ctx context.Context, in *CheckPermissionRequest, opts ...grpc.CallOption) (*CheckPermissionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CheckPermissionResponse)
+	err := c.cc.Invoke(ctx, PaymentService_CheckPermission_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PaymentServiceServer is the server API for PaymentService service.
 // All implementations must embed UnimplementedPaymentServiceServer
 // for forward compatibility.
@@ -103,6 +129,10 @@ type PaymentServiceServer interface {
 	Subscribe(context.Context, *SubscribeRequest) (*SubscribeResponse, error)
 	// Get all subscriptions for a customer
 	GetUserSubscriptions(context.Context, *GetUserSubscriptionsRequest) (*GetUserSubscriptionsResponse, error)
+	// Process Stripe webhook event
+	ProcessWebhook(context.Context, *ProcessWebhookRequest) (*ProcessWebhookResponse, error)
+	// Check if a user has an active subscription permission
+	CheckPermission(context.Context, *CheckPermissionRequest) (*CheckPermissionResponse, error)
 	mustEmbedUnimplementedPaymentServiceServer()
 }
 
@@ -124,6 +154,12 @@ func (UnimplementedPaymentServiceServer) Subscribe(context.Context, *SubscribeRe
 }
 func (UnimplementedPaymentServiceServer) GetUserSubscriptions(context.Context, *GetUserSubscriptionsRequest) (*GetUserSubscriptionsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUserSubscriptions not implemented")
+}
+func (UnimplementedPaymentServiceServer) ProcessWebhook(context.Context, *ProcessWebhookRequest) (*ProcessWebhookResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProcessWebhook not implemented")
+}
+func (UnimplementedPaymentServiceServer) CheckPermission(context.Context, *CheckPermissionRequest) (*CheckPermissionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckPermission not implemented")
 }
 func (UnimplementedPaymentServiceServer) mustEmbedUnimplementedPaymentServiceServer() {}
 func (UnimplementedPaymentServiceServer) testEmbeddedByValue()                        {}
@@ -218,6 +254,42 @@ func _PaymentService_GetUserSubscriptions_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PaymentService_ProcessWebhook_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ProcessWebhookRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaymentServiceServer).ProcessWebhook(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaymentService_ProcessWebhook_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaymentServiceServer).ProcessWebhook(ctx, req.(*ProcessWebhookRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PaymentService_CheckPermission_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckPermissionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaymentServiceServer).CheckPermission(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaymentService_CheckPermission_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaymentServiceServer).CheckPermission(ctx, req.(*CheckPermissionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // PaymentService_ServiceDesc is the grpc.ServiceDesc for PaymentService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -240,6 +312,14 @@ var PaymentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUserSubscriptions",
 			Handler:    _PaymentService_GetUserSubscriptions_Handler,
+		},
+		{
+			MethodName: "ProcessWebhook",
+			Handler:    _PaymentService_ProcessWebhook_Handler,
+		},
+		{
+			MethodName: "CheckPermission",
+			Handler:    _PaymentService_CheckPermission_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

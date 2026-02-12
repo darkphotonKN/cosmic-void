@@ -26,6 +26,8 @@ service AuthService {
   rpc SetStripeCustomerID(SetStripeCustomerIDRequest) returns (SetStripeCustomerIDResponse) {}
   // Get Stripe customer ID for a member
   rpc GetStripeCustomerID(GetStripeCustomerIDRequest) returns (GetStripeCustomerIDResponse) {}
+  // Update member subscription status
+  rpc UpdateSubscriptionStatus(UpdateSubscriptionStatusRequest) returns (UpdateSubscriptionStatusResponse) {}
 }
 
 // used for Upload methods 
@@ -124,6 +126,18 @@ message GetStripeCustomerIDRequest {
 // Get Stripe customer ID response
 message GetStripeCustomerIDResponse {
   string stripe_customer_id = 1;
+}
+
+// Update subscription status request
+message UpdateSubscriptionStatusRequest {
+  string member_id = 1;
+  string product_id = 2;
+  string status = 3;
+}
+
+// Update subscription status response
+message UpdateSubscriptionStatusResponse {
+  bool success = 1;
 }
 
 // Request avatar upload request

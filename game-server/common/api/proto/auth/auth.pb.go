@@ -830,6 +830,112 @@ func (x *GetStripeCustomerIDResponse) GetStripeCustomerId() string {
 	return ""
 }
 
+// Update subscription status request
+type UpdateSubscriptionStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MemberId      string                 `protobuf:"bytes,1,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
+	ProductId     string                 `protobuf:"bytes,2,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateSubscriptionStatusRequest) Reset() {
+	*x = UpdateSubscriptionStatusRequest{}
+	mi := &file_api_proto_auth_auth_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateSubscriptionStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateSubscriptionStatusRequest) ProtoMessage() {}
+
+func (x *UpdateSubscriptionStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_auth_auth_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateSubscriptionStatusRequest.ProtoReflect.Descriptor instead.
+func (*UpdateSubscriptionStatusRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_auth_auth_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *UpdateSubscriptionStatusRequest) GetMemberId() string {
+	if x != nil {
+		return x.MemberId
+	}
+	return ""
+}
+
+func (x *UpdateSubscriptionStatusRequest) GetProductId() string {
+	if x != nil {
+		return x.ProductId
+	}
+	return ""
+}
+
+func (x *UpdateSubscriptionStatusRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+// Update subscription status response
+type UpdateSubscriptionStatusResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateSubscriptionStatusResponse) Reset() {
+	*x = UpdateSubscriptionStatusResponse{}
+	mi := &file_api_proto_auth_auth_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateSubscriptionStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateSubscriptionStatusResponse) ProtoMessage() {}
+
+func (x *UpdateSubscriptionStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_auth_auth_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateSubscriptionStatusResponse.ProtoReflect.Descriptor instead.
+func (*UpdateSubscriptionStatusResponse) Descriptor() ([]byte, []int) {
+	return file_api_proto_auth_auth_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *UpdateSubscriptionStatusResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
 // Request avatar upload request
 type RequestAvatarUploadRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -841,7 +947,7 @@ type RequestAvatarUploadRequest struct {
 
 func (x *RequestAvatarUploadRequest) Reset() {
 	*x = RequestAvatarUploadRequest{}
-	mi := &file_api_proto_auth_auth_proto_msgTypes[14]
+	mi := &file_api_proto_auth_auth_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -853,7 +959,7 @@ func (x *RequestAvatarUploadRequest) String() string {
 func (*RequestAvatarUploadRequest) ProtoMessage() {}
 
 func (x *RequestAvatarUploadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_auth_auth_proto_msgTypes[14]
+	mi := &file_api_proto_auth_auth_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -866,7 +972,7 @@ func (x *RequestAvatarUploadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestAvatarUploadRequest.ProtoReflect.Descriptor instead.
 func (*RequestAvatarUploadRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_auth_auth_proto_rawDescGZIP(), []int{14}
+	return file_api_proto_auth_auth_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *RequestAvatarUploadRequest) GetMemberId() string {
@@ -898,7 +1004,7 @@ type RequestAvatarUploadResponse struct {
 
 func (x *RequestAvatarUploadResponse) Reset() {
 	*x = RequestAvatarUploadResponse{}
-	mi := &file_api_proto_auth_auth_proto_msgTypes[15]
+	mi := &file_api_proto_auth_auth_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -910,7 +1016,7 @@ func (x *RequestAvatarUploadResponse) String() string {
 func (*RequestAvatarUploadResponse) ProtoMessage() {}
 
 func (x *RequestAvatarUploadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_auth_auth_proto_msgTypes[15]
+	mi := &file_api_proto_auth_auth_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -923,7 +1029,7 @@ func (x *RequestAvatarUploadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestAvatarUploadResponse.ProtoReflect.Descriptor instead.
 func (*RequestAvatarUploadResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_auth_auth_proto_rawDescGZIP(), []int{15}
+	return file_api_proto_auth_auth_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *RequestAvatarUploadResponse) GetUploadId() string {
@@ -979,7 +1085,7 @@ type ConfirmAvatarUploadRequest struct {
 
 func (x *ConfirmAvatarUploadRequest) Reset() {
 	*x = ConfirmAvatarUploadRequest{}
-	mi := &file_api_proto_auth_auth_proto_msgTypes[16]
+	mi := &file_api_proto_auth_auth_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -991,7 +1097,7 @@ func (x *ConfirmAvatarUploadRequest) String() string {
 func (*ConfirmAvatarUploadRequest) ProtoMessage() {}
 
 func (x *ConfirmAvatarUploadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_auth_auth_proto_msgTypes[16]
+	mi := &file_api_proto_auth_auth_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1004,7 +1110,7 @@ func (x *ConfirmAvatarUploadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfirmAvatarUploadRequest.ProtoReflect.Descriptor instead.
 func (*ConfirmAvatarUploadRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_auth_auth_proto_rawDescGZIP(), []int{16}
+	return file_api_proto_auth_auth_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ConfirmAvatarUploadRequest) GetMemberId() string {
@@ -1033,7 +1139,7 @@ type ConfirmAvatarUploadResponse struct {
 
 func (x *ConfirmAvatarUploadResponse) Reset() {
 	*x = ConfirmAvatarUploadResponse{}
-	mi := &file_api_proto_auth_auth_proto_msgTypes[17]
+	mi := &file_api_proto_auth_auth_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1045,7 +1151,7 @@ func (x *ConfirmAvatarUploadResponse) String() string {
 func (*ConfirmAvatarUploadResponse) ProtoMessage() {}
 
 func (x *ConfirmAvatarUploadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_auth_auth_proto_msgTypes[17]
+	mi := &file_api_proto_auth_auth_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1058,7 +1164,7 @@ func (x *ConfirmAvatarUploadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfirmAvatarUploadResponse.ProtoReflect.Descriptor instead.
 func (*ConfirmAvatarUploadResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_auth_auth_proto_rawDescGZIP(), []int{17}
+	return file_api_proto_auth_auth_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ConfirmAvatarUploadResponse) GetSuccess() bool {
@@ -1140,7 +1246,14 @@ const file_api_proto_auth_auth_proto_rawDesc = "" +
 	"\x1aGetStripeCustomerIDRequest\x12\x1b\n" +
 	"\tmember_id\x18\x01 \x01(\tR\bmemberId\"K\n" +
 	"\x1bGetStripeCustomerIDResponse\x12,\n" +
-	"\x12stripe_customer_id\x18\x01 \x01(\tR\x10stripeCustomerId\"U\n" +
+	"\x12stripe_customer_id\x18\x01 \x01(\tR\x10stripeCustomerId\"u\n" +
+	"\x1fUpdateSubscriptionStatusRequest\x12\x1b\n" +
+	"\tmember_id\x18\x01 \x01(\tR\bmemberId\x12\x1d\n" +
+	"\n" +
+	"product_id\x18\x02 \x01(\tR\tproductId\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\"<\n" +
+	" UpdateSubscriptionStatusResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"U\n" +
 	"\x1aRequestAvatarUploadRequest\x12\x1b\n" +
 	"\tmember_id\x18\x01 \x01(\tR\bmemberId\x12\x1a\n" +
 	"\bfilename\x18\x02 \x01(\tR\bfilename\"\x89\x02\n" +
@@ -1159,7 +1272,7 @@ const file_api_proto_auth_auth_proto_rawDesc = "" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x1d\n" +
 	"\n" +
-	"avatar_url\x18\x03 \x01(\tR\tavatarUrl2\xd7\x04\n" +
+	"avatar_url\x18\x03 \x01(\tR\tavatarUrl2\xc4\x05\n" +
 	"\vAuthService\x128\n" +
 	"\vLoginMember\x12\x12.auth.LoginRequest\x1a\x13.auth.LoginResponse\"\x00\x123\n" +
 	"\tGetMember\x12\x16.auth.GetMemberRequest\x1a\f.auth.Member\"\x00\x129\n" +
@@ -1168,7 +1281,8 @@ const file_api_proto_auth_auth_proto_rawDesc = "" +
 	"\x14UpdateMemberPassword\x12\x1b.auth.UpdatePasswordRequest\x1a\x1c.auth.UpdatePasswordResponse\"\x00\x12J\n" +
 	"\rValidateToken\x12\x1a.auth.ValidateTokenRequest\x1a\x1b.auth.ValidateTokenResponse\"\x00\x12\\\n" +
 	"\x13SetStripeCustomerID\x12 .auth.SetStripeCustomerIDRequest\x1a!.auth.SetStripeCustomerIDResponse\"\x00\x12\\\n" +
-	"\x13GetStripeCustomerID\x12 .auth.GetStripeCustomerIDRequest\x1a!.auth.GetStripeCustomerIDResponse\"\x002\xc7\x01\n" +
+	"\x13GetStripeCustomerID\x12 .auth.GetStripeCustomerIDRequest\x1a!.auth.GetStripeCustomerIDResponse\"\x00\x12k\n" +
+	"\x18UpdateSubscriptionStatus\x12%.auth.UpdateSubscriptionStatusRequest\x1a&.auth.UpdateSubscriptionStatusResponse\"\x002\xc7\x01\n" +
 	"\rUploadService\x12Z\n" +
 	"\x13RequestAvatarUpload\x12 .auth.RequestAvatarUploadRequest\x1a!.auth.RequestAvatarUploadResponse\x12Z\n" +
 	"\x13ConfirmAvatarUpload\x12 .auth.ConfirmAvatarUploadRequest\x1a!.auth.ConfirmAvatarUploadResponseBOZMgithub.com/darkphotonKN/community-builds-microservice/auth-service/proto/authb\x06proto3"
@@ -1185,33 +1299,35 @@ func file_api_proto_auth_auth_proto_rawDescGZIP() []byte {
 	return file_api_proto_auth_auth_proto_rawDescData
 }
 
-var file_api_proto_auth_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_api_proto_auth_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_api_proto_auth_auth_proto_goTypes = []any{
-	(*Member)(nil),                      // 0: auth.Member
-	(*LoginRequest)(nil),                // 1: auth.LoginRequest
-	(*LoginResponse)(nil),               // 2: auth.LoginResponse
-	(*GetMemberRequest)(nil),            // 3: auth.GetMemberRequest
-	(*CreateMemberRequest)(nil),         // 4: auth.CreateMemberRequest
-	(*UpdateMemberInfoRequest)(nil),     // 5: auth.UpdateMemberInfoRequest
-	(*UpdatePasswordRequest)(nil),       // 6: auth.UpdatePasswordRequest
-	(*UpdatePasswordResponse)(nil),      // 7: auth.UpdatePasswordResponse
-	(*ValidateTokenRequest)(nil),        // 8: auth.ValidateTokenRequest
-	(*ValidateTokenResponse)(nil),       // 9: auth.ValidateTokenResponse
-	(*SetStripeCustomerIDRequest)(nil),  // 10: auth.SetStripeCustomerIDRequest
-	(*SetStripeCustomerIDResponse)(nil), // 11: auth.SetStripeCustomerIDResponse
-	(*GetStripeCustomerIDRequest)(nil),  // 12: auth.GetStripeCustomerIDRequest
-	(*GetStripeCustomerIDResponse)(nil), // 13: auth.GetStripeCustomerIDResponse
-	(*RequestAvatarUploadRequest)(nil),  // 14: auth.RequestAvatarUploadRequest
-	(*RequestAvatarUploadResponse)(nil), // 15: auth.RequestAvatarUploadResponse
-	(*ConfirmAvatarUploadRequest)(nil),  // 16: auth.ConfirmAvatarUploadRequest
-	(*ConfirmAvatarUploadResponse)(nil), // 17: auth.ConfirmAvatarUploadResponse
-	(*timestamppb.Timestamp)(nil),       // 18: google.protobuf.Timestamp
+	(*Member)(nil),                           // 0: auth.Member
+	(*LoginRequest)(nil),                     // 1: auth.LoginRequest
+	(*LoginResponse)(nil),                    // 2: auth.LoginResponse
+	(*GetMemberRequest)(nil),                 // 3: auth.GetMemberRequest
+	(*CreateMemberRequest)(nil),              // 4: auth.CreateMemberRequest
+	(*UpdateMemberInfoRequest)(nil),          // 5: auth.UpdateMemberInfoRequest
+	(*UpdatePasswordRequest)(nil),            // 6: auth.UpdatePasswordRequest
+	(*UpdatePasswordResponse)(nil),           // 7: auth.UpdatePasswordResponse
+	(*ValidateTokenRequest)(nil),             // 8: auth.ValidateTokenRequest
+	(*ValidateTokenResponse)(nil),            // 9: auth.ValidateTokenResponse
+	(*SetStripeCustomerIDRequest)(nil),       // 10: auth.SetStripeCustomerIDRequest
+	(*SetStripeCustomerIDResponse)(nil),      // 11: auth.SetStripeCustomerIDResponse
+	(*GetStripeCustomerIDRequest)(nil),       // 12: auth.GetStripeCustomerIDRequest
+	(*GetStripeCustomerIDResponse)(nil),      // 13: auth.GetStripeCustomerIDResponse
+	(*UpdateSubscriptionStatusRequest)(nil),  // 14: auth.UpdateSubscriptionStatusRequest
+	(*UpdateSubscriptionStatusResponse)(nil), // 15: auth.UpdateSubscriptionStatusResponse
+	(*RequestAvatarUploadRequest)(nil),       // 16: auth.RequestAvatarUploadRequest
+	(*RequestAvatarUploadResponse)(nil),      // 17: auth.RequestAvatarUploadResponse
+	(*ConfirmAvatarUploadRequest)(nil),       // 18: auth.ConfirmAvatarUploadRequest
+	(*ConfirmAvatarUploadResponse)(nil),      // 19: auth.ConfirmAvatarUploadResponse
+	(*timestamppb.Timestamp)(nil),            // 20: google.protobuf.Timestamp
 }
 var file_api_proto_auth_auth_proto_depIdxs = []int32{
-	18, // 0: auth.Member.created_at:type_name -> google.protobuf.Timestamp
-	18, // 1: auth.Member.updated_at:type_name -> google.protobuf.Timestamp
+	20, // 0: auth.Member.created_at:type_name -> google.protobuf.Timestamp
+	20, // 1: auth.Member.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 2: auth.LoginResponse.member_info:type_name -> auth.Member
-	18, // 3: auth.RequestAvatarUploadResponse.expires_at:type_name -> google.protobuf.Timestamp
+	20, // 3: auth.RequestAvatarUploadResponse.expires_at:type_name -> google.protobuf.Timestamp
 	1,  // 4: auth.AuthService.LoginMember:input_type -> auth.LoginRequest
 	3,  // 5: auth.AuthService.GetMember:input_type -> auth.GetMemberRequest
 	4,  // 6: auth.AuthService.CreateMember:input_type -> auth.CreateMemberRequest
@@ -1220,20 +1336,22 @@ var file_api_proto_auth_auth_proto_depIdxs = []int32{
 	8,  // 9: auth.AuthService.ValidateToken:input_type -> auth.ValidateTokenRequest
 	10, // 10: auth.AuthService.SetStripeCustomerID:input_type -> auth.SetStripeCustomerIDRequest
 	12, // 11: auth.AuthService.GetStripeCustomerID:input_type -> auth.GetStripeCustomerIDRequest
-	14, // 12: auth.UploadService.RequestAvatarUpload:input_type -> auth.RequestAvatarUploadRequest
-	16, // 13: auth.UploadService.ConfirmAvatarUpload:input_type -> auth.ConfirmAvatarUploadRequest
-	2,  // 14: auth.AuthService.LoginMember:output_type -> auth.LoginResponse
-	0,  // 15: auth.AuthService.GetMember:output_type -> auth.Member
-	0,  // 16: auth.AuthService.CreateMember:output_type -> auth.Member
-	0,  // 17: auth.AuthService.UpdateMemberInfo:output_type -> auth.Member
-	7,  // 18: auth.AuthService.UpdateMemberPassword:output_type -> auth.UpdatePasswordResponse
-	9,  // 19: auth.AuthService.ValidateToken:output_type -> auth.ValidateTokenResponse
-	11, // 20: auth.AuthService.SetStripeCustomerID:output_type -> auth.SetStripeCustomerIDResponse
-	13, // 21: auth.AuthService.GetStripeCustomerID:output_type -> auth.GetStripeCustomerIDResponse
-	15, // 22: auth.UploadService.RequestAvatarUpload:output_type -> auth.RequestAvatarUploadResponse
-	17, // 23: auth.UploadService.ConfirmAvatarUpload:output_type -> auth.ConfirmAvatarUploadResponse
-	14, // [14:24] is the sub-list for method output_type
-	4,  // [4:14] is the sub-list for method input_type
+	14, // 12: auth.AuthService.UpdateSubscriptionStatus:input_type -> auth.UpdateSubscriptionStatusRequest
+	16, // 13: auth.UploadService.RequestAvatarUpload:input_type -> auth.RequestAvatarUploadRequest
+	18, // 14: auth.UploadService.ConfirmAvatarUpload:input_type -> auth.ConfirmAvatarUploadRequest
+	2,  // 15: auth.AuthService.LoginMember:output_type -> auth.LoginResponse
+	0,  // 16: auth.AuthService.GetMember:output_type -> auth.Member
+	0,  // 17: auth.AuthService.CreateMember:output_type -> auth.Member
+	0,  // 18: auth.AuthService.UpdateMemberInfo:output_type -> auth.Member
+	7,  // 19: auth.AuthService.UpdateMemberPassword:output_type -> auth.UpdatePasswordResponse
+	9,  // 20: auth.AuthService.ValidateToken:output_type -> auth.ValidateTokenResponse
+	11, // 21: auth.AuthService.SetStripeCustomerID:output_type -> auth.SetStripeCustomerIDResponse
+	13, // 22: auth.AuthService.GetStripeCustomerID:output_type -> auth.GetStripeCustomerIDResponse
+	15, // 23: auth.AuthService.UpdateSubscriptionStatus:output_type -> auth.UpdateSubscriptionStatusResponse
+	17, // 24: auth.UploadService.RequestAvatarUpload:output_type -> auth.RequestAvatarUploadResponse
+	19, // 25: auth.UploadService.ConfirmAvatarUpload:output_type -> auth.ConfirmAvatarUploadResponse
+	15, // [15:26] is the sub-list for method output_type
+	4,  // [4:15] is the sub-list for method input_type
 	4,  // [4:4] is the sub-list for extension type_name
 	4,  // [4:4] is the sub-list for extension extendee
 	0,  // [0:4] is the sub-list for field type_name
@@ -1250,7 +1368,7 @@ func file_api_proto_auth_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_proto_auth_auth_proto_rawDesc), len(file_api_proto_auth_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   18,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

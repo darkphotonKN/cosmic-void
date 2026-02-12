@@ -21,6 +21,7 @@ type Service interface {
 	ValidateToken(ctx context.Context, req *pb.ValidateTokenRequest) (*pb.ValidateTokenResponse, error)
 	SetStripeCustomerID(ctx context.Context, req *pb.SetStripeCustomerIDRequest) (*pb.SetStripeCustomerIDResponse, error)
 	GetStripeCustomerID(ctx context.Context, req *pb.GetStripeCustomerIDRequest) (*pb.GetStripeCustomerIDResponse, error)
+	UpdateSubscriptionStatus(ctx context.Context, req *pb.UpdateSubscriptionStatusRequest) (*pb.UpdateSubscriptionStatusResponse, error)
 	CreateDefaultMembers(members []CreateDefaultMember) error
 }
 
@@ -61,4 +62,8 @@ func (s *Handler) SetStripeCustomerID(ctx context.Context, req *pb.SetStripeCust
 
 func (s *Handler) GetStripeCustomerID(ctx context.Context, req *pb.GetStripeCustomerIDRequest) (*pb.GetStripeCustomerIDResponse, error) {
 	return s.service.GetStripeCustomerID(ctx, req)
+}
+
+func (s *Handler) UpdateSubscriptionStatus(ctx context.Context, req *pb.UpdateSubscriptionStatusRequest) (*pb.UpdateSubscriptionStatusResponse, error) {
+	return s.service.UpdateSubscriptionStatus(ctx, req)
 }

@@ -732,6 +732,103 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/* Splash Page Styles */
+.splash-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--color-bg-darker);
+  z-index: 900;
+}
+
+.splash-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.splash-overlay {
+  position: absolute;
+  bottom: 12%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.splash-subtitle {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.3em;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.splash-enter-btn {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: #fff;
+  background: transparent;
+  border: 2px solid var(--color-primary);
+  padding: 1rem 3rem;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: all 0.3s ease;
+  animation: breathe 3s ease-in-out infinite;
+}
+
+.splash-enter-btn:hover {
+  background: var(--color-primary);
+  color: var(--color-bg-dark);
+  box-shadow: 0 0 30px rgba(78, 204, 163, 0.6);
+  animation: none;
+}
+
+@keyframes breathe {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(78, 204, 163, 0.2), 0 0 20px rgba(78, 204, 163, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(78, 204, 163, 0.5), 0 0 40px rgba(78, 204, 163, 0.2);
+  }
+}
+
+.splash-hint {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.25);
+  letter-spacing: 0.1em;
+  transition: opacity 1s ease;
+}
+
+.splash-hint.fade-out {
+  opacity: 0;
+}
+
+@media (max-width: 640px) {
+  .splash-subtitle {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    white-space: normal;
+    padding: 0 1rem;
+  }
+
+  .splash-enter-btn {
+    font-size: 0.9rem;
+    padding: 0.8rem 2rem;
+  }
+}
+
 /* Login Page Styles */
 .login-container {
   min-height: 100vh;
@@ -1008,7 +1105,6 @@ h1, h2, h3, h4, h5, h6 {
 /* Subscription Page Styles */
 .sub-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #2d2d5a 100%);
   position: relative;
   overflow-x: hidden;
   padding: 2rem;
@@ -1026,10 +1122,20 @@ h1, h2, h3, h4, h5, h6 {
   left: 0;
   width: 100%;
   height: 100%;
+  background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #2d2d5a 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.sub-bg::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background: radial-gradient(circle at 30% 20%, rgba(78, 204, 163, 0.15) 0%, transparent 50%),
               radial-gradient(circle at 70% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 50%);
-  pointer-events: none;
-  z-index: 1;
 }
 
 .sub-header {
@@ -1037,6 +1143,7 @@ h1, h2, h3, h4, h5, h6 {
   z-index: 2;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 1rem;
   width: 100%;
 }

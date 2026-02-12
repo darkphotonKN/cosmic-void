@@ -509,6 +509,192 @@ func (x *GetUserSubscriptionsResponse) GetSubscriptions() []*UserSubscriptionInf
 	return nil
 }
 
+// ProcessWebhook - forward raw Stripe webhook for verification and processing
+type ProcessWebhookRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Payload         []byte                 `protobuf:"bytes,1,opt,name=payload,proto3" json:"payload,omitempty"`
+	StripeSignature string                 `protobuf:"bytes,2,opt,name=stripe_signature,json=stripeSignature,proto3" json:"stripe_signature,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ProcessWebhookRequest) Reset() {
+	*x = ProcessWebhookRequest{}
+	mi := &file_api_proto_payment_payment_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProcessWebhookRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProcessWebhookRequest) ProtoMessage() {}
+
+func (x *ProcessWebhookRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_payment_payment_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProcessWebhookRequest.ProtoReflect.Descriptor instead.
+func (*ProcessWebhookRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_payment_payment_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ProcessWebhookRequest) GetPayload() []byte {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+func (x *ProcessWebhookRequest) GetStripeSignature() string {
+	if x != nil {
+		return x.StripeSignature
+	}
+	return ""
+}
+
+type ProcessWebhookResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProcessWebhookResponse) Reset() {
+	*x = ProcessWebhookResponse{}
+	mi := &file_api_proto_payment_payment_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProcessWebhookResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProcessWebhookResponse) ProtoMessage() {}
+
+func (x *ProcessWebhookResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_payment_payment_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProcessWebhookResponse.ProtoReflect.Descriptor instead.
+func (*ProcessWebhookResponse) Descriptor() ([]byte, []int) {
+	return file_api_proto_payment_payment_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ProcessWebhookResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+// CheckPermission - check if user has active subscription
+type CheckPermissionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CheckPermissionRequest) Reset() {
+	*x = CheckPermissionRequest{}
+	mi := &file_api_proto_payment_payment_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CheckPermissionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CheckPermissionRequest) ProtoMessage() {}
+
+func (x *CheckPermissionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_payment_payment_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CheckPermissionRequest.ProtoReflect.Descriptor instead.
+func (*CheckPermissionRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_payment_payment_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *CheckPermissionRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type CheckPermissionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	HasPermission bool                   `protobuf:"varint,1,opt,name=has_permission,json=hasPermission,proto3" json:"has_permission,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CheckPermissionResponse) Reset() {
+	*x = CheckPermissionResponse{}
+	mi := &file_api_proto_payment_payment_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CheckPermissionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CheckPermissionResponse) ProtoMessage() {}
+
+func (x *CheckPermissionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_payment_payment_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CheckPermissionResponse.ProtoReflect.Descriptor instead.
+func (*CheckPermissionResponse) Descriptor() ([]byte, []int) {
+	return file_api_proto_payment_payment_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *CheckPermissionResponse) GetHasPermission() bool {
+	if x != nil {
+		return x.HasPermission
+	}
+	return false
+}
+
 var File_api_proto_payment_payment_proto protoreflect.FileDescriptor
 
 const file_api_proto_payment_payment_proto_rawDesc = "" +
@@ -548,12 +734,23 @@ const file_api_proto_payment_payment_proto_rawDesc = "" +
 	"\x06status\x18\x04 \x01(\tR\x06status\x12,\n" +
 	"\x12current_period_end\x18\x05 \x01(\x03R\x10currentPeriodEnd\"c\n" +
 	"\x1cGetUserSubscriptionsResponse\x12C\n" +
-	"\rsubscriptions\x18\x01 \x03(\v2\x1d.payment.UserSubscriptionInfoR\rsubscriptions2\xf0\x02\n" +
+	"\rsubscriptions\x18\x01 \x03(\v2\x1d.payment.UserSubscriptionInfoR\rsubscriptions\"\\\n" +
+	"\x15ProcessWebhookRequest\x12\x18\n" +
+	"\apayload\x18\x01 \x01(\fR\apayload\x12)\n" +
+	"\x10stripe_signature\x18\x02 \x01(\tR\x0fstripeSignature\"2\n" +
+	"\x16ProcessWebhookResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"1\n" +
+	"\x16CheckPermissionRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"@\n" +
+	"\x17CheckPermissionResponse\x12%\n" +
+	"\x0ehas_permission\x18\x01 \x01(\bR\rhasPermission2\x9d\x04\n" +
 	"\x0ePaymentService\x12S\n" +
 	"\x0eCreateCustomer\x12\x1e.payment.CreateCustomerRequest\x1a\x1f.payment.CreateCustomerResponse\"\x00\x12\\\n" +
 	"\x11SetupSubscription\x12!.payment.SetupSubscriptionRequest\x1a\".payment.SetupSubscriptionResponse\"\x00\x12D\n" +
 	"\tSubscribe\x12\x19.payment.SubscribeRequest\x1a\x1a.payment.SubscribeResponse\"\x00\x12e\n" +
-	"\x14GetUserSubscriptions\x12$.payment.GetUserSubscriptionsRequest\x1a%.payment.GetUserSubscriptionsResponse\"\x00BEZCgithub.com/darkphotonKN/cosmic-void-server/common/api/proto/paymentb\x06proto3"
+	"\x14GetUserSubscriptions\x12$.payment.GetUserSubscriptionsRequest\x1a%.payment.GetUserSubscriptionsResponse\"\x00\x12S\n" +
+	"\x0eProcessWebhook\x12\x1e.payment.ProcessWebhookRequest\x1a\x1f.payment.ProcessWebhookResponse\"\x00\x12V\n" +
+	"\x0fCheckPermission\x12\x1f.payment.CheckPermissionRequest\x1a .payment.CheckPermissionResponse\"\x00BEZCgithub.com/darkphotonKN/cosmic-void-server/common/api/proto/paymentb\x06proto3"
 
 var (
 	file_api_proto_payment_payment_proto_rawDescOnce sync.Once
@@ -567,7 +764,7 @@ func file_api_proto_payment_payment_proto_rawDescGZIP() []byte {
 	return file_api_proto_payment_payment_proto_rawDescData
 }
 
-var file_api_proto_payment_payment_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_api_proto_payment_payment_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_api_proto_payment_payment_proto_goTypes = []any{
 	(*CreateCustomerRequest)(nil),        // 0: payment.CreateCustomerRequest
 	(*CreateCustomerResponse)(nil),       // 1: payment.CreateCustomerResponse
@@ -578,22 +775,30 @@ var file_api_proto_payment_payment_proto_goTypes = []any{
 	(*GetUserSubscriptionsRequest)(nil),  // 6: payment.GetUserSubscriptionsRequest
 	(*UserSubscriptionInfo)(nil),         // 7: payment.UserSubscriptionInfo
 	(*GetUserSubscriptionsResponse)(nil), // 8: payment.GetUserSubscriptionsResponse
+	(*ProcessWebhookRequest)(nil),        // 9: payment.ProcessWebhookRequest
+	(*ProcessWebhookResponse)(nil),       // 10: payment.ProcessWebhookResponse
+	(*CheckPermissionRequest)(nil),       // 11: payment.CheckPermissionRequest
+	(*CheckPermissionResponse)(nil),      // 12: payment.CheckPermissionResponse
 }
 var file_api_proto_payment_payment_proto_depIdxs = []int32{
-	7, // 0: payment.GetUserSubscriptionsResponse.subscriptions:type_name -> payment.UserSubscriptionInfo
-	0, // 1: payment.PaymentService.CreateCustomer:input_type -> payment.CreateCustomerRequest
-	2, // 2: payment.PaymentService.SetupSubscription:input_type -> payment.SetupSubscriptionRequest
-	4, // 3: payment.PaymentService.Subscribe:input_type -> payment.SubscribeRequest
-	6, // 4: payment.PaymentService.GetUserSubscriptions:input_type -> payment.GetUserSubscriptionsRequest
-	1, // 5: payment.PaymentService.CreateCustomer:output_type -> payment.CreateCustomerResponse
-	3, // 6: payment.PaymentService.SetupSubscription:output_type -> payment.SetupSubscriptionResponse
-	5, // 7: payment.PaymentService.Subscribe:output_type -> payment.SubscribeResponse
-	8, // 8: payment.PaymentService.GetUserSubscriptions:output_type -> payment.GetUserSubscriptionsResponse
-	5, // [5:9] is the sub-list for method output_type
-	1, // [1:5] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	7,  // 0: payment.GetUserSubscriptionsResponse.subscriptions:type_name -> payment.UserSubscriptionInfo
+	0,  // 1: payment.PaymentService.CreateCustomer:input_type -> payment.CreateCustomerRequest
+	2,  // 2: payment.PaymentService.SetupSubscription:input_type -> payment.SetupSubscriptionRequest
+	4,  // 3: payment.PaymentService.Subscribe:input_type -> payment.SubscribeRequest
+	6,  // 4: payment.PaymentService.GetUserSubscriptions:input_type -> payment.GetUserSubscriptionsRequest
+	9,  // 5: payment.PaymentService.ProcessWebhook:input_type -> payment.ProcessWebhookRequest
+	11, // 6: payment.PaymentService.CheckPermission:input_type -> payment.CheckPermissionRequest
+	1,  // 7: payment.PaymentService.CreateCustomer:output_type -> payment.CreateCustomerResponse
+	3,  // 8: payment.PaymentService.SetupSubscription:output_type -> payment.SetupSubscriptionResponse
+	5,  // 9: payment.PaymentService.Subscribe:output_type -> payment.SubscribeResponse
+	8,  // 10: payment.PaymentService.GetUserSubscriptions:output_type -> payment.GetUserSubscriptionsResponse
+	10, // 11: payment.PaymentService.ProcessWebhook:output_type -> payment.ProcessWebhookResponse
+	12, // 12: payment.PaymentService.CheckPermission:output_type -> payment.CheckPermissionResponse
+	7,  // [7:13] is the sub-list for method output_type
+	1,  // [1:7] is the sub-list for method input_type
+	1,  // [1:1] is the sub-list for extension type_name
+	1,  // [1:1] is the sub-list for extension extendee
+	0,  // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_api_proto_payment_payment_proto_init() }
@@ -607,7 +812,7 @@ func file_api_proto_payment_payment_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_proto_payment_payment_proto_rawDesc), len(file_api_proto_payment_payment_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

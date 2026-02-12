@@ -211,3 +211,12 @@ func (r *repository) SetStripeCustomerID(ctx context.Context, memberID uuid.UUID
 	}
 	return nil
 }
+
+func (r *repository) UpdateSubscriptionStatus(ctx context.Context, memberID uuid.UUID, productID, status string) error {
+	query := `UPDATE members SET stripe_subscription_product_id = $2, stripe_subscription_status = $3, updated_at = NOW() WHERE id = $1`
+	_, err := r.DB.ExecContext(ctx, query, memberID, productID, status)
+	if err != nil {
+		return commonhelpers.AnalyzeDBErr(err)
+	}
+	return nil
+}

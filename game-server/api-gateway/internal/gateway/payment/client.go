@@ -65,3 +65,25 @@ func (c *Client) GetUserSubscriptions(ctx context.Context, req *pb.GetUserSubscr
 	client := pb.NewPaymentServiceClient(conn)
 	return client.GetUserSubscriptions(ctx, req)
 }
+
+func (c *Client) ProcessWebhook(ctx context.Context, req *pb.ProcessWebhookRequest) (*pb.ProcessWebhookResponse, error) {
+	conn, err := discovery.ServiceConnection(ctx, serviceName, c.registry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to payment service: %w", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewPaymentServiceClient(conn)
+	return client.ProcessWebhook(ctx, req)
+}
+
+func (c *Client) CheckPermission(ctx context.Context, req *pb.CheckPermissionRequest) (*pb.CheckPermissionResponse, error) {
+	conn, err := discovery.ServiceConnection(ctx, serviceName, c.registry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to payment service: %w", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewPaymentServiceClient(conn)
+	return client.CheckPermission(ctx, req)
+}

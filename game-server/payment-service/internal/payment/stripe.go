@@ -125,12 +125,21 @@ func (s *StripeProcessor) SubscribeToProduct(ctx context.Context, req *Subscribe
 	}, nil
 }
 
+// getStripeCustomer retrieves a Stripe customer by ID (used for metadata lookup).
+func getStripeCustomer(customerID string) (*stripe.Customer, error) {
+	cust, err := customer.Get(customerID, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get customer %s: %w", customerID, err)
+	}
+	return cust, nil
+}
+
 // GetUserSubscriptions returns all subscriptions for a customer
 func (s *StripeProcessor) GetUserSubscriptions(ctx context.Context, customerID string) (*UserSubscriptionsResponse, error) {
 	params := &stripe.SubscriptionListParams{
 		Customer: stripe.String(customerID),
 	}
-	params.AddExpand("data.items.data.price.product")
+	params.AddExpand("data.items.data.price")
 
 	iter := subscription.List(params)
 

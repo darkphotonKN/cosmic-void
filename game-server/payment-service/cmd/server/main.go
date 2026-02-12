@@ -11,6 +11,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
+	"github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
 	"github.com/darkphotonKN/cosmic-void-server/payment-service/config"
 	"github.com/darkphotonKN/cosmic-void-server/payment-service/internal/payment"
 	_ "github.com/joho/godotenv/autoload"
@@ -27,7 +28,10 @@ var (
 	amqpPassword   = commonhelpers.GetEnvString("RABBITMQ_PASS", "guest")
 	amqpHost       = commonhelpers.GetEnvString("RABBITMQ_HOST", "localhost")
 	amqpPort       = commonhelpers.GetEnvString("RABBITMQ_PORT", "5672")
-	stripeSecretKey = commonhelpers.GetEnvString("STRIPE_SECRET_KEY", "")
+	stripeSecretKey    = commonhelpers.GetEnvString("STRIPE_SECRET_KEY", "")
+	stripeWebhookSecret = commonhelpers.GetEnvString("STRIPE_WEBHOOK_SECRET", "")
+	redisAddr          = commonhelpers.GetEnvString("REDIS_ADDR", "localhost:6379")
+	redisPassword      = commonhelpers.GetEnvString("REDIS_PASSWORD", "")
 )
 
 func main() {
@@ -36,6 +40,13 @@ func main() {
 		log.Fatal("STRIPE_SECRET_KEY is required")
 	}
 	stripe.Key = stripeSecretKey
+
+	// --- redis setup ---
+	if err := config.InitRedis(redisAddr, redisPassword, 0); err != nil {
+		log.Fatalf("Failed to init Redis: %v", err)
+	}
+	defer config.CloseRedis()
+	cacheService := cache.NewRedisCache(config.GetRedisClient())
 
 	// --- database setup ---
 	db := config.InitDB()
@@ -86,7 +97,7 @@ func main() {
 	// Initialize layers
 	repo := payment.NewRepository(db)
 	processor := payment.NewStripeProcessor()
-	svc := payment.NewService(repo, processor, ch, registry)
+	svc := payment.NewService(repo, processor, ch, registry, cacheService, stripeWebhookSecret)
 	handler := payment.NewHandler(svc)
 
 	pb.RegisterPaymentServiceServer(grpcServer, handler)

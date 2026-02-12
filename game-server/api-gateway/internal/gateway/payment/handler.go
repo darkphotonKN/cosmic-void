@@ -1,6 +1,7 @@
 package payment
 
 import (
+	"io"
 	"net/http"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/payment"
@@ -152,6 +153,68 @@ func (h *Handler) GetUserSubscriptionsHandler(c *gin.Context) {
 		"statusCode": http.StatusOK,
 		"message":    "Successfully retrieved subscriptions",
 		"result":     resp,
+	})
+}
+
+// WebhookHandler reads the raw Stripe webhook body and forwards it to payment-service.
+// Must NOT use ShouldBindJSON — Stripe signature is calculated from raw bytes.
+func (h *Handler) WebhookHandler(c *gin.Context) {
+	payload, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"statusCode": http.StatusBadRequest,
+			"message":    "Failed to read request body",
+		})
+		return
+	}
+
+	signature := c.GetHeader("Stripe-Signature")
+	if signature == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"statusCode": http.StatusBadRequest,
+			"message":    "Missing Stripe-Signature header",
+		})
+		return
+	}
+
+	resp, err := h.client.ProcessWebhook(c.Request.Context(), &pb.ProcessWebhookRequest{
+		Payload:         payload,
+		StripeSignature: signature,
+	})
+	if err != nil {
+		handleGrpcError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"statusCode": http.StatusOK,
+		"message":    "Webhook processed",
+		"result":     resp,
+	})
+}
+
+func (h *Handler) CheckPermissionHandler(c *gin.Context) {
+	userIdStr, exists := c.Get("userIdStr")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"statusCode": http.StatusUnauthorized,
+			"message":    "User ID not found in context",
+		})
+		return
+	}
+
+	resp, err := h.client.CheckPermission(c.Request.Context(), &pb.CheckPermissionRequest{
+		UserId: userIdStr.(string),
+	})
+	if err != nil {
+		handleGrpcError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"statusCode":     http.StatusOK,
+		"message":        "Permission check successful",
+		"has_permission": resp.HasPermission,
 	})
 }
 

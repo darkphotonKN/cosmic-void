@@ -14,6 +14,10 @@ service PaymentService {
   rpc Subscribe(SubscribeRequest) returns (SubscribeResponse) {}
   // Get all subscriptions for a customer
   rpc GetUserSubscriptions(GetUserSubscriptionsRequest) returns (GetUserSubscriptionsResponse) {}
+  // Process Stripe webhook event
+  rpc ProcessWebhook(ProcessWebhookRequest) returns (ProcessWebhookResponse) {}
+  // Check if a user has an active subscription permission
+  rpc CheckPermission(CheckPermissionRequest) returns (CheckPermissionResponse) {}
 }
 
 // CreateCustomer
@@ -65,4 +69,23 @@ message UserSubscriptionInfo {
 
 message GetUserSubscriptionsResponse {
   repeated UserSubscriptionInfo subscriptions = 1;
+}
+
+// ProcessWebhook - forward raw Stripe webhook for verification and processing
+message ProcessWebhookRequest {
+  bytes payload = 1;
+  string stripe_signature = 2;
+}
+
+message ProcessWebhookResponse {
+  bool success = 1;
+}
+
+// CheckPermission - check if user has active subscription
+message CheckPermissionRequest {
+  string user_id = 1;
+}
+
+message CheckPermissionResponse {
+  bool has_permission = 1;
 }

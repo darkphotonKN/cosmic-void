@@ -41,6 +41,7 @@ type Repository interface {
 	UpdateAvatarURLTx(ctx context.Context, tx *sqlx.Tx, memberID uuid.UUID, avatarURL string) (*models.Member, error)
 	GetStripeCustomerID(ctx context.Context, memberID uuid.UUID) (string, error)
 	SetStripeCustomerID(ctx context.Context, memberID uuid.UUID, customerID string) error
+	UpdateSubscriptionStatus(ctx context.Context, memberID uuid.UUID, productID, status string) error
 }
 
 func NewService(repo Repository, publishCh commonbroker.Publisher, cacheService cache.Cache) *service {
@@ -364,4 +365,18 @@ func (s *service) GetStripeCustomerID(ctx context.Context, req *pb.GetStripeCust
 	}
 
 	return &pb.GetStripeCustomerIDResponse{StripeCustomerId: customerID}, nil
+}
+
+// UpdateSubscriptionStatus updates the member's subscription product and status
+func (s *service) UpdateSubscriptionStatus(ctx context.Context, req *pb.UpdateSubscriptionStatusRequest) (*pb.UpdateSubscriptionStatusResponse, error) {
+	memberID, err := uuid.Parse(req.MemberId)
+	if err != nil {
+		return nil, fmt.Errorf("invalid member UUID: %w", err)
+	}
+
+	if err := s.Repo.UpdateSubscriptionStatus(ctx, memberID, req.ProductId, req.Status); err != nil {
+		return nil, err
+	}
+
+	return &pb.UpdateSubscriptionStatusResponse{Success: true}, nil
 }

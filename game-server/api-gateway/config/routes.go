@@ -112,6 +112,10 @@ func SetupRouter(registry discovery.Registry, ch *amqp.Channel) *gin.Engine {
 	paymentRoutes.POST("/subscription/setup", paymentHandler.SetupSubscriptionHandler)
 	paymentRoutes.POST("/subscribe", paymentHandler.SubscribeHandler)
 	paymentRoutes.GET("/subscriptions/:customerId", paymentHandler.GetUserSubscriptionsHandler)
+	paymentRoutes.GET("/subscription/permission", paymentHandler.CheckPermissionHandler)
+
+	// Stripe Webhook (no auth - Stripe sends POST directly)
+	router.POST("/webhook/stripe", paymentHandler.WebhookHandler)
 
 	// --- ITEMS MICROSERVICE ---
 

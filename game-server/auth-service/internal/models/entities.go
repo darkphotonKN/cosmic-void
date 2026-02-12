@@ -16,7 +16,9 @@ type Member struct {
 	Status        string    `db:"status" json:"status"`
 	AverageRating float64   `db:"average_rating"`
 	AvatarURL        *string `db:"avatar_url" json:"avatar_url,omitempty"`
-	StripeCustomerID *string `db:"stripe_customer_id" json:"stripe_customer_id,omitempty"`
-	CreatedAt     time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt     time.Time `db:"updated_at" json:"updated_at"`
+	StripeCustomerID            *string `db:"stripe_customer_id" json:"stripe_customer_id,omitempty"`
+	StripeSubscriptionProductID *string `db:"stripe_subscription_product_id" json:"stripe_subscription_product_id,omitempty"`
+	StripeSubscriptionStatus    string  `db:"stripe_subscription_status" json:"stripe_subscription_status"`
+	CreatedAt                   time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt                   time.Time `db:"updated_at" json:"updated_at"`
 }
