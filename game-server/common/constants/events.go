@@ -53,6 +53,15 @@ const (
 )
 
 /**
+* Auth RPC Routing Keys
+* NOTE: used for RPC-style calls from api-gateway to auth-service via RabbitMQ
+**/
+const (
+	AuthMemberCreate = "member.create"
+	AuthMemberLogin  = "member.login"
+)
+
+/**
 * Queue Names
 * NOTE: {service}.{domain}.{resource}.{action}
 **/
@@ -62,6 +71,7 @@ const (
 	NotificationMemberSignedUpQueue = "notification.auth.member.signedup"
 	NotificationItemCreatedQueue    = "notification.item.item.created"
 	NotificationDlqQueue            = "notification.dlq"
+	StatsAuthQueue                  = "stats.auth"
 )
 
 /**

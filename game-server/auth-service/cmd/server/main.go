@@ -159,12 +159,12 @@ func main() {
 	}()
 
 	// --- member service setup ---
+	publishCh := commonbroker.NewAmqpPublisher(ch)
 	memberRepo := member.NewRepository(db)
-	memberService := member.NewService(memberRepo, ch, cacheService)
+	memberService := member.NewService(memberRepo, publishCh, cacheService)
 	memberHandler := member.NewHandler(memberService)
 
 	// --- upload service setup ---
-	publishCh := commonbroker.NewAmqpPublisher(ch)
 	if s3Client != nil {
 		uploadRepo := upload.NewRepository(db)
 		logger := slog.Default()
@@ -184,9 +184,12 @@ func main() {
 		pb.RegisterUploadServiceServer(grpcServer, uploadHandler)
 	}
 
-	// consumer := member.NewConsumer(service, ch)
-	// start goroutine and listen to events from message broker
-	// consumer.Listen()
+	// rabbitmq consumer
+	consumer := member.NewConsumer(memberService, publishCh)
+	if err := consumer.SetupConsumer(); err != nil {
+		log.Fatalf("Failed to setup auth RPC infrastructure: %v", err)
+	}
+	consumer.Listen()
 
 	pb.RegisterAuthServiceServer(grpcServer, memberHandler)
 

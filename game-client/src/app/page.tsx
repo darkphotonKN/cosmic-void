@@ -1,15 +1,33 @@
-import Link from 'next/link';
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import ParticleText from '@/components/ParticleText';
 
 export default function Home() {
+  const router = useRouter();
+  const [showHint, setShowHint] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowHint(false), 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center">
-      <h1 className="text-4xl font-bold mb-8 text-[#ff00ff]">Void Raiders</h1>
-      <Link
-        href="/game"
-        className="px-8 py-4 bg-[#ff00ff] text-white text-xl font-bold rounded hover:bg-[#cc00cc] transition-colors"
-      >
-        開始遊戲
-      </Link>
-    </main>
+    <div className="splash-container">
+      <ParticleText />
+      <div className="splash-overlay">
+        <p className="splash-subtitle">NAVIGATE THE COSMOS. SURVIVE THE VOID.</p>
+        <button
+          className="splash-enter-btn"
+          onClick={() => router.push('/login')}
+        >
+          ENTER THE VOID
+        </button>
+        <p className={`splash-hint ${showHint ? '' : 'fade-out'}`}>
+          Move your mouse over the text
+        </p>
+      </div>
+    </div>
   );
 }

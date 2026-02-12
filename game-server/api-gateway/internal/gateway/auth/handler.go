@@ -7,6 +7,7 @@ import (
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/otel"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -28,7 +29,9 @@ type Signup struct {
 }
 
 func (h *Handler) CreateMemberHandler(c *gin.Context) {
-
+	ctx := c.Request.Context()
+	ctx, span := tracer.Start(ctx, "service.CreateMember")
+	defer span.End()
 	var req pb.CreateMemberRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -36,7 +39,7 @@ func (h *Handler) CreateMemberHandler(c *gin.Context) {
 		return
 	}
 
-	member, err := h.client.CreateMember(c.Request.Context(), &req)
+	member, err := h.client.CreateMember(ctx, &req)
 	if err != nil {
 		status, ok := status.FromError(err)
 		if !ok {
@@ -69,16 +72,22 @@ func (h *Handler) CreateMemberHandler(c *gin.Context) {
 	})
 }
 
+var tracer = otel.Tracer("api-gateway")
+
 func (h *Handler) LoginMemberHandler(c *gin.Context) {
+	ctx := c.Request.Context()
+	ctx, span := tracer.Start(ctx, "service.LoginMember")
+	defer span.End()
+	span.AddEvent("start bind json")
 	var req pb.LoginRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"statusCode": http.StatusBadRequest, "message": fmt.Sprintf("Error parsing payload as JSON: %s", err)})
 		return
 	}
-
-	response, err := h.client.LoginMember(c.Request.Context(), &req)
-
+	span.AddEvent("before grpc call")
+	response, err := h.client.LoginMember(ctx, &req)
+	span.AddEvent("after grpc call")
 	if err != nil {
 		status, ok := status.FromError(err)
 

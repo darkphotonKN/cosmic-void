@@ -9,8 +9,8 @@ export default function Header() {
   const pathname = usePathname();
   const { isAuthenticated } = useAuthStore();
 
-  // Don't show header on login/register pages
-  if (pathname === '/login' || pathname === '/register') {
+  // Don't show header on splash, login, or register pages
+  if (pathname === '/' || pathname === '/login' || pathname === '/register') {
     return null;
   }
 
@@ -36,6 +36,12 @@ export default function Header() {
                 className={`nav-link ${pathname === '/leaderboard' ? 'active' : ''}`}
               >
                 Leaderboard
+              </Link>
+              <Link
+                href="/subscription"
+                className={`nav-link ${pathname === '/subscription' ? 'active' : ''}`}
+              >
+                Subscribe
               </Link>
             </nav>
           )}

@@ -6,6 +6,7 @@ use (
 	./common
 	./example-service
 	./game-service
+	./payment-service
 	./stats-service
 	./items-service
 	./notification-service

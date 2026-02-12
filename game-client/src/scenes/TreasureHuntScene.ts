@@ -1182,7 +1182,7 @@ export class TreasureHuntScene extends Phaser.Scene {
 
     for (const building of this.buildings) {
       // 計算門的中心位置
-      const doorWidth = 50;
+      // const doorWidth = 50;
       let doorCenterX = 0;
       let doorCenterY = 0;
 
@@ -1254,7 +1254,7 @@ export class TreasureHuntScene extends Phaser.Scene {
 
   update(): void {
     // 處理移動
-    const speed = 200;
+    // const speed = 200;
     let vx = 0;
     let vy = 0;
 

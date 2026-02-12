@@ -41,6 +41,11 @@ class ApiClient {
 
     const data = await response.json();
 
+    if (response.status === 401) {
+      window.location.href = "/login";
+      throw new Error("Unauthorized");
+    }
+
     if (!response.ok) {
       throw new Error(data.message || `Request failed with status ${response.status}`);
     }
@@ -67,6 +72,19 @@ class ApiClient {
       method: "POST",
       body: { upload_id: uploadId },
     });
+  }
+
+  // Subscribe to a product (backend auto-creates Stripe customer)
+  async subscribe(productId: string, email: string) {
+    return this.request("/api/payment/subscribe", {
+      method: "POST",
+      body: { product_id: productId, email },
+    });
+  }
+
+  // Check subscription permission (polling endpoint)
+  async checkSubscriptionPermission(): Promise<{ has_permission: boolean }> {
+    return this.request("/api/payment/subscription/permission");
   }
 
   // Upload file directly to S3

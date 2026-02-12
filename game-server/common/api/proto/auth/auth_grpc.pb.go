@@ -21,12 +21,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthService_LoginMember_FullMethodName          = "/auth.AuthService/LoginMember"
-	AuthService_GetMember_FullMethodName            = "/auth.AuthService/GetMember"
-	AuthService_CreateMember_FullMethodName         = "/auth.AuthService/CreateMember"
-	AuthService_UpdateMemberInfo_FullMethodName     = "/auth.AuthService/UpdateMemberInfo"
-	AuthService_UpdateMemberPassword_FullMethodName = "/auth.AuthService/UpdateMemberPassword"
-	AuthService_ValidateToken_FullMethodName        = "/auth.AuthService/ValidateToken"
+	AuthService_LoginMember_FullMethodName              = "/auth.AuthService/LoginMember"
+	AuthService_GetMember_FullMethodName                = "/auth.AuthService/GetMember"
+	AuthService_CreateMember_FullMethodName             = "/auth.AuthService/CreateMember"
+	AuthService_UpdateMemberInfo_FullMethodName         = "/auth.AuthService/UpdateMemberInfo"
+	AuthService_UpdateMemberPassword_FullMethodName     = "/auth.AuthService/UpdateMemberPassword"
+	AuthService_ValidateToken_FullMethodName            = "/auth.AuthService/ValidateToken"
+	AuthService_SetStripeCustomerID_FullMethodName      = "/auth.AuthService/SetStripeCustomerID"
+	AuthService_GetStripeCustomerID_FullMethodName      = "/auth.AuthService/GetStripeCustomerID"
+	AuthService_UpdateSubscriptionStatus_FullMethodName = "/auth.AuthService/UpdateSubscriptionStatus"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -47,6 +50,12 @@ type AuthServiceClient interface {
 	UpdateMemberPassword(ctx context.Context, in *UpdatePasswordRequest, opts ...grpc.CallOption) (*UpdatePasswordResponse, error)
 	// Validate token
 	ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error)
+	// Set Stripe customer ID for a member
+	SetStripeCustomerID(ctx context.Context, in *SetStripeCustomerIDRequest, opts ...grpc.CallOption) (*SetStripeCustomerIDResponse, error)
+	// Get Stripe customer ID for a member
+	GetStripeCustomerID(ctx context.Context, in *GetStripeCustomerIDRequest, opts ...grpc.CallOption) (*GetStripeCustomerIDResponse, error)
+	// Update member subscription status
+	UpdateSubscriptionStatus(ctx context.Context, in *UpdateSubscriptionStatusRequest, opts ...grpc.CallOption) (*UpdateSubscriptionStatusResponse, error)
 }
 
 type authServiceClient struct {
@@ -117,6 +126,36 @@ func (c *authServiceClient) ValidateToken(ctx context.Context, in *ValidateToken
 	return out, nil
 }
 
+func (c *authServiceClient) SetStripeCustomerID(ctx context.Context, in *SetStripeCustomerIDRequest, opts ...grpc.CallOption) (*SetStripeCustomerIDResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetStripeCustomerIDResponse)
+	err := c.cc.Invoke(ctx, AuthService_SetStripeCustomerID_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) GetStripeCustomerID(ctx context.Context, in *GetStripeCustomerIDRequest, opts ...grpc.CallOption) (*GetStripeCustomerIDResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetStripeCustomerIDResponse)
+	err := c.cc.Invoke(ctx, AuthService_GetStripeCustomerID_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) UpdateSubscriptionStatus(ctx context.Context, in *UpdateSubscriptionStatusRequest, opts ...grpc.CallOption) (*UpdateSubscriptionStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateSubscriptionStatusResponse)
+	err := c.cc.Invoke(ctx, AuthService_UpdateSubscriptionStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
@@ -135,6 +174,12 @@ type AuthServiceServer interface {
 	UpdateMemberPassword(context.Context, *UpdatePasswordRequest) (*UpdatePasswordResponse, error)
 	// Validate token
 	ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error)
+	// Set Stripe customer ID for a member
+	SetStripeCustomerID(context.Context, *SetStripeCustomerIDRequest) (*SetStripeCustomerIDResponse, error)
+	// Get Stripe customer ID for a member
+	GetStripeCustomerID(context.Context, *GetStripeCustomerIDRequest) (*GetStripeCustomerIDResponse, error)
+	// Update member subscription status
+	UpdateSubscriptionStatus(context.Context, *UpdateSubscriptionStatusRequest) (*UpdateSubscriptionStatusResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -162,6 +207,15 @@ func (UnimplementedAuthServiceServer) UpdateMemberPassword(context.Context, *Upd
 }
 func (UnimplementedAuthServiceServer) ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ValidateToken not implemented")
+}
+func (UnimplementedAuthServiceServer) SetStripeCustomerID(context.Context, *SetStripeCustomerIDRequest) (*SetStripeCustomerIDResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetStripeCustomerID not implemented")
+}
+func (UnimplementedAuthServiceServer) GetStripeCustomerID(context.Context, *GetStripeCustomerIDRequest) (*GetStripeCustomerIDResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetStripeCustomerID not implemented")
+}
+func (UnimplementedAuthServiceServer) UpdateSubscriptionStatus(context.Context, *UpdateSubscriptionStatusRequest) (*UpdateSubscriptionStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateSubscriptionStatus not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -292,6 +346,60 @@ func _AuthService_ValidateToken_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_SetStripeCustomerID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetStripeCustomerIDRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).SetStripeCustomerID(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_SetStripeCustomerID_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).SetStripeCustomerID(ctx, req.(*SetStripeCustomerIDRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_GetStripeCustomerID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetStripeCustomerIDRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).GetStripeCustomerID(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_GetStripeCustomerID_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).GetStripeCustomerID(ctx, req.(*GetStripeCustomerIDRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_UpdateSubscriptionStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateSubscriptionStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).UpdateSubscriptionStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_UpdateSubscriptionStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).UpdateSubscriptionStatus(ctx, req.(*UpdateSubscriptionStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -322,6 +430,18 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ValidateToken",
 			Handler:    _AuthService_ValidateToken_Handler,
+		},
+		{
+			MethodName: "SetStripeCustomerID",
+			Handler:    _AuthService_SetStripeCustomerID_Handler,
+		},
+		{
+			MethodName: "GetStripeCustomerID",
+			Handler:    _AuthService_GetStripeCustomerID_Handler,
+		},
+		{
+			MethodName: "UpdateSubscriptionStatus",
+			Handler:    _AuthService_UpdateSubscriptionStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
