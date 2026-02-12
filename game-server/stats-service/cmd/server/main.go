@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/common/broker"
@@ -34,6 +35,11 @@ var (
 	amqpPassword = commonhelpers.GetEnvString("RABBITMQ_PASS", "guest")
 	amqpHost     = commonhelpers.GetEnvString("RABBITMQ_HOST", "localhost")
 	amqpPort     = commonhelpers.GetEnvString("RABBITMQ_PORT", "5672")
+
+	// redis
+	redisHost = commonhelpers.GetEnvString("REDIS_HOST", "localhost")
+	redisPort = commonhelpers.GetEnvString("REDIS_PORT", "6379")
+	redisDB   = commonhelpers.GetEnvString("REDIS_DB", "0")
 )
 
 func main() {
@@ -57,6 +63,25 @@ func main() {
 	// --- database setup ---
 	db := config.InitDB()
 	defer db.Close()
+
+	// --- redis setup ---
+	redisDBInt, err := strconv.Atoi(redisDB)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = config.InitRedis(config.RedisConfig{
+		Mode:         "standalone",
+		Addrs:        []string{redisHost + ":" + redisPort},
+		Password:     "",
+		DB:           redisDBInt,
+		PoolSize:     10,
+		MinIdleConns: 5,
+	})
+	if err != nil {
+		log.Fatalf("Failed to initialize Redis: %v", err)
+	}
+	defer config.CloseRedis()
 
 	registry, err := consul.NewRegistry(consulAddr, serviceName)
 	if err != nil {
@@ -107,7 +132,7 @@ func main() {
 		ch.Close()
 	}()
 
-	// Use the new config setup to initialize all services
+	// use the new config setup to initialize all services
 	grpcServer = config.SetupServices(db, ch)
 
 	log.Printf("grpc Stats Server started on PORT: %s\n", grpcAddr)

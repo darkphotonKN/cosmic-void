@@ -40,7 +40,6 @@ func (r *redisClient) Close() error {
 	return r.client.Close()
 }
 
-// Lock 獲取分散式鎖
 func (r *redisClient) Lock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
 	lockKey := fmt.Sprintf("lock:%s", key)
 	// SetNX: 只有當 key 不存在時才設置
@@ -52,7 +51,6 @@ func (r *redisClient) Lock(ctx context.Context, key string, ttl time.Duration) (
 	return result, nil
 }
 
-// Unlock 釋放分散式鎖
 func (r *redisClient) Unlock(ctx context.Context, key string) error {
 	lockKey := fmt.Sprintf("lock:%s", key)
 	return r.client.Del(ctx, lockKey).Err()

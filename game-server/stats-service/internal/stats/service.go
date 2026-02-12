@@ -8,30 +8,36 @@ import (
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonutils "github.com/darkphotonKN/cosmic-void-server/common/utils"
+	"github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 
-// Repository interface defines what the service needs from the repository
 type Repository interface {
-	UpsertPlayerMatchStats(ctx context.Context, params *UpdateStatsParams) (*PlayerMatchStats, error)
+	// transaction methods
+	UpsertPlayerMatchStatsTx(ctx context.Context, tx *sqlx.Tx, params *UpdateStatsParams) (*PlayerMatchStats, error)
+	UpsertPlayerRankingStatsTx(ctx context.Context, tx *sqlx.Tx, params *UpdatePlayerRankingsParams) (*PlayerRankingStats, error)
+	CreateMatchHistoryTx(ctx context.Context, tx *sqlx.Tx, history *MatchHistory) error
+	GetPlayerMatchStatsTx(ctx context.Context, tx *sqlx.Tx, memberID uuid.UUID) (*PlayerMatchStats, error)
+	GetPlayerRankingStatsTx(ctx context.Context, tx *sqlx.Tx, memberID uuid.UUID) (*PlayerRankingStats, error)
+
+	// non transaction methods
 	UpsertPlayerRankingStats(ctx context.Context, params *UpdatePlayerRankingsParams) (*PlayerRankingStats, error)
-	CreateMatchHistory(ctx context.Context, history *MatchHistory) error
-	GetPlayerMatchStats(ctx context.Context, memberID uuid.UUID) (*PlayerMatchStats, error)
-	GetPlayerRankingStats(ctx context.Context, memberID uuid.UUID) (*PlayerRankingStats, error)
 }
 
 type service struct {
 	repo      Repository
 	publishCh commonbroker.Publisher
 	db        *sqlx.DB
+	cache     cache.Cache
 }
 
-func NewService(repo Repository, publishCh commonbroker.Publisher, db *sqlx.DB) *service {
+func NewService(repo Repository, publishCh commonbroker.Publisher, db *sqlx.DB, cache cache.Cache) *service {
 	return &service{
 		repo:      repo,
 		publishCh: publishCh,
 		db:        db,
+		cache:     cache,
 	}
 }
 
@@ -55,14 +61,14 @@ func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.MatchEndedE
 		// history and their personal stats
 		err := commonutils.ExecTx(ctx, s.db, func(tx *sqlx.Tx) error {
 			// -- player stats --
-			err := s.updatePlayerStats(ctx, playerResults)
+			err := s.updatePlayerStats(ctx, tx, playerResults)
 			if err != nil {
 				slog.Error("error when updating match stats", "memberID", playerResults.MemberId, "error", err)
 				return err
 			}
 
 			// -- leaderboards --
-			err = s.updateDenormalizedLeaderboard(ctx, playerResults)
+			err = s.updateDenormalizedLeaderboard(ctx, tx, playerResults)
 			if err != nil {
 				slog.Error("error when updating leaderboard stats", "memberID", playerResults.MemberId, "error", err)
 				return err
@@ -91,7 +97,7 @@ func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.MatchEndedE
 				MatchStartedAt: req.MatchStartedAt.AsTime(),
 			}
 
-			err = s.repo.CreateMatchHistory(ctx, matchHistory)
+			err = s.repo.CreateMatchHistoryTx(ctx, tx, matchHistory)
 			if err != nil {
 				slog.Error("error creating match history", "memberID", playerResults.MemberId, "error", err)
 				return err
@@ -117,7 +123,7 @@ func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.MatchEndedE
 	}, nil
 }
 
-func (s *service) updatePlayerStats(ctx context.Context, player *pb.PlayerMatchResult) error {
+func (s *service) updatePlayerStats(ctx context.Context, tx *sqlx.Tx, player *pb.PlayerMatchResult) error {
 	memberId, err := uuid.Parse(player.MemberId)
 	if err != nil {
 		slog.Info("Errored when attempting to get parse member id into UUID", "err", err)
@@ -134,7 +140,7 @@ func (s *service) updatePlayerStats(ctx context.Context, player *pb.PlayerMatchR
 
 	slog.Info("Match history data for player", "player", player, "data", matchHistoryData)
 
-	playerStats, err := s.repo.GetPlayerMatchStats(ctx, memberId)
+	playerStats, err := s.repo.GetPlayerMatchStatsTx(ctx, tx, memberId)
 
 	if err != nil {
 		return err
@@ -165,7 +171,7 @@ func (s *service) updatePlayerStats(ctx context.Context, player *pb.PlayerMatchR
 	}
 
 	// update aggregate stats
-	_, err = s.repo.UpsertPlayerMatchStats(ctx, &UpdateStatsParams{
+	_, err = s.repo.UpsertPlayerMatchStatsTx(ctx, tx, &UpdateStatsParams{
 		MemberID:            playerStats.MemberID,
 		GamesPlayed:         playerStats.GamesPlayed,
 		Wins:                playerStats.Wins,
@@ -192,16 +198,16 @@ func (s *service) calculateMatchAverage(ctx context.Context, matchHistory []*Mat
 }
 
 /**
-* Handles setting up and updating the denormalized leaderboard stats.
+* handles setting up and updating the denormalized leaderboard stats.
 **/
-func (s *service) updateDenormalizedLeaderboard(ctx context.Context, results *pb.PlayerMatchResult) error {
+func (s *service) updateDenormalizedLeaderboard(ctx context.Context, tx *sqlx.Tx, results *pb.PlayerMatchResult) error {
 	memberId, err := uuid.Parse(results.MemberId)
 	if err != nil {
 		slog.Info("Errored when attempting to get parse member id into UUID", "err", err)
 		return err
 	}
 
-	stats, err := s.repo.GetPlayerMatchStats(ctx, memberId)
+	stats, err := s.repo.GetPlayerMatchStatsTx(ctx, tx, memberId)
 
 	if err != nil {
 		return err
@@ -217,7 +223,7 @@ func (s *service) updateDenormalizedLeaderboard(ctx context.Context, results *pb
 	}
 
 	// recalculate rank position
-	rankingStats, err := s.repo.GetPlayerRankingStats(ctx, memberId)
+	rankingStats, err := s.repo.GetPlayerRankingStatsTx(ctx, tx, memberId)
 
 	slog.Debug("getting ranking stats from GetPlayerRankingStats", "rankingStats", rankingStats)
 
@@ -236,7 +242,7 @@ func (s *service) updateDenormalizedLeaderboard(ctx context.Context, results *pb
 		LastCalculatedAt: time.Now(),
 	}
 
-	playerRankingStats, err := s.repo.UpsertPlayerRankingStats(ctx, statsParam)
+	playerRankingStats, err := s.repo.UpsertPlayerRankingStatsTx(ctx, tx, statsParam)
 
 	if err != nil {
 		return err

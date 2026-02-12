@@ -6,6 +6,7 @@ import (
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats"
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
+	"github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
 	"github.com/darkphotonKN/cosmic-void-server/stats-service/internal/stats"
 	"github.com/jmoiron/sqlx"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -17,9 +18,12 @@ func SetupServices(db *sqlx.DB, amqpChannel *amqp.Channel) *grpc.Server {
 	// create repository
 	repo := stats.NewRepository(db)
 
-	// create service with repository and AMQP channel
+	// create cache service
+	cacheService := cache.NewRedisCache(GetClient())
+
+	// create service with repository, AMQP channel, and cache
 	publishCh := commonbroker.NewAmqpPublisher(amqpChannel) // adapter
-	service := stats.NewService(repo, publishCh)
+	service := stats.NewService(repo, publishCh, db, cacheService)
 
 	// create gRPC handler with service
 	handler := stats.NewHandler(service)
