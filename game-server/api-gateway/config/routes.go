@@ -80,6 +80,7 @@ func SetupRouter(registry discovery.Registry) *gin.Engine {
 
 	statsRoutes := api.Group("/stats")
 	statsRoutes.GET("/player/:playerId", statsHandler.GetPlayerStats)
+	statsRoutes.GET("/leaderboard", statsHandler.GetLeaderboard)
 
 	// --- GAME SERVICE ---
 	// TODO: Add game service routes when implemented

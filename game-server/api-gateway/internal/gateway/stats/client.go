@@ -37,3 +37,19 @@ func (c *Client) GetPlayerStats(ctx context.Context, req *pb.GetPlayerMatchStats
 
 	return stats, nil
 }
+
+func (c *Client) GetLeaderboard(ctx context.Context, req *pb.GetLeaderboardRequest) (*pb.GetLeaderboardResponse, error) {
+	conn, err := discovery.ServiceConnection(ctx, serviceName, c.registry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to stats service: %w", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewStatsServiceClient(conn)
+	stats, err := client.GetLeaderboard(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get player stats: %w", err)
+	}
+
+	return stats, nil
+}

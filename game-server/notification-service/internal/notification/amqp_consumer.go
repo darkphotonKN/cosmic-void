@@ -24,8 +24,8 @@ type RetryLevel struct {
 
 var RetryLevels = []RetryLevel{
 	{"retry-1", 5000, 5},   // 第1次重試：等 5 秒
-	{"retry-2", 15000, 15},  // 第2次重試：等 15 秒
-	{"retry-3", 60000, 60},  // 第3次重試：等 60 秒
+	{"retry-2", 15000, 15}, // 第2次重試：等 15 秒
+	{"retry-3", 60000, 60}, // 第3次重試：等 60 秒
 }
 
 // MaxRetries 從 RetryLevels 推導，不用寫死
@@ -223,6 +223,7 @@ func getRetryCount(msg amqp.Delivery) int {
 func (c *Consumer) requeueWithRetry(msg amqp.Delivery, newRetryCount int) error {
 	// 複製 headers
 	headers := amqp.Table{}
+
 	if msg.Headers != nil {
 		for k, v := range msg.Headers {
 			headers[k] = v
@@ -440,3 +441,4 @@ func SetupAMQPInfrastructure(channel *amqp.Channel) error {
 	slog.Info("Notification AMQP infrastructure setup completed")
 	return nil
 }
+

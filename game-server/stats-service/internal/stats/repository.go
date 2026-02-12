@@ -229,7 +229,7 @@ func (r *repository) CreateMatchHistory(ctx context.Context, history *MatchHisto
 
 // UpsertPlayerMatchStatsTx updates player match stats within a transaction
 func (r *repository) UpsertPlayerMatchStatsTx(ctx context.Context, tx *sqlx.Tx, params *UpdateStatsParams) (*PlayerMatchStats, error) {
-	rows, err := tx.NamedQueryContext(ctx, `
+	query := `
 	INSERT INTO player_match_stats (
 			member_id,
 			games_played,
@@ -242,13 +242,7 @@ func (r *repository) UpsertPlayerMatchStatsTx(ctx context.Context, tx *sqlx.Tx, 
 			updated_at
 	)
 	VALUES (
-			:member_id,
-			:games_played,
-			:wins,
-			:losses,
-			:kills,
-			:deaths,
-			:times_placed_top_three,
+			$1, $2, $3, $4, $5, $6, $7,
 			CURRENT_TIMESTAMP,
 			CURRENT_TIMESTAMP
 	)
@@ -262,23 +256,33 @@ func (r *repository) UpsertPlayerMatchStatsTx(ctx context.Context, tx *sqlx.Tx, 
 			times_placed_top_three = EXCLUDED.times_placed_top_three,
 			updated_at = CURRENT_TIMESTAMP
 	RETURNING *;
-`, params)
+	`
+
+	var updated PlayerMatchStats
+	err := tx.QueryRowContext(ctx, query,
+		params.MemberID,
+		params.GamesPlayed,
+		params.Wins,
+		params.Losses,
+		params.Kills,
+		params.Deaths,
+		params.TimesPlacedTopThree,
+	).Scan(
+		&updated.ID,
+		&updated.MemberID,
+		&updated.GamesPlayed,
+		&updated.Wins,
+		&updated.Losses,
+		&updated.Kills,
+		&updated.Deaths,
+		&updated.TimesPlacedTopThree,
+		&updated.CreatedAt,
+		&updated.UpdatedAt,
+	)
 
 	if err != nil {
 		slog.Info("Errored when attempting to update player stats", "err", err)
 		return nil, err
-	}
-
-	defer rows.Close()
-
-	var updated PlayerMatchStats
-
-	if rows.Next() {
-		err = rows.StructScan(&updated)
-
-		if err != nil {
-			return nil, commonutils.AnalyzeDBErr(err)
-		}
 	}
 
 	return &updated, nil
@@ -324,13 +328,7 @@ func (r *repository) UpsertPlayerRankingStatsTx(ctx context.Context, tx *sqlx.Tx
 			member_id, username, wins, top_threes, avatar_url,
 			rating, rank_position
 		) VALUES (
-			:member_id,
-			:username,
-			:wins,
-			:top_threes,
-			:avatar_url,
-			:rating,
-			:rank_position
+			$1, $2, $3, $4, $5, $6, $7
 		)
 		ON CONFLICT (member_id)
 		DO UPDATE SET
@@ -345,29 +343,35 @@ func (r *repository) UpsertPlayerRankingStatsTx(ctx context.Context, tx *sqlx.Tx
 		RETURNING *;
 	`
 
-	rows, err := tx.NamedQueryContext(ctx, query, stats)
+	var updated PlayerRankingStats
+	err := tx.QueryRowContext(ctx, query,
+		stats.MemberID,
+		stats.Username,
+		stats.Wins,
+		stats.TopThrees,
+		stats.AvatarUrl,
+		stats.Rating,
+		stats.RankPosition,
+	).Scan(
+		&updated.ID,
+		&updated.MemberID,
+		&updated.Username,
+		&updated.Wins,
+		&updated.TopThrees,
+		&updated.AvatarUrl,
+		&updated.Rating,
+		&updated.RankPosition,
+		&updated.LastCalculatedAt,
+		&updated.CreatedAt,
+		&updated.UpdatedAt,
+	)
+
 	if err != nil {
 		slog.Error("Could not run upsert to PlayerRankings successfully.",
 			"member_id", stats.MemberID,
 			"error", err,
 		)
 		return nil, commonutils.AnalyzeDBErr(err)
-	}
-
-	defer rows.Close()
-
-	var updated PlayerRankingStats
-
-	if rows.Next() {
-		err = rows.StructScan(&updated)
-
-		if err != nil {
-			slog.Error("Could not scan to row.",
-				"member_id", stats.MemberID,
-				"error", err,
-			)
-			return nil, commonutils.AnalyzeDBErr(err)
-		}
 	}
 
 	return &updated, nil

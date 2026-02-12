@@ -20,7 +20,7 @@ type PlayerMatchStats struct {
 	UpdatedAt           time.Time `db:"updated_at" json:"updated_at"`
 }
 
-// PlayerRankingStats represents ranking and leaderboard data
+// PlayerRankingStats represents ranking and leaderboard data for an inidvidual player
 type PlayerRankingStats struct {
 	ID               uuid.UUID `db:"id" json:"id"`
 	MemberID         uuid.UUID `db:"member_id" json:"member_id"`
@@ -72,6 +72,12 @@ type UpdatePlayerRankingsParams struct {
 	Rating           int       `db:"rating"`
 	RankPosition     *int      `db:"rank_position"`
 	LastCalculatedAt time.Time `db:"last_calculated_at"`
+}
+
+// getting player rankings list, for the full leaderboard
+type GetPlayerRankings struct {
+	limit  int
+	offset int
 }
 
 type ProcessMatchCompletedResponse struct {

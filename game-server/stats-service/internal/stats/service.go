@@ -6,6 +6,7 @@ import (
 	"time"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
+	pbstats "github.com/darkphotonKN/cosmic-void-server/common/api/proto/stats"
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonutils "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
@@ -23,6 +24,7 @@ type Repository interface {
 
 	// non transaction methods
 	UpsertPlayerRankingStats(ctx context.Context, params *UpdatePlayerRankingsParams) (*PlayerRankingStats, error)
+	GetPlayerRankings(ctx context.Context, params *GetPlayerRankings) ([]*PlayerRankingStats, error)
 }
 
 type service struct {
@@ -272,4 +274,38 @@ func (s *service) UpdatePlayerRankings(ctx context.Context, updateData *pb.Membe
 	}
 
 	return nil
+}
+
+/**
+* Grabs leaderboard related data from the player rankings table.
+**/
+
+func (s *service) GetLeaderboard(ctx context.Context, req *pbstats.GetLeaderboardRequest) (*pbstats.GetLeaderboardResponse, error) {
+
+	params := GetPlayerRankings{
+		limit:  int(*req.Limit),
+		offset: int(*req.Offset),
+	}
+
+	playerRankings, err := s.repo.GetPlayerRankings(ctx, &params)
+
+	if err != nil {
+		return nil, err
+	}
+
+	playerRankingsProto := make([]*pbstats.PlayerRankingStats, len(playerRankings))
+
+	for _, playerRanking := range playerRankings {
+		playerRankingsProto := &pbstats.PlayerMatchStats{
+			Id:       playerRanking.ID.String(),
+			MemberId: playerRanking.MemberID.String(),
+			Wins:     int32(playerRanking.Wins),
+		}
+	}
+
+	res := pbstats.GetLeaderboardResponse{
+		Players: playerRankingsProto,
+	}
+
+	return &res, nil
 }

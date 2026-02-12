@@ -8,5 +8,6 @@ import (
 
 type StatsClient interface {
 	GetPlayerStats(ctx context.Context, req *pb.GetPlayerMatchStatsRequest) (*pb.PlayerMatchStats, error)
-}
 
+	GetLeaderboard(ctx context.Context, req *pb.GetLeaderboardRequest) (*pb.GetLeaderboardResponse, error)
+}
