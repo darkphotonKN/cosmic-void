@@ -1,0 +1,762 @@
+{
+  "info": {
+    "name": "Cosmic Void API",
+    "description": "API collection for Cosmic Void - 2D Multiplayer Game Server",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": []
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": []
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "member_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth & Members",
+      "item": [
+        {
+          "name": "Sign Up",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"SecurePassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/member/signup",
+              "host": ["{{base_url}}"],
+              "path": ["api", "member", "signup"]
+            },
+            "description": "Create a new member account (via RabbitMQ RPC)"
+          }
+        },
+        {
+          "name": "Sign In",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Parse the response body",
+                  "const response = pm.response.json();",
+                  "",
+                  "// Check if the request was successful",
+                  "if (pm.response.code === 200 && response.result) {",
+                  "    // Extract the tokens from the response",
+                  "    const accessToken = response.result.access_token;",
+                  "    const refreshToken = response.result.refresh_token;",
+                  "    const memberId = response.result.member_info?.id;",
+                  "    ",
+                  "    // Set the tokens as environment/collection variables",
+                  "    if (accessToken) {",
+                  "        pm.collectionVariables.set('access_token', accessToken);",
+                  "        console.log('Access token saved:', accessToken);",
+                  "    }",
+                  "    ",
+                  "    if (refreshToken) {",
+                  "        pm.collectionVariables.set('refresh_token', refreshToken);",
+                  "        console.log('Refresh token saved');",
+                  "    }",
+                  "    ",
+                  "    if (memberId) {",
+                  "        pm.collectionVariables.set('member_id', memberId);",
+                  "        console.log('Member ID saved:', memberId);",
+                  "    }",
+                  "    ",
+                  "    // Log success",
+                  "    console.log('Login successful! Tokens have been saved to collection variables.');",
+                  "} else {",
+                  "    console.log('Login failed. Please check your credentials.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"SecurePassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/member/signin",
+              "host": ["{{base_url}}"],
+              "path": ["api", "member", "signin"]
+            },
+            "description": "Login member and get access token (via RabbitMQ RPC). This will automatically save the access_token, refresh_token, and member_id to collection variables."
+          }
+        },
+        {
+          "name": "Get Member Info",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/member",
+              "host": ["{{base_url}}"],
+              "path": ["api", "member"]
+            },
+            "description": "Get current member information (requires authentication)"
+          }
+        },
+        {
+          "name": "Update Password",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"OldPassword123!\",\n  \"new_password\": \"NewPassword456!\",\n  \"repeat_new_password\": \"NewPassword456!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/member/update-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "member", "update-password"]
+            },
+            "description": "Update member password (requires authentication)"
+          }
+        },
+        {
+          "name": "Update Member Info",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Doe\",\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/member/update-info",
+              "host": ["{{base_url}}"],
+              "path": ["api", "member", "update-info"]
+            },
+            "description": "Update member information (requires authentication)"
+          }
+        },
+        {
+          "name": "Request Avatar Upload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filename\": \"avatar.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/member/avatar/upload-request",
+              "host": ["{{base_url}}"],
+              "path": ["api", "member", "avatar", "upload-request"]
+            },
+            "description": "Request a pre-signed URL for avatar upload (requires authentication)"
+          }
+        },
+        {
+          "name": "Confirm Avatar Upload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"upload_id\": \"upload-123-xyz\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/member/avatar/confirm",
+              "host": ["{{base_url}}"],
+              "path": ["api", "member", "avatar", "confirm"]
+            },
+            "description": "Confirm avatar upload completion (requires authentication)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stats",
+      "item": [
+        {
+          "name": "Get Player Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/stats/player/:playerId",
+              "host": ["{{base_url}}"],
+              "path": ["api", "stats", "player", ":playerId"],
+              "variable": [
+                {
+                  "key": "playerId",
+                  "value": "{{member_id}}",
+                  "description": "Player ID to get stats for"
+                }
+              ]
+            },
+            "description": "Get statistics for a specific player"
+          }
+        },
+        {
+          "name": "Get Leaderboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/stats/leaderboard?limit=10&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["api", "stats", "leaderboard"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of entries to return"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Offset for pagination"
+                }
+              ]
+            },
+            "description": "Get game leaderboard with pagination"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Items",
+      "item": [
+        {
+          "name": "Create Weapon (Legacy)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"damage\": 50,\n  \"attack_speed\": 1.5,\n  \"range\": 100\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/items/weapon",
+              "host": ["{{base_url}}"],
+              "path": ["api", "items", "weapon"]
+            },
+            "description": "Create weapon without template (legacy API, requires authentication)"
+          }
+        },
+        {
+          "name": "Create Item Template",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Excalibur\",\n  \"description\": \"Legendary sword of kings\",\n  \"type\": \"WEAPON\",\n  \"rarity\": \"LEGENDARY\",\n  \"icon_url\": \"https://example.com/excalibur.png\",\n  \"stackable\": false,\n  \"max_stack\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/items/template",
+              "host": ["{{base_url}}"],
+              "path": ["api", "items", "template"]
+            },
+            "description": "Create item template only (sends notification, requires authentication)"
+          }
+        },
+        {
+          "name": "Create Complete Weapon",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dragon Slayer\",\n  \"description\": \"A mighty sword forged to slay dragons\",\n  \"type\": \"WEAPON\",\n  \"rarity\": \"EPIC\",\n  \"icon_url\": \"https://example.com/dragon-slayer.png\",\n  \"stackable\": false,\n  \"max_stack\": 1,\n  \"damage\": 75,\n  \"attack_speed\": 1.2,\n  \"range\": 120\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/items/complete-weapon",
+              "host": ["{{base_url}}"],
+              "path": ["api", "items", "complete-weapon"]
+            },
+            "description": "Create complete weapon with template (requires authentication)"
+          }
+        },
+        {
+          "name": "Create Complete Armor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dragon Scale Armor\",\n  \"description\": \"Armor made from dragon scales\",\n  \"type\": \"ARMOR\",\n  \"rarity\": \"LEGENDARY\",\n  \"icon_url\": \"https://example.com/dragon-armor.png\",\n  \"stackable\": false,\n  \"max_stack\": 1,\n  \"defense\": 100,\n  \"durability\": 500,\n  \"armor_type\": \"HEAVY\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/items/complete-armor",
+              "host": ["{{base_url}}"],
+              "path": ["api", "items", "complete-armor"]
+            },
+            "description": "Create complete armor with template (requires authentication)"
+          }
+        },
+        {
+          "name": "Create Complete Consumable",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Health Potion\",\n  \"description\": \"Restores 50 HP\",\n  \"type\": \"CONSUMABLE\",\n  \"rarity\": \"COMMON\",\n  \"icon_url\": \"https://example.com/health-potion.png\",\n  \"stackable\": true,\n  \"max_stack\": 99,\n  \"effect\": \"HEAL\",\n  \"value\": 50,\n  \"duration\": 0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/items/complete-consumable",
+              "host": ["{{base_url}}"],
+              "path": ["api", "items", "complete-consumable"]
+            },
+            "description": "Create complete consumable with template (requires authentication)"
+          }
+        },
+        {
+          "name": "List Weapons",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/items/weapons",
+              "host": ["{{base_url}}"],
+              "path": ["api", "items", "weapons"]
+            },
+            "description": "List all weapons with their templates (requires authentication)"
+          }
+        },
+        {
+          "name": "Get Item Types",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/items/types",
+              "host": ["{{base_url}}"],
+              "path": ["api", "items", "types"]
+            },
+            "description": "Get available item types for dropdown options (requires authentication)"
+          }
+        },
+        {
+          "name": "Get Item Rarities",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/items/rarities",
+              "host": ["{{base_url}}"],
+              "path": ["api", "items", "rarities"]
+            },
+            "description": "Get available item rarities for dropdown options (requires authentication)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Get User Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notification/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notification", ""]
+            },
+            "description": "Get notifications for the authenticated user (requires authentication)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payment",
+      "item": [
+        {
+          "name": "Create Customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"customer@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/payment/customer",
+              "host": ["{{base_url}}"],
+              "path": ["api", "payment", "customer"]
+            },
+            "description": "Create Stripe customer (requires authentication)"
+          }
+        },
+        {
+          "name": "Setup Subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": \"cus_XXXXX\",\n  \"price_id\": \"price_XXXXX\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/payment/subscription/setup",
+              "host": ["{{base_url}}"],
+              "path": ["api", "payment", "subscription", "setup"]
+            },
+            "description": "Setup subscription payment intent (requires authentication)"
+          }
+        },
+        {
+          "name": "Subscribe",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": \"cus_XXXXX\",\n  \"payment_method_id\": \"pm_XXXXX\",\n  \"price_id\": \"price_XXXXX\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/payment/subscribe",
+              "host": ["{{base_url}}"],
+              "path": ["api", "payment", "subscribe"]
+            },
+            "description": "Create subscription (requires authentication)"
+          }
+        },
+        {
+          "name": "Get User Subscriptions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/payment/subscriptions/:customerId",
+              "host": ["{{base_url}}"],
+              "path": ["api", "payment", "subscriptions", ":customerId"],
+              "variable": [
+                {
+                  "key": "customerId",
+                  "value": "cus_XXXXX",
+                  "description": "Stripe customer ID"
+                }
+              ]
+            },
+            "description": "Get user subscriptions (requires authentication)"
+          }
+        },
+        {
+          "name": "Check Permission",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/payment/subscription/permission?product_id=prod_XXXXX",
+              "host": ["{{base_url}}"],
+              "path": ["api", "payment", "subscription", "permission"],
+              "query": [
+                {
+                  "key": "product_id",
+                  "value": "prod_XXXXX",
+                  "description": "Product ID to check permission for"
+                }
+              ]
+            },
+            "description": "Check if user has permission for a product (requires authentication)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Example Service",
+      "item": [
+        {
+          "name": "Get Example",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/example/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "example", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "123",
+                  "description": "Example ID"
+                }
+              ]
+            },
+            "description": "Get example by ID"
+          }
+        },
+        {
+          "name": "Create Example",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Example Item\",\n  \"description\": \"This is an example\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/example",
+              "host": ["{{base_url}}"],
+              "path": ["api", "example"]
+            },
+            "description": "Create a new example"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "item": [
+        {
+          "name": "Stripe Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Stripe-Signature",
+                "value": "{{stripe_webhook_signature}}",
+                "description": "Stripe webhook signature for verification"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"payment_intent.succeeded\",\n  \"data\": {\n    \"object\": {\n      \"id\": \"pi_XXXXX\",\n      \"amount\": 2000,\n      \"currency\": \"usd\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/webhook/stripe",
+              "host": ["{{base_url}}"],
+              "path": ["webhook", "stripe"]
+            },
+            "description": "Stripe webhook endpoint (no authentication required, uses Stripe signature)"
+          }
+        }
+      ]
+    }
+  ]
+}
