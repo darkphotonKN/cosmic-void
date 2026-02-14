@@ -10,6 +10,7 @@ import (
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonutils "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
+	commoncache "github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
@@ -282,6 +283,12 @@ func (s *service) UpdatePlayerRankings(ctx context.Context, updateData *pb.Membe
 
 func (s *service) GetLeaderboard(ctx context.Context, req *pbstats.GetLeaderboardRequest) (*pbstats.GetLeaderboardResponse, error) {
 
+	// check cache first
+
+	key := commoncache.GetLeaderboardKey(int(*req.Limit), int(*req.Offset))
+	s.cache.Get(ctx, key)
+
+	// cache stale / invalid, pull from repo
 	params := GetPlayerRankings{
 		limit:  int(*req.Limit),
 		offset: int(*req.Offset),
