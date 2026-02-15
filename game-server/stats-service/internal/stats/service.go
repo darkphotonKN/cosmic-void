@@ -13,6 +13,7 @@ import (
 	commoncache "github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"google.golang.org/protobuf/proto"
 )
 
 type Repository interface {
@@ -282,16 +283,41 @@ func (s *service) UpdatePlayerRankings(ctx context.Context, updateData *pb.Membe
 **/
 
 func (s *service) GetLeaderboard(ctx context.Context, req *pbstats.GetLeaderboardRequest) (*pbstats.GetLeaderboardResponse, error) {
+	limit := 50
+	offset := 0
 
-	// check cache first
+	if req.Limit != nil {
+		limit = int(*req.Limit)
+	}
+	if req.Offset != nil {
+		offset = int(*req.Offset)
+	}
 
-	key := commoncache.GetLeaderboardKey(int(*req.Limit), int(*req.Offset))
-	s.cache.Get(ctx, key)
+	key := commoncache.StatsLeaderboardKey(limit, offset)
+	cachedResStr, err := s.cache.Get(ctx, key)
 
-	// cache stale / invalid, pull from repo
+	if err == nil && cachedResStr != "" {
+		// -- cache exists, return cached data --
+		slog.Info("Getleaderboard cached result", "cachedRes", cachedResStr)
+
+		var cachedResProto pbstats.GetLeaderboardResponse
+		err := proto.Unmarshal([]byte(cachedResStr), &cachedResProto)
+
+		if err == nil {
+			slog.Info("cache hit", "cachedResProto", cachedResProto)
+			return &cachedResProto, nil
+		}
+
+		slog.Warn("Error when attempting to unmarshal proto", "error", err)
+		// goes back to db fetch here
+	}
+
+	// -- cache stale / invalid, pull from repo --
+	slog.Warn("Cached result retreival failed.", "key", key, "error", err)
+
 	params := GetPlayerRankings{
-		limit:  int(*req.Limit),
-		offset: int(*req.Offset),
+		limit:  limit,
+		offset: offset,
 	}
 
 	playerRankings, err := s.repo.GetPlayerRankings(ctx, &params)
@@ -311,13 +337,22 @@ func (s *service) GetLeaderboard(ctx context.Context, req *pbstats.GetLeaderboar
 			AvatarUrl: playerRanking.AvatarUrl,
 			Rating:    int32(playerRanking.Rating),
 		}
-
 		playerRankingsProto[index] = playerRankingProto
 	}
 
 	res := pbstats.GetLeaderboardResponse{
 		Players: playerRankingsProto,
 	}
+
+	// cache results
+	go func() {
+		protoRes, err := proto.Marshal(&res)
+		if err != nil {
+			slog.Warn("could not marshal result for caching, caching failed", "key", key, "error", err)
+			return
+		}
+		s.cache.Set(ctx, key, protoRes, time.Hour*24)
+	}()
 
 	return &res, nil
 }
