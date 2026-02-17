@@ -117,9 +117,19 @@ func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.MatchEndedE
 				"error", err)
 			continue
 		}
+
 	}
 
 	// TODO: call auth service for player information
+
+	// transaction was fine, invalidate cache results for denormalized leaderboard
+	go func() {
+		err := s.cache.Del(ctx, commoncache.StatsLeaderboardKey(50, 0))
+		if err != nil {
+			slog.Warn("Cache would not be deleted")
+			return
+		}
+	}()
 
 	return &ProcessMatchCompletedResponse{
 		Success: true,
@@ -309,11 +319,11 @@ func (s *service) GetLeaderboard(ctx context.Context, req *pbstats.GetLeaderboar
 		}
 
 		slog.Warn("Error when attempting to unmarshal proto", "error", err)
-		// goes back to db fetch here
+		// back to db fetch after this point
 	}
 
 	// -- cache stale / invalid, pull from repo --
-	slog.Warn("Cached result retreival failed.", "key", key, "error", err)
+	slog.Warn("Cached result doesn't exist or retreival failed.", "key", key, "error", err)
 
 	params := GetPlayerRankings{
 		limit:  limit,
