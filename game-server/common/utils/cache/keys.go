@@ -3,13 +3,12 @@ package cache
 import "fmt"
 
 const (
-	leaderboardKeyTemplate = "stats:leaderboard:version:%d:%d"
+	leaderboardKeyTemplate = "stats:leaderboard:v%d:%d:%d"
 	leaderboardVersionKey  = "stats:leaderboard:version"
 )
 
-func StatsLeaderboardKey(limit, offset int) string {
-	leaderboardKey := fmt.Sprintf(leaderboardKeyTemplate, limit, offset)
-	return leaderboardKey
+func StatsLeaderboardKey(version int64, limit, offset int) string {
+	return fmt.Sprintf(leaderboardKeyTemplate, version, limit, offset)
 }
 
 func StatsLeaderboardVersionKey() string {

@@ -3,6 +3,7 @@ package stats
 import (
 	"context"
 	"log/slog"
+	"strconv"
 	"time"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
@@ -123,12 +124,16 @@ func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.MatchEndedE
 	// TODO: call auth service for player information
 
 	// transaction was fine, invalidate cache results for denormalized leaderboard
+	// version increment to invalidate, no deletion needed, short TTL is enough
 	go func() {
-		err := s.cache.Del(ctx, commoncache.StatsLeaderboardKey(50, 0))
+		newVersion, err := s.cache.Incr(context.Background(), commoncache.StatsLeaderboardVersionKey())
+
 		if err != nil {
-			slog.Warn("Cache would not be deleted")
+			slog.Warn("Cache version could not be updated", "error", err)
 			return
 		}
+
+		slog.Info("Cache version updated", "for key", commoncache.StatsLeaderboardVersionKey(), "new version", newVersion)
 	}()
 
 	return &ProcessMatchCompletedResponse{
@@ -299,11 +304,24 @@ func (s *service) GetLeaderboard(ctx context.Context, req *pbstats.GetLeaderboar
 	if req.Limit != nil {
 		limit = int(*req.Limit)
 	}
+
 	if req.Offset != nil {
 		offset = int(*req.Offset)
 	}
 
-	key := commoncache.StatsLeaderboardKey(limit, offset)
+	version, err := s.cache.Get(ctx, commoncache.StatsLeaderboardVersionKey())
+	var versionInt64 int64
+
+	if err != nil {
+		slog.Warn("Cached result for status leaderboard version doesn't exist or retreival failed.", "key", commoncache.StatsLeaderboardVersionKey(), "error", err)
+
+		versionInt64 = int64(1) // default to 1
+	} else {
+		// cache exists, parse into int64
+		versionInt64, _ = strconv.ParseInt(version, 10, 64)
+	}
+
+	key := commoncache.StatsLeaderboardKey(versionInt64, limit, offset)
 	cachedResStr, err := s.cache.Get(ctx, key)
 
 	if err == nil && cachedResStr != "" {
@@ -361,7 +379,8 @@ func (s *service) GetLeaderboard(ctx context.Context, req *pbstats.GetLeaderboar
 			slog.Warn("could not marshal result for caching, caching failed", "key", key, "error", err)
 			return
 		}
-		s.cache.Set(ctx, key, protoRes, time.Hour*24)
+
+		s.cache.Set(context.Background(), key, protoRes, time.Hour*1)
 	}()
 
 	return &res, nil
