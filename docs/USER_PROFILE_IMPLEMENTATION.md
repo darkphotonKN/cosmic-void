@@ -1,11 +1,13 @@
 # User Profile Implementation Guide
 
 ## Overview
+
 This document outlines the implementation of user profiles for the Cosmic Void game, using a denormalized database design for optimal performance.
 
 ## Architecture Decision: Denormalized Design
 
 ### Why Denormalized?
+
 - **Performance**: Single query fetches all user data (no JOINs required)
 - **Caching**: Simpler cache invalidation strategy
 - **Scalability**: Better horizontal scaling capabilities
@@ -448,7 +450,7 @@ func setupMatchEndConsumer(ch *amqp.Channel, memberService *member.Service) {
 Create `game-client/src/services/profileService.ts`:
 
 ```typescript
-import { API_BASE_URL } from '@/config/constants';
+import { API_BASE_URL } from "@/config/constants";
 
 export interface UserProfile {
   id: string;
@@ -484,13 +486,13 @@ export interface LeaderboardEntry {
   score: number;
 }
 
-export type LeaderboardType = 'WINS' | 'WIN_RATE' | 'KD_RATIO' | 'GAMES_PLAYED';
+export type LeaderboardType = "WINS" | "WIN_RATE" | "KD_RATIO" | "GAMES_PLAYED";
 
 class ProfileService {
   private getAuthHeader(token: string) {
     return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     };
   }
 
@@ -500,21 +502,25 @@ class ProfileService {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch profile');
+      throw new Error("Failed to fetch profile");
     }
 
     return response.json();
   }
 
-  async updateProfile(memberId: string, updates: UpdateProfileRequest, token: string): Promise<UserProfile> {
+  async updateProfile(
+    memberId: string,
+    updates: UpdateProfileRequest,
+    token: string,
+  ): Promise<UserProfile> {
     const response = await fetch(`${API_BASE_URL}/api/profile/${memberId}`, {
-      method: 'PATCH',
+      method: "PATCH",
       headers: this.getAuthHeader(token),
       body: JSON.stringify(updates),
     });
 
     if (!response.ok) {
-      throw new Error('Failed to update profile');
+      throw new Error("Failed to update profile");
     }
 
     return response.json();
@@ -522,31 +528,38 @@ class ProfileService {
 
   async uploadAvatar(file: File, token: string): Promise<string> {
     const formData = new FormData();
-    formData.append('avatar', file);
+    formData.append("avatar", file);
 
     const response = await fetch(`${API_BASE_URL}/api/profile/avatar`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: formData,
     });
 
     if (!response.ok) {
-      throw new Error('Failed to upload avatar');
+      throw new Error("Failed to upload avatar");
     }
 
     const data = await response.json();
     return data.avatarUrl;
   }
 
-  async getLeaderboard(type: LeaderboardType, limit: number = 10, token: string): Promise<LeaderboardEntry[]> {
-    const response = await fetch(`${API_BASE_URL}/api/leaderboard?type=${type}&limit=${limit}`, {
-      headers: this.getAuthHeader(token),
-    });
+  async getLeaderboard(
+    type: LeaderboardType,
+    limit: number = 10,
+    token: string,
+  ): Promise<LeaderboardEntry[]> {
+    const response = await fetch(
+      `${API_BASE_URL}/api/leaderboard?type=${type}&limit=${limit}`,
+      {
+        headers: this.getAuthHeader(token),
+      },
+    );
 
     if (!response.ok) {
-      throw new Error('Failed to fetch leaderboard');
+      throw new Error("Failed to fetch leaderboard");
     }
 
     return response.json();
@@ -561,9 +574,14 @@ export const profileService = new ProfileService();
 Create `game-client/src/stores/profileStore.ts`:
 
 ```typescript
-import { create } from 'zustand';
-import { UserProfile, UpdateProfileRequest, LeaderboardEntry, LeaderboardType } from '@/services/profileService';
-import { profileService } from '@/services/profileService';
+import { create } from "zustand";
+import {
+  UserProfile,
+  UpdateProfileRequest,
+  LeaderboardEntry,
+  LeaderboardType,
+} from "@/services/profileService";
+import { profileService } from "@/services/profileService";
 
 interface ProfileState {
   currentProfile: UserProfile | null;
@@ -573,7 +591,11 @@ interface ProfileState {
 
   // Actions
   fetchProfile: (memberId: string, token: string) => Promise<void>;
-  updateProfile: (memberId: string, updates: UpdateProfileRequest, token: string) => Promise<void>;
+  updateProfile: (
+    memberId: string,
+    updates: UpdateProfileRequest,
+    token: string,
+  ) => Promise<void>;
   uploadAvatar: (file: File, memberId: string, token: string) => Promise<void>;
   fetchLeaderboard: (type: LeaderboardType, token: string) => Promise<void>;
   clearProfile: () => void;
@@ -600,10 +622,18 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     }
   },
 
-  updateProfile: async (memberId: string, updates: UpdateProfileRequest, token: string) => {
+  updateProfile: async (
+    memberId: string,
+    updates: UpdateProfileRequest,
+    token: string,
+  ) => {
     set({ isLoading: true, error: null });
     try {
-      const updatedProfile = await profileService.updateProfile(memberId, updates, token);
+      const updatedProfile = await profileService.updateProfile(
+        memberId,
+        updates,
+        token,
+      );
       set({ currentProfile: updatedProfile, isLoading: false });
     } catch (error) {
       set({ error: error.message, isLoading: false });
@@ -623,7 +653,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   fetchLeaderboard: async (type: LeaderboardType, token: string) => {
     try {
       const entries = await profileService.getLeaderboard(type, 10, token);
-      set(state => ({
+      set((state) => ({
         leaderboard: {
           ...state.leaderboard,
           [type]: entries,
@@ -645,16 +675,16 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
 Create `game-client/src/app/profile/page.tsx`:
 
 ```tsx
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { useAuthStore } from '@/stores/authStore';
-import { useProfileStore } from '@/stores/profileStore';
-import { ProfileCard } from '@/components/profile/ProfileCard';
-import { StatsDisplay } from '@/components/profile/StatsDisplay';
-import { EditProfileModal } from '@/components/profile/EditProfileModal';
-import { Leaderboard } from '@/components/profile/Leaderboard';
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { useAuthStore } from "@/stores/authStore";
+import { useProfileStore } from "@/stores/profileStore";
+import { ProfileCard } from "@/components/profile/ProfileCard";
+import { StatsDisplay } from "@/components/profile/StatsDisplay";
+import { EditProfileModal } from "@/components/profile/EditProfileModal";
+import { Leaderboard } from "@/components/profile/Leaderboard";
 
 export default function ProfilePage() {
   const { id } = useParams();
@@ -672,11 +702,19 @@ export default function ProfilePage() {
   }, [profileId, accessToken]);
 
   if (isLoading) {
-    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        Loading...
+      </div>
+    );
   }
 
   if (!currentProfile) {
-    return <div className="flex justify-center items-center h-screen">Profile not found</div>;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        Profile not found
+      </div>
+    );
   }
 
   return (
@@ -719,8 +757,8 @@ export default function ProfilePage() {
 Create `game-client/src/components/profile/ProfileCard.tsx`:
 
 ```tsx
-import { UserProfile } from '@/services/profileService';
-import Image from 'next/image';
+import { UserProfile } from "@/services/profileService";
+import Image from "next/image";
 
 interface ProfileCardProps {
   profile: UserProfile;
@@ -728,7 +766,11 @@ interface ProfileCardProps {
   onEditClick: () => void;
 }
 
-export const ProfileCard: React.FC<ProfileCardProps> = ({ profile, isOwnProfile, onEditClick }) => {
+export const ProfileCard: React.FC<ProfileCardProps> = ({
+  profile,
+  isOwnProfile,
+  onEditClick,
+}) => {
   const formatPlayTime = (minutes: number) => {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
@@ -757,7 +799,9 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ profile, isOwnProfile,
 
       {/* Name and Bio */}
       <div className="text-center mb-4">
-        <h2 className="text-2xl font-bold">{profile.displayName || profile.name}</h2>
+        <h2 className="text-2xl font-bold">
+          {profile.displayName || profile.name}
+        </h2>
         <p className="text-gray-400">@{profile.name}</p>
         {profile.bio && (
           <p className="mt-2 text-sm text-gray-300">{profile.bio}</p>
@@ -813,11 +857,13 @@ router.GET("/api/leaderboard", authMiddleware, handlers.GetLeaderboard)
 ### Backend Tests
 
 1. **Unit Tests**:
+
    - Repository methods with mock DB
    - Service methods with mock repository
    - Profile data validation
 
 2. **Integration Tests**:
+
    - gRPC endpoints with test client
    - RabbitMQ event handling
    - Cache invalidation
@@ -830,6 +876,7 @@ router.GET("/api/leaderboard", authMiddleware, handlers.GetLeaderboard)
 ### Frontend Tests
 
 1. **Component Tests**:
+
    - Profile display with mock data
    - Edit form validation
    - Avatar upload flow
@@ -844,11 +891,13 @@ router.GET("/api/leaderboard", authMiddleware, handlers.GetLeaderboard)
 ### Caching Strategy
 
 1. **Redis Cache**:
+
    - Cache profiles for 5 minutes
    - Cache leaderboards for 1 minute
    - Invalidate on updates
 
 2. **Database Indexes**:
+
    - Index on game stats for leaderboards
    - Composite index for filtered queries
 
@@ -859,11 +908,13 @@ router.GET("/api/leaderboard", authMiddleware, handlers.GetLeaderboard)
 ## Security Considerations
 
 1. **Authorization**:
+
    - Users can only edit their own profile
    - Validate all input data
    - Rate limit profile updates
 
 2. **Data Privacy**:
+
    - Optional fields (bio, avatar) are nullable
    - Email never exposed in public profiles
    - Configurable privacy settings (future)
@@ -889,16 +940,19 @@ router.GET("/api/leaderboard", authMiddleware, handlers.GetLeaderboard)
 ## Future Enhancements
 
 1. **Social Features**:
+
    - Friend system
    - Profile privacy settings
    - Activity feed
 
 2. **Achievements**:
+
    - Achievement badges
    - Milestone tracking
    - Seasonal stats
 
 3. **Advanced Stats**:
+
    - Per-weapon statistics
    - Heat maps
    - Match history

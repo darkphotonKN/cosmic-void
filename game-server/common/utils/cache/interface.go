@@ -13,4 +13,5 @@ type Cache interface {
 	Close() error
 	Lock(ctx context.Context, key string, ttl time.Duration) (bool, error)
 	Unlock(ctx context.Context, key string) error
+	Incr(ctx context.Context, key string) (int64, error)
 }

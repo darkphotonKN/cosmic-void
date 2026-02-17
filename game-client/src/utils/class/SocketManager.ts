@@ -76,10 +76,10 @@ class SocketManager {
       console.error("WebSocket error:", error);
       this.setConnectionStatus("error");
       this.updateStatus("WebSocket Error", "#ff4444");
-      // 連線錯誤時觸發 auth error（可能是 401）
-      if (this.onAuthError) {
-        this.onAuthError();
-      }
+      // Don't trigger auth error on WebSocket errors - we handle these separately
+      // if (this.onAuthError) {
+      //   this.onAuthError();
+      // }
     };
 
     this.socket.onclose = (event) => {

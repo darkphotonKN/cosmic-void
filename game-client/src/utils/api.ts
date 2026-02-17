@@ -42,8 +42,8 @@ class ApiClient {
     const data = await response.json();
 
     if (response.status === 401) {
-      window.location.href = "/login";
-      throw new Error("Unauthorized");
+      // Just throw the error, don't automatically redirect
+      throw new Error(data.message || "Unauthorized");
     }
 
     if (!response.ok) {

@@ -32,12 +32,11 @@ export class BootScene extends Phaser.Scene {
       return;
     }
 
-    // 設定驗證失敗時跳轉到登入頁面
-    socketManager.setOnAuthError(() => {
-      // 清除 localStorage 中的 auth 資料
-      localStorage.removeItem("auth-storage");
-      window.location.href = "/login";
-    });
+    // Remove auth error callback - we don't want to kick out on WebSocket errors
+    // socketManager.setOnAuthError(() => {
+    //   localStorage.removeItem("auth-storage");
+    //   window.location.href = "/login";
+    // });
 
     console.log("token: ", token);
     console.log("name: ", name);

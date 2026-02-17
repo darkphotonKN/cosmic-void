@@ -1,31 +1,31 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { useAuthStore } from '@/stores/authStore';
+import { useEffect, useState } from 'react';
 
 interface AuthGuardProps {
   children: React.ReactNode;
 }
 
 export default function AuthGuard({ children }: AuthGuardProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const { isAuthenticated } = useAuthStore();
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const protectedPaths = ['/game', '/profile'];
-    const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path));
+    // Just a brief delay to ensure client-side hydration
+    const timer = setTimeout(() => {
+      setIsReady(true);
+    }, 10);
 
-    if (isProtectedPath && !isAuthenticated) {
-      router.push(`/login?redirect=${pathname}`);
-    }
+    return () => clearTimeout(timer);
+  }, []);
 
-    // If authenticated and on login/register, redirect to game
-    if (isAuthenticated && (pathname === '/login' || pathname === '/register')) {
-      router.push('/game');
-    }
-  }, [isAuthenticated, pathname, router]);
+  // Brief loading state just for hydration
+  if (!isReady) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-black">
+        <div className="text-cyan-400">Loading...</div>
+      </div>
+    );
+  }
 
   return <>{children}</>;
 }

@@ -1,427 +1,391 @@
 {
-	"info": {
-		"_postman_id": "dropdown-apis-collection",
-		"name": "Cosmic Void - Item Dropdowns",
-		"description": "API collection for fetching item types and rarities dropdown options",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-	},
-	"auth": {
-		"type": "bearer",
-		"bearer": [
-			{
-				"key": "token",
-				"value": "{{authToken}}",
-				"type": "string"
-			}
-		]
-	},
-	"event": [
-		{
-			"listen": "prerequest",
-			"script": {
-				"type": "text/javascript",
-				"exec": [
-					"console.log('Request to:', pm.request.url.toString());",
-					"console.log('Auth Token:', pm.collectionVariables.get('authToken') ? 'Present' : 'Missing');"
-				]
-			}
-		}
-	],
-	"item": [
-		{
-			"name": "1. Login (Get Token)",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"// Parse response",
-							"const response = pm.response.json();",
-							"",
-							"// Log the response",
-							"console.log('Login Response:', response);",
-							"",
-							"// Extract and save token",
-							"if (response.result && response.result.token) {",
-							"    const token = response.result.token;",
-							"    pm.collectionVariables.set('authToken', token);",
-							"    console.log('✅ Token saved:', token.substring(0, 20) + '...');",
-							"    ",
-							"    // Save user ID if available",
-							"    if (response.result.member && response.result.member.id) {",
-							"        pm.collectionVariables.set('userId', response.result.member.id);",
-							"        console.log('✅ User ID saved:', response.result.member.id);",
-							"    }",
-							"} else {",
-							"    console.error('❌ No token found in response');",
-							"}"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"auth": {
-					"type": "noauth"
-				},
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password123\"\n}"
-				},
-				"url": {
-					"raw": "{{baseUrl}}/api/member/signin",
-					"host": [
-						"{{baseUrl}}"
-					],
-					"path": [
-						"api",
-						"member",
-						"signin"
-					]
-				},
-				"description": "Login to get authentication token. The token will be automatically saved and used in subsequent requests."
-			},
-			"response": []
-		},
-		{
-			"name": "2. Get Item Types (Dropdown)",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"// Parse response",
-							"const response = pm.response.json();",
-							"",
-							"// Log the response",
-							"console.log('Item Types Response:', response);",
-							"",
-							"// Display item types",
-							"if (response.result && Array.isArray(response.result)) {",
-							"    console.log('\\n📋 Available Item Types:');",
-							"    response.result.forEach((type, index) => {",
-							"        console.log(`${index + 1}. ${type.name} (ID: ${type.id})`);",
-							"        if (type.description) {",
-							"            console.log(`   Description: ${type.description}`);",
-							"        }",
-							"    });",
-							"    console.log(`\\n✅ Total: ${response.result.length} item types`);",
-							"    ",
-							"    // Save first type ID for testing",
-							"    if (response.result.length > 0) {",
-							"        pm.collectionVariables.set('sampleTypeId', response.result[0].id);",
-							"        console.log('💾 Saved sample type ID:', response.result[0].id);",
-							"    }",
-							"} else {",
-							"    console.error('❌ No item types found in response');",
-							"}"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "GET",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"url": {
-					"raw": "{{baseUrl}}/api/items/types",
-					"host": [
-						"{{baseUrl}}"
-					],
-					"path": [
-						"api",
-						"items",
-						"types"
-					]
-				},
-				"description": "Fetches all item types (weapon, armor, consumable) for dropdown menus. Requires authentication."
-			},
-			"response": []
-		},
-		{
-			"name": "3. Get Item Rarities (Dropdown)",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"// Parse response",
-							"const response = pm.response.json();",
-							"",
-							"// Log the response",
-							"console.log('Item Rarities Response:', response);",
-							"",
-							"// Display item rarities",
-							"if (response.result && Array.isArray(response.result)) {",
-							"    console.log('\\n✨ Available Item Rarities:');",
-							"    response.result.forEach((rarity, index) => {",
-							"        console.log(`${index + 1}. ${rarity.name} (ID: ${rarity.id})`);",
-							"    });",
-							"    console.log(`\\n✅ Total: ${response.result.length} rarities`);",
-							"    ",
-							"    // Save first rarity ID for testing",
-							"    if (response.result.length > 0) {",
-							"        pm.collectionVariables.set('sampleRarityId', response.result[0].id);",
-							"        console.log('💾 Saved sample rarity ID:', response.result[0].id);",
-							"    }",
-							"} else {",
-							"    console.error('❌ No item rarities found in response');",
-							"}"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "GET",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"url": {
-					"raw": "{{baseUrl}}/api/items/rarities",
-					"host": [
-						"{{baseUrl}}"
-					],
-					"path": [
-						"api",
-						"items",
-						"rarities"
-					]
-				},
-				"description": "Fetches all item rarities (common, rare, epic, legendary) for dropdown menus. Requires authentication."
-			},
-			"response": []
-		},
-		{
-			"name": "4. Create Complete Weapon (Using Dropdown Values)",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"// Parse response",
-							"const response = pm.response.json();",
-							"",
-							"// Log the response",
-							"console.log('Create Weapon Response:', response);",
-							"",
-							"// Display created weapon info",
-							"if (response.result) {",
-							"    console.log('\\n⚔️ Weapon Created Successfully!');",
-							"    console.log('Weapon ID:', response.result.id);",
-							"    console.log('Item Name:', response.result.item_name);",
-							"    console.log('Item Code:', response.result.item_code);",
-							"    console.log('Attack Power:', response.result.attack_power);",
-							"    console.log('Durability:', response.result.durability);",
-							"    console.log('Critical Rate:', response.result.critical_rate);",
-							"    console.log('\\n✅', response.message);",
-							"} else {",
-							"    console.error('❌ Weapon creation failed');",
-							"}"
-						],
-						"type": "text/javascript"
-					}
-				},
-				{
-					"listen": "prerequest",
-					"script": {
-						"exec": [
-							"// Check if we have type_id and rarity_id from previous requests",
-							"const typeId = pm.collectionVariables.get('sampleTypeId');",
-							"const rarityId = pm.collectionVariables.get('sampleRarityId');",
-							"",
-							"if (!typeId || !rarityId) {",
-							"    console.warn('⚠️ Warning: type_id or rarity_id not found.');",
-							"    console.warn('Please run \"Get Item Types\" and \"Get Item Rarities\" first!');",
-							"} else {",
-							"    console.log('✅ Using type_id:', typeId);",
-							"    console.log('✅ Using rarity_id:', rarityId);",
-							"}"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"item_name\": \"Thunder Blade\",\n  \"item_code\": \"THUNDER_BLADE_001\",\n  \"icon_url\": \"https://example.com/icons/thunder_blade.png\",\n  \"is_tradeable\": true,\n  \"is_droppable\": true,\n  \"required_level\": 10,\n  \"base_sell_price\": 500,\n  \"base_buy_price\": 1000,\n  \"type_id\": \"{{sampleTypeId}}\",\n  \"rarity_id\": \"{{sampleRarityId}}\",\n  \"attack_power\": 150,\n  \"durability\": 100,\n  \"critical_rate\": 0.15,\n  \"weapon_type\": \"sword\",\n  \"description\": \"A powerful blade infused with lightning magic\"\n}"
-				},
-				"url": {
-					"raw": "{{baseUrl}}/api/items/complete-weapon",
-					"host": [
-						"{{baseUrl}}"
-					],
-					"path": [
-						"api",
-						"items",
-						"complete-weapon"
-					]
-				},
-				"description": "Creates a complete weapon using type_id and rarity_id from dropdown APIs. Automatically creates both weapon and item template, then sends notification."
-			},
-			"response": []
-		},
-		{
-			"name": "5. Get Notifications",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"// Parse response",
-							"const response = pm.response.json();",
-							"",
-							"// Log the response",
-							"console.log('Notifications Response:', response);",
-							"",
-							"// Display notifications",
-							"if (response.result && Array.isArray(response.result)) {",
-							"    console.log('\\n🔔 Notifications:');",
-							"    response.result.forEach((notif, index) => {",
-							"        console.log(`\\n${index + 1}. ${notif.type}`);",
-							"        console.log(`   Message: ${notif.message}`);",
-							"        console.log(`   Read: ${notif.is_read}`);",
-							"        console.log(`   Created: ${notif.created_at}`);",
-							"        if (notif.data) {",
-							"            console.log(`   Data:`, notif.data);",
-							"        }",
-							"    });",
-							"    console.log(`\\n✅ Total: ${response.result.length} notifications`);",
-							"} else {",
-							"    console.log('📭 No notifications found');",
-							"}"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "GET",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"url": {
-					"raw": "{{baseUrl}}/api/notification/",
-					"host": [
-						"{{baseUrl}}"
-					],
-					"path": [
-						"api",
-						"notification",
-						""
-					]
-				},
-				"description": "Fetches all notifications for the authenticated user. Should show notification for the created weapon."
-			},
-			"response": []
-		},
-		{
-			"name": "6. List All Weapons",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"// Parse response",
-							"const response = pm.response.json();",
-							"",
-							"// Log the response",
-							"console.log('Weapons List Response:', response);",
-							"",
-							"// Display weapons",
-							"if (response.weapons && Array.isArray(response.weapons)) {",
-							"    console.log('\\n⚔️ Weapons List:');",
-							"    response.weapons.forEach((weapon, index) => {",
-							"        console.log(`\\n${index + 1}. ${weapon.item_name} (${weapon.item_code})`);",
-							"        console.log(`   Attack Power: ${weapon.attack_power}`);",
-							"        console.log(`   Durability: ${weapon.durability}`);",
-							"        console.log(`   Price: ${weapon.base_buy_price} (buy) / ${weapon.base_sell_price} (sell)`);",
-							"        console.log(`   Required Level: ${weapon.required_level}`);",
-							"    });",
-							"    console.log(`\\n✅ Total: ${response.weapons.length} weapons`);",
-							"} else {",
-							"    console.log('📭 No weapons found');",
-							"}"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "GET",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"url": {
-					"raw": "{{baseUrl}}/api/items/weapons",
-					"host": [
-						"{{baseUrl}}"
-					],
-					"path": [
-						"api",
-						"items",
-						"weapons"
-					]
-				},
-				"description": "Lists all weapons with their item templates. Should show the newly created weapon."
-			},
-			"response": []
-		}
-	],
-	"variable": [
-		{
-			"key": "baseUrl",
-			"value": "http://localhost:8080",
-			"type": "string"
-		},
-		{
-			"key": "authToken",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "userId",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "sampleTypeId",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "sampleRarityId",
-			"value": "",
-			"type": "string"
-		}
-	]
+  "info": {
+    "_postman_id": "dropdown-apis-collection",
+    "name": "Cosmic Void - Item Dropdowns",
+    "description": "API collection for fetching item types and rarities dropdown options",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "console.log('Request to:', pm.request.url.toString());",
+          "console.log('Auth Token:', pm.collectionVariables.get('authToken') ? 'Present' : 'Missing');"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Login (Get Token)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Parse response",
+              "const response = pm.response.json();",
+              "",
+              "// Log the response",
+              "console.log('Login Response:', response);",
+              "",
+              "// Extract and save token",
+              "if (response.result && response.result.token) {",
+              "    const token = response.result.token;",
+              "    pm.collectionVariables.set('authToken', token);",
+              "    console.log('✅ Token saved:', token.substring(0, 20) + '...');",
+              "    ",
+              "    // Save user ID if available",
+              "    if (response.result.member && response.result.member.id) {",
+              "        pm.collectionVariables.set('userId', response.result.member.id);",
+              "        console.log('✅ User ID saved:', response.result.member.id);",
+              "    }",
+              "} else {",
+              "    console.error('❌ No token found in response');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password123\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/member/signin",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "member", "signin"]
+        },
+        "description": "Login to get authentication token. The token will be automatically saved and used in subsequent requests."
+      },
+      "response": []
+    },
+    {
+      "name": "2. Get Item Types (Dropdown)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Parse response",
+              "const response = pm.response.json();",
+              "",
+              "// Log the response",
+              "console.log('Item Types Response:', response);",
+              "",
+              "// Display item types",
+              "if (response.result && Array.isArray(response.result)) {",
+              "    console.log('\\n📋 Available Item Types:');",
+              "    response.result.forEach((type, index) => {",
+              "        console.log(`${index + 1}. ${type.name} (ID: ${type.id})`);",
+              "        if (type.description) {",
+              "            console.log(`   Description: ${type.description}`);",
+              "        }",
+              "    });",
+              "    console.log(`\\n✅ Total: ${response.result.length} item types`);",
+              "    ",
+              "    // Save first type ID for testing",
+              "    if (response.result.length > 0) {",
+              "        pm.collectionVariables.set('sampleTypeId', response.result[0].id);",
+              "        console.log('💾 Saved sample type ID:', response.result[0].id);",
+              "    }",
+              "} else {",
+              "    console.error('❌ No item types found in response');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/items/types",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "items", "types"]
+        },
+        "description": "Fetches all item types (weapon, armor, consumable) for dropdown menus. Requires authentication."
+      },
+      "response": []
+    },
+    {
+      "name": "3. Get Item Rarities (Dropdown)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Parse response",
+              "const response = pm.response.json();",
+              "",
+              "// Log the response",
+              "console.log('Item Rarities Response:', response);",
+              "",
+              "// Display item rarities",
+              "if (response.result && Array.isArray(response.result)) {",
+              "    console.log('\\n✨ Available Item Rarities:');",
+              "    response.result.forEach((rarity, index) => {",
+              "        console.log(`${index + 1}. ${rarity.name} (ID: ${rarity.id})`);",
+              "    });",
+              "    console.log(`\\n✅ Total: ${response.result.length} rarities`);",
+              "    ",
+              "    // Save first rarity ID for testing",
+              "    if (response.result.length > 0) {",
+              "        pm.collectionVariables.set('sampleRarityId', response.result[0].id);",
+              "        console.log('💾 Saved sample rarity ID:', response.result[0].id);",
+              "    }",
+              "} else {",
+              "    console.error('❌ No item rarities found in response');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/items/rarities",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "items", "rarities"]
+        },
+        "description": "Fetches all item rarities (common, rare, epic, legendary) for dropdown menus. Requires authentication."
+      },
+      "response": []
+    },
+    {
+      "name": "4. Create Complete Weapon (Using Dropdown Values)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Parse response",
+              "const response = pm.response.json();",
+              "",
+              "// Log the response",
+              "console.log('Create Weapon Response:', response);",
+              "",
+              "// Display created weapon info",
+              "if (response.result) {",
+              "    console.log('\\n⚔️ Weapon Created Successfully!');",
+              "    console.log('Weapon ID:', response.result.id);",
+              "    console.log('Item Name:', response.result.item_name);",
+              "    console.log('Item Code:', response.result.item_code);",
+              "    console.log('Attack Power:', response.result.attack_power);",
+              "    console.log('Durability:', response.result.durability);",
+              "    console.log('Critical Rate:', response.result.critical_rate);",
+              "    console.log('\\n✅', response.message);",
+              "} else {",
+              "    console.error('❌ Weapon creation failed');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Check if we have type_id and rarity_id from previous requests",
+              "const typeId = pm.collectionVariables.get('sampleTypeId');",
+              "const rarityId = pm.collectionVariables.get('sampleRarityId');",
+              "",
+              "if (!typeId || !rarityId) {",
+              "    console.warn('⚠️ Warning: type_id or rarity_id not found.');",
+              "    console.warn('Please run \"Get Item Types\" and \"Get Item Rarities\" first!');",
+              "} else {",
+              "    console.log('✅ Using type_id:', typeId);",
+              "    console.log('✅ Using rarity_id:', rarityId);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"item_name\": \"Thunder Blade\",\n  \"item_code\": \"THUNDER_BLADE_001\",\n  \"icon_url\": \"https://example.com/icons/thunder_blade.png\",\n  \"is_tradeable\": true,\n  \"is_droppable\": true,\n  \"required_level\": 10,\n  \"base_sell_price\": 500,\n  \"base_buy_price\": 1000,\n  \"type_id\": \"{{sampleTypeId}}\",\n  \"rarity_id\": \"{{sampleRarityId}}\",\n  \"attack_power\": 150,\n  \"durability\": 100,\n  \"critical_rate\": 0.15,\n  \"weapon_type\": \"sword\",\n  \"description\": \"A powerful blade infused with lightning magic\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/items/complete-weapon",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "items", "complete-weapon"]
+        },
+        "description": "Creates a complete weapon using type_id and rarity_id from dropdown APIs. Automatically creates both weapon and item template, then sends notification."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Get Notifications",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Parse response",
+              "const response = pm.response.json();",
+              "",
+              "// Log the response",
+              "console.log('Notifications Response:', response);",
+              "",
+              "// Display notifications",
+              "if (response.result && Array.isArray(response.result)) {",
+              "    console.log('\\n🔔 Notifications:');",
+              "    response.result.forEach((notif, index) => {",
+              "        console.log(`\\n${index + 1}. ${notif.type}`);",
+              "        console.log(`   Message: ${notif.message}`);",
+              "        console.log(`   Read: ${notif.is_read}`);",
+              "        console.log(`   Created: ${notif.created_at}`);",
+              "        if (notif.data) {",
+              "            console.log(`   Data:`, notif.data);",
+              "        }",
+              "    });",
+              "    console.log(`\\n✅ Total: ${response.result.length} notifications`);",
+              "} else {",
+              "    console.log('📭 No notifications found');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/notification/",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "notification", ""]
+        },
+        "description": "Fetches all notifications for the authenticated user. Should show notification for the created weapon."
+      },
+      "response": []
+    },
+    {
+      "name": "6. List All Weapons",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Parse response",
+              "const response = pm.response.json();",
+              "",
+              "// Log the response",
+              "console.log('Weapons List Response:', response);",
+              "",
+              "// Display weapons",
+              "if (response.weapons && Array.isArray(response.weapons)) {",
+              "    console.log('\\n⚔️ Weapons List:');",
+              "    response.weapons.forEach((weapon, index) => {",
+              "        console.log(`\\n${index + 1}. ${weapon.item_name} (${weapon.item_code})`);",
+              "        console.log(`   Attack Power: ${weapon.attack_power}`);",
+              "        console.log(`   Durability: ${weapon.durability}`);",
+              "        console.log(`   Price: ${weapon.base_buy_price} (buy) / ${weapon.base_sell_price} (sell)`);",
+              "        console.log(`   Required Level: ${weapon.required_level}`);",
+              "    });",
+              "    console.log(`\\n✅ Total: ${response.weapons.length} weapons`);",
+              "} else {",
+              "    console.log('📭 No weapons found');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/items/weapons",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "items", "weapons"]
+        },
+        "description": "Lists all weapons with their item templates. Should show the newly created weapon."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sampleTypeId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sampleRarityId",
+      "value": "",
+      "type": "string"
+    }
+  ]
 }
