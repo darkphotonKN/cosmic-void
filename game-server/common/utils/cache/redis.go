@@ -55,6 +55,8 @@ func (r *redisClient) Unlock(ctx context.Context, key string) error {
 	lockKey := fmt.Sprintf("lock:%s", key)
 	return r.client.Del(ctx, lockKey).Err()
 }
+
+// increments and returns new version key
 func (r *redisClient) Incr(ctx context.Context, key string) (int64, error) {
 	return r.client.Incr(ctx, key).Result()
 }
