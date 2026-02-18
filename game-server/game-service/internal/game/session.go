@@ -284,8 +284,6 @@ func (s *Session) manageClientMessages() {
 * runs system code to update state of game x times every second.
 **/
 func (s *Session) manageGameLoop() {
-	// NOTE: keep for tracking game loop performance
-	tickStart := time.Now()
 
 	ticker := time.NewTicker((1 * time.Second) / time.Duration(constants.GameFrameRate))
 	defer ticker.Stop()
@@ -293,6 +291,9 @@ func (s *Session) manageGameLoop() {
 	for {
 		select {
 		case <-ticker.C:
+			// NOTE: keep for tracking game loop performance
+			tickStart := time.Now()
+
 			// TEST: exclude game loop for tests
 			if s.TestMessageSpy != nil {
 				return

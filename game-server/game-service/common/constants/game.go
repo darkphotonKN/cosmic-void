@@ -8,6 +8,7 @@ const (
 	ActionQueue      Action = "queue"
 	ActionFindGame   Action = "find_game"
 	ActionLeaveQueue Action = "leave_queue"
+	ActionLeaveGame  Action = "leave_game"
 
 	// active game actions
 	ActionMove     Action = "move"
