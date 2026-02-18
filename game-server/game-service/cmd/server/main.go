@@ -17,6 +17,7 @@ import (
 	commontelemetry "github.com/darkphotonKN/cosmic-void-server/common/telemetry"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/config"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components/metrics"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -59,6 +60,8 @@ func main() {
 	commonhelpers.SetupLogger(environment)
 
 	// --- observability ---
+
+	// -- default --
 	shutdown, err := commontelemetry.Init(ctx, commontelemetry.Config{
 		ServiceName:       serviceName,
 		ServiceVersion:    serviceVersion,
@@ -69,6 +72,12 @@ func main() {
 		log.Fatal(err)
 	}
 	defer shutdown(ctx)
+
+	// -- custom metrics --
+	err = metrics.Init()
+	if err != nil {
+		log.Printf("\ncustom metrics setup init errored. Error: %w\n\n", err)
+	}
 
 	// --- database setup ---
 

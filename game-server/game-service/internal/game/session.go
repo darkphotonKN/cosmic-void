@@ -13,6 +13,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	grpcitems "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/items"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components/metrics"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/serializer"
@@ -283,6 +284,9 @@ func (s *Session) manageClientMessages() {
 * runs system code to update state of game x times every second.
 **/
 func (s *Session) manageGameLoop() {
+	// NOTE: keep for tracking game loop performance
+	tickStart := time.Now()
+
 	ticker := time.NewTicker((1 * time.Second) / time.Duration(constants.GameFrameRate))
 	defer ticker.Stop()
 
@@ -312,6 +316,10 @@ func (s *Session) manageGameLoop() {
 				slog.Error("Error broadcasting state", "error", err)
 				continue
 			}
+
+			// NOTE: record metrics for tick duration and include entity count for reference
+			metrics.TickDuration.Record(context.Background(), time.Since(tickStart).Seconds())
+			metrics.EntityCount.Record(context.Background(), int64(len(entities)))
 		case <-s.stopChan:
 			slog.Info("Game session game loop stopped", "sessionID", s.ID)
 			return

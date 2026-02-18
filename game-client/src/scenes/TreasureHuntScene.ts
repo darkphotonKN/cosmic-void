@@ -8,6 +8,7 @@ import { ActionType } from "@/assets/types/client";
 import { socketManager } from "@/utils/class/SocketManager";
 import { ClientGameState, ContainerState, ItemState } from "@/types/gameState";
 import { GameStateLogger } from "@/utils/gameStateLogger";
+import { AstronautSpriteGenerator } from "@/utils/spriteGenerator";
 
 interface Building {
   id: string;
@@ -31,6 +32,12 @@ export class TreasureHuntScene extends Phaser.Scene {
   private otherPlayers: Map<string, Phaser.Physics.Arcade.Sprite> = new Map();
   private otherPlayersTargets: Map<string, { x: number; y: number }> =
     new Map();
+
+  // sprite animation tracking
+  private playerDirection: string = 'S';
+  private playerMoving: boolean = false;
+  private otherPlayersDirection: Map<string, string> = new Map();
+  private otherPlayersMoving: Map<string, boolean> = new Map();
 
   // Controls
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -87,31 +94,69 @@ export class TreasureHuntScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.createPlayerTexture();
-    this.createOtherPlayerTexture();
+    // generate astronaut sprite sheets
+    const spriteGen = new AstronautSpriteGenerator();
+    const playerSpriteData = spriteGen.generateSpriteSheet();
+    const otherPlayerSpriteData = spriteGen.generateOtherPlayerSpriteSheet();
+
+    // load generated sprite sheets
+    this.textures.addBase64('astronaut', playerSpriteData);
+    this.textures.addBase64('astronaut_other', otherPlayerSpriteData);
+
+    // still need chest textures
     this.createChestTextures();
   }
 
-  private createPlayerTexture(): void {
-    const graphics = this.make.graphics({});
-    graphics.fillStyle(0x4ecca3, 1);
-    graphics.fillCircle(20, 20, 18);
-    graphics.fillStyle(0xffffff, 1);
-    graphics.fillCircle(14, 16, 4);
-    graphics.fillCircle(26, 16, 4);
-    graphics.generateTexture("player", 40, 40);
-    graphics.destroy();
+  private createPlayerAnimations(): void {
+    // create animations for player astronaut
+    const directions = ['S', 'SW', 'W', 'NW', 'N', 'NE', 'E', 'SE'];
+
+    directions.forEach((dir, index) => {
+      // idle animation
+      this.anims.create({
+        key: `player_idle_${dir}`,
+        frames: [{ key: 'astronaut', frame: index * 5 }],
+        frameRate: 1,
+        repeat: -1
+      });
+
+      // walking animation
+      this.anims.create({
+        key: `player_walk_${dir}`,
+        frames: this.anims.generateFrameNumbers('astronaut', {
+          start: index * 5 + 1,
+          end: index * 5 + 4
+        }),
+        frameRate: 8,
+        repeat: -1
+      });
+    });
   }
 
-  private createOtherPlayerTexture(): void {
-    const graphics = this.make.graphics({});
-    graphics.fillStyle(0xff6b6b, 1); // Red color for other players
-    graphics.fillCircle(20, 20, 18);
-    graphics.fillStyle(0xffffff, 1);
-    graphics.fillCircle(14, 16, 4);
-    graphics.fillCircle(26, 16, 4);
-    graphics.generateTexture("otherPlayer", 40, 40);
-    graphics.destroy();
+  private createOtherPlayerAnimations(): void {
+    // create animations for other players
+    const directions = ['S', 'SW', 'W', 'NW', 'N', 'NE', 'E', 'SE'];
+
+    directions.forEach((dir, index) => {
+      // idle animation
+      this.anims.create({
+        key: `other_idle_${dir}`,
+        frames: [{ key: 'astronaut_other', frame: index * 5 }],
+        frameRate: 1,
+        repeat: -1
+      });
+
+      // walking animation
+      this.anims.create({
+        key: `other_walk_${dir}`,
+        frames: this.anims.generateFrameNumbers('astronaut_other', {
+          start: index * 5 + 1,
+          end: index * 5 + 4
+        }),
+        frameRate: 8,
+        repeat: -1
+      });
+    });
   }
 
   private createChestTextures(): void {
@@ -531,9 +576,15 @@ export class TreasureHuntScene extends Phaser.Scene {
   }
 
   private createPlayer(x: number, y: number): void {
-    this.player = this.physics.add.sprite(x, y, "player");
+    this.player = this.physics.add.sprite(x, y, "astronaut");
     this.player.setCollideWorldBounds(true);
     this.player.setDepth(100);
+
+    // set circular physics body to match backend collision (radius 20)
+    this.player.body.setCircle(20, -2, -2); // slight offset to center
+
+    // start with idle animation facing south
+    this.player.play('player_idle_S');
 
     // 玩家與所有建築牆壁/門碰撞
     this.buildings.forEach((building) => {
@@ -549,13 +600,17 @@ export class TreasureHuntScene extends Phaser.Scene {
     // Connect via SocketManager instead of direct WebSocket
     this.connectToServer();
 
-    // 設置世界邊界
+    // create sprite animations before anything else
+    this.createPlayerAnimations();
+    this.createOtherPlayerAnimations();
+
+    // setup world boundaries
     this.physics.world.setBounds(0, 0, this.mapWidth, this.mapHeight);
 
-    // 創建地圖背景
+    // create map background with cosmic theme
     this.createMapBackground();
 
-    // 創建建築
+    // create buildings
     this.createBuildings();
 
     // 寶箱由後端同步，不在這裡創建
@@ -752,10 +807,19 @@ export class TreasureHuntScene extends Phaser.Scene {
         sprite = this.physics.add.sprite(
           playerData.position.x,
           playerData.position.y,
-          "otherPlayer",
+          "astronaut_other",
         );
         sprite.setDepth(99);
+
+        // set circular physics body
+        sprite.body.setCircle(20, -2, -2);
+
+        // start with idle animation
+        sprite.play('other_idle_S');
+
         this.otherPlayers.set(playerData.id, sprite);
+        this.otherPlayersDirection.set(playerData.id, 'S');
+        this.otherPlayersMoving.set(playerData.id, false);
       }
 
       // 設定目標位置，在 update() 中平滑移動
@@ -769,12 +833,58 @@ export class TreasureHuntScene extends Phaser.Scene {
   private createMapBackground(): void {
     const graphics = this.add.graphics();
 
-    // 背景色
-    graphics.fillStyle(0x1a1a2e, 1);
-    graphics.fillRect(0, 0, this.mapWidth, this.mapHeight);
+    // cosmic background gradient
+    const gradient = this.add.graphics();
+    for (let i = 0; i < this.mapHeight; i++) {
+      const ratio = i / this.mapHeight;
+      const color = Phaser.Display.Color.Interpolate.ColorWithColor(
+        { r: 10, g: 10, b: 20 },
+        { r: 30, g: 15, b: 60 },
+        1,
+        ratio
+      );
+      gradient.fillStyle(Phaser.Display.Color.GetColor(color.r, color.g, color.b), 1);
+      gradient.fillRect(0, i, this.mapWidth, 1);
+    }
+    gradient.setDepth(-2);
 
-    // 格線
-    graphics.lineStyle(1, 0x333355, 0.3);
+    // add stars for cosmic effect
+    const starGraphics = this.add.graphics();
+    for (let i = 0; i < 100; i++) {
+      const x = Phaser.Math.Between(0, this.mapWidth);
+      const y = Phaser.Math.Between(0, this.mapHeight);
+      const size = Phaser.Math.FloatBetween(0.5, 2);
+      const alpha = Phaser.Math.FloatBetween(0.3, 0.9);
+
+      starGraphics.fillStyle(0xffffff, alpha);
+      starGraphics.fillCircle(x, y, size);
+    }
+
+    // add some twinkling stars
+    for (let i = 0; i < 20; i++) {
+      const x = Phaser.Math.Between(0, this.mapWidth);
+      const y = Phaser.Math.Between(0, this.mapHeight);
+      const star = this.add.graphics();
+      star.fillStyle(0xffffcc, 1);
+      star.fillCircle(0, 0, 1.5);
+      star.setPosition(x, y);
+      star.setDepth(-1);
+
+      this.tweens.add({
+        targets: star,
+        alpha: 0.2,
+        duration: Phaser.Math.Between(1000, 3000),
+        ease: 'Sine.easeInOut',
+        yoyo: true,
+        repeat: -1,
+        delay: Phaser.Math.Between(0, 2000)
+      });
+    }
+
+    starGraphics.setDepth(-1);
+
+    // grid lines with lower opacity and cosmic color
+    graphics.lineStyle(1, 0x4a4a8e, 0.15);
     for (let x = 0; x <= this.mapWidth; x += 50) {
       graphics.lineBetween(x, 0, x, this.mapHeight);
     }
@@ -782,14 +892,18 @@ export class TreasureHuntScene extends Phaser.Scene {
       graphics.lineBetween(0, y, this.mapWidth, y);
     }
 
-    // 邊界
-    graphics.lineStyle(3, 0x4ecca3, 0.8);
+    // boundary with cosmic glow effect
+    graphics.lineStyle(2, 0x00ffcc, 0.4);
+    graphics.strokeRect(2, 2, this.mapWidth - 4, this.mapHeight - 4);
+    graphics.lineStyle(3, 0x4ecca3, 0.6);
     graphics.strokeRect(0, 0, this.mapWidth, this.mapHeight);
 
     graphics.setDepth(-1);
 
-    // 儲存為室外物件
+    // save as outdoor objects
     this.outsideObjects.push(graphics);
+    this.outsideObjects.push(gradient);
+    this.outsideObjects.push(starGraphics);
   }
 
   private createBuildings(): void {
@@ -1215,6 +1329,35 @@ export class TreasureHuntScene extends Phaser.Scene {
     return null;
   }
 
+  private getDirection(vx: number, vy: number): string {
+    // determine direction based on velocity
+    if (vx === 0 && vy === 0) return this.playerDirection || 'S';
+
+    // normalize vectors
+    const length = Math.sqrt(vx * vx + vy * vy);
+    const nx = vx / length;
+    const ny = vy / length;
+
+    // calculate angle in radians
+    const angle = Math.atan2(ny, nx);
+
+    // convert to degrees and normalize to 0-360
+    let degrees = angle * 180 / Math.PI;
+    degrees = (degrees + 360) % 360;
+
+    // map to 8 directions
+    if (degrees >= 337.5 || degrees < 22.5) return 'E';
+    if (degrees >= 22.5 && degrees < 67.5) return 'SE';
+    if (degrees >= 67.5 && degrees < 112.5) return 'S';
+    if (degrees >= 112.5 && degrees < 157.5) return 'SW';
+    if (degrees >= 157.5 && degrees < 202.5) return 'W';
+    if (degrees >= 202.5 && degrees < 247.5) return 'NW';
+    if (degrees >= 247.5 && degrees < 292.5) return 'N';
+    if (degrees >= 292.5 && degrees < 337.5) return 'NE';
+
+    return 'S'; // default
+  }
+
   private createUI(): void {
     const posText = this.add.text(10, 10, "", {
       fontSize: "14px",
@@ -1253,29 +1396,42 @@ export class TreasureHuntScene extends Phaser.Scene {
   }
 
   update(): void {
-    // 處理移動
-    // const speed = 200;
+    // handle movement
     let vx = 0;
     let vy = 0;
 
-    // 計算水平方向
+    // calculate horizontal direction
     if (this.cursors.left.isDown || this.wasd.left.isDown) {
       vx = -1;
     } else if (this.cursors.right.isDown || this.wasd.right.isDown) {
       vx = 1;
     }
 
-    // 計算垂直方向
+    // calculate vertical direction
     if (this.cursors.up.isDown || this.wasd.up.isDown) {
       vy = -1;
     } else if (this.cursors.down.isDown || this.wasd.down.isDown) {
       vy = 1;
     }
 
-    // 設置速度
-    // this.player.setVelocity(vx * speed, vy * speed);
+    // update player direction and animation
+    if (this.player) {
+      const newDirection = this.getDirection(vx, vy);
+      const isMoving = vx !== 0 || vy !== 0;
 
-    // 發送 WebSocket 訊息（包含八個方位）
+      if (newDirection !== this.playerDirection || isMoving !== this.playerMoving) {
+        this.playerDirection = newDirection;
+        this.playerMoving = isMoving;
+
+        if (isMoving) {
+          this.player.play(`player_walk_${newDirection}`, true);
+        } else {
+          this.player.play(`player_idle_${this.playerDirection}`, true);
+        }
+      }
+    }
+
+    // send websocket message for movement
     if (vx !== 0 || vy !== 0) {
       socketManager.sendMessage(ActionType.Move, {
         vx: vx,
@@ -1299,12 +1455,42 @@ export class TreasureHuntScene extends Phaser.Scene {
       );
     }
 
-    // 其他玩家也平滑移動
+    // smooth movement for other players with animation
     this.otherPlayers.forEach((sprite, playerId) => {
       const target = this.otherPlayersTargets.get(playerId);
       if (target) {
+        const prevX = sprite.x;
+        const prevY = sprite.y;
+
         sprite.x = Phaser.Math.Linear(sprite.x, target.x, lerpFactor);
         sprite.y = Phaser.Math.Linear(sprite.y, target.y, lerpFactor);
+
+        // calculate movement and update animation
+        const deltaX = sprite.x - prevX;
+        const deltaY = sprite.y - prevY;
+        const threshold = 0.5;
+
+        const isMoving = Math.abs(deltaX) > threshold || Math.abs(deltaY) > threshold;
+
+        if (isMoving) {
+          // normalize movement vector
+          const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+          const vx = length > 0 ? deltaX / length : 0;
+          const vy = length > 0 ? deltaY / length : 0;
+
+          const direction = this.getDirection(vx, vy);
+
+          if (direction !== this.otherPlayersDirection.get(playerId) ||
+              isMoving !== this.otherPlayersMoving.get(playerId)) {
+            this.otherPlayersDirection.set(playerId, direction);
+            this.otherPlayersMoving.set(playerId, isMoving);
+            sprite.play(`other_walk_${direction}`, true);
+          }
+        } else if (this.otherPlayersMoving.get(playerId)) {
+          this.otherPlayersMoving.set(playerId, false);
+          const dir = this.otherPlayersDirection.get(playerId) || 'S';
+          sprite.play(`other_idle_${dir}`, true);
+        }
       }
     });
 
