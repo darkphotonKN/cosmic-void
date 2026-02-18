@@ -6,6 +6,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
+	"runtime"
 	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/common/broker"
@@ -46,6 +48,12 @@ var (
 
 func main() {
 	ctx := context.Background()
+
+	// --- pprof ---
+
+	// TODO: remove after benchmark passes
+	runtime.SetMutexProfileFraction(5)
+	runtime.SetBlockProfileRate(1)
 
 	// --- logger ---
 	commonhelpers.SetupLogger(environment)
@@ -148,7 +156,6 @@ func main() {
 
 	}()
 
-	// 這個會阻塞，所以測試要放在上面
 	if err := grpcServer.Serve(listener); err != nil {
 		log.Fatal("Can't connect to grpc server. Error:", err.Error())
 	}

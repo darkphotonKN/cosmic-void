@@ -3,28 +3,28 @@ package systems
 import "github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 
 /*
- 1. 檢查是否要施放技能
- 2. 檢查技能施放條件
-    - 技能冷卻是否完成？
-    - 是否有足夠的資源（MP, 能量等，如果你有）
-3. 根據技能類型執行不同邏輯
+ 1. check if skill should be cast
+ 2. check skill casting conditions
+    - is skill cooldown complete?
+    - are there enough resources (MP, energy, etc, if you have them)
+3. execute different logic based on skill type
    switch skillName {
    case "Fireball":
-        - 計算技能傷害（通常基於 Intelligence）
-        - 選擇目標
-        - 應用傷害
-        - 可能有 AOE 範圍傷害
+        - calculate skill damage (usually based on Intelligence)
+        - select target
+        - apply damage
+        - might have AOE range damage
     case "Heal":
-        - 不是傷害，是加血
-        - 選擇友方目標
-        - 恢復 Health
+        - not damage, is healing
+        - select friendly target
+        - restore Health
     case "Shield":
-        - 不是傷害，是加 Buff
-        - 給目標添加 Buff component
+        - not damage, is adding Buff
+        - add Buff component to target
     case "Poison":
-        - 添加 Debuff component（持續傷害）
-4. 更新技能冷卻時間
-5. 消耗資源（如果有 MP 系統）
+        - add Debuff component (damage over time)
+4. update skill cooldown time
+5. consume resources (if there's MP system)
 */
 
 type SkillSystem struct{}

@@ -13,8 +13,8 @@ type MovementSystem struct{}
 func NewMovementSystem() *MovementSystem {
 	return &MovementSystem{}
 }
-// resolveCollision 檢查碰撞並返回解析後的位置
-// 如果有碰撞，會將位置推到剛好不重疊的地方
+// resolveCollision checks collision and returns resolved position
+// if there's a collision, pushes position to just not overlapping
 func resolveCollision(newX, newY float64, other *ecs.Entity) (float64, float64, bool) {
 	otherTransformComp, hasTransform := other.GetComponent(ecs.ComponentTypeTransform)
 	_, hasVelocity := other.GetComponent(ecs.ComponentTypeVelocity)
@@ -32,7 +32,7 @@ func resolveCollision(newX, newY float64, other *ecs.Entity) (float64, float64, 
 	minDist := 2 * constants.PlayerRadius
 
 	if distance < minDist && distance > 0 {
-		// 碰撞了，推到剛好不重疊的位置
+		// collision detected, push to just not overlapping position
 		ratio := minDist / distance
 		resolvedX := otherTransform.X + dx*ratio
 		resolvedY := otherTransform.Y + dy*ratio
@@ -46,7 +46,7 @@ func resolveCollision(newX, newY float64, other *ecs.Entity) (float64, float64, 
 func (s *MovementSystem) Update(deltaTime float64, entities []*ecs.Entity) {
 
 	// O(n)
-	// player 碰撞
+	// player collision
 	entitiesMap := make(map[int]*ecs.Entity, 0)
 	for _, entity := range entities {
 		transformComp, hasTransform := entity.GetComponent(ecs.ComponentTypeTransform)
@@ -72,14 +72,14 @@ func (s *MovementSystem) Update(deltaTime float64, entities []*ecs.Entity) {
 		// type assertion
 		transform := transformComp.(*components.TransformComponent)
 		velocity := velocityComp.(*components.VelocityComponent)
-		// 計算這個targetentity的周圍的cell 9宮格內是否有其他接近的entity
+		// calculate if there are other nearby entities in the 9-grid cells around this targetentity
 		cellX := int(transform.X / (2 * constants.PlayerRadius))
 		cellY := int(transform.Y / (2 * constants.PlayerRadius))
 
 		newX := transform.X + velocity.VX*velocity.Speed*deltaTime
 		newY := transform.Y + velocity.VY*velocity.Speed*deltaTime
 
-		// 檢查 9 宮格內的碰撞，並解析位置
+		// check collision in 9-grid and resolve position
 		for i := -1; i <= 1; i++ {
 			for j := -1; j <= 1; j++ {
 				cellKey := (cellX+i)<<8 | (cellY + j)

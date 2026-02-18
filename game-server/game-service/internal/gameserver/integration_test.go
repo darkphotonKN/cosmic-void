@@ -139,7 +139,7 @@ func (m *mockQueueService) AddPlayerChan(player *types.Player) {
 func (m *mockQueueService) PlayerRemoveQueue(player *types.Player) {}
 func (m *mockQueueService) MatchQueue()                            {}
 func (m *mockQueueService) Start() {
-	// 測試時不需要真的啟動
+	// no need to really start during testing
 }
 
 func (m *mockQueueService) GetMatchedChan() chan []*types.Player {
@@ -272,12 +272,12 @@ func TestQueueFindGameFlow(t *testing.T) {
 						server.mu.RLock()
 						currentSessions := len(server.sessions)
 						server.mu.RUnlock()
-						fmt.Printf("✅ Player%d 收到 game_found，目前 session 数量: %d\n", idx, currentSessions)
+						fmt.Printf("✅ Player%d received game_found, current session count: %d\n", idx, currentSessions)
 						return
 					}
 					// queue_status 继续等待
 				case <-timeout:
-					fmt.Printf("❌ Player%d 沒收到 game_found\n", idx)
+					fmt.Printf("❌ Player%d did not receive game_found\n", idx)
 					return
 				}
 			}
@@ -293,7 +293,7 @@ func TestQueueFindGameFlow(t *testing.T) {
 
 	expectedSessions := playerCount / 2
 	assert.Equal(t, expectedSessions, sessionCount)
-	fmt.Println("總共創建遊戲數量", expectedSessions)
+	fmt.Println("total games created", expectedSessions)
 }
 
 type Conn struct{}
@@ -305,22 +305,22 @@ func (c *Conn) WriteJSON(v interface{}) error {
 
 func TestSenderToBroadcastToPlayerList(t *testing.T) {
 	testCases := []struct {
-		name          string                    // 測試案例名稱
-		setupPlayers  func(*Server) []uuid.UUID // 設置玩家的函數
-		action        constants.Action          // 要測試的 action
-		payload       map[string]interface{}    // 訊息內容
-		expectedError error                     // 預期的錯誤 (使用 errors.New() 定義的)
-		errorContains string                    // 錯誤訊息應該包含的文字 (用於更詳細的檢查)
+		name          string                    // test case name
+		setupPlayers  func(*Server) []uuid.UUID // function to setup players
+		action        constants.Action          // action to test
+		payload       map[string]interface{}    // message content
+		expectedError error                     // expected error (defined with errors.New())
+		errorContains string                    // text that error message should contain (for more detailed checking)
 	}{
 		{
 			name: "broadcast to all connected players - success",
 			setupPlayers: func(s *Server) []uuid.UUID {
-				// 情境:所有玩家都有連線
+				// scenario: all players have connections
 				player1 := &types.Player{ID: uuid.New(), Username: "Player1"}
 				player2 := &types.Player{ID: uuid.New(), Username: "Player2"}
 				player3 := &types.Player{ID: uuid.New(), Username: "Player3"}
 
-				// 模擬建立連線和 message channel
+				// simulate establishing connections and message channels
 				conn1 := &websocket.Conn{} // 這裡需要實際的 mock connection
 				conn2 := &websocket.Conn{}
 				conn3 := &websocket.Conn{}
@@ -340,33 +340,33 @@ func TestSenderToBroadcastToPlayerList(t *testing.T) {
 			payload: map[string]interface{}{
 				"info": "Game found, starting match",
 			},
-			expectedError: nil, // 不應該有錯誤
+			expectedError: nil, // should not have error
 		},
 		{
 			name: "broadcast to disconnected players - should error",
 			setupPlayers: func(s *Server) []uuid.UUID {
-				// 情境:玩家已經創建但沒有連線
+				// scenario: players created but no connections
 				player1 := uuid.New()
 				player2 := uuid.New()
 				player3 := uuid.New()
 
-				// 不設置連線,模擬玩家已斷線
+				// don't setup connections, simulate disconnected players
 				return []uuid.UUID{player1, player2, player3}
 			},
 			action: constants.ActionFindGame,
 			payload: map[string]interface{}{
 				"info": "Test broadcast to disconnected players",
 			},
-			expectedError: ErrAllPlayersFailed, // 使用預定義的錯誤常量
+			expectedError: ErrAllPlayersFailed, // use predefined error constant
 			errorContains: "broadcast failed for 3 players",
 		},
 		{
 			name: "broadcast to mixed connected/disconnected players",
 			setupPlayers: func(s *Server) []uuid.UUID {
-				// 情境:部分玩家有連線,部分沒有
+				// scenario: some players have connections, some don't
 				player1 := &types.Player{ID: uuid.New(), Username: "ConnectedPlayer"}
-				player2 := uuid.New() // 沒有連線的玩家
-				player3 := uuid.New() // 沒有連線的玩家
+				player2 := uuid.New() // player without connection
+				player3 := uuid.New() // player without connection
 
 				conn1 := &websocket.Conn{}
 				s.mu.Lock()
@@ -381,20 +381,20 @@ func TestSenderToBroadcastToPlayerList(t *testing.T) {
 				"current": 2,
 				"total":   3,
 			},
-			expectedError: ErrPartialBroadcastFailed, // 使用預定義的錯誤常量
+			expectedError: ErrPartialBroadcastFailed, // use predefined error constant
 			errorContains: "broadcast failed for 2 players",
 		},
 		{
 			name: "broadcast with empty player list",
 			setupPlayers: func(s *Server) []uuid.UUID {
-				// 情境:空的玩家列表
+				// scenario: empty player list
 				return []uuid.UUID{}
 			},
 			action: constants.ActionFindGame,
 			payload: map[string]interface{}{
 				"info": "No players to broadcast to",
 			},
-			expectedError: nil, // 空列表不應該報錯,只是什麼都不做
+			expectedError: nil, // empty list should not error, just do nothing
 		},
 	}
 

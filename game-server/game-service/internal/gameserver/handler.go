@@ -31,7 +31,7 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 		return
 	}
 
-	// 驗證 member
+	// verify member
 	grpcPayload := &authPb.GetMemberRequest{
 		Id: userIdStr.(string),
 	}
@@ -65,15 +65,15 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 		player = existingPlayer
 		isReconnection = true
 
-		// 標記為已連線
+		// mark as connected
 		connected := constants.Connected
 		player.ConnectState = &connected
 
-		// 更新 username (可能改名了)
+		// update username (may have changed name)
 		player.Username = data.Name
 
 	} else {
-		// 新玩家第一次連線
+		// new player connecting for the first time
 		fmt.Printf("New player connecting: %s\n", data.Name)
 
 		connected := constants.Connected
@@ -84,13 +84,13 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 			ConnectState:         &connected,
 		}
 
-		// 加入 players map
+		// add to players map
 		s.mu.Lock()
 		s.players[memberId] = player
 		s.mu.Unlock()
 	}
 
-	// 建立 WebSocket 連線
+	// establish websocket connection
 	conn, err := s.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		fmt.Println("Error establishing websocket connection.")
@@ -98,10 +98,10 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 		return
 	}
 
-	// 更新 conn -> player 映射
+	// update conn to player mapping
 	s.MapConnToPlayer(conn, *player)
 
-	// 建立 msgChan
+	// create msgChan
 	s.setupClientWriter(conn)
 
 	if isReconnection && player.CurrentGameSessionId != uuid.Nil {
@@ -113,7 +113,7 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 		s.mu.RUnlock()
 
 		if exists {
-			// 發送 reconnected 訊息
+			// send reconnected message
 			msgChan <- types.Message{
 				Action: "reconnected",
 				Payload: map[string]interface{}{
@@ -123,7 +123,7 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 				},
 			}
 
-			// 重要！發送 game_found 訊息讓前端進入遊戲
+			// important! send game_found message to let frontend enter game
 			fmt.Println("Sending game_found message after reconnection...")
 			msgChan <- types.Message{
 				Action: "game_found",
@@ -134,7 +134,7 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 		}
 	}
 
-	// 處理連線訊息
+	// handle connection messages
 	go s.ServeConnectedPlayer(conn)
 }
 
@@ -163,26 +163,26 @@ func (s *Server) ServeConnectedPlayer(conn *websocket.Conn) {
 				fmt.Printf("Network disconnection for %s. Keeping state for reconnection...\n", playerInfo)
 
 				if exists {
-					// 標記為重連狀態
+					// mark as reconnecting state
 					s.markPlayerAsReconnecting(player)
 
-					// 只清理連線,保留玩家資料、session、queue
+					// only clean connection, keep player data, session, queue
 					s.cleanUpConnectionOnly(conn)
 
-					// 啟動 30 秒計時器
+					// start 30 second timer
 					go s.handleReconnectionTimeout(playerID, 30*time.Second)
 				} else {
-					// 沒有玩家資訊,直接關閉連線
+					// no player info, directly close connection
 					conn.Close()
 				}
 
-				return // 退出此 goroutine
+				return // exit this goroutine
 			}
 
 			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 				fmt.Printf("Player %s closed connection normally (intentional leave)\n", playerInfo)
 				s.cleanUpClient(conn)
-				return // 退出此 goroutine
+				return // exit this goroutine
 			}
 
 			if websocket.IsCloseError(err, websocket.CloseGoingAway) {
@@ -309,12 +309,12 @@ func (s *Server) createMsgChan(conn *websocket.Conn) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// 如果已經存在，不要重複創建
+	// if already exists, don't duplicate create
 	if _, exists := s.msgChan[conn]; exists {
 		return false
 	}
 
-	s.msgChan[conn] = make(chan interface{}, 10) // 加入緩衝避免阻塞
+	s.msgChan[conn] = make(chan interface{}, 10) // add buffer to avoid blocking
 	return true
 }
 
@@ -370,12 +370,12 @@ func (s *Server) cleanUpConnectionOnly(conn *websocket.Conn) {
 		delete(s.msgChan, conn)
 	}
 
-	// 刪除 conn -> player 映射 (但不刪除 player 本身)
+	// delete conn to player mapping (but don't delete player itself)
 	delete(s.connToPlayer, conn)
 
-	// 注意:不刪除 s.players[player.ID]  ← 保留玩家資料
-	// 注意:不從 queue 移除              ← 保留排隊狀態
-	// 注意:不從 session 移除            ← 保留遊戲狀態
+	// note: don't delete s.players[player.ID] <- keep player data
+	// note: don't remove from queue <- keep queue state
+	// note: don't remove from session <- keep game state
 
 	s.mu.Unlock()
 
@@ -397,7 +397,7 @@ func (s *Server) handleReconnectionTimeout(playerID uuid.UUID, timeout time.Dura
 		return
 	}
 
-	// 檢查玩家狀態
+	// check player state
 	if player.ConnectState != nil && *player.ConnectState == constants.Reconnecting {
 		fmt.Printf("Player %s failed to reconnect within %v. Cleaning up...\n", player.Username, timeout)
 		s.cleanUpPlayerCompletely(playerID)
@@ -458,15 +458,15 @@ func (s *Server) cleanUpClient(conn *websocket.Conn) {
 		fmt.Printf("Closed message channel for player %s\n", player.Username)
 	}
 
-	// 刪除 conn -> player 映射
+	// delete conn to player mapping
 	delete(s.connToPlayer, conn)
 
-	// 刪除 player 映射
+	// delete player mapping
 	delete(s.players, player.ID)
 
 	s.mu.Unlock()
 
-	// 從遊戲 session 中移除玩家 (在釋放鎖之後調用,避免死鎖)
+	// remove player from game session (call after releasing lock to avoid deadlock)
 	s.cleanUpPlayerFromSession(player)
 
 	// 關閉 WebSocket 連線
@@ -499,18 +499,18 @@ func (s *Server) cleanUpPlayerFromSession(player *types.Player) {
 
 	fmt.Printf("Removing player %s from session %s\n", player.Username, playerSession.ID)
 
-	// 從 session 移除玩家
+	// remove player from session
 	playerSession.RemovePlayer(player.ID.String())
 
-	// 檢查 session 是否還有玩家
+	// check if session still has players
 	remainingPlayers := playerSession.GetPlayerIDs()
 	if len(remainingPlayers) == 0 {
 		fmt.Printf("Session %s has no remaining players, shutting down...\n", playerSession.ID)
 
-		// 關閉 session
+		// shutdown session
 		playerSession.Shutdown()
 
-		// 從 server 的 sessions map 移除
+		// remove from server's sessions map
 		s.mu.Lock()
 		delete(s.sessions, playerSession.ID)
 		s.mu.Unlock()

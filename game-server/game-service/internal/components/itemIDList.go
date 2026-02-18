@@ -15,6 +15,6 @@ func (d *ItemIDListComponent) Type() ecs.ComponentType {
 
 func NewItemIDListComponent(itemIDs []uuid.UUID) *ItemIDListComponent {
 	return &ItemIDListComponent{
-		ItemIDs: itemIDs, // ✓ 使用參數
+		ItemIDs: itemIDs, // ✓ use parameter
 	}
 }

@@ -14,12 +14,15 @@ package telemetry
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
@@ -126,12 +129,34 @@ func Init(ctx context.Context, cfg Config) (shutdown func(context.Context) error
 		propagation.Baggage{},      // Optional: carry business data across services
 	))
 
+	// Meter provider
+	metricExporter, err := otlpmetricgrpc.New(ctx,
+		otlpmetricgrpc.WithEndpoint(cfg.CollectorEndpoint),
+		otlpmetricgrpc.WithInsecure(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("creating metric exporter: %w", err)
+	}
+
+	meterProvider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithResource(res),
+		sdkmetric.WithReader(
+			sdkmetric.NewPeriodicReader(metricExporter,
+				sdkmetric.WithInterval(10*time.Second),
+			),
+		),
+	)
+	otel.SetMeterProvider(meterProvider)
+
 	// STEP 5: Return Shutdown Function
 	// we always call this on application shutdown
 	// it flushes any pending traces so you don't lose data.
 	//
 	shutdown = func(ctx context.Context) error {
-		return tracerProvider.Shutdown(ctx)
+		err1 := tracerProvider.Shutdown(ctx)
+		err2 := meterProvider.Shutdown(ctx)
+
+		return errors.Join(err1, err2)
 	}
 
 	return shutdown, nil

@@ -117,7 +117,6 @@ func (h *messageHub) Run() {
 				player, exists := h.sessionManager.GetPlayerFromConn(clientPackage.Conn)
 
 				if !exists {
-					// 傳入 conn 作為參數
 					h.sender.SendMessageToPlayer(player.ID, types.Message{
 						Action: string(constants.ActionFindGame),
 						Payload: map[string]interface{}{
@@ -130,12 +129,9 @@ func (h *messageHub) Run() {
 					continue
 				}
 
-				// 將 player 加入 queue，QueueSystem 會透過 channel 處理
-				// 配對成功後會自動呼叫 Server.onMatchFound callback
 				h.sessionManager.AddPlayerToQueue(player)
 				fmt.Printf("Player %s added to matchmaking queue\n", player.Username)
 
-				// 傳入 conn 作為參數
 				h.sender.SendMessageToConn(clientPackage.Conn, types.Message{
 					Action: clientPackage.Message.Action,
 					Payload: map[string]interface{}{
@@ -148,7 +144,6 @@ func (h *messageHub) Run() {
 			case constants.ActionLeaveQueue:
 				player, exists := h.sessionManager.GetPlayerFromConn(clientPackage.Conn)
 				if !exists {
-					// 傳入 conn 作為參數
 					h.sender.SendMessageToPlayer(player.ID, types.Message{
 						Action: clientPackage.Message.Action,
 						Payload: map[string]interface{}{
@@ -160,11 +155,9 @@ func (h *messageHub) Run() {
 					continue
 				}
 
-				// TODO: 實現離開隊列邏輯
 				// h.sessionManager.RemovePlayerFromQueue(player)
 				fmt.Println("Leave game...")
 
-				// 傳入 conn 作為參數
 				h.sender.SendMessageToPlayer(player.ID, types.Message{
 					Action: clientPackage.Message.Action,
 					Payload: map[string]interface{}{
@@ -174,7 +167,6 @@ func (h *messageHub) Run() {
 				})
 
 			default:
-				// 傳入 conn 作為參數
 				err := "Unknown action"
 				h.sender.SendMessageToConn(
 					clientPackage.Conn, types.Message{
@@ -187,7 +179,6 @@ func (h *messageHub) Run() {
 				)
 			}
 
-		// 監聯配對成功的 channel
 		case matchedPlayers := <-h.sessionManager.GetMatchedChan():
 			fmt.Printf("Received matched players, creating game session...\n")
 			fmt.Println(matchedPlayers)
@@ -204,7 +195,6 @@ func (h *messageHub) Run() {
 					},
 				})
 
-		// 監聽排隊狀態更新
 		case status := <-h.sessionManager.GetQueueStatusChan():
 			fmt.Printf("Queue status update: %d/%d\n", status.Current, status.Total)
 			playerIDs := make([]uuid.UUID, len(status.Players))

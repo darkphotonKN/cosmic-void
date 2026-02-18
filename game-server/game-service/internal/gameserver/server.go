@@ -109,16 +109,16 @@ func (s *Server) MapConnToPlayer(conn *websocket.Conn, player types.Player) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// 檢查是否有相同 player ID 的舊連線，如果有則清除
+	// check if there's an old connection with same player ID, if so clean it up
 	for oldConn, existingPlayer := range s.connToPlayer {
 		if existingPlayer.ID == player.ID && oldConn != conn {
 			fmt.Printf("Player %s reconnected, cleaning up old connection\n", player.Username)
-			// 關閉舊的 msgChan
+			// close old msgChan
 			if ch, exists := s.msgChan[oldConn]; exists {
 				close(ch)
 				delete(s.msgChan, oldConn)
 			}
-			// 移除舊的 conn -> player 映射
+			// remove old conn to player mapping
 			delete(s.connToPlayer, oldConn)
 			break
 		}
@@ -158,15 +158,15 @@ func (s *Server) CreateGameSession(players []*types.Player) *game.Session {
 	defer s.mu.Unlock()
 
 	for _, player := range players {
-		// 將玩家加入 session
+		// add player to session
 		newGameSession.AddPlayer(player.ID, player.Username)
 
 		connected := constants.Connected
-		// 更新玩家的 SessionId
+		// update player's SessionId
 		player.CurrentGameSessionId = newGameSession.ID
 		player.ConnectState = &connected
 
-		// 同時更新 server 的 players map 中的玩家資訊 (如果存在)
+		// also update player info in server's players map (if exists)
 		if existingPlayer, exists := s.players[player.ID]; exists {
 			existingPlayer.CurrentGameSessionId = newGameSession.ID
 			existingPlayer.ConnectState = &connected

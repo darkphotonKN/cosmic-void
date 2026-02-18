@@ -9,10 +9,10 @@ import (
 )
 
 /*
-Player queue system - 使用 channel 監聽玩家加入配對
+Player queue system - uses channel to listen for players joining matchmaking
 */
 
-// QueueStatus 用於通知排隊狀態
+// QueueStatus used to notify queue status
 type QueueStatus struct {
 	Players []*types.Player
 	Current int
@@ -20,10 +20,10 @@ type QueueStatus struct {
 }
 
 type queueService struct {
-	// 接收要加入配對的玩家
+	// receive players to join matchmaking
 	playerChan chan *types.Player
 	queue      []*types.Player
-	// 需要多少人才能開始遊戲
+	// how many people needed to start game
 	matchSize int
 
 	mu sync.RWMutex
@@ -42,14 +42,14 @@ func NewQueueService(matchSize int) QueueService {
 	}
 }
 
-// Start 啟動 queue 監聽
+// Start launches queue listening
 func (q *queueService) Start() {
 	go q.MatchQueue()
 	go q.JoinQueue()
 	fmt.Println("QueueSystem started, listening for players...")
 }
 
-// AddPlayer 將玩家加入配對 queue（透過 channel）
+// AddPlayer adds player to matchmaking queue (via channel)
 func (q *queueService) AddPlayerChan(player *types.Player) {
 	q.playerChan <- player
 }
@@ -63,7 +63,7 @@ func (q *queueService) JoinQueue() {
 	}
 }
 
-// matchQueue 每秒檢查一次 queue
+// matchQueue checks queue once per second
 func (q *queueService) MatchQueue() {
 	fmt.Println("Listening for queue...")
 	ticker := time.NewTicker(1 * time.Second)
@@ -73,35 +73,35 @@ func (q *queueService) MatchQueue() {
 		// fmt.Println("match queue")
 
 		select {
-		// 每秒從chan送一次值
+		// send value from chan once per second
 		case <-ticker.C:
 			q.mu.Lock()
 			sizeLen := len(q.queue) >= q.matchSize
 			q.mu.Unlock()
 			defer q.mu.Unlock()
-			// 人數滿了
+			// enough people
 			if sizeLen {
 				matched := make([]*types.Player, q.matchSize)
 				q.mu.Lock()
-				// 取前兩個
+				// take first two
 				copy(matched, q.queue[:q.matchSize])
-				// 移除前兩個
+				// remove first two
 				q.queue = q.queue[q.matchSize:]
 				q.mu.Unlock()
 				fmt.Println("Match found!")
 				q.MatchedChan <- matched
 				continue
 			}
-			// 人數不足，通知玩家目前排隊人數
+			// not enough people, notify players of current queue count
 			if len(q.queue) > 0 {
 				fmt.Printf("Waiting: %d/%d\n", len(q.queue), q.matchSize)
-				// 複製一份 queue 發送狀態
+				// copy queue to send status
 				q.mu.Lock()
 				playersCopy := make([]*types.Player, len(q.queue))
 				copy(playersCopy, q.queue)
 				q.mu.Unlock()
 
-				// 發送到 QueueStatusChan（用 goroutine 避免阻塞）
+				// send to QueueStatusChan (use goroutine to avoid blocking)
 				go func() {
 					q.QueueStatusChan <- QueueStatus{
 						Players: playersCopy,
@@ -116,7 +116,7 @@ func (q *queueService) MatchQueue() {
 	}
 }
 
-// handlePlayerJoinQueue 處理玩家加入 queue 的邏輯
+// handlePlayerJoinQueue handles logic for player joining queue
 func (q *queueService) PlayerJoinQueue(player *types.Player) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
@@ -129,12 +129,12 @@ func (q *queueService) PlayerJoinQueue(player *types.Player) {
 		}
 	}
 
-	// 加入 queue
+	// join queue
 	q.queue = append(q.queue, player)
 	fmt.Printf("Player %s joined queue. Waiting: %d/%d\n", player.Username, len(q.queue), q.matchSize)
 }
 
-// TODO: discconnect remove player
+// TODO: disconnect remove player
 func (q *queueService) PlayerRemoveQueue(player *types.Player) {
 	q.mu.Lock()
 	defer q.mu.Unlock()

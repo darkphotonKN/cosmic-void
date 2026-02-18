@@ -162,7 +162,7 @@ func (s *Session) manageClientMessages() {
 					// Get playerID from payload if possible, otherwise skip sending error to specific player
 					if playerIDStr, ok := msg.Message.Payload["player_id"].(string); ok {
 						if playerID, parseErr := uuid.Parse(playerIDStr); parseErr == nil {
-							s.sendErrorToPlayer(playerID, msg.Message.Action, "無法解析移動請求")
+							s.sendErrorToPlayer(playerID, msg.Message.Action, "failed to parse move request")
 						}
 					}
 					continue
@@ -190,7 +190,7 @@ func (s *Session) manageClientMessages() {
 					slog.Error("Failed to parse interact payload", "error", err)
 					if playerIDStr, ok := msg.Message.Payload["player_id"].(string); ok {
 						if playerID, parseErr := uuid.Parse(playerIDStr); parseErr == nil {
-							s.sendErrorToPlayer(playerID, msg.Message.Action, "無法解析互動請求")
+							s.sendErrorToPlayer(playerID, msg.Message.Action, "failed to parse interact request")
 						}
 					}
 					continue
@@ -210,7 +210,7 @@ func (s *Session) manageClientMessages() {
 
 				if err != nil {
 					slog.Error("Invalid EntityID from session payload", "entityID", interactPayload.EntityID, "error", err)
-					s.sendErrorToPlayer(playerID, msg.Message.Action, "無效的目標物件")
+					s.sendErrorToPlayer(playerID, msg.Message.Action, "invalid target object")
 					continue
 				}
 
@@ -228,7 +228,7 @@ func (s *Session) manageClientMessages() {
 					slog.Error("Failed to parse loot payload", "error", err)
 					if playerIDStr, ok := msg.Message.Payload["player_id"].(string); ok {
 						if playerID, parseErr := uuid.Parse(playerIDStr); parseErr == nil {
-							s.sendErrorToPlayer(playerID, msg.Message.Action, "無法解析拾取請求")
+							s.sendErrorToPlayer(playerID, msg.Message.Action, "failed to parse loot request")
 						}
 					}
 					continue
@@ -251,7 +251,7 @@ func (s *Session) manageClientMessages() {
 						"containerEntityID", lootPayload.ContainerEntityID,
 						"playerID", playerID,
 						"error", err)
-					s.sendErrorToPlayer(playerID, msg.Message.Action, "無效的容器目標")
+					s.sendErrorToPlayer(playerID, msg.Message.Action, "invalid container target")
 					continue
 				}
 
@@ -289,7 +289,7 @@ func (s *Session) manageGameLoop() {
 	for {
 		select {
 		case <-ticker.C:
-			// TEST: dont run for tests
+			// TEST: exclude game loop for tests
 			if s.TestMessageSpy != nil {
 				return
 			}
@@ -580,7 +580,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 
 		if !isWithinDistance {
 			slog.Debug("Door entity out of range for interaction", "targetID", targetEntityID, "playerID", playerID)
-			s.sendErrorToPlayer(playerID, string(constants.ActionInteract), "距離太遠，無法互動")
+			s.sendErrorToPlayer(playerID, string(constants.ActionInteract), "too far away to interact")
 			return ErrOutOfRange
 		}
 
@@ -637,7 +637,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		isWithinDistance := s.calcWithinDistance(playerTransform.X, playerTransform.Y, containerTransform.X, containerTransform.Y)
 		if !isWithinDistance {
 			slog.Debug("Container entity out of range for interaction", "targetID", targetEntityID, "playerID", playerID)
-			s.sendErrorToPlayer(playerID, string(constants.ActionInteract), "距離太遠，無法互動")
+			s.sendErrorToPlayer(playerID, string(constants.ActionInteract), "too far away to interact")
 			return ErrOutOfRange
 		}
 		// trigger containers swap in openable state via its OpenableComponent
@@ -705,7 +705,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 }
 
 func (s *Session) handleLoot(playerID uuid.UUID, containerEntityID uuid.UUID, lootEntityIDs []uuid.UUID) error {
-	// 取得 player entity ID
+	// get player entity ID
 	playerEntityID, ok := s.playerIDToEntitiesID[playerID]
 	if !ok {
 		return fmt.Errorf("Player %s not found", playerID)
@@ -743,7 +743,7 @@ func (s *Session) handleLoot(playerID uuid.UUID, containerEntityID uuid.UUID, lo
 		removeItemEntityIDsMap[removeEntityID] = struct{}{}
 	}
 	newItemIDs := []uuid.UUID{}
-	// 不在移除清單內的物品才保留
+	// only keep items not in the removal list
 	for _, itemID := range containerItemIDs.ItemIDs {
 		if _, exists := removeItemEntityIDsMap[itemID]; !exists {
 			newItemIDs = append(newItemIDs, itemID)

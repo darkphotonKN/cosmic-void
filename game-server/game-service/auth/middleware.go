@@ -40,7 +40,7 @@ func WSAuthMiddleware(authClient grpcauth.AuthClient) gin.HandlerFunc {
 			return
 		}
 
-		// 存入 context
+		// store in context
 		c.Set("userId", userID)
 		c.Set("userIdStr", resp.MemberId)
 
