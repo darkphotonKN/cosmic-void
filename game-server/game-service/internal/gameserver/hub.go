@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"sync"
 
+	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
@@ -116,20 +117,21 @@ func (h *messageHub) Run() {
 				slog.Debug("ActionFindGame")
 				player, exists := h.sessionManager.GetPlayerFromConn(clientPackage.Conn)
 
-				// player doesn't exist at all, skip them
+				// player doesn't exist at all in the server, skip them
 				if !exists {
-					slog.Error("Player doesn't exist in session.")
+					slog.Debug("Player doesn't exist in session.")
 					continue
 				}
 
-				// TODO: player already in a session, resume it
-				if player.CurrentGameSessionId != uuid.Nil {
-					slog.Warn("Attempting to find a game when player already in an old session. Attempting to resume.")
-					// propogate message to corresponding game
-					// session.MessageCh <- clientPackage
+				// --- player already exists in an old game ---
+				err := h.handlePlayerExistingGame(player, clientPackage)
+
+				// no error, so player exists, skip queue
+				if err == nil {
 					continue
 				}
 
+				// --- queue up player ---
 				h.sessionManager.AddPlayerToQueue(player)
 				slog.Info("Player added to matchmaking queue", "player username", player.Username)
 
@@ -212,4 +214,44 @@ func (h *messageHub) Run() {
 				})
 		}
 	}
+}
+
+/**
+* Checks if a player exists in a game and handles the responses to the client if they
+* exist, or throws an error if they dont.
+**/
+func (h *messageHub) handlePlayerExistingGame(player *types.Player, clientPackage types.ClientPackage) error {
+	if player.CurrentGameSessionId != uuid.Nil {
+		slog.Warn("Attempting to find a game when player already in an old session. Attempting to resume.")
+
+		// find the session with their current game sessionId
+		session, exists := h.sessionManager.GetGameSession(player.CurrentGameSessionId)
+
+		if !exists {
+			slog.Error("When attempting to resume game for player detected that game session doesn't exist anymore", "playerId", player.ID, "sessionId", player.CurrentGameSessionId)
+			// clear the non-existing session
+			player.CurrentGameSessionId = uuid.Nil
+			return commonconstants.ErrGameDoesntExist
+		}
+
+		// game found, tells frontend to resume, player should be already receiving game state at this point
+		slog.Debug("Resuamble session found", "sessionId", session.ID)
+
+		slog.Info("Player already in session, sending game_found",
+			"playerId", player.ID,
+			"sessionId", player.CurrentGameSessionId)
+
+		h.sender.SendMessageToConn(clientPackage.Conn, types.Message{
+			Action: "game_found",
+			Payload: map[string]any{
+				"session_id": player.CurrentGameSessionId.String(),
+			},
+		})
+
+		// return no error if player exists in a game
+		return nil
+	}
+
+	slog.Debug("Player doesn't exist in any game.")
+	return commonconstants.ErrGameDoesntExist
 }

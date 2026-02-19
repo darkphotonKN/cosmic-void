@@ -14,4 +14,7 @@ var (
 	ErrForbidden           = errors.New("You do not have permission to access this resource.")
 	ErrUnauthorized        = errors.New("Incorrect credentials entered during when attempting to authenticate.")
 	ErrTransient           = errors.New("Transient error.")
+
+	// game specific
+	ErrGameDoesntExist = errors.New("Game does not exist.")
 )
