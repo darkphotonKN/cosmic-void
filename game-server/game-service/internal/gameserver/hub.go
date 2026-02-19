@@ -113,24 +113,25 @@ func (h *messageHub) Run() {
 
 			// NOTE: queues a player for a game
 			case constants.ActionFindGame:
-				fmt.Println("ActionFindGame")
+				slog.Debug("ActionFindGame")
 				player, exists := h.sessionManager.GetPlayerFromConn(clientPackage.Conn)
 
+				// player doesn't exist at all, skip them
 				if !exists {
-					h.sender.SendMessageToPlayer(player.ID, types.Message{
-						Action: string(constants.ActionFindGame),
-						Payload: map[string]interface{}{
-							"message":   "Successfully joined matchmaking queue",
-							"player_id": player.ID.String(),
-							"username":  player.Username,
-						},
-					})
-					slog.Error("Attempting to find a game when player already in session.")
+					slog.Error("Player doesn't exist in session.")
+					continue
+				}
+
+				// TODO: player already in a session, resume it
+				if player.CurrentGameSessionId != uuid.Nil {
+					slog.Warn("Attempting to find a game when player already in an old session. Attempting to resume.")
+					// propogate message to corresponding game
+					// session.MessageCh <- clientPackage
 					continue
 				}
 
 				h.sessionManager.AddPlayerToQueue(player)
-				fmt.Printf("Player %s added to matchmaking queue\n", player.Username)
+				slog.Info("Player added to matchmaking queue", "player username", player.Username)
 
 				h.sender.SendMessageToConn(clientPackage.Conn, types.Message{
 					Action: clientPackage.Message.Action,
