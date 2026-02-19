@@ -315,7 +315,7 @@ func (s *service) GetLeaderboard(ctx context.Context, req *pbstats.GetLeaderboar
 	var versionInt64 int64
 
 	if err != nil {
-		slog.Warn("Cached key for status leaderboard version doesn't exist or retreival failed.", "key", commoncache.StatsLeaderboardVersionKey(), "error", err)
+		slog.Warn("Cached version for status leaderboard version doesn't exist or retreival failed.", "key", commoncache.StatsLeaderboardVersionKey(), "error", err)
 
 		versionInt64 = int64(1) // default to 1
 	} else {
@@ -377,6 +377,8 @@ func (s *service) GetLeaderboard(ctx context.Context, req *pbstats.GetLeaderboar
 
 	// cache results
 	go func() {
+		slog.Debug("Caching results of leaderboard response", "res", res)
+
 		protoRes, err := proto.Marshal(&res)
 		if err != nil {
 			slog.Warn("could not marshal result for caching, caching failed", "key", key, "error", err)

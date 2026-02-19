@@ -171,7 +171,34 @@ func (r *repository) UpsertPlayerRankingStats(ctx context.Context, stats *Update
 }
 
 func (r *repository) GetPlayerRankings(ctx context.Context, params *GetPlayerRankings) ([]*PlayerRankingStats, error) {
-	return nil, nil
+	query := `
+		SELECT
+			id,
+			member_id,
+			username,
+			wins,
+			top_threes,
+			avatar_url,
+			rating,
+			rank_position,
+			last_calculated_at,
+			created_at,
+			updated_at
+		FROM player_ranking_stats
+		ORDER BY rating DESC, wins DESC, top_threes DESC
+		LIMIT $1 OFFSET $2
+	`
+
+	var playerRankings []*PlayerRankingStats
+
+	err := r.DB.SelectContext(ctx, &playerRankings, query, params.limit, params.offset)
+	if err != nil {
+		slog.Error("failed to get player rankings", "limit", params.limit, "offset", params.offset, "error", err)
+		return nil, commonutils.AnalyzeDBErr(err)
+	}
+
+	slog.Info("successfully retrieved player rankings", "count", len(playerRankings), "limit", params.limit, "offset", params.offset)
+	return playerRankings, nil
 }
 
 func (r *repository) GetPlayerRankingStats(ctx context.Context, memberID uuid.UUID) (*PlayerRankingStats, error) {
