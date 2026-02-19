@@ -15,6 +15,32 @@ import (
 // ==========================================
 // Retry Config（統一管理，避免重複定義）
 // ==========================================
+type EventRetryConfig struct {
+	EventType  string
+	RoutingKey string
+	Exchange   string
+	WorkQueue  string
+	DLQKey     string
+}
+
+func GetEventRetryConfigs() []EventRetryConfig {
+	return []EventRetryConfig{
+		{
+			EventType:  "item.created",
+			RoutingKey: commonconstants.ItemCreated,
+			Exchange:   commonconstants.ItemEventsExchange,
+			WorkQueue:  commonconstants.NotificationItemCreatedQueue,
+			DLQKey:     commonconstants.NotificationItemCreatedFailed,
+		},
+		{
+			EventType:  "member.signedup",
+			RoutingKey: commonconstants.MemberSignedUpEvent,
+			Exchange:   commonconstants.AuthEventsExchange,
+			WorkQueue:  commonconstants.NotificationMemberSignedUpQueue,
+			DLQKey:     commonconstants.NotificationMemberSignedupFailed,
+		},
+	}
+}
 
 type RetryLevel struct {
 	Level        string
@@ -28,7 +54,6 @@ var RetryLevels = []RetryLevel{
 	{"retry-3", 60000, 60}, // 第3次重試：等 60 秒
 }
 
-// MaxRetries 從 RetryLevels 推導，不用寫死
 var MaxRetries = len(RetryLevels)
 
 // ==========================================
@@ -274,17 +299,49 @@ func (c *Consumer) requeueWithRetry(msg amqp.Delivery, newRetryCount int) error 
 // ==========================================
 
 func SetupAMQPInfrastructure(channel *amqp.Channel) error {
-	// ==========================================
-	// 1. Dead Letter Exchange + DLQ
-	// ==========================================
+	// 1. DLX Exchange + DLQ
+	if err := setupDLXExchangeAndQueue(channel); err != nil {
+		return err
+	}
+
+	// 2. Retry Exchange
+	if err := setupRetryExchange(channel); err != nil {
+		return err
+	}
+
+	// 3. Business Exchanges（自動從 Event Configs 推導）
+	if err := setupBusinessExchanges(channel); err != nil {
+		return err
+	}
+
+	// 4. Retry Queues
+	if err := setupRetryQueues(channel); err != nil {
+		return err
+	}
+
+	// 5. Work Queues
+	if err := setupWorkQueues(channel); err != nil {
+		return err
+	}
+
+	slog.Info("✓ AMQP infrastructure ready")
+	return nil
+}
+
+// ==========================================
+// 1. DLX Exchange + DLQ
+// ==========================================
+
+func setupDLXExchangeAndQueue(channel *amqp.Channel) error {
+	// Declare DLX Exchange
 	if err := channel.ExchangeDeclare(
 		commonconstants.DlxEventsExchange,
-		"topic",
-		true, false, false, false, nil,
+		"topic", true, false, false, false, nil,
 	); err != nil {
 		return err
 	}
 
+	// Declare DLQ
 	if _, err := channel.QueueDeclare(
 		commonconstants.NotificationDlqQueue,
 		true, false, false, false, nil,
@@ -292,85 +349,93 @@ func SetupAMQPInfrastructure(channel *amqp.Channel) error {
 		return err
 	}
 
+	// Bind DLQ to DLX
 	if err := channel.QueueBind(
 		commonconstants.NotificationDlqQueue,
-		"#", // 接收所有 DLX 消息
+		"#",
 		commonconstants.DlxEventsExchange,
 		false, nil,
 	); err != nil {
 		return err
 	}
 
-	// ==========================================
-	// 2. 原始 Exchanges（先宣告，因為 retry queue 的 DLX 指向它們）
-	// ==========================================
-	if err := channel.ExchangeDeclare(
-		commonconstants.AuthEventsExchange,
-		"topic",
-		true, false, false, false, nil,
-	); err != nil {
-		slog.Error("Failed to declare auth exchange", "error", err)
-		return err
-	}
+	slog.Debug("✓ DLX and DLQ setup")
+	return nil
+}
 
-	if err := channel.ExchangeDeclare(
-		commonconstants.ItemEventsExchange,
-		"topic",
-		true, false, false, false, nil,
-	); err != nil {
-		slog.Error("Failed to declare item exchange", "error", err)
-		return err
-	}
+// ==========================================
+// 2. Retry Exchange
+// ==========================================
 
-	// ==========================================
-	// 3. Retry Exchange + Retry Queues
-	// ==========================================
+func setupRetryExchange(channel *amqp.Channel) error {
 	if err := channel.ExchangeDeclare(
 		commonconstants.RetryExchange,
-		"topic",
-		true, false, false, false, nil,
+		"topic", true, false, false, false, nil,
 	); err != nil {
 		return err
 	}
 
-	// 每種 event type 對應的 retry 設定
-	type eventRetryConfig struct {
-		eventType  string // e.g. "item.created"
-		routingKey string // 原始 routing key
-		exchange   string // TTL 到期後送回的 exchange
+	slog.Debug("✓ Retry exchange setup")
+	return nil
+}
+
+// ==========================================
+// 3. Business Exchanges（自動推導）
+// ==========================================
+
+func setupBusinessExchanges(channel *amqp.Channel) error {
+	configs := GetEventRetryConfigs()
+
+	// 收集唯一的 exchanges
+	uniqueExchanges := make(map[string]bool)
+	for _, config := range configs {
+		uniqueExchanges[config.Exchange] = true
 	}
 
-	eventConfigs := []eventRetryConfig{
-		{
-			eventType:  "item.created",
-			routingKey: commonconstants.ItemCreated,
-			exchange:   commonconstants.ItemEventsExchange,
-		},
-		{
-			eventType:  "member.signedup",
-			routingKey: commonconstants.MemberSignedUpEvent,
-			exchange:   commonconstants.AuthEventsExchange,
-		},
+	// 聲明所有唯一的 exchanges
+	for exchange := range uniqueExchanges {
+		if err := channel.ExchangeDeclare(
+			exchange,
+			"topic", true, false, false, false, nil,
+		); err != nil {
+			slog.Error("Failed to declare business exchange",
+				"exchange", exchange,
+				"error", err,
+			)
+			return err
+		}
+		slog.Debug("✓ Business exchange", "name", exchange)
 	}
 
-	// 為每種 event type 創建不同延遲級別的 retry queue
-	for _, config := range eventConfigs {
+	return nil
+}
+
+// ==========================================
+// 4. Retry Queues
+// ==========================================
+
+func setupRetryQueues(channel *amqp.Channel) error {
+	configs := GetEventRetryConfigs()
+
+	for _, config := range configs {
 		for _, retry := range RetryLevels {
-			queueName := "retry." + retry.Level + "." + config.eventType
-			bindingKey := retry.Level + "." + config.eventType
+			queueName := "retry." + retry.Level + "." + config.EventType
+			bindingKey := retry.Level + "." + config.RoutingKey
 
+			// Declare Retry Queue
 			if _, err := channel.QueueDeclare(
 				queueName,
 				true, false, false, false,
 				amqp.Table{
-					"x-message-ttl":             retry.TTL,         // 消息在此 queue 等待的時間
-					"x-dead-letter-exchange":    config.exchange,   // TTL 到期後送回原始 exchange
-					"x-dead-letter-routing-key": config.routingKey, // 使用原始 routing key
+					"x-message-ttl":             retry.TTL,
+					"x-dead-letter-exchange":    config.Exchange,
+					"x-dead-letter-routing-key": config.RoutingKey,
 				},
 			); err != nil {
 				return err
 			}
 
+			// Bind to Retry Exchange
 			if err := channel.QueueBind(
 				queueName,
 				bindingKey,
@@ -380,65 +445,48 @@ func SetupAMQPInfrastructure(channel *amqp.Channel) error {
 				return err
 			}
 
-			slog.Info("Retry queue created",
-				"queue", queueName,
-				"ttl_ms", retry.TTL,
-				"binding_key", bindingKey,
+			slog.Debug("✓ Retry queue",
+				"name", queueName,
+				"ttl_seconds", retry.DelaySeconds,
 			)
 		}
 	}
 
-	// ==========================================
-	// 4. 原始工作 Queues + Bindings
-	// ==========================================
-
-	// Member Signed Up Queue
-	if _, err := channel.QueueDeclare(
-		commonconstants.NotificationMemberSignedUpQueue,
-		true, false, false, false,
-		amqp.Table{
-			"x-dead-letter-exchange":    commonconstants.DlxEventsExchange,
-			"x-dead-letter-routing-key": commonconstants.NotificationMemberSignedupFailed,
-		},
-	); err != nil {
-		slog.Error("Failed to declare member signedup queue", "error", err)
-		return err
-	}
-
-	if err := channel.QueueBind(
-		commonconstants.NotificationMemberSignedUpQueue,
-		commonconstants.MemberSignedUpEvent,
-		commonconstants.AuthEventsExchange,
-		false, nil,
-	); err != nil {
-		slog.Error("Failed to bind member signedup queue", "error", err)
-		return err
-	}
-
-	// Item Created Queue
-	if _, err := channel.QueueDeclare(
-		commonconstants.NotificationItemCreatedQueue,
-		true, false, false, false,
-		amqp.Table{
-			"x-dead-letter-exchange":    commonconstants.DlxEventsExchange,
-			"x-dead-letter-routing-key": commonconstants.NotificationItemCreatedFailed,
-		},
-	); err != nil {
-		slog.Error("Failed to declare item created queue", "error", err)
-		return err
-	}
-
-	if err := channel.QueueBind(
-		commonconstants.NotificationItemCreatedQueue,
-		commonconstants.ItemCreated,
-		commonconstants.ItemEventsExchange,
-		false, nil,
-	); err != nil {
-		slog.Error("Failed to bind item created queue", "error", err)
-		return err
-	}
-
-	slog.Info("Notification AMQP infrastructure setup completed")
 	return nil
 }
 
+// ==========================================
+// 5. Work Queues
+// ==========================================
+
+func setupWorkQueues(channel *amqp.Channel) error {
+	configs := GetEventRetryConfigs()
+
+	for _, config := range configs {
+		// Declare Work Queue
+		if _, err := channel.QueueDeclare(
+			config.WorkQueue,
+			true, false, false, false,
+			amqp.Table{
+				"x-dead-letter-exchange":    commonconstants.DlxEventsExchange,
+				"x-dead-letter-routing-key": config.DLQKey,
+			},
+		); err != nil {
+			return err
+		}
+
+		// Bind to Business Exchange
+		if err := channel.QueueBind(
+			config.WorkQueue,
+			config.RoutingKey,
+			config.Exchange,
+			false, nil,
+		); err != nil {
+			return err
+		}
+
+		slog.Debug("✓ Work queue", "name", config.WorkQueue)
+	}
+
+	return nil
+}
