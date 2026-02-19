@@ -273,7 +273,7 @@ func (s *service) updateDenormalizedLeaderboard(ctx context.Context, tx *sqlx.Tx
 }
 
 /**
-* Updates the player rankings leaderboard.
+* Updates the player rankings leaderboard stats
 **/
 func (s *service) UpdatePlayerRankings(ctx context.Context, updateData *pb.MemberProfileUpdatedEvent) error {
 	memberIdUUID, err := uuid.Parse(updateData.MemberId)
@@ -281,6 +281,7 @@ func (s *service) UpdatePlayerRankings(ctx context.Context, updateData *pb.Membe
 		slog.Error("error when parsing updateData.MemberId as uuid", "memberID", updateData.MemberId, "error", err)
 	}
 	_, err = s.repo.UpsertPlayerRankingStats(ctx, &UpdatePlayerRankingsParams{
+		Username:  updateData.Username,
 		MemberID:  memberIdUUID,
 		AvatarUrl: updateData.AvatarUrl,
 	})
@@ -309,11 +310,12 @@ func (s *service) GetLeaderboard(ctx context.Context, req *pbstats.GetLeaderboar
 		offset = int(*req.Offset)
 	}
 
+	// get cache version
 	version, err := s.cache.Get(ctx, commoncache.StatsLeaderboardVersionKey())
 	var versionInt64 int64
 
 	if err != nil {
-		slog.Warn("Cached result for status leaderboard version doesn't exist or retreival failed.", "key", commoncache.StatsLeaderboardVersionKey(), "error", err)
+		slog.Warn("Cached key for status leaderboard version doesn't exist or retreival failed.", "key", commoncache.StatsLeaderboardVersionKey(), "error", err)
 
 		versionInt64 = int64(1) // default to 1
 	} else {
@@ -321,6 +323,7 @@ func (s *service) GetLeaderboard(ctx context.Context, req *pbstats.GetLeaderboar
 		versionInt64, _ = strconv.ParseInt(version, 10, 64)
 	}
 
+	// get cache key and cached data
 	key := commoncache.StatsLeaderboardKey(versionInt64, limit, offset)
 	cachedResStr, err := s.cache.Get(ctx, key)
 

@@ -132,10 +132,10 @@ export class TreasureHuntScene extends Phaser.Scene {
   private drawEyes(graphics: Phaser.GameObjects.Graphics, x: number, y: number, vx: number, vy: number, isPlayer: boolean): void {
     graphics.clear();
 
-    // calculate eye offset based on movement direction
+    // calculate eye offset based on movement direction (negative to look in direction of movement)
     const maxOffset = 2;
-    let eyeOffsetX = vx * maxOffset;
-    let eyeOffsetY = vy * maxOffset;
+    let eyeOffsetX = -vx * maxOffset;
+    let eyeOffsetY = -vy * maxOffset;
 
     // base eye positions (relative to sprite center)
     const leftEyeX = x - 6 + eyeOffsetX;

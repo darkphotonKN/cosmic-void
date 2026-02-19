@@ -158,7 +158,7 @@ export default function SubscriptionPage() {
           setHasPermission(true);
         }
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setCheckingPermission(false));
   }, [isAuthenticated]);
 
