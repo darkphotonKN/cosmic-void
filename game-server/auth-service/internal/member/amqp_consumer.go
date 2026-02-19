@@ -8,34 +8,47 @@ import (
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/protobuf/proto"
 )
 
 type Consumer struct {
 	service   Service
+	channel   *amqp.Channel
 	publishCh commonbroker.Publisher
 }
 
-func NewConsumer(service Service, publishCh commonbroker.Publisher) *Consumer {
+func NewConsumer(service Service, channel *amqp.Channel, publishCh commonbroker.Publisher) *Consumer {
 	return &Consumer{
 		service:   service,
+		channel:   channel,
 		publishCh: publishCh,
 	}
 }
 
 func (c *Consumer) SetupConsumer() error {
 	// Declare topic exchange
-	err := c.publishCh.ExchangeDeclare(
+	err := c.channel.ExchangeDeclare(
 		commonconstants.AuthEventsExchange,
 		"topic",
+		true,
+		false,
+		false,
+		false,
+		nil,
 	)
 	if err != nil {
 		return err
 	}
 
 	// Declare queue
-	_, err = c.publishCh.QueueDeclare(
+	_, err = c.channel.QueueDeclare(
 		commonconstants.StatsAuthQueue,
+		true,
+		false,
+		false,
+		false,
+		nil,
 	)
 	if err != nil {
 		slog.Error("Failed to declare auth RPC queue", "error", err)
@@ -49,10 +62,12 @@ func (c *Consumer) SetupConsumer() error {
 	}
 
 	for _, key := range routingKeys {
-		err = c.publishCh.QueueBind(
+		err = c.channel.QueueBind(
 			commonconstants.StatsAuthQueue,
 			key,
 			commonconstants.AuthEventsExchange,
+			false,
+			nil,
 		)
 		if err != nil {
 			slog.Error("Failed to bind routing key", "key", key, "error", err)
@@ -74,9 +89,14 @@ func (c *Consumer) Listen() {
 }
 
 func (c *Consumer) consumeRequests() {
-	msgs, err := c.publishCh.Consume(
+	msgs, err := c.channel.Consume(
 		commonconstants.StatsAuthQueue,
+		"",
 		false, // manual ack
+		false,
+		false,
+		false,
+		nil,
 	)
 	if err != nil {
 		slog.Error("Failed to register auth RPC consumer", "error", err)
@@ -88,7 +108,7 @@ func (c *Consumer) consumeRequests() {
 	}
 }
 
-func (c *Consumer) handleRequest(msg commonbroker.Delivery) {
+func (c *Consumer) handleRequest(msg amqp.Delivery) {
 	ctx := context.Background()
 
 	slog.Info("Received auth RPC request",
@@ -110,7 +130,7 @@ func (c *Consumer) handleRequest(msg commonbroker.Delivery) {
 	default:
 		slog.Warn("Unknown routing key for auth RPC", "routing_key", msg.RoutingKey)
 		c.replyError(msg, "unknown routing key: "+msg.RoutingKey)
-		msg.Acknowledger.Ack(false)
+		msg.Ack(false)
 		return
 	}
 
@@ -120,7 +140,7 @@ func (c *Consumer) handleRequest(msg commonbroker.Delivery) {
 			"error", rpcErr,
 		)
 		c.replyError(msg, rpcErr.Error())
-		msg.Acknowledger.Ack(false)
+		msg.Ack(false)
 		return
 	}
 
@@ -135,7 +155,7 @@ func (c *Consumer) handleRequest(msg commonbroker.Delivery) {
 		slog.Error("Failed to publish RPC reply", "error", err)
 	}
 
-	msg.Acknowledger.Ack(false)
+	msg.Ack(false)
 	slog.Info("Auth RPC request processed successfully",
 		"routing_key", msg.RoutingKey,
 		"correlation_id", msg.CorrelationId,
@@ -179,7 +199,7 @@ func (c *Consumer) handleLoginMember(ctx context.Context, body []byte) ([]byte, 
 }
 
 // replyError sends an error response back to the reply queue.
-func (c *Consumer) replyError(msg commonbroker.Delivery, errMsg string) {
+func (c *Consumer) replyError(msg amqp.Delivery, errMsg string) {
 	ctx := context.Background()
 	err := c.publishCh.PublishWithContext(ctx, "", msg.ReplyTo,
 		commonbroker.Message{
