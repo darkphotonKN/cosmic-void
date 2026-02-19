@@ -125,7 +125,7 @@ func (h *messageHub) Run() {
 							"username":  player.Username,
 						},
 					})
-					fmt.Println("Player not found for connection")
+					slog.Error("Attempting to find a game when player already in session.")
 					continue
 				}
 

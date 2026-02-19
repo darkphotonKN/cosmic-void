@@ -353,7 +353,6 @@ func (s *Server) markPlayerAsReconnecting(player *types.Player) {
 func (s *Server) cleanUpConnectionOnly(conn *websocket.Conn) {
 	s.mu.Lock()
 
-	// 獲取玩家資訊
 	player, exists := s.connToPlayer[conn]
 	if !exists {
 		s.mu.Unlock()
@@ -364,7 +363,6 @@ func (s *Server) cleanUpConnectionOnly(conn *websocket.Conn) {
 
 	fmt.Printf("Cleaning up connection only for player: %s (keeping game state)\n", player.Username)
 
-	// 關閉並刪除 msgChan
 	if ch, exists := s.msgChan[conn]; exists {
 		close(ch)
 		delete(s.msgChan, conn)
@@ -379,7 +377,6 @@ func (s *Server) cleanUpConnectionOnly(conn *websocket.Conn) {
 
 	s.mu.Unlock()
 
-	// 關閉 WebSocket 連線
 	conn.Close()
 }
 

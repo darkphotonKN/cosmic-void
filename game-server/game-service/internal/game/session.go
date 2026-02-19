@@ -284,7 +284,6 @@ func (s *Session) manageClientMessages() {
 * runs system code to update state of game x times every second.
 **/
 func (s *Session) manageGameLoop() {
-
 	ticker := time.NewTicker((1 * time.Second) / time.Duration(constants.GameFrameRate))
 	defer ticker.Stop()
 
