@@ -101,8 +101,8 @@ func TestHandleMoveUpdatesPositionIntegration(t *testing.T) {
 * test integration between match publish and event
 **/
 func TestPublishMatchCompleteIntegration(t *testing.T) {
-	testMemberIDOne := "213b277a-68b8-4da2-ab6e-adb4f28e7b0d"
-	testMemberIDTwo := "4bbd9306-f06e-440e-a870-a2db4e07a7a6"
+	testMemberIDOne := "192fff36-d8ad-498d-8a0e-9a364087dcd7" // feb19
+	testMemberIDTwo := "aaefa37e-d2f7-404d-8c24-7cb0aef4a8fa" // feb20
 
 	// create test data player match results
 	matchEndData := &commontypes.MatchEndState{
@@ -112,7 +112,7 @@ func TestPublishMatchCompleteIntegration(t *testing.T) {
 		PlayerMatchResults: []*commontypes.PlayerMatchResults{
 			{
 				MemberID:      testMemberIDOne,
-				Username:      "testplayer1",
+				Username:      "test1feb19",
 				Win:           false,
 				FinalPosition: 2,
 				Kills:         3,
@@ -120,7 +120,7 @@ func TestPublishMatchCompleteIntegration(t *testing.T) {
 			},
 			{
 				MemberID:      testMemberIDTwo,
-				Username:      "test2",
+				Username:      "test1feb20",
 				Win:           true,
 				FinalPosition: 1,
 				Kills:         10,

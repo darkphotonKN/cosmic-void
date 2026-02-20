@@ -317,9 +317,14 @@ func (s *Session) manageGameLoop() {
 				continue
 			}
 
-			// NOTE: record metrics for tick duration and include entity count for reference
-			metrics.TickDuration.Record(context.Background(), time.Since(tickStart).Seconds())
-			metrics.EntityCount.Record(context.Background(), int64(len(entities)))
+			// NOTE: record metrics for tick duration (skip if not initialized)
+			if metrics.TickDuration != nil {
+				metrics.TickDuration.Record(context.Background(), time.Since(tickStart).Seconds())
+			}
+			if metrics.EntityCount != nil {
+				metrics.EntityCount.Record(context.Background(), int64(len(entities)))
+			}
+
 		case <-s.stopChan:
 			slog.Info("Game session game loop stopped", "sessionID", s.ID)
 			return

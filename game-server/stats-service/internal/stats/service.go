@@ -57,6 +57,9 @@ func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.MatchEndedE
 		"match_ended_at", req.MatchEndedAt.AsTime(),
 	)
 
+	// track if at least one complete update for a player was successfully processed
+	atLeastOnePlayerUpdated := false
+
 	for _, playerResults := range req.Players {
 		slog.Info("Player match outcome",
 			"playerResults", playerResults,
@@ -64,6 +67,7 @@ func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.MatchEndedE
 
 		// wrap transaction for business critical sync up between players match
 		// history and their personal stats
+
 		err := commonutils.ExecTx(ctx, s.db, func(tx *sqlx.Tx) error {
 			// -- player stats --
 			err := s.updatePlayerStats(ctx, tx, playerResults)
@@ -119,11 +123,21 @@ func (s *service) ProcessMatchCompleted(ctx context.Context, req *pb.MatchEndedE
 			continue
 		}
 
+		// finished all transactions for one player
+		atLeastOnePlayerUpdated = true
 	}
 
-	// TODO: call auth service for player information
+	// no update succeeded all rolledback
+	if !atLeastOnePlayerUpdated {
+		slog.Warn("No player succeeded ProcessMatchComplete transactions.")
 
-	// transaction was fine, invalidate cache results for denormalized leaderboard
+		return &ProcessMatchCompletedResponse{
+			Success: false,
+			Message: "All players updates were rolled back",
+		}, nil
+	}
+
+	// at least one complete update for one player passsed, invalidate cache results for denormalized leaderboard
 	// version increment to invalidate, no deletion needed, short TTL is enough
 	go func() {
 		newVersion, err := s.cache.Incr(context.Background(), commoncache.StatsLeaderboardVersionKey())
@@ -315,7 +329,7 @@ func (s *service) GetLeaderboard(ctx context.Context, req *pbstats.GetLeaderboar
 	var versionInt64 int64
 
 	if err != nil {
-		slog.Warn("Cached version for status leaderboard version doesn't exist or retreival failed.", "key", commoncache.StatsLeaderboardVersionKey(), "error", err)
+		slog.Warn("Cached \"version\" value for status leaderboard version doesn't exist or retreival failed.", "key", commoncache.StatsLeaderboardVersionKey(), "error", err)
 
 		versionInt64 = int64(1) // default to 1
 	} else {

@@ -23,6 +23,19 @@ func Init() error {
 		"game.tick.duration_seconds",
 		metric.WithDescription("Time to process one game tick"),
 		metric.WithUnit("s"),
+		metric.WithExplicitBucketBoundaries(
+			0.001, // 1ms
+			0.002, // 2ms
+			0.005, // 5ms
+			0.01,  // 10ms
+			0.015, // 15ms
+			0.02,  // 20ms
+			0.025, // 25ms
+			0.03,  // 30ms
+			0.033, // 33ms  NOTE: budget limit when runnign at 30 ticks a second
+			0.05,  // 50ms  WARN: over budget
+			0.1,   // 100ms WARN: over budget
+		),
 	)
 	if err != nil {
 		return err
