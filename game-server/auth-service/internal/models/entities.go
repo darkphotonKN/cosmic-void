@@ -14,6 +14,7 @@ type Member struct {
 	Name          string    `db:"name" json:"name"`
 	Password      string    `db:"password" json:"password,omitempty"`
 	Status        string    `db:"status" json:"status"`
+	Role          string    `db:"role" json:"role"`
 	AverageRating float64   `db:"average_rating"`
 	AvatarURL        *string `db:"avatar_url" json:"avatar_url,omitempty"`
 	StripeCustomerID            *string `db:"stripe_customer_id" json:"stripe_customer_id,omitempty"`
