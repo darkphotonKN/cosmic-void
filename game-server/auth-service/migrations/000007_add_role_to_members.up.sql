@@ -19,13 +19,13 @@ BEGIN
         WHERE id = (SELECT id FROM members ORDER BY created_at ASC LIMIT 1);
     ELSE
         -- Create default admin account
-        -- Password is 'admin' hashed with bcrypt (cost 10)
+        -- Password is '123456' hashed with bcrypt (cost 10)
         INSERT INTO members (id, email, name, password, status, role, created_at, updated_at)
         VALUES (
             gen_random_uuid(),
             'admin@cosmicvoid.com',
             'Admin',
-            '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+            '$2a$10$.2AEer5Qwhhxq0XkYndjkO6NhsPuG4KvYDsx8EHspoUWXPuo/LD2e',
             '1',
             'admin',
             NOW(),
