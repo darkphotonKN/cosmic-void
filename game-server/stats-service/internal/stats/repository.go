@@ -375,26 +375,14 @@ func (r *repository) UpsertPlayerRankingStatsTx(ctx context.Context, tx *sqlx.Tx
 	`
 
 	var updated PlayerRankingStats
-	err := tx.QueryRowContext(ctx, query,
-		stats.MemberID,
+	err := tx.GetContext(ctx, &updated, query,
+		stats.MemberID.String(),
 		stats.Username,
 		stats.Wins,
 		stats.TopThrees,
 		stats.AvatarUrl,
 		stats.Rating,
 		stats.RankPosition,
-	).Scan(
-		&updated.ID,
-		&updated.MemberID,
-		&updated.Username,
-		&updated.Wins,
-		&updated.TopThrees,
-		&updated.AvatarUrl,
-		&updated.Rating,
-		&updated.RankPosition,
-		&updated.LastCalculatedAt,
-		&updated.CreatedAt,
-		&updated.UpdatedAt,
 	)
 
 	if err != nil {
