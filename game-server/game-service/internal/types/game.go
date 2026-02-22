@@ -55,6 +55,7 @@ type ItemState struct {
 	ManaAmount    int32     `json:"mana_amount,omitempty"`    // consumable
 	Description   string    `json:"description,omitempty"`    // all types
 }
+
 type ContainerState struct {
 	ContainerID uuid.UUID    `json:"container_id"`
 	EntityID    uuid.UUID    `json:"entity_id"`

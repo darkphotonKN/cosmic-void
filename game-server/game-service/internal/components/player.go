@@ -6,7 +6,7 @@ import (
 )
 
 type PlayerComponent struct {
-	UserID   uuid.UUID
+	MemberID uuid.UUID
 	Username string
 }
 
@@ -14,6 +14,6 @@ func (p *PlayerComponent) Type() ecs.ComponentType {
 	return ecs.ComponentTypePlayer
 }
 
-func NewPlayerComponent(userID uuid.UUID, username string) *PlayerComponent {
-	return &PlayerComponent{UserID: userID, Username: username}
+func NewPlayerComponent(memberID uuid.UUID, username string) *PlayerComponent {
+	return &PlayerComponent{MemberID: memberID, Username: username}
 }

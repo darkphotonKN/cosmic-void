@@ -67,7 +67,7 @@ func (s *StateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, re
 				}
 			}
 			playerState := &types.PlayerState{
-				ID:       player.UserID,
+				ID:       player.MemberID,
 				EntityID: entity.ID,
 				Username: player.Username,
 				Position: &types.Position{
@@ -83,7 +83,7 @@ func (s *StateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, re
 			}
 
 			// Check if this is the recipient player
-			if player.UserID == recipientPlayerID {
+			if player.MemberID == recipientPlayerID {
 				state.CurrentPlayer = playerState
 			} else {
 				state.OtherPlayers = append(state.OtherPlayers, playerState)

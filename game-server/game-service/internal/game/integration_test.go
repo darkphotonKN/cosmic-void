@@ -333,7 +333,7 @@ func TestPublishMatchCompleteIntegration(t *testing.T) {
 		slog.Info(fmt.Sprintf("Publishing match %d", i+1), "winnerID", matchData.winnerID)
 
 		// Add time spacing between matches (as if they happened at different times)
-		matchStartTime := time.Now().Add(time.Duration(-(45-i*15)) * time.Minute)
+		matchStartTime := time.Now().Add(time.Duration(-(45 - i*15)) * time.Minute)
 		matchEndTime := matchStartTime.Add(15 * time.Minute)
 
 		matchEndData := &commontypes.MatchEndState{

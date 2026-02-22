@@ -16,7 +16,6 @@ func NewMovementSystem() *MovementSystem {
 
 // NOTE: this runs every game tick
 func (s *MovementSystem) Update(deltaTime float64, entities []*ecs.Entity) {
-
 	// O(n)
 	// player collision
 	entitiesMap := make(map[int]*ecs.Entity, 0)
@@ -37,6 +36,7 @@ func (s *MovementSystem) Update(deltaTime float64, entities []*ecs.Entity) {
 
 		entitiesMap[key] = entity
 	}
+
 	for _, entity := range entitiesMap {
 		targetEntity := entity
 		transformComp, _ := targetEntity.GetComponent(ecs.ComponentTypeTransform)

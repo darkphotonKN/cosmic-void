@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	grpcitems "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/items"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
@@ -67,7 +66,7 @@ type SessionSender interface {
 }
 
 type EventEmitter interface {
-	PublishMatchComplete(ctx context.Context, data *commontypes.MatchEndState) error
+	PublishMatchComplete(ctx context.Context, data *types.RawMatchState) error
 }
 
 func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSerializer, em *ecs.EntityManager, eventEmitter EventEmitter, itemsClient grpcitems.ItemsClient) *Session {
@@ -337,7 +336,7 @@ func (s *Session) AddPlayer(playerID uuid.UUID, username string) uuid.UUID {
 	defer s.mu.Unlock()
 
 	PlayerConfig := PlayerConfig{
-		UserID:        playerID,
+		MemberID:      playerID,
 		Username:      username,
 		X:             constants.PlayerRadius + rand.Float64()*(constants.MapWidth-2*constants.PlayerRadius),
 		Y:             constants.PlayerRadius + rand.Float64()*(constants.MapHeight-2*constants.PlayerRadius),
@@ -977,17 +976,48 @@ func (s *Session) endSession() {
 	// clean up
 	s.Shutdown()
 
-	entities := s.EntityManager.GetAllEntities()
-	s.eventEmitter.PublishMatchComplete(context.Background(), entities)
+	// grab raw data for publishing
+	rawMatchState := s.getRawMatchState()
+	s.eventEmitter.PublishMatchComplete(context.Background(), rawMatchState)
 }
 
 /**
 * Converts game specific entities into raw data for processing.
 **/
 func (s *Session) getRawMatchState() *types.RawMatchState {
+	// TODO: update this to fixed player count once player count is fixed
 	rawPlayers := make([]types.RawPlayerState, 0)
 
 	entities := s.EntityManager.GetAllEntities()
+
+	// --- player data ---
+	for _, entity := range entities {
+		playerComponent, isPlayer := entity.GetComponent(ecs.ComponentTypePlayer)
+
+		if isPlayer {
+			// assert back to component's original type
+			playerState := playerComponent.(*components.PlayerComponent)
+
+			// pull players end game stats state out of its entity
+			statsComp, _ := entity.GetComponent(ecs.ComponentTypeStats)
+			stats := statsComp.(*components.StatsComponent)
+
+			rawPlayers = append(rawPlayers, types.RawPlayerState{
+				MemberID: playerState.MemberID.String(),
+				Username: playerState.Username,
+				Kills:    int32(stats.Kills),
+				Deaths:   int32(stats.Deaths),
+			})
+		}
+	}
+
+	return &types.RawMatchState{
+		SessionID: s.ID,
+		// TODO: need to add started at in session struct for tracking
+		StartedAt: time.Now(),
+		EndedAt:   time.Now(),
+		Players:   rawPlayers,
+	}
 }
 
 func (s *Session) InitialMapObjects() {

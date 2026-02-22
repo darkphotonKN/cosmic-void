@@ -9,7 +9,7 @@ import (
 )
 
 type PlayerConfig struct {
-	UserID        uuid.UUID
+	MemberID      uuid.UUID
 	Username      string
 	X, Y          float64
 	SkillName     string
@@ -24,7 +24,7 @@ type PlayerConfig struct {
 
 func CreatePlayerEntity(em *ecs.EntityManager, config PlayerConfig) *ecs.Entity {
 	entity := em.CreateEntity()
-	entity.AddComponent(components.NewPlayerComponent(config.UserID, config.Username))
+	entity.AddComponent(components.NewPlayerComponent(config.MemberID, config.Username))
 
 	entity.AddComponent(components.NewTransformComponent(config.X, config.Y))
 
