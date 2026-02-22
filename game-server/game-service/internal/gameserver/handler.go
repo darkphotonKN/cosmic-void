@@ -3,6 +3,7 @@ package gameserver
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -24,8 +25,10 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 	ctx := c.Request.Context()
 	ctx, span := tracer.Start(ctx, "service.HandleWebSocketConnection")
 	defer span.End()
+
 	userIdStr, ok := c.Get("userIdStr")
-	fmt.Printf("User ID: %s\n", userIdStr)
+	slog.Debug("User ID from token and passed down with gin context", "userIdStr", userIdStr)
+
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"statusCode": http.StatusUnauthorized, "message": "Unauthorized"})
 		return
