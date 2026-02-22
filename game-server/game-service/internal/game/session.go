@@ -977,26 +977,19 @@ func (s *Session) endSession() {
 	// clean up
 	s.Shutdown()
 
-	matchEndData, err := s.formatMatchEndData()
-	if err != nil {
-		slog.Error("Failed to format match end data", "error", err)
-	}
-
-	slog.Info("Match end data", "data", matchEndData)
-
-	s.eventEmitter.PublishMatchComplete(context.Background(), matchEndData)
+	entities := s.EntityManager.GetAllEntities()
+	s.eventEmitter.PublishMatchComplete(context.Background(), entities)
 }
 
 /**
-* Formats the final end game data from the final game state.
+* Converts game specific entities into raw data for processing.
 **/
-// TODO: WIP
-func (s *Session) formatMatchEndData() (*commontypes.MatchEndState, error) {
-	// entities := s.EntityManager.GetAllEntities()
-	slog.Info("Formatting data after match ended")
+func (s *Session) getRawMatchState() *types.RawMatchState {
+	rawPlayers := make([]types.RawPlayerState, 0)
 
-	return nil, nil
+	entities := s.EntityManager.GetAllEntities()
 }
+
 func (s *Session) InitialMapObjects() {
 	// add container (ensure it's not cut off at edges)
 	containerX := constants.ContainerWidthRadius + rand.Float64()*(constants.MapWidth-2*constants.ContainerWidthRadius)

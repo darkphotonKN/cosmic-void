@@ -8,6 +8,7 @@ import (
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -24,6 +25,14 @@ func NewService(publishCh commonbroker.Publisher) *service {
 }
 
 func (s *service) PublishMatchComplete(ctx context.Context, data *commontypes.MatchEndState) error {
+
+	// TODO: pass game state
+	// formatData, err := s.formatMatchData()
+	//
+	// if err != nil {
+	// 	return err
+	// }
+
 	// format data for marshalling as protobuf
 	playerMatchRes := make([]*pb.PlayerMatchResult, len(data.PlayerMatchResults))
 
@@ -62,4 +71,11 @@ func (s *service) PublishMatchComplete(ctx context.Context, data *commontypes.Ma
 	}
 
 	return nil
+}
+
+/**
+* Formats from raw game state to match end state.
+**/
+func (s *service) formatMatchData(rawState []*ecs.Entity) (*commontypes.MatchEndState, error) {
+	return nil, nil
 }

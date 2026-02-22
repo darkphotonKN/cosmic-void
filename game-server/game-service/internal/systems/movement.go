@@ -13,34 +13,6 @@ type MovementSystem struct{}
 func NewMovementSystem() *MovementSystem {
 	return &MovementSystem{}
 }
-// resolveCollision checks collision and returns resolved position
-// if there's a collision, pushes position to just not overlapping
-func resolveCollision(newX, newY float64, other *ecs.Entity) (float64, float64, bool) {
-	otherTransformComp, hasTransform := other.GetComponent(ecs.ComponentTypeTransform)
-	_, hasVelocity := other.GetComponent(ecs.ComponentTypeVelocity)
-
-	if !hasTransform || !hasVelocity {
-		return newX, newY, false
-	}
-
-	otherTransform := otherTransformComp.(*components.TransformComponent)
-
-	dx := newX - otherTransform.X
-	dy := newY - otherTransform.Y
-	distance := math.Hypot(dx, dy)
-
-	minDist := 2 * constants.PlayerRadius
-
-	if distance < minDist && distance > 0 {
-		// collision detected, push to just not overlapping position
-		ratio := minDist / distance
-		resolvedX := otherTransform.X + dx*ratio
-		resolvedY := otherTransform.Y + dy*ratio
-		return resolvedX, resolvedY, true
-	}
-
-	return newX, newY, false
-}
 
 // NOTE: this runs every game tick
 func (s *MovementSystem) Update(deltaTime float64, entities []*ecs.Entity) {
@@ -114,4 +86,33 @@ func (s *MovementSystem) Update(deltaTime float64, entities []*ecs.Entity) {
 
 	}
 
+}
+
+// resolveCollision checks collision and returns resolved position
+// if there's a collision, pushes position to just not overlapping
+func resolveCollision(newX, newY float64, other *ecs.Entity) (float64, float64, bool) {
+	otherTransformComp, hasTransform := other.GetComponent(ecs.ComponentTypeTransform)
+	_, hasVelocity := other.GetComponent(ecs.ComponentTypeVelocity)
+
+	if !hasTransform || !hasVelocity {
+		return newX, newY, false
+	}
+
+	otherTransform := otherTransformComp.(*components.TransformComponent)
+
+	dx := newX - otherTransform.X
+	dy := newY - otherTransform.Y
+	distance := math.Hypot(dx, dy)
+
+	minDist := 2 * constants.PlayerRadius
+
+	if distance < minDist && distance > 0 {
+		// collision detected, push to just not overlapping position
+		ratio := minDist / distance
+		resolvedX := otherTransform.X + dx*ratio
+		resolvedY := otherTransform.Y + dy*ratio
+		return resolvedX, resolvedY, true
+	}
+
+	return newX, newY, false
 }

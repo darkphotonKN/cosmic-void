@@ -101,35 +101,190 @@ func TestHandleMoveUpdatesPositionIntegration(t *testing.T) {
 * test integration between match publish and event
 **/
 func TestPublishMatchCompleteIntegration(t *testing.T) {
-	testMemberIDOne := "192fff36-d8ad-498d-8a0e-9a364087dcd7" // feb19
-	testMemberIDTwo := "aaefa37e-d2f7-404d-8c24-7cb0aef4a8fa" // feb20
+	// Test member IDs from the actual registered members
+	testMemberIDOne := "7f12d971-5879-4057-84c5-408a36de913c" // feb19
+	testMemberIDTwo := "0760888e-f489-4a68-a83f-c1abddc64f10" // feb20
+	testMemberIDThree := "61363b86-5eef-4ddd-b944-3c0869b99182"
+	testMemberIDFour := "f5535dc6-1d6d-4f0b-b003-65db9bbf24f0"
+	testMemberIDFive := "49fd6267-d7ec-4963-948a-832cc7140c9c"
+	testMemberIDSix := "b5338eba-fffb-443c-bea4-51629d60be7c"
 
-	// create test data player match results
-	matchEndData := &commontypes.MatchEndState{
-		SessionID:      uuid.MustParse("550e8400-e29b-41d4-a716-446655440001"),
-		MatchStartedAt: time.Now().Add(-15 * time.Minute), // Match lasted 15 minutes
-		MatchEndedAt:   time.Now(),
-		PlayerMatchResults: []*commontypes.PlayerMatchResults{
-			{
-				MemberID:      testMemberIDOne,
-				Username:      "test1feb19",
-				Win:           false,
-				FinalPosition: 2,
-				Kills:         3,
-				Deaths:        1,
+	// Create 3 different match scenarios
+	matchScenarios := []struct {
+		sessionID      string
+		winnerID       string
+		winnerUsername string
+		playerResults  []*commontypes.PlayerMatchResults
+	}{
+		// Match 1: testMemberIDThree wins
+		{
+			sessionID:      "550e8400-e29b-41d4-a716-446655440001",
+			winnerID:       testMemberIDThree,
+			winnerUsername: "player_three",
+			playerResults: []*commontypes.PlayerMatchResults{
+				{
+					MemberID:      testMemberIDThree,
+					Username:      "player_three",
+					Win:           true,
+					FinalPosition: 1,
+					Kills:         7,
+					Deaths:        0,
+				},
+				{
+					MemberID:      testMemberIDOne,
+					Username:      "test1feb19",
+					Win:           false,
+					FinalPosition: 2,
+					Kills:         4,
+					Deaths:        1,
+				},
+				{
+					MemberID:      testMemberIDTwo,
+					Username:      "test1feb20",
+					Win:           false,
+					FinalPosition: 3,
+					Kills:         3,
+					Deaths:        1,
+				},
+				{
+					MemberID:      testMemberIDFour,
+					Username:      "player_four",
+					Win:           false,
+					FinalPosition: 4,
+					Kills:         2,
+					Deaths:        2,
+				},
+				{
+					MemberID:      testMemberIDFive,
+					Username:      "player_five",
+					Win:           false,
+					FinalPosition: 5,
+					Kills:         1,
+					Deaths:        1,
+				},
+				{
+					MemberID:      testMemberIDSix,
+					Username:      "player_six",
+					Win:           false,
+					FinalPosition: 6,
+					Kills:         0,
+					Deaths:        2,
+				},
 			},
-			{
-				MemberID:      testMemberIDTwo,
-				Username:      "test1feb20",
-				Win:           true,
-				FinalPosition: 1,
-				Kills:         10,
-				Deaths:        0,
+		},
+		// Match 2: testMemberIDOne wins
+		{
+			sessionID:      "550e8400-e29b-41d4-a716-446655440002",
+			winnerID:       testMemberIDOne,
+			winnerUsername: "test1feb19",
+			playerResults: []*commontypes.PlayerMatchResults{
+				{
+					MemberID:      testMemberIDOne,
+					Username:      "test1feb19",
+					Win:           true,
+					FinalPosition: 1,
+					Kills:         8,
+					Deaths:        0,
+				},
+				{
+					MemberID:      testMemberIDFour,
+					Username:      "player_four",
+					Win:           false,
+					FinalPosition: 2,
+					Kills:         5,
+					Deaths:        1,
+				},
+				{
+					MemberID:      testMemberIDThree,
+					Username:      "player_three",
+					Win:           false,
+					FinalPosition: 3,
+					Kills:         3,
+					Deaths:        1,
+				},
+				{
+					MemberID:      testMemberIDFive,
+					Username:      "player_five",
+					Win:           false,
+					FinalPosition: 4,
+					Kills:         2,
+					Deaths:        1,
+				},
+				{
+					MemberID:      testMemberIDTwo,
+					Username:      "test1feb20",
+					Win:           false,
+					FinalPosition: 5,
+					Kills:         1,
+					Deaths:        2,
+				},
+				{
+					MemberID:      testMemberIDSix,
+					Username:      "player_six",
+					Win:           false,
+					FinalPosition: 6,
+					Kills:         1,
+					Deaths:        2,
+				},
+			},
+		},
+		// Match 3: testMemberIDFive wins
+		{
+			sessionID:      "550e8400-e29b-41d4-a716-446655440003",
+			winnerID:       testMemberIDFive,
+			winnerUsername: "player_five",
+			playerResults: []*commontypes.PlayerMatchResults{
+				{
+					MemberID:      testMemberIDFive,
+					Username:      "player_five",
+					Win:           true,
+					FinalPosition: 1,
+					Kills:         6,
+					Deaths:        0,
+				},
+				{
+					MemberID:      testMemberIDTwo,
+					Username:      "test1feb20",
+					Win:           false,
+					FinalPosition: 2,
+					Kills:         4,
+					Deaths:        1,
+				},
+				{
+					MemberID:      testMemberIDSix,
+					Username:      "player_six",
+					Win:           false,
+					FinalPosition: 3,
+					Kills:         3,
+					Deaths:        0,
+				},
+				{
+					MemberID:      testMemberIDOne,
+					Username:      "test1feb19",
+					Win:           false,
+					FinalPosition: 4,
+					Kills:         2,
+					Deaths:        1,
+				},
+				{
+					MemberID:      testMemberIDThree,
+					Username:      "player_three",
+					Win:           false,
+					FinalPosition: 5,
+					Kills:         2,
+					Deaths:        2,
+				},
+				{
+					MemberID:      testMemberIDFour,
+					Username:      "player_four",
+					Win:           false,
+					FinalPosition: 6,
+					Kills:         0,
+					Deaths:        1,
+				},
 			},
 		},
 	}
-
-	slog.Info("Match end data", "data", matchEndData)
 
 	ch, close := broker.Connect(amqpUser, amqpPassword, amqpHost, amqpPort)
 
@@ -173,36 +328,88 @@ func TestPublishMatchCompleteIntegration(t *testing.T) {
 	publishCh := commonbroker.NewAmqpPublisher(ch) // use adapter
 	service := NewService(publishCh)
 
-	service.PublishMatchComplete(context.Background(), matchEndData)
+	// Publish all 3 match scenarios
+	for i, matchData := range matchScenarios {
+		slog.Info(fmt.Sprintf("Publishing match %d", i+1), "winnerID", matchData.winnerID)
 
-	msgs, err := ch.Consume(testQueue, "", false, false, false, false, nil)
+		// Add time spacing between matches (as if they happened at different times)
+		matchStartTime := time.Now().Add(time.Duration(-(45-i*15)) * time.Minute)
+		matchEndTime := matchStartTime.Add(15 * time.Minute)
 
-	assert.NoError(t, err)
+		matchEndData := &commontypes.MatchEndState{
+			SessionID:          uuid.MustParse(matchData.sessionID),
+			MatchStartedAt:     matchStartTime,
+			MatchEndedAt:       matchEndTime,
+			PlayerMatchResults: matchData.playerResults,
+		}
 
-	select {
-	case msg := <-msgs:
-		var data pb.MatchEndedEvent
+		slog.Info("Match end data", "matchNumber", i+1, "data", matchEndData)
 
-		if err := proto.Unmarshal(msg.Body, &data); err != nil {
-			slog.Error("Failed to parse match completed event", "error", err)
-
-			msg.Nack(false, false)
-
+		err := service.PublishMatchComplete(context.Background(), matchEndData)
+		if err != nil {
+			slog.Error("Failed to publish match complete", "error", err, "matchNumber", i+1)
 			assert.NoError(t, err)
 		}
 
-		// check each player from consumed results
-		for _, player := range data.Players {
-			if player.MemberId == testMemberIDOne {
-				assert.Equal(t, player.Win, false)
-			}
-			if player.MemberId == testMemberIDTwo {
-				assert.Equal(t, player.Win, true)
-			}
-		}
-
-	// for timeout
-	case <-time.After(time.Second * 5):
-		t.Fatal("Timed out when waiting for consuming message for testing publish match complete.")
+		// Small delay between publishes to ensure proper processing
+		time.Sleep(100 * time.Millisecond)
 	}
+
+	msgs, err := ch.Consume(testQueue, "", false, false, false, false, nil)
+	assert.NoError(t, err)
+
+	// Consume and verify all 3 messages
+	matchesReceived := 0
+	timeout := time.After(time.Second * 10)
+
+	for matchesReceived < 3 {
+		select {
+		case msg := <-msgs:
+			var data pb.MatchEndedEvent
+
+			if err := proto.Unmarshal(msg.Body, &data); err != nil {
+				slog.Error("Failed to parse match completed event", "error", err)
+				msg.Nack(false, false)
+				assert.NoError(t, err)
+			}
+
+			matchesReceived++
+			slog.Info(fmt.Sprintf("Received match %d", matchesReceived), "sessionID", data.SessionId)
+
+			// Acknowledge message
+			msg.Ack(false)
+
+			// Verify data integrity for specific players
+			if matchesReceived == 1 {
+				// First match: testMemberIDThree wins
+				for _, player := range data.Players {
+					if player.MemberId == testMemberIDThree {
+						assert.Equal(t, true, player.Win)
+						assert.Equal(t, int32(1), player.FinalPosition)
+					}
+				}
+			} else if matchesReceived == 2 {
+				// Second match: testMemberIDOne wins
+				for _, player := range data.Players {
+					if player.MemberId == testMemberIDOne {
+						assert.Equal(t, true, player.Win)
+						assert.Equal(t, int32(1), player.FinalPosition)
+					}
+				}
+			} else if matchesReceived == 3 {
+				// Third match: testMemberIDFive wins
+				for _, player := range data.Players {
+					if player.MemberId == testMemberIDFive {
+						assert.Equal(t, true, player.Win)
+						assert.Equal(t, int32(1), player.FinalPosition)
+					}
+				}
+			}
+
+		case <-timeout:
+			t.Fatalf("Timed out when waiting for consuming messages. Received %d of 3 expected messages", matchesReceived)
+		}
+	}
+
+	slog.Info("Successfully published and consumed all 3 match scenarios")
 }

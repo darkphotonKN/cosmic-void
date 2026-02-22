@@ -1,6 +1,8 @@
 package types
 
 import (
+	"time"
+
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	"github.com/google/uuid"
 )
@@ -59,4 +61,18 @@ type ContainerState struct {
 	Position    *Position    `json:"position"`
 	IsOpen      bool         `json:"is_open"`
 	Items       []*ItemState `json:"items"`
+}
+
+type RawMatchState struct {
+	SessionID uuid.UUID
+	StartedAt time.Time
+	EndedAt   time.Time
+	Players   []RawPlayerState
+}
+
+type RawPlayerState struct {
+	MemberID string
+	Username string
+	Kills    int32
+	Deaths   int32
 }
