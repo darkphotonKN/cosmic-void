@@ -26,28 +26,14 @@ func NewService(publishCh commonbroker.Publisher) *service {
 }
 
 func (s *service) PublishMatchComplete(ctx context.Context, data *types.RawMatchState) error {
-
 	// determine win and other business logic
 
-	// format data for marshalling as protobuf
-	playerMatchRes := make([]*pb.PlayerMatchResult, len(data.Players))
+	protoData, err := s.formatMatchData(data)
 
-	for i, player := range data.Players {
-		playerMatchRes[i] = &pb.PlayerMatchResult{
-			MemberId: player.MemberID,
-			Username: player.Username,
-			Kills:    player.Kills,
-			Deaths:   player.Deaths,
-		}
+	if err != nil {
+		slog.Error("Error publishing game match end event", "error", err)
+		return err
 	}
-
-	// marshal to protobuf
-	protoData, err := proto.Marshal(&pb.MatchEndedEvent{
-		SessionId:      string(data.SessionID.String()),
-		MatchStartedAt: timestamppb.New(data.StartedAt),
-		MatchEndedAt:   timestamppb.New(data.EndedAt),
-		Players:        playerMatchRes,
-	})
 
 	err = s.publishCh.PublishWithContext(
 		ctx,
@@ -70,8 +56,37 @@ func (s *service) PublishMatchComplete(ctx context.Context, data *types.RawMatch
 /**
 * Formats from raw game state to match end state.
 **/
-func (s *service) formatMatchData(rawState []*ecs.Entity) (*commontypes.MatchEndState, error) {
-	return nil, nil
+func (s *service) formatMatchData(data *types.RawMatchState) ([]byte, error) {
+	// format data for marshalling as protobuf
+	playerMatchRes := make([]*pb.PlayerMatchResult, len(data.Players))
+
+	for i, player := range data.Players {
+		playerMatchRes[i] = &pb.PlayerMatchResult{
+			MemberId: player.MemberID,
+			Username: player.Username,
+			Kills:    player.Kills,
+			Deaths:   player.Deaths,
+		}
+	}
+
+	// marshal to protobuf
+	protoData, err := proto.Marshal(&pb.MatchEndedEvent{
+		SessionId:      string(data.SessionID.String()),
+		MatchStartedAt: timestamppb.New(data.StartedAt),
+		MatchEndedAt:   timestamppb.New(data.EndedAt),
+		Players:        playerMatchRes,
+	})
+
+	if err != nil {
+		slog.Error("could not marshal end match data to MatchEndedEvent proto",
+			"session_id", data.SessionID,
+			"error", err,
+		)
+
+		return nil, err
+	}
+
+	return protoData, nil
 }
 
 /**

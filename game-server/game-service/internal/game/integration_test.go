@@ -11,11 +11,11 @@ import (
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 
 	"github.com/darkphotonKN/cosmic-void-server/common/broker"
-	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/serializer"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
@@ -46,7 +46,7 @@ func (m *MessageSender) PushMessageToConn(
 // Mock EventEmitter for testing
 type mockEventEmitter struct{}
 
-func (m *mockEventEmitter) PublishMatchComplete(ctx context.Context, data *commontypes.MatchEndState) error {
+func (m *mockEventEmitter) PublishMatchComplete(ctx context.Context, data *types.RawMatchState) error {
 	return nil
 }
 
@@ -109,66 +109,57 @@ func TestPublishMatchCompleteIntegration(t *testing.T) {
 	testMemberIDFive := "49fd6267-d7ec-4963-948a-832cc7140c9c"
 	testMemberIDSix := "b5338eba-fffb-443c-bea4-51629d60be7c"
 
-	// Create 3 different match scenarios
+	// Create 3 different match scenarios using RawMatchState
 	matchScenarios := []struct {
 		sessionID      string
 		winnerID       string
 		winnerUsername string
-		playerResults  []*commontypes.PlayerMatchResults
+		rawMatchState  *types.RawMatchState
 	}{
-		// Match 1: testMemberIDThree wins
+		// Match 1: testMemberIDThree wins (highest kills, no deaths)
 		{
 			sessionID:      "550e8400-e29b-41d4-a716-446655440001",
 			winnerID:       testMemberIDThree,
 			winnerUsername: "player_three",
-			playerResults: []*commontypes.PlayerMatchResults{
-				{
-					MemberID:      testMemberIDThree,
-					Username:      "player_three",
-					Win:           true,
-					FinalPosition: 1,
-					Kills:         7,
-					Deaths:        0,
-				},
-				{
-					MemberID:      testMemberIDOne,
-					Username:      "test1feb19",
-					Win:           false,
-					FinalPosition: 2,
-					Kills:         4,
-					Deaths:        1,
-				},
-				{
-					MemberID:      testMemberIDTwo,
-					Username:      "test1feb20",
-					Win:           false,
-					FinalPosition: 3,
-					Kills:         3,
-					Deaths:        1,
-				},
-				{
-					MemberID:      testMemberIDFour,
-					Username:      "player_four",
-					Win:           false,
-					FinalPosition: 4,
-					Kills:         2,
-					Deaths:        2,
-				},
-				{
-					MemberID:      testMemberIDFive,
-					Username:      "player_five",
-					Win:           false,
-					FinalPosition: 5,
-					Kills:         1,
-					Deaths:        1,
-				},
-				{
-					MemberID:      testMemberIDSix,
-					Username:      "player_six",
-					Win:           false,
-					FinalPosition: 6,
-					Kills:         0,
-					Deaths:        2,
+			rawMatchState: &types.RawMatchState{
+				SessionID: uuid.MustParse("550e8400-e29b-41d4-a716-446655440001"),
+				Players: []types.RawPlayerState{
+					{
+						MemberID: testMemberIDThree,
+						Username: "player_three",
+						Kills:    7,
+						Deaths:   0,
+					},
+					{
+						MemberID: testMemberIDOne,
+						Username: "test1feb19",
+						Kills:    4,
+						Deaths:   1,
+					},
+					{
+						MemberID: testMemberIDTwo,
+						Username: "test1feb20",
+						Kills:    3,
+						Deaths:   1,
+					},
+					{
+						MemberID: testMemberIDFour,
+						Username: "player_four",
+						Kills:    2,
+						Deaths:   2,
+					},
+					{
+						MemberID: testMemberIDFive,
+						Username: "player_five",
+						Kills:    1,
+						Deaths:   1,
+					},
+					{
+						MemberID: testMemberIDSix,
+						Username: "player_six",
+						Kills:    0,
+						Deaths:   2,
+					},
 				},
 			},
 		},
@@ -177,54 +168,45 @@ func TestPublishMatchCompleteIntegration(t *testing.T) {
 			sessionID:      "550e8400-e29b-41d4-a716-446655440002",
 			winnerID:       testMemberIDOne,
 			winnerUsername: "test1feb19",
-			playerResults: []*commontypes.PlayerMatchResults{
-				{
-					MemberID:      testMemberIDOne,
-					Username:      "test1feb19",
-					Win:           true,
-					FinalPosition: 1,
-					Kills:         8,
-					Deaths:        0,
-				},
-				{
-					MemberID:      testMemberIDFour,
-					Username:      "player_four",
-					Win:           false,
-					FinalPosition: 2,
-					Kills:         5,
-					Deaths:        1,
-				},
-				{
-					MemberID:      testMemberIDThree,
-					Username:      "player_three",
-					Win:           false,
-					FinalPosition: 3,
-					Kills:         3,
-					Deaths:        1,
-				},
-				{
-					MemberID:      testMemberIDFive,
-					Username:      "player_five",
-					Win:           false,
-					FinalPosition: 4,
-					Kills:         2,
-					Deaths:        1,
-				},
-				{
-					MemberID:      testMemberIDTwo,
-					Username:      "test1feb20",
-					Win:           false,
-					FinalPosition: 5,
-					Kills:         1,
-					Deaths:        2,
-				},
-				{
-					MemberID:      testMemberIDSix,
-					Username:      "player_six",
-					Win:           false,
-					FinalPosition: 6,
-					Kills:         1,
-					Deaths:        2,
+			rawMatchState: &types.RawMatchState{
+				SessionID: uuid.MustParse("550e8400-e29b-41d4-a716-446655440002"),
+				Players: []types.RawPlayerState{
+					{
+						MemberID: testMemberIDOne,
+						Username: "test1feb19",
+						Kills:    8,
+						Deaths:   0,
+					},
+					{
+						MemberID: testMemberIDFour,
+						Username: "player_four",
+						Kills:    5,
+						Deaths:   1,
+					},
+					{
+						MemberID: testMemberIDThree,
+						Username: "player_three",
+						Kills:    3,
+						Deaths:   1,
+					},
+					{
+						MemberID: testMemberIDFive,
+						Username: "player_five",
+						Kills:    2,
+						Deaths:   1,
+					},
+					{
+						MemberID: testMemberIDTwo,
+						Username: "test1feb20",
+						Kills:    1,
+						Deaths:   2,
+					},
+					{
+						MemberID: testMemberIDSix,
+						Username: "player_six",
+						Kills:    1,
+						Deaths:   2,
+					},
 				},
 			},
 		},
@@ -233,54 +215,45 @@ func TestPublishMatchCompleteIntegration(t *testing.T) {
 			sessionID:      "550e8400-e29b-41d4-a716-446655440003",
 			winnerID:       testMemberIDFive,
 			winnerUsername: "player_five",
-			playerResults: []*commontypes.PlayerMatchResults{
-				{
-					MemberID:      testMemberIDFive,
-					Username:      "player_five",
-					Win:           true,
-					FinalPosition: 1,
-					Kills:         6,
-					Deaths:        0,
-				},
-				{
-					MemberID:      testMemberIDTwo,
-					Username:      "test1feb20",
-					Win:           false,
-					FinalPosition: 2,
-					Kills:         4,
-					Deaths:        1,
-				},
-				{
-					MemberID:      testMemberIDSix,
-					Username:      "player_six",
-					Win:           false,
-					FinalPosition: 3,
-					Kills:         3,
-					Deaths:        0,
-				},
-				{
-					MemberID:      testMemberIDOne,
-					Username:      "test1feb19",
-					Win:           false,
-					FinalPosition: 4,
-					Kills:         2,
-					Deaths:        1,
-				},
-				{
-					MemberID:      testMemberIDThree,
-					Username:      "player_three",
-					Win:           false,
-					FinalPosition: 5,
-					Kills:         2,
-					Deaths:        2,
-				},
-				{
-					MemberID:      testMemberIDFour,
-					Username:      "player_four",
-					Win:           false,
-					FinalPosition: 6,
-					Kills:         0,
-					Deaths:        1,
+			rawMatchState: &types.RawMatchState{
+				SessionID: uuid.MustParse("550e8400-e29b-41d4-a716-446655440003"),
+				Players: []types.RawPlayerState{
+					{
+						MemberID: testMemberIDFive,
+						Username: "player_five",
+						Kills:    6,
+						Deaths:   0,
+					},
+					{
+						MemberID: testMemberIDTwo,
+						Username: "test1feb20",
+						Kills:    4,
+						Deaths:   1,
+					},
+					{
+						MemberID: testMemberIDSix,
+						Username: "player_six",
+						Kills:    3,
+						Deaths:   0,
+					},
+					{
+						MemberID: testMemberIDOne,
+						Username: "test1feb19",
+						Kills:    2,
+						Deaths:   1,
+					},
+					{
+						MemberID: testMemberIDThree,
+						Username: "player_three",
+						Kills:    2,
+						Deaths:   2,
+					},
+					{
+						MemberID: testMemberIDFour,
+						Username: "player_four",
+						Kills:    0,
+						Deaths:   1,
+					},
 				},
 			},
 		},
@@ -336,16 +309,13 @@ func TestPublishMatchCompleteIntegration(t *testing.T) {
 		matchStartTime := time.Now().Add(time.Duration(-(45 - i*15)) * time.Minute)
 		matchEndTime := matchStartTime.Add(15 * time.Minute)
 
-		matchEndData := &commontypes.MatchEndState{
-			SessionID:          uuid.MustParse(matchData.sessionID),
-			MatchStartedAt:     matchStartTime,
-			MatchEndedAt:       matchEndTime,
-			PlayerMatchResults: matchData.playerResults,
-		}
+		// Set the timestamps for the raw match state
+		matchData.rawMatchState.StartedAt = matchStartTime
+		matchData.rawMatchState.EndedAt = matchEndTime
 
-		slog.Info("Match end data", "matchNumber", i+1, "data", matchEndData)
+		slog.Info("Match raw data", "matchNumber", i+1, "data", matchData.rawMatchState)
 
-		err := service.PublishMatchComplete(context.Background(), matchEndData)
+		err := service.PublishMatchComplete(context.Background(), matchData.rawMatchState)
 		if err != nil {
 			slog.Error("Failed to publish match complete", "error", err, "matchNumber", i+1)
 			assert.NoError(t, err)
@@ -379,29 +349,42 @@ func TestPublishMatchCompleteIntegration(t *testing.T) {
 			// Acknowledge message
 			msg.Ack(false)
 
-			// Verify data integrity for specific players
+			// Verify data integrity - check that raw stats are passed correctly
+			// Note: The service now just passes raw data, it doesn't determine win/loss
 			if matchesReceived == 1 {
-				// First match: testMemberIDThree wins
+				// First match: verify testMemberIDThree has highest kills and no deaths
 				for _, player := range data.Players {
 					if player.MemberId == testMemberIDThree {
-						assert.Equal(t, true, player.Win)
-						assert.Equal(t, int32(1), player.FinalPosition)
+						assert.Equal(t, int32(7), player.Kills)
+						assert.Equal(t, int32(0), player.Deaths)
+					}
+					if player.MemberId == testMemberIDOne {
+						assert.Equal(t, int32(4), player.Kills)
+						assert.Equal(t, int32(1), player.Deaths)
 					}
 				}
 			} else if matchesReceived == 2 {
-				// Second match: testMemberIDOne wins
+				// Second match: verify testMemberIDOne has highest kills
 				for _, player := range data.Players {
 					if player.MemberId == testMemberIDOne {
-						assert.Equal(t, true, player.Win)
-						assert.Equal(t, int32(1), player.FinalPosition)
+						assert.Equal(t, int32(8), player.Kills)
+						assert.Equal(t, int32(0), player.Deaths)
+					}
+					if player.MemberId == testMemberIDFour {
+						assert.Equal(t, int32(5), player.Kills)
+						assert.Equal(t, int32(1), player.Deaths)
 					}
 				}
 			} else if matchesReceived == 3 {
-				// Third match: testMemberIDFive wins
+				// Third match: verify testMemberIDFive has good stats
 				for _, player := range data.Players {
 					if player.MemberId == testMemberIDFive {
-						assert.Equal(t, true, player.Win)
-						assert.Equal(t, int32(1), player.FinalPosition)
+						assert.Equal(t, int32(6), player.Kills)
+						assert.Equal(t, int32(0), player.Deaths)
+					}
+					if player.MemberId == testMemberIDTwo {
+						assert.Equal(t, int32(4), player.Kills)
+						assert.Equal(t, int32(1), player.Deaths)
 					}
 				}
 			}
