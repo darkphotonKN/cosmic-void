@@ -103,6 +103,15 @@ class ApiClient {
 
     return response;
   }
+
+  // Get leaderboard
+  async getLeaderboard(limit: number = 50, offset: number = 0) {
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString(),
+    });
+    return this.request(`/api/stats/leaderboard?${params.toString()}`);
+  }
 }
 
 export const apiClient = new ApiClient();
