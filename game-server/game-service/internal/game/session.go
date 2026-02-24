@@ -320,6 +320,10 @@ func (s *Session) manageGameLoop() {
 			interactionSys := systems.InteractionSystem{}
 			interactionSys.Update(entities)
 
+			// elimination
+			eliminationSys := systems.EliminationSystem{}
+			eliminationSys.Update(deltaTime, entities, s.ID, s.eliminationCh)
+
 			// broadcast state update to all players
 			err := s.broadcastFullState()
 			if err != nil {

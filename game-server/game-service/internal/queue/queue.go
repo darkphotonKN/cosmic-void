@@ -70,8 +70,6 @@ func (q *queueService) MatchQueue() {
 	defer ticker.Stop()
 
 	for {
-		// fmt.Println("match queue")
-
 		select {
 		// send value from chan once per second
 		case <-ticker.C:
@@ -111,7 +109,6 @@ func (q *queueService) MatchQueue() {
 				}()
 				continue
 			}
-
 		}
 	}
 }
