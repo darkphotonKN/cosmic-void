@@ -44,6 +44,10 @@ type Session struct {
 	// [entityID] - interacted
 	containerInteractedCache map[uuid.UUID]bool
 
+	// elimination tracking
+	eliminationCh chan *types.Player
+	eliminations  []*types.Player
+
 	// TEST: testing only
 	TestMessageSpy chan types.Message
 
@@ -88,10 +92,14 @@ func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSer
 
 		playerInteractedCache:    make(map[uuid.UUID]bool, constants.DefautMaxSessionPlayers),
 		containerInteractedCache: make(map[uuid.UUID]bool),
-		sender:                   sender,
-		stateSerializer:          serializer,
-		eventEmitter:             eventEmitter,
-		itemsClient:              itemsClient,
+
+		eliminationCh: make(chan *types.Player),
+		eliminations:  make([]*types.Player, 0),
+
+		sender:          sender,
+		stateSerializer: serializer,
+		eventEmitter:    eventEmitter,
+		itemsClient:     itemsClient,
 	}
 
 	go s.Start()
@@ -116,8 +124,11 @@ func (s *Session) Start() {
 	// managing incoming client messages
 	go s.manageClientMessages()
 
-	// start update game loop
+	// game loop processing
 	go s.manageGameLoop()
+
+	// eliminations processing
+	go s.manageEliminations()
 }
 
 /**
@@ -421,14 +432,18 @@ func (s *Session) Update(deltaTime float64) {
 
 func (s *Session) Shutdown() {
 	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if !s.isRunning {
-		s.mu.Unlock()
 		return
 	}
-	s.mu.Unlock()
+
 	slog.Info("Shutting down game session", "sessionID", s.ID)
+
+	// clean up channels
 	close(s.stopChan)
 	close(s.MessageCh)
+	close(s.eliminationCh)
 }
 
 /**
@@ -967,6 +982,25 @@ func (s *Session) AddItem(itemConfig ItemConfig, priceConfig PriceConfig) uuid.U
 	entity := CreateItemEntity(s.EntityManager, itemConfig, priceConfig)
 
 	return entity.ID
+}
+
+/**
+* Manages eliminations outside primary game loop to claculate end game results.
+**/
+func (s *Session) manageEliminations() {
+
+	for player := range s.eliminationCh {
+		slog.Debug("Player eliminated",
+			"ID", player.ID,
+			"Username", player.Username,
+			"SessionID", player.CurrentGameSessionId)
+
+		// store in elimination for processing
+		s.mu.Lock()
+		s.eliminations = append(s.eliminations, player)
+		s.mu.Unlock()
+	}
+
 }
 
 /**

@@ -5,6 +5,7 @@ import "github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 type HealthComponent struct {
 	CurrentHealth int
 	MaxHealth     int
+	IsEliminated  bool
 }
 
 func (h *HealthComponent) Type() ecs.ComponentType {
@@ -12,5 +13,5 @@ func (h *HealthComponent) Type() ecs.ComponentType {
 }
 
 func NewHealthComponent(currentHealth, maxHealth int) *HealthComponent {
-	return &HealthComponent{CurrentHealth: currentHealth, MaxHealth: maxHealth}
+	return &HealthComponent{CurrentHealth: currentHealth, MaxHealth: maxHealth, IsEliminated: false}
 }
