@@ -8,7 +8,6 @@ import (
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
-	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
