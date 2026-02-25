@@ -96,6 +96,67 @@ func (s *Service) ProcessItemCreated(ctx context.Context, payload *pb.ItemCreate
 	return err
 }
 
+func (s *Service) ProcessGameEnded(ctx context.Context, payload *pb.MatchEndedEvent) error {
+	// Notify all players about the game result
+	for _, player := range payload.Players {
+		playerID, err := uuid.Parse(player.MemberId)
+		if err != nil {
+			slog.Warn("invalid player UUID format",
+				"member_id", player.MemberId,
+				"err", err,
+			)
+			continue // Skip this player but continue with others
+		}
+
+		// Prepare template data
+		templateData := map[string]any{
+			"SessionId":     payload.SessionId,
+			"Username":      player.Username,
+			"Win":           player.Win,
+			"FinalPosition": player.FinalPosition,
+			"Kills":         player.Kills,
+			"Deaths":        player.Deaths,
+		}
+
+		// Build notification message
+		var title, message string
+		if player.Win {
+			title = "遊戲勝利！"
+			message = fmt.Sprintf("恭喜 %s！你贏得了本場比賽！排名第 %d，擊殺: %d，死亡: %d",
+				player.Username, player.FinalPosition, player.Kills, player.Deaths)
+		} else {
+			title = "遊戲結束"
+			message = fmt.Sprintf("%s，本場比賽結束。排名第 %d，擊殺: %d，死亡: %d",
+				player.Username, player.FinalPosition, player.Kills, player.Deaths)
+		}
+
+		createNotification := &CreateNotification{
+			UserID:           playerID,
+			NotificationType: "in_app",
+			EventType:        "game.ended",
+			Title:            title,
+			Message:          message,
+			Data:             templateData,
+		}
+
+		_, err = s.repo.Create(ctx, createNotification)
+		if err != nil {
+			slog.Warn("Error occurred when creating game ended notification",
+				"user_id", player.MemberId,
+				"session_id", payload.SessionId,
+				"err", err,
+			)
+			// Continue with other players even if one fails
+		}
+	}
+
+	slog.Info("Game ended notifications sent",
+		"session_id", payload.SessionId,
+		"players_count", len(payload.Players),
+	)
+	return nil
+}
+
 func (s *Service) GetNotification(ctx context.Context, payload QueryNotifications) (*NotificationListResponse, error) {
 	notificationList, err := s.repo.GetByUserID(ctx, &payload)
 	if err != nil {

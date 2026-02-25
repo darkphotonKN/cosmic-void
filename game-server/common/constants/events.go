@@ -50,6 +50,7 @@ const (
 	//Notification Event
 	NotificationItemCreatedFailed    = "notification.item.created.failed"
 	NotificationMemberSignedupFailed = "notification.member.signedup.failed"
+	NotificationGameEndFailed = "notification.game.end.failed"
 )
 
 /**
@@ -70,6 +71,7 @@ const (
 	StatsAuthProfileUpdatedQueue    = "stats.auth.profile.updated"
 	NotificationMemberSignedUpQueue = "notification.auth.member.signedup"
 	NotificationItemCreatedQueue    = "notification.item.item.created"
+	NotificationGameEndQueue        = "notification.game.end"
 	NotificationDlqQueue            = "notification.dlq"
 	StatsAuthQueue                  = "stats.auth"
 )
