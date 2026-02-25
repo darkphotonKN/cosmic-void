@@ -11,7 +11,6 @@ import (
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
 	itemspb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/items"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
-	commontypes "github.com/darkphotonKN/cosmic-void-server/common/types"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	grpcauth "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/auth"
@@ -51,7 +50,7 @@ func (m *MockAuthClient) ValidateToken(ctx context.Context, req *pb.ValidateToke
 // MockEventEmitter for testing
 type MockEventEmitter struct{}
 
-func (m *MockEventEmitter) PublishMatchComplete(ctx context.Context, data *commontypes.MatchEndState) error {
+func (m *MockEventEmitter) PublishMatchComplete(ctx context.Context, data *types.RawMatchState) error {
 	return nil
 }
 

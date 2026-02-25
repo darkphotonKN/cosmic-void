@@ -46,7 +46,8 @@ type Session struct {
 
 	// elimination tracking
 	eliminationCh chan *types.Player
-	eliminations  []*types.Player
+	// [memberID] finish position
+	eliminations map[uuid.UUID]int
 
 	// TEST: testing only
 	TestMessageSpy chan types.Message
@@ -94,7 +95,7 @@ func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSer
 		containerInteractedCache: make(map[uuid.UUID]bool),
 
 		eliminationCh: make(chan *types.Player),
-		eliminations:  make([]*types.Player, 0),
+		eliminations:  make(map[uuid.UUID]int),
 
 		sender:          sender,
 		stateSerializer: serializer,
@@ -1001,7 +1002,7 @@ func (s *Session) manageEliminations() {
 
 		// store in elimination for processing
 		s.mu.Lock()
-		s.eliminations = append(s.eliminations, player)
+		s.eliminations[player.ID] = len(s.eliminations) + 1
 		s.mu.Unlock()
 	}
 
@@ -1014,7 +1015,7 @@ func (s *Session) endSession() {
 	// clean up
 	s.Shutdown()
 
-	// grab raw data for publishing
+	// grab raw data for publishing end game stats
 	rawMatchState := s.getRawMatchState()
 	s.eventEmitter.PublishMatchComplete(context.Background(), rawMatchState)
 }
@@ -1052,9 +1053,10 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 	return &types.RawMatchState{
 		SessionID: s.ID,
 		// TODO: need to add started at in session struct for tracking
-		StartedAt: time.Now(),
-		EndedAt:   time.Now(),
-		Players:   rawPlayers,
+		StartedAt:        time.Now(),
+		EndedAt:          time.Now(),
+		Players:          rawPlayers,
+		EliminationOrder: s.eliminations,
 	}
 }
 

@@ -69,6 +69,8 @@ type RawMatchState struct {
 	StartedAt time.Time
 	EndedAt   time.Time
 	Players   []RawPlayerState
+	// [player's memberID] Position
+	EliminationOrder map[uuid.UUID]int
 }
 
 type RawPlayerState struct {
