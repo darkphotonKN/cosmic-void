@@ -79,3 +79,12 @@ type RawPlayerState struct {
 	Kills    int32
 	Deaths   int32
 }
+
+type RankedPlayerState struct {
+	MemberID      string
+	Username      string
+	Kills         int32
+	Deaths        int32
+	FinalPosition int32
+	Win           bool
+}

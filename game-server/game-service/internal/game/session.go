@@ -1002,7 +1002,7 @@ func (s *Session) manageEliminations() {
 
 		// store in elimination for processing
 		s.mu.Lock()
-		s.eliminations[player.ID] = len(s.eliminations) + 1
+		s.eliminations[player.ID] = len(s.eliminations)
 		s.mu.Unlock()
 	}
 
