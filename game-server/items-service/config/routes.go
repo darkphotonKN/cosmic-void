@@ -6,6 +6,8 @@ import (
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/items"
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
+	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
+	"github.com/darkphotonKN/cosmic-void-server/items-service/grpc/auth"
 	"github.com/darkphotonKN/cosmic-void-server/items-service/internal/items"
 	"github.com/jmoiron/sqlx"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -13,7 +15,10 @@ import (
 )
 
 // SetupServices initializes all services and their dependencies
-func SetupServices(db *sqlx.DB, amqpChannel *amqp.Channel) *grpc.Server {
+func SetupServices(db *sqlx.DB, amqpChannel *amqp.Channel, registry discovery.Registry) *grpc.Server {
+	// Create Auth Service client
+	authClient := auth.NewClient(registry)
+
 	// Create repository
 	repo := items.NewRepository(db)
 
@@ -21,8 +26,8 @@ func SetupServices(db *sqlx.DB, amqpChannel *amqp.Channel) *grpc.Server {
 	publishCh := commonbroker.NewAmqpPublisher(amqpChannel)
 	service := items.NewService(repo, publishCh)
 
-	// Create gRPC handler with service
-	handler := items.NewHandler(service)
+	// Create gRPC handler with service and auth client
+	handler := items.NewHandler(service, authClient)
 
 	// Create AMQP consumer with service
 	consumer := items.NewConsumer(service, amqpChannel)

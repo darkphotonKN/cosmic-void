@@ -46,6 +46,7 @@ message Member {
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
   string avatar_url = 8;
+  string role = 9;
 }
 
 // Login request

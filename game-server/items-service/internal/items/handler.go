@@ -2,8 +2,13 @@ package items
 
 import (
 	"context"
+	"log/slog"
+	"strings"
 
+	authpb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/items"
+	commontypes "github.com/darkphotonKN/cosmic-void-server/common/constants/types"
+	"github.com/darkphotonKN/cosmic-void-server/items-service/grpc/auth"
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -13,12 +18,42 @@ import (
 
 type Handler struct {
 	pb.UnimplementedItemsServiceServer
-	service Service
+	service    Service
+	authClient auth.AuthClient
 }
 
-func NewHandler(service Service) *Handler {
+func NewHandler(service Service, authClient auth.AuthClient) *Handler {
 	return &Handler{
-		service: service,
+		service:    service,
+		authClient: authClient,
+	}
+}
+
+// checkAdminPermission checks if the user has admin permission
+func (h *Handler) checkAdminPermission(ctx context.Context, userID string) error {
+	member, err := h.authClient.GetMember(ctx, &authpb.GetMemberRequest{Id: userID})
+	if err != nil {
+		return status.Errorf(codes.Internal, "failed to get member info: %v", err)
+	}
+
+	// Convert string role to enum for comparison
+	memberRole := stringToRole(member.Role)
+	if memberRole != commontypes.Role_ROLE_ADMIN {
+		return status.Error(codes.PermissionDenied, "admin permission required")
+	}
+
+	return nil
+}
+
+// stringToRole converts database role string to Role enum
+func stringToRole(roleStr string) commontypes.Role {
+	switch strings.ToLower(roleStr) {
+	case "player":
+		return commontypes.Role_ROLE_PLAYER
+	case "admin":
+		return commontypes.Role_ROLE_ADMIN
+	default:
+		return commontypes.Role_ROLE_UNSPECIFIED
 	}
 }
 
@@ -310,6 +345,12 @@ func (h *Handler) ListConsumablesWithTemplate(ctx context.Context, _ *emptypb.Em
 // CreateItemTemplate creates a new item template (gRPC endpoint)
 // This will also send an event to RabbitMQ for notification-service
 func (h *Handler) CreateItemTemplate(ctx context.Context, req *pb.CreateItemTemplateRequest) (*pb.ItemTemplate, error) {
+
+	err := h.checkAdminPermission(ctx, req.UserId)
+	if err != nil {
+		slog.Error("role is not Admin", "err", err)
+		return nil, err
+	}
 	// Parse UUIDs
 	typeID, err := uuid.Parse(req.TypeId)
 	if err != nil {
@@ -394,6 +435,12 @@ func (h *Handler) CreateItemTemplate(ctx context.Context, req *pb.CreateItemTemp
 // CreateCompleteWeapon creates a complete weapon (weapon + template) in one operation
 // This will automatically send an event to RabbitMQ for notification-service
 func (h *Handler) CreateCompleteWeapon(ctx context.Context, req *pb.CreateCompleteWeaponRequest) (*pb.WeaponDetail, error) {
+	// Check admin permission
+	if err := h.checkAdminPermission(ctx, req.UserId); err != nil {
+		slog.Error("role is not Admin", "err", err)
+		return nil, err
+	}
+
 	// Parse UUIDs
 	typeID, err := uuid.Parse(req.TypeId)
 	if err != nil {
@@ -408,16 +455,16 @@ func (h *Handler) CreateCompleteWeapon(ctx context.Context, req *pb.CreateComple
 	// Build service request
 	critRate := float64(req.CriticalRate)
 	createReq := &CreateCompleteWeaponRequest{
-		UserId:        req.UserId,
-		ItemName:      req.ItemName,
-		ItemCode:      req.ItemCode,
-		TypeID:        typeID,
-		RarityID:      rarityID,
-		AttackPower:   int(req.AttackPower),
-		Durability:    int(req.Durability),
-		CriticalRate:  &critRate,
-		WeaponType:    &req.WeaponType,
-		Description:   &req.Description,
+		UserId:       req.UserId,
+		ItemName:     req.ItemName,
+		ItemCode:     req.ItemCode,
+		TypeID:       typeID,
+		RarityID:     rarityID,
+		AttackPower:  int(req.AttackPower),
+		Durability:   int(req.Durability),
+		CriticalRate: &critRate,
+		WeaponType:   &req.WeaponType,
+		Description:  &req.Description,
 	}
 
 	// Handle optional template fields
@@ -494,6 +541,12 @@ func (h *Handler) CreateCompleteWeapon(ctx context.Context, req *pb.CreateComple
 
 // CreateCompleteArmor creates a complete armor (armor + template) in one operation
 func (h *Handler) CreateCompleteArmor(ctx context.Context, req *pb.CreateCompleteArmorRequest) (*pb.ArmorDetail, error) {
+	// Check admin permission
+	if err := h.checkAdminPermission(ctx, req.UserId); err != nil {
+		slog.Error("role is not Admin", "err", err)
+		return nil, err
+	}
+
 	// Parse UUIDs
 	typeID, err := uuid.Parse(req.TypeId)
 	if err != nil {
@@ -592,6 +645,12 @@ func (h *Handler) CreateCompleteArmor(ctx context.Context, req *pb.CreateComplet
 
 // CreateCompleteConsumable creates a complete consumable (consumable + template) in one operation
 func (h *Handler) CreateCompleteConsumable(ctx context.Context, req *pb.CreateCompleteConsumableRequest) (*pb.ConsumableDetail, error) {
+	// Check admin permission
+	if err := h.checkAdminPermission(ctx, req.UserId); err != nil {
+		slog.Error("role is not Admin", "err", err)
+		return nil, err
+	}
+
 	// Parse UUIDs
 	typeID, err := uuid.Parse(req.TypeId)
 	if err != nil {
