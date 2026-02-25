@@ -39,6 +39,13 @@ func GetEventRetryConfigs() []EventRetryConfig {
 			WorkQueue:  commonconstants.NotificationMemberSignedUpQueue,
 			DLQKey:     commonconstants.NotificationMemberSignedupFailed,
 		},
+		{
+			EventType:  "game.ended",
+			RoutingKey: commonconstants.GameMatchEnded,
+			Exchange:   commonconstants.GameEventsExchange,
+			WorkQueue:  commonconstants.NotificationGameEndQueue,
+			DLQKey:     commonconstants.NotificationGameEndFailed,
+		},
 	}
 }
 
@@ -64,6 +71,7 @@ var MaxRetries = len(RetryLevels)
 type ConsumerService interface {
 	ProcessMemberSignedUp(ctx context.Context, payload *commonconstants.MemberSignedUpEventPayload) error
 	ProcessItemCreated(ctx context.Context, payload *pb.ItemCreatedEvent) error
+	ProcessGameEnded(ctx context.Context, payload *pb.MatchEndedEvent) error
 }
 
 type Consumer struct {
@@ -82,6 +90,7 @@ func NewConsumer(service ConsumerService, channel *amqp.Channel) *Consumer {
 func (c *Consumer) Listen() {
 	go c.consumeMemberSignedUp()
 	go c.consumeItemCreated()
+	go c.consumeGameEnded()
 	slog.Info("Notification consumer listening for events...")
 }
 
@@ -179,6 +188,55 @@ func (c *Consumer) handleMemberSignedUp(msg amqp.Delivery) {
 	err := c.service.ProcessMemberSignedUp(ctx, &payload)
 
 	c.handleResult(msg, err, retryCount, "member.signedup", payload.UserID)
+}
+
+// ==========================================
+// Consumer: Game Ended
+// ==========================================
+
+func (c *Consumer) consumeGameEnded() {
+	msgs, err := c.channel.Consume(
+		commonconstants.NotificationGameEndQueue,
+		"",    // consumer
+		false, // auto-ack
+		false, // exclusive
+		false, // no-local
+		false, // no-wait
+		nil,   // args
+	)
+	if err != nil {
+		slog.Error("Failed to register consumer", "error", err)
+		return
+	}
+
+	slog.Info("Started consuming game.ended events")
+
+	for msg := range msgs {
+		c.handleGameEnded(msg)
+	}
+}
+
+func (c *Consumer) handleGameEnded(msg amqp.Delivery) {
+	retryCount := getRetryCount(msg)
+
+	var payload pb.MatchEndedEvent
+	if err := proto.Unmarshal(msg.Body, &payload); err != nil {
+		slog.Error("Failed to parse MatchEndedEvent", "error", err)
+		msg.Nack(false, false)
+		return
+	}
+
+	slog.Info("Received game ended event",
+		"session_id", payload.SessionId,
+		"players_count", len(payload.Players),
+		"retry_count", retryCount,
+	)
+
+	ctx := context.Background()
+	err := c.service.ProcessGameEnded(ctx, &payload)
+
+	// Use session_id as identifier
+	c.handleResult(msg, err, retryCount, "game.ended", payload.SessionId)
 }
 
 // ==========================================

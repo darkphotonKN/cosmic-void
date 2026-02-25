@@ -115,7 +115,7 @@ func main() {
 	}()
 
 	// Use the new config setup to initialize all services
-	grpcServer = config.SetupServices(db, ch)
+	grpcServer = config.SetupServices(db, ch, registry)
 
 	log.Printf("grpc Items Server started on PORT: %s\n", grpcAddr)
 
