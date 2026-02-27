@@ -84,18 +84,6 @@ func stringToInt(s string) int {
 	return i
 }
 
-// dbRoleToProto converts database role string to proto Role enum
-func dbRoleToProto(dbRole string) pb.Role {
-	switch dbRole {
-	case "player":
-		return pb.Role_ROLE_PLAYER
-	case "admin":
-		return pb.Role_ROLE_ADMIN
-	default:
-		return pb.Role_ROLE_UNSPECIFIED
-	}
-}
-
 func (s *service) GetMember(ctx context.Context, req *pb.GetMemberRequest) (*pb.Member, error) {
 	id, err := uuid.Parse(req.Id)
 	if err != nil {

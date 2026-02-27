@@ -169,3 +169,4 @@ message ConfirmAvatarUploadResponse {
   string message = 2;
   string avatar_url = 3;
 }
+
