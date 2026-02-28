@@ -9,8 +9,8 @@ export default function Header() {
   const pathname = usePathname();
   const { isAuthenticated } = useAuthStore();
 
-  // Don't show header on splash, login, or register pages
-  if (pathname === '/' || pathname === '/login' || pathname === '/register') {
+  // Don't show header on portal, login, or register pages
+  if (pathname === '/portal' || pathname === '/login' || pathname === '/register') {
     return null;
   }
 
@@ -18,44 +18,48 @@ export default function Header() {
     <header className="header-main">
       <div className="header-container">
         <div className="header-left">
-          <Link href="/" className="header-logo">
+          <Link href="/portal" className="header-logo">
             <span className="logo-text">COSMIC</span>
             <span className="logo-accent">VOID</span>
           </Link>
 
-          {isAuthenticated && (
-            <nav className="header-nav">
-              <Link
-                href="/game"
-                className={`nav-link ${pathname === '/game' ? 'active' : ''}`}
-              >
-                Game
-              </Link>
-              <Link
-                href="/leaderboard"
-                className={`nav-link ${pathname === '/leaderboard' ? 'active' : ''}`}
-              >
-                Leaderboard
-              </Link>
-              <Link
-                href="/subscription"
-                className={`nav-link ${pathname === '/subscription' ? 'active' : ''}`}
-              >
-                Subscribe
-              </Link>
-            </nav>
-          )}
+          <nav className="header-nav">
+            <Link
+              href="/"
+              className={`nav-link ${pathname === '/' ? 'active' : ''}`}
+            >
+              Home
+            </Link>
+            <Link
+              href="/game"
+              className={`nav-link ${pathname === '/game' ? 'active' : ''}`}
+            >
+              Game
+            </Link>
+            <Link
+              href="/leaderboard"
+              className={`nav-link ${pathname === '/leaderboard' ? 'active' : ''}`}
+            >
+              Leaderboard
+            </Link>
+            <Link
+              href="/subscription"
+              className={`nav-link ${pathname === '/subscription' ? 'active' : ''}`}
+            >
+              Subscribe
+            </Link>
+          </nav>
         </div>
 
         <div className="header-right">
           {isAuthenticated ? (
             <UserMenu />
           ) : (
-            <div className="auth-buttons">
-              <Link href="/login" className="btn-secondary">
-                Login
+            <div className="auth-buttons flex gap-3">
+              <Link href="/login" className="btn-secondary px-4 py-2">
+                Sign In
               </Link>
-              <Link href="/register" className="btn-primary">
+              <Link href="/register" className="btn-primary px-4 py-2">
                 Sign Up
               </Link>
             </div>
