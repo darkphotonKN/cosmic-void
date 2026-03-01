@@ -14,6 +14,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 
 /**
@@ -35,6 +36,8 @@ func SetupRouter(registry discovery.Registry, ch *amqp.Channel) *gin.Engine {
 		AllowHeaders:     []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,
 	}))
+
+	router.Use(otelgin.Middleware("api-gateway"))
 
 	// base route
 	api := router.Group("/api")
