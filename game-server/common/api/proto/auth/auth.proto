@@ -28,6 +28,8 @@ service AuthService {
   rpc GetStripeCustomerID(GetStripeCustomerIDRequest) returns (GetStripeCustomerIDResponse) {}
   // Update member subscription status
   rpc UpdateSubscriptionStatus(UpdateSubscriptionStatusRequest) returns (UpdateSubscriptionStatusResponse) {}
+  // Check if email exists (for signup polling)
+  rpc CheckEmailExists(CheckEmailRequest) returns (CheckEmailResponse) {}
 }
 
 // used for Upload methods 
@@ -139,6 +141,16 @@ message UpdateSubscriptionStatusRequest {
 // Update subscription status response
 message UpdateSubscriptionStatusResponse {
   bool success = 1;
+}
+
+// Check email exists request
+message CheckEmailRequest {
+  string email = 1;
+}
+
+// Check email exists response
+message CheckEmailResponse {
+  bool exists = 1;
 }
 
 // Request avatar upload request

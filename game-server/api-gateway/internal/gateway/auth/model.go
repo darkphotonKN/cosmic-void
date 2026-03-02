@@ -15,4 +15,5 @@ type AuthClient interface {
 	ValidateToken(ctx context.Context, req *pb.ValidateTokenRequest) (*pb.ValidateTokenResponse, error)
 	RequestAvatarUpload(ctx context.Context, req *pb.RequestAvatarUploadRequest) (*pb.RequestAvatarUploadResponse, error)
 	ConfirmAvatarUpload(ctx context.Context, req *pb.ConfirmAvatarUploadRequest) (*pb.ConfirmAvatarUploadResponse, error)
+	CheckEmailExists(ctx context.Context, req *pb.CheckEmailRequest) (*pb.CheckEmailResponse, error)
 }
