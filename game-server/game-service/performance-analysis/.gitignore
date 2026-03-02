@@ -1,0 +1,15 @@
+# 效能分析產生的檔案（通常很大，不需要版本控制）
+
+# 報告檔案
+reports/*.txt
+reports/*.log
+
+# Profile 檔案
+profiles/*.prof
+profiles/*.pdf
+profiles/*.svg
+
+# 保留範例和最新的符號連結
+!reports/.gitkeep
+!profiles/.gitkeep
+!reports/*_latest.txt

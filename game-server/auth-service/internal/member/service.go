@@ -65,7 +65,7 @@ func memberToProto(m *models.Member) *pb.Member {
 		AverageRating: float32(m.AverageRating),
 		CreatedAt:     timestamppb.New(m.CreatedAt),
 		UpdatedAt:     timestamppb.New(m.UpdatedAt),
-		Role:          dbRoleToProto(m.Role),
+		Role:          m.Role,
 	}
 
 	// Include avatar_url if it exists
@@ -82,18 +82,6 @@ func stringToInt(s string) int {
 		return 0
 	}
 	return i
-}
-
-// dbRoleToProto converts database role string to proto Role enum
-func dbRoleToProto(dbRole string) pb.Role {
-	switch dbRole {
-	case "player":
-		return pb.Role_ROLE_PLAYER
-	case "admin":
-		return pb.Role_ROLE_ADMIN
-	default:
-		return pb.Role_ROLE_UNSPECIFIED
-	}
 }
 
 func (s *service) GetMember(ctx context.Context, req *pb.GetMemberRequest) (*pb.Member, error) {

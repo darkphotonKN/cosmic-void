@@ -52,6 +52,7 @@ scrape_configs:
 
   # GAME SERVICE
   - job_name: "game-service"
+    scrape_interval: 5s # 更頻繁抓取，因為 game loop 很快 (30 ticks/sec)
     static_configs:
       - targets: ["host.docker.internal:8082"]
 
