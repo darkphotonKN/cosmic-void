@@ -2,11 +2,20 @@ package systems
 
 import (
 	"math"
+	"sync"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 )
+
+// Pool for entitiesMap to reduce GC pressure
+var entitiesMapPool = sync.Pool{
+	New: func() interface{} {
+		// Pre-allocate with reasonable capacity (adjust based on your typical player count)
+		return make(map[int]*ecs.Entity, 32)
+	},
+}
 
 type MovementSystem struct{}
 
@@ -18,7 +27,19 @@ func NewMovementSystem() *MovementSystem {
 func (s *MovementSystem) Update(deltaTime float64, entities []*ecs.Entity) {
 	// O(n)
 	// player collision
-	entitiesMap := make(map[int]*ecs.Entity, 0)
+
+	// Get map from pool
+	entitiesMap := entitiesMapPool.Get().(map[int]*ecs.Entity)
+
+	// IMPORTANT: Always return to pool when done
+	defer func() {
+		// Clear the map before returning to pool
+		for k := range entitiesMap {
+			delete(entitiesMap, k)
+		}
+		entitiesMapPool.Put(entitiesMap)
+	}()
+
 	for _, entity := range entities {
 		transformComp, hasTransform := entity.GetComponent(ecs.ComponentTypeTransform)
 		_, hasVelocity := entity.GetComponent(ecs.ComponentTypeVelocity)
