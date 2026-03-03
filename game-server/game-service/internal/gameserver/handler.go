@@ -291,7 +291,16 @@ func (s *Server) setupClientWriter(conn *websocket.Conn) {
 			// TEST: remove after testing
 			// fmt.Printf("\nclientWriter writing back to client message:\n\n%+v\n\n", msg)
 
-			err := conn.WriteJSON(msg)
+			var err error
+
+			// Check if this is a binary message (protobuf)
+			if binaryMsg, ok := msg.(*types.BinaryMessage); ok {
+				// Send as binary WebSocket frame
+				err = conn.WriteMessage(websocket.BinaryMessage, binaryMsg.Data)
+			} else {
+				// Send as JSON (legacy/other messages)
+				err = conn.WriteJSON(msg)
+			}
 
 			if err != nil {
 				fmt.Printf("Error writing to client, connection likely closed: %s\n", err)

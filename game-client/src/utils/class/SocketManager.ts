@@ -3,6 +3,8 @@ import { ClientGameState, isGameState } from "@/types/gameState";
 import { GameStateLogger } from "@/utils/gameStateLogger";
 import { useGameStore } from "@/stores/gameStore";
 import { useAuthStore } from "@/stores/authStore";
+import { decodeGameState, initProtobuf, isProtobufReady, uuidBytesToString } from "@/utils/protobuf/gameState";
+import type { ClientGameState as ProtobufGameState } from "@/utils/protobuf/gameState";
 
 export type ConnectionStatus =
   | "disconnected"
@@ -29,6 +31,10 @@ class SocketManager {
   constructor() {
     this.socket = null;
     this.listeners = new Map();
+    // Initialize protobuf on construction
+    initProtobuf().catch(err => {
+      console.error('Failed to initialize protobuf:', err);
+    });
   }
 
   getConnectionStatus(): ConnectionStatus {
@@ -91,27 +97,34 @@ class SocketManager {
 
     this.socket.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
-
-        // Check if it's a game state update
-        if (isGameState(data)) {
-          this.handleGameStateUpdate(data);
-        } else if (data.action === "game_found") {
-          // Store session_id when game is found
-          const sessionId = data.payload?.session_id;
-          if (sessionId) {
-            useGameStore.getState().setSessionId(sessionId);
-            console.log("Game found, session_id:", sessionId);
-          }
-          // Also notify listeners
-          this.listeners.get(data.action)?.(data.payload);
-        } else if (data.action && this.listeners.has(data.action)) {
-          // Handle action-based messages
-          console.log("Received action message:", data.action);
-          this.listeners.get(data.action)?.(data.payload);
+        // Check if message is binary (Protobuf) or text (JSON)
+        if (event.data instanceof ArrayBuffer || event.data instanceof Blob) {
+          // Binary message - Protobuf game state
+          this.handleBinaryMessage(event.data);
         } else {
-          // Log unhandled messages for debugging
-          console.log("Received unhandled message:", data);
+          // Text message - JSON (legacy or non-game-state messages)
+          const data = JSON.parse(event.data);
+
+          // Check if it's a game state update (JSON format - legacy)
+          if (isGameState(data)) {
+            this.handleGameStateUpdate(data);
+          } else if (data.action === "game_found") {
+            // Store session_id when game is found
+            const sessionId = data.payload?.session_id;
+            if (sessionId) {
+              useGameStore.getState().setSessionId(sessionId);
+              console.log("Game found, session_id:", sessionId);
+            }
+            // Also notify listeners
+            this.listeners.get(data.action)?.(data.payload);
+          } else if (data.action && this.listeners.has(data.action)) {
+            // Handle action-based messages
+            console.log("Received action message:", data.action);
+            this.listeners.get(data.action)?.(data.payload);
+          } else {
+            // Log unhandled messages for debugging
+            console.log("Received unhandled message:", data);
+          }
         }
       } catch (e) {
         console.error("Failed to parse message:", e);
@@ -178,6 +191,133 @@ class SocketManager {
     // Return unsubscribe function
     return () => {
       this.gameStateListeners.delete(callback);
+    };
+  }
+
+  // Handle binary protobuf messages
+  private async handleBinaryMessage(data: ArrayBuffer | Blob): Promise<void> {
+    try {
+      // Convert Blob to ArrayBuffer if needed
+      const buffer = data instanceof Blob ? await data.arrayBuffer() : data;
+
+      console.log('📦 Received binary message, size:', buffer.byteLength);
+
+      // Check if protobuf is ready
+      if (!isProtobufReady()) {
+        console.warn('⚠️ Protobuf not ready yet, skipping binary message');
+        return;
+      }
+
+      // Decode the protobuf message
+      const protobufState = decodeGameState(buffer);
+
+      console.log('✅ Protobuf decoded:', {
+        sessionId: uuidBytesToString(protobufState.sessionId),
+        containerCount: protobufState.containers.length,
+        currentPlayerItems: protobufState.currentPlayer?.inventory.length || 0,
+        containers: protobufState.containers.map(c => ({
+          id: uuidBytesToString(c.entityId),
+          itemCount: c.items.length,
+          isOpen: c.isOpen,
+        })),
+      });
+
+      // Convert protobuf format to our existing ClientGameState format
+      const gameState = this.convertProtobufToGameState(protobufState);
+
+      console.log('✅ Converted to game state:', {
+        containers: gameState.containers.map(c => ({
+          id: c.entity_id,
+          itemCount: c.items.length,
+          isOpen: c.is_open,
+        })),
+        currentPlayerInventory: gameState.current_player?.inventory?.length || 0,
+      });
+
+      // Handle as normal game state
+      this.handleGameStateUpdate(gameState);
+    } catch (error) {
+      console.error('❌ Failed to handle binary message:', error);
+      console.error('Error details:', error);
+      GameStateLogger.logError('Failed to decode protobuf message', error);
+    }
+  }
+
+  // Convert Protobuf ClientGameState to our existing ClientGameState format
+  private convertProtobufToGameState(pbState: ProtobufGameState): ClientGameState {
+    return {
+      session_id: uuidBytesToString(pbState.sessionId),
+      current_player: pbState.currentPlayer ? {
+        id: uuidBytesToString(pbState.currentPlayer.id),
+        entity_id: uuidBytesToString(pbState.currentPlayer.entityId),
+        username: pbState.currentPlayer.username,
+        position: pbState.currentPlayer.position,
+        direction: pbState.currentPlayer.direction,
+        inventory: pbState.currentPlayer.inventory.map(item => ({
+          item_id: uuidBytesToString(item.itemId),
+          entity_id: uuidBytesToString(item.entityId),
+          name: item.name,
+          quantity: item.quantity,
+          attack_power: item.attackPower,
+          durability: item.durability,
+          critical_rate: item.criticalRate,
+          weapon_type: item.weaponType,
+          defense_rating: item.defenseRating,
+          armor_slot: item.armorSlot,
+          healing_amount: item.healingAmount,
+          mana_amount: item.manaAmount,
+          description: item.description,
+        })),
+      } : null,
+      other_players: pbState.otherPlayers.map(player => ({
+        id: uuidBytesToString(player.id),
+        entity_id: uuidBytesToString(player.entityId),
+        username: player.username,
+        position: player.position,
+        direction: player.direction,
+        inventory: player.inventory.map(item => ({
+          item_id: uuidBytesToString(item.itemId),
+          entity_id: uuidBytesToString(item.entityId),
+          name: item.name,
+          quantity: item.quantity,
+          attack_power: item.attackPower,
+          durability: item.durability,
+          critical_rate: item.criticalRate,
+          weapon_type: item.weaponType,
+          defense_rating: item.defenseRating,
+          armor_slot: item.armorSlot,
+          healing_amount: item.healingAmount,
+          mana_amount: item.manaAmount,
+          description: item.description,
+        })),
+      })),
+      items: pbState.items.map(itemId => uuidBytesToString(itemId)),
+      doors: pbState.doors.map(door => ({
+        entity_id: uuidBytesToString(door.entityId),
+        position: door.position,
+        is_open: door.isOpen,
+      })),
+      containers: pbState.containers.map(container => ({
+        container_id: uuidBytesToString(container.containerId),
+        entity_id: uuidBytesToString(container.entityId),
+        position: container.position,
+        is_open: container.isOpen,
+        items: container.items.map(item => ({
+          item_id: uuidBytesToString(item.itemId),
+          entity_id: uuidBytesToString(item.entityId),
+          name: item.name,
+          quantity: item.quantity,
+          attack_power: item.attackPower,
+          durability: item.durability,
+          critical_rate: item.criticalRate,
+          weapon_type: item.weaponType,
+          defense_rating: item.defenseRating,
+          armor_slot: item.armorSlot,
+          healing_amount: item.healingAmount,
+          mana_amount: item.manaAmount,
+          description: item.description,
+        })),
+      })),
     };
   }
 

@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package game;
+
+option go_package = "github.com/darkphotonKN/cosmic-void-server/game-service/proto/pb";
+
+// Main game state message sent to clients
+message ClientGameState {
+  bytes session_id = 1;                      // UUID as 16 bytes
+  PlayerState current_player = 2;            // The recipient player's state
+  repeated PlayerState other_players = 3;    // All other players in the session
+  repeated bytes items = 4;                  // Item entity IDs as UUIDs (16 bytes each)
+  repeated DoorState doors = 5;              // Door states
+  repeated ContainerState containers = 6;    // Container states
+}
+
+// Player state
+message PlayerState {
+  bytes id = 1;                    // Player ID (UUID as 16 bytes)
+  bytes entity_id = 2;             // Entity ID (UUID as 16 bytes)
+  string username = 3;             // Player username
+  Position position = 4;           // Player position
+  PlayerDirection direction = 5;   // Player direction
+  repeated ItemState inventory = 6; // Player inventory items
+}
+
+// Position in 2D space
+message Position {
+  double x = 1;
+  double y = 2;
+}
+
+// Player direction and velocity
+message PlayerDirection {
+  double vx = 1;     // Velocity X
+  double vy = 2;     // Velocity Y
+  double speed = 3;  // Speed
+}
+
+// Door state
+message DoorState {
+  bytes entity_id = 1;  // Entity ID (UUID as 16 bytes)
+  Position position = 2;
+  bool is_open = 3;
+}
+
+// Item state with all possible fields
+message ItemState {
+  bytes item_id = 1;         // Item ID (UUID as 16 bytes)
+  bytes entity_id = 2;       // Entity ID (UUID as 16 bytes)
+  string name = 3;           // Item name
+  int32 quantity = 4;        // Item quantity
+
+  // Weapon fields
+  int32 attack_power = 5;
+  int32 durability = 6;
+  float critical_rate = 7;
+  string weapon_type = 8;
+
+  // Armor fields
+  int32 defense_rating = 9;
+  string armor_slot = 10;
+
+  // Consumable fields
+  int32 healing_amount = 11;
+  int32 mana_amount = 12;
+
+  // Common field
+  string description = 13;
+}
+
+// Container state
+message ContainerState {
+  bytes container_id = 1;        // Container ID (UUID as 16 bytes)
+  bytes entity_id = 2;           // Entity ID (UUID as 16 bytes)
+  Position position = 3;         // Container position
+  bool is_open = 4;              // Is container open
+  repeated ItemState items = 5;  // Items in container
+}

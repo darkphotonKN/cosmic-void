@@ -37,6 +37,11 @@ type ClientGameState struct {
 	Containers    []*ContainerState `json:"containers"`
 }
 
+// BinaryMessage wraps protobuf binary data for WebSocket transmission
+type BinaryMessage struct {
+	Data []byte // Raw protobuf bytes
+}
+
 func (m *Message) ParsePayload() (interface{}, error) {
 	switch constants.Action(m.Action) {
 	case constants.ActionMove:

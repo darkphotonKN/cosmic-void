@@ -338,17 +338,33 @@ export class TreasureHuntScene extends Phaser.Scene {
     const chestId = entityId || this.openedChestEntityId;
     if (!chestId) return;
 
+    console.log('🎁 updatePopupItems called:', {
+      entityId: chestId,
+      itemCount: items.length,
+      items: items.map(i => i.name),
+      isPopupOpen: this.isPopupOpen,
+      openedChestId: this.openedChestEntityId,
+    });
+
     const now = Date.now();
     const lootedAt = this.chestLootedAtMap.get(chestId);
     const isPending = lootedAt && (now - lootedAt) < this.PENDING_DURATION;
+
+    console.log('🎁 Pending status:', {
+      lootedAt,
+      isPending,
+      timeSinceLoot: lootedAt ? now - lootedAt : 0,
+    });
 
     // 如果剛 loot 過，等後端確認清空才更新
     if (isPending) {
       if (items.length === 0) {
         // 後端已確認清空
+        console.log('✅ Backend confirmed empty, clearing pending');
         this.chestLootedAtMap.delete(chestId);
       } else {
         // 後端還沒處理完，忽略這次更新
+        console.log('⏳ Still pending, ignoring update');
         return;
       }
     }
@@ -357,9 +373,11 @@ export class TreasureHuntScene extends Phaser.Scene {
     this.currentChestItems = items.map(item => ({ ...item }));
 
     if (items.length === 0) {
+      console.log('📭 Chest is empty');
       this.popupItemsText.setText("(Empty)");
     } else {
       const itemLines = items.map(item => `${item.name} x${item.quantity}`);
+      console.log('📦 Displaying items:', itemLines);
       this.popupItemsText.setText(itemLines.join("\n"));
     }
   }

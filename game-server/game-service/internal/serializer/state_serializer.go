@@ -2,12 +2,11 @@ package serializer
 
 import (
 	"context"
-	"log"
-	"log/slog"
+	"sync"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
-	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
+	pb "github.com/darkphotonKN/cosmic-void-server/game-service/proto/pb"
 	"github.com/google/uuid"
 )
 
@@ -16,36 +15,58 @@ import (
 * state in the form of entity and components into client consumable state.
 **/
 type StateSerializer struct {
-	em *ecs.EntityManager
+	em             *ecs.EntityManager
+	protoStatePool *sync.Pool
 }
 
 func NewStateSerializer(em *ecs.EntityManager) *StateSerializer {
-	return &StateSerializer{em: em}
+	return &StateSerializer{
+		em: em,
+		protoStatePool: &sync.Pool{
+			New: func() interface{} {
+				return &pb.ClientGameState{
+					OtherPlayers: make([]*pb.PlayerState, 0, 10),
+					Items:        make([][]byte, 0, 20),
+					Doors:        make([]*pb.DoorState, 0, 5),
+					Containers:   make([]*pb.ContainerState, 0, 5),
+				}
+			},
+		},
+	}
 }
 
-func (s *StateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, recipientPlayerID uuid.UUID, entities []*ecs.Entity) (*types.ClientGameState, error) {
-	state := &types.ClientGameState{
-		SessionID:     sessionID,
-		CurrentPlayer: nil,
-		OtherPlayers:  make([]*types.PlayerState, 0),
-		Items:         make([]uuid.UUID, 0),
-		Doors:         make([]*types.DoorState, 0),
-		Containers:    make([]*types.ContainerState, 0),
-	}
+// GetProtoState retrieves a pooled protobuf state object
+func (s *StateSerializer) GetProtoState() *pb.ClientGameState {
+	state := s.protoStatePool.Get().(*pb.ClientGameState)
+	state.Reset() // Protobuf built-in method to clear all fields
+	return state
+}
+
+// PutProtoState returns a protobuf state object to the pool
+func (s *StateSerializer) PutProtoState(state *pb.ClientGameState) {
+	s.protoStatePool.Put(state)
+}
+
+// SerializeToProto serializes game entities into protobuf format
+// This is similar to Serialize() but outputs to protobuf instead of JSON types
+func (s *StateSerializer) SerializeToProto(ctx context.Context, sessionID uuid.UUID, recipientPlayerID uuid.UUID, entities []*ecs.Entity, state *pb.ClientGameState) error {
+	// Set session ID (UUID as bytes)
+	state.SessionId = sessionID[:]
 
 	for _, entity := range entities {
 		// --- Player ---
 		pc, isPlayer := entity.GetComponent(ecs.ComponentTypePlayer)
 
 		if isPlayer {
-			// -- get all player components --
+			// Get all player components
 			player := pc.(*components.PlayerComponent)
 			tc, _ := entity.GetComponent(ecs.ComponentTypeTransform)
 			transform := tc.(*components.TransformComponent)
 			vc, _ := entity.GetComponent(ecs.ComponentTypeVelocity)
 			velocity := vc.(*components.VelocityComponent)
-			// get player's inventory
-			inventory := []*types.ItemState{}
+
+			// Get player's inventory
+			inventory := make([]*pb.ItemState, 0)
 			itemIDListC, _ := entity.GetComponent(ecs.ComponentTypeItemIDList)
 			itemIDList := itemIDListC.(*components.ItemIDListComponent)
 			for _, itemID := range itemIDList.ItemIDs {
@@ -54,29 +75,29 @@ func (s *StateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, re
 					itemC, _ := itemEntity.GetComponent(ecs.ComponentTypeItem)
 					item := itemC.(*components.ItemComponent)
 
-					itemState := &types.ItemState{
-						ItemID:   itemID,
-						EntityID: itemEntity.ID,
+					itemState := &pb.ItemState{
+						ItemId:   itemID[:],
+						EntityId: itemEntity.ID[:],
 						Name:     item.ItemName,
 						Quantity: 1,
 					}
 
-					populateItemDetails(ctx, item, itemState)
-
+					populateProtoItemDetails(item, itemState)
 					inventory = append(inventory, itemState)
 				}
 			}
-			playerState := &types.PlayerState{
-				ID:       player.MemberID,
-				EntityID: entity.ID,
+
+			playerState := &pb.PlayerState{
+				Id:       player.MemberID[:],
+				EntityId: entity.ID[:],
 				Username: player.Username,
-				Position: &types.Position{
+				Position: &pb.Position{
 					X: transform.X,
 					Y: transform.Y,
 				},
-				Direction: &types.PlayerDirection{
-					VX:    velocity.VX,
-					VY:    velocity.VY,
+				Direction: &pb.PlayerDirection{
+					Vx:    velocity.VX,
+					Vy:    velocity.VY,
 					Speed: velocity.Speed,
 				},
 				Inventory: inventory,
@@ -90,11 +111,7 @@ func (s *StateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, re
 			}
 		}
 
-		// --- Interactables ---
-
-		// -- Doors --
-
-		// -- Containers --
+		// --- Containers ---
 		containerComp, isContainer := entity.GetComponent(ecs.ComponentTypeContainer)
 		if isContainer {
 			container := containerComp.(*components.ContainerComponent)
@@ -108,7 +125,7 @@ func (s *StateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, re
 				isOpen = openable.IsOpen
 			}
 
-			items := make([]*types.ItemState, 0)
+			items := make([]*pb.ItemState, 0)
 			itemIDListComp, hasItemIDList := entity.GetComponent(ecs.ComponentTypeItemIDList)
 			if hasItemIDList {
 				itemIDList := itemIDListComp.(*components.ItemIDListComponent)
@@ -119,27 +136,24 @@ func (s *StateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, re
 						if hasItem {
 							item := itemComp.(*components.ItemComponent)
 
-							itemState := &types.ItemState{
-								ItemID:   itemID,
-								EntityID: itemEntity.ID,
+							itemState := &pb.ItemState{
+								ItemId:   itemID[:],
+								EntityId: itemEntity.ID[:],
 								Name:     item.ItemName,
 								Quantity: 1,
 							}
 
-							populateItemDetails(ctx, item, itemState)
-
+							populateProtoItemDetails(item, itemState)
 							items = append(items, itemState)
 						}
 					}
 				}
 			}
 
-			slog.Debug("items after extracting and formatting from entity", "items", items)
-
-			containerState := &types.ContainerState{
-				ContainerID: container.ContainerID,
-				EntityID:    entity.ID,
-				Position: &types.Position{
+			containerState := &pb.ContainerState{
+				ContainerId: container.ContainerID[:],
+				EntityId:    entity.ID[:],
+				Position: &pb.Position{
 					X: transform.X,
 					Y: transform.Y,
 				},
@@ -148,66 +162,23 @@ func (s *StateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, re
 			}
 			state.Containers = append(state.Containers, containerState)
 		}
-		// --- Items ---
-		// TODO: add this after item entity is added
 	}
 
-	return state, nil
+	return nil
 }
 
-// populateItemDetails fetches item details from items-service via the item's
-// ItemTool gRPC client and populates the ItemState accordingly.
-func populateItemDetails(ctx context.Context, item *components.ItemComponent, itemState *types.ItemState) {
-	if item.ItemTool == nil {
-		return
-	}
-
-	// Try weapons
-	weaponResponse, err := item.ItemTool.ListWeaponsWithTemplate(ctx)
-	if err != nil {
-		log.Printf("Failed to fetch weapons for item %s: %v", item.ItemName, err)
-	} else if weaponResponse != nil {
-		for _, weapon := range weaponResponse.Weapons {
-			if weapon.ItemName == item.ItemName {
-				itemState.AttackPower = weapon.AttackPower
-				itemState.Durability = weapon.Durability
-				itemState.CriticalRate = weapon.CriticalRate
-				itemState.WeaponType = weapon.WeaponType
-				itemState.Description = weapon.Description
-				return
-			}
-		}
-	}
-
-	// Try armors
-	armorResponse, err := item.ItemTool.ListArmorsWithTemplate(ctx)
-	if err != nil {
-		log.Printf("Failed to fetch armors for item %s: %v", item.ItemName, err)
-	} else if armorResponse != nil {
-		for _, armor := range armorResponse.Armors {
-			if armor.ItemName == item.ItemName {
-				itemState.DefenseRating = armor.DefenseRating
-				itemState.ArmorSlot = armor.ArmorSlot
-				itemState.Description = armor.Description
-				return
-			}
-		}
-	}
-
-	// Try consumables
-	consumableResponse, err := item.ItemTool.ListConsumablesWithTemplate(ctx)
-	if err != nil {
-		log.Printf("Failed to fetch consumables for item %s: %v", item.ItemName, err)
-	} else if consumableResponse != nil {
-		for _, consumable := range consumableResponse.Consumables {
-			if consumable.ItemName == item.ItemName {
-				itemState.HealingAmount = consumable.HealingAmount
-				itemState.ManaAmount = consumable.ManaAmount
-				itemState.Description = consumable.Description
-				return
-			}
-		}
-	}
-
-	log.Printf("No matching item details found for: %s", item.ItemName)
+// populateProtoItemDetails reads cached item details from ItemComponent
+// No gRPC calls needed - all data is cached at item creation time
+func populateProtoItemDetails(item *components.ItemComponent, itemState *pb.ItemState) {
+	// Simply copy cached values from ItemComponent to protobuf ItemState
+	itemState.Quantity = item.Quantity
+	itemState.AttackPower = item.AttackPower
+	itemState.Durability = item.Durability
+	itemState.CriticalRate = item.CriticalRate
+	itemState.WeaponType = item.WeaponType
+	itemState.DefenseRating = item.DefenseRating
+	itemState.ArmorSlot = item.ArmorSlot
+	itemState.HealingAmount = item.HealingAmount
+	itemState.ManaAmount = item.ManaAmount
+	itemState.Description = item.Description
 }

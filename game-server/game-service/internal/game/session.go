@@ -19,6 +19,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/systems"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/proto"
 )
 
 // the session represents one game room with its own ECS world
@@ -63,6 +64,7 @@ type SessionSender interface {
 	BroadcastToPlayerList(players []uuid.UUID, msg types.Message) error
 	SendStateToPlayer(playerID uuid.UUID, clientState *types.ClientGameState) error
 	BroadcastStateToPlayerList(players []uuid.UUID, state *types.ClientGameState) error
+	SendBytesToPlayer(playerID uuid.UUID, data []byte) error
 }
 
 type EventEmitter interface {
@@ -448,6 +450,7 @@ func (s *Session) GetPlayerIDs() []uuid.UUID {
 /**
 * Broadcasts the current game state, after serialization, to all the players in the
 * session. Each player receives a personalized view with their player state separated.
+* Uses Protobuf for efficient serialization and proper pool management.
 **/
 func (s *Session) broadcastFullState() error {
 	ctx := context.Background()
@@ -455,13 +458,31 @@ func (s *Session) broadcastFullState() error {
 
 	// create and send personalized state for each player
 	for _, playerID := range s.playerEntityIDToPlayerID {
-		clientState, err := s.stateSerializer.Serialize(ctx, s.ID, playerID, entities)
+		// Get pooled protobuf state
+		pbState := s.stateSerializer.GetProtoState()
+
+		// Serialize entities into protobuf format
+		err := s.stateSerializer.SerializeToProto(ctx, s.ID, playerID, entities, pbState)
 		if err != nil {
+			s.stateSerializer.PutProtoState(pbState) // Return to pool on error
 			slog.Error("Failed to serialize state for player", "playerID", playerID, "error", err)
 			continue
 		}
 
-		err = s.sender.SendStateToPlayer(playerID, clientState)
+		// Marshal to bytes (this creates a copy, so we can recycle pbState immediately)
+		data, err := proto.Marshal(pbState)
+
+		// ✅ SAFE: Immediately return to pool after marshaling
+		// proto.Marshal creates a new []byte, so pbState is no longer needed
+		s.stateSerializer.PutProtoState(pbState)
+
+		if err != nil {
+			slog.Error("Failed to marshal protobuf state", "playerID", playerID, "error", err)
+			continue
+		}
+
+		// Send the bytes (independent of pbState)
+		err = s.sender.SendBytesToPlayer(playerID, data)
 		if err != nil {
 			slog.Error("Failed to send state to player", "playerID", playerID, "error", err)
 		}
@@ -717,6 +738,12 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 }
 
 func (s *Session) handleLoot(playerID uuid.UUID, containerEntityID uuid.UUID, lootEntityIDs []uuid.UUID) error {
+	slog.Info("===== LOOT START =====",
+		"playerID", playerID,
+		"containerID", containerEntityID,
+		"itemCount", len(lootEntityIDs),
+		"itemIDs", lootEntityIDs)
+
 	// get player entity ID
 	playerEntityID, ok := s.playerIDToEntitiesID[playerID]
 	if !ok {
@@ -744,9 +771,19 @@ func (s *Session) handleLoot(playerID uuid.UUID, containerEntityID uuid.UUID, lo
 	itemIDsComponent, _ := containerEntity.GetComponent(ecs.ComponentTypeItemIDList)
 	containerItemIDs := itemIDsComponent.(*components.ItemIDListComponent)
 
+	slog.Info("Container items before loot",
+		"containerID", containerEntityID,
+		"itemCount", len(containerItemIDs.ItemIDs),
+		"items", containerItemIDs.ItemIDs)
+
 	// store to player's inventory
 	playerItemIDsComponent, _ := playerEntity.GetComponent(ecs.ComponentTypeItemIDList)
 	playerItemIDs, _ := playerItemIDsComponent.(*components.ItemIDListComponent)
+
+	slog.Info("Player inventory before loot",
+		"playerID", playerID,
+		"itemCount", len(playerItemIDs.ItemIDs))
+
 	playerItemIDs.ItemIDs = append(playerItemIDs.ItemIDs, lootEntityIDs...)
 
 	// remove looted items from container
@@ -762,6 +799,17 @@ func (s *Session) handleLoot(playerID uuid.UUID, containerEntityID uuid.UUID, lo
 		}
 	}
 	containerItemIDs.ItemIDs = newItemIDs
+
+	slog.Info("Container items after loot",
+		"containerID", containerEntityID,
+		"remainingItems", len(newItemIDs),
+		"items", newItemIDs)
+
+	slog.Info("Player inventory after loot",
+		"playerID", playerID,
+		"totalItems", len(playerItemIDs.ItemIDs))
+
+	slog.Info("===== LOOT END =====")
 
 	return nil
 }

@@ -1,6 +1,9 @@
 package game
 
 import (
+	"context"
+	"log/slog"
+
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	grpcitems "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/items"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
@@ -80,8 +83,65 @@ type PriceConfig struct {
 
 func CreateItemEntity(em *ecs.EntityManager, itemconfig ItemConfig, priceconfig PriceConfig) *ecs.Entity {
 	entity := em.CreateEntity()
-	entity.AddComponent(components.NewItemComponent(itemconfig.Name, itemconfig.ItemTool))
+
+	// Create item component with default values
+	itemComponent := components.NewItemComponent(itemconfig.Name, itemconfig.ItemTool)
+
+	// Fetch and cache item details once at creation time
+	ctx := context.Background()
+	if err := populateItemDetails(ctx, itemComponent); err != nil {
+		slog.Error("Failed to populate item details at creation", "itemName", itemconfig.Name, "error", err)
+	}
+
+	entity.AddComponent(itemComponent)
 	entity.AddComponent(components.NewPriceComponent(priceconfig.BaseBuyPrice, priceconfig.BaseSellPrice))
 
 	return entity
+}
+
+// populateItemDetails fetches item details from item-service and caches them in ItemComponent
+func populateItemDetails(ctx context.Context, item *components.ItemComponent) error {
+	// Try to find as weapon
+	weaponResponse, err := item.ItemTool.ListWeaponsWithTemplate(ctx)
+	if err == nil {
+		for _, weapon := range weaponResponse.Weapons {
+			if weapon.ItemName == item.ItemName {
+				item.AttackPower = weapon.AttackPower
+				item.Durability = weapon.Durability
+				item.CriticalRate = weapon.CriticalRate
+				item.WeaponType = weapon.WeaponType
+				item.Description = weapon.Description
+				return nil
+			}
+		}
+	}
+
+	// Try to find as armor
+	armorResponse, err := item.ItemTool.ListArmorsWithTemplate(ctx)
+	if err == nil {
+		for _, armor := range armorResponse.Armors {
+			if armor.ItemName == item.ItemName {
+				item.DefenseRating = armor.DefenseRating
+				item.Durability = armor.Durability
+				item.ArmorSlot = armor.ArmorSlot
+				item.Description = armor.Description
+				return nil
+			}
+		}
+	}
+
+	// Try to find as consumable
+	consumableResponse, err := item.ItemTool.ListConsumablesWithTemplate(ctx)
+	if err == nil {
+		for _, consumable := range consumableResponse.Consumables {
+			if consumable.ItemName == item.ItemName {
+				item.HealingAmount = consumable.HealingAmount
+				item.ManaAmount = consumable.ManaAmount
+				item.Description = consumable.Description
+				return nil
+			}
+		}
+	}
+
+	return nil
 }

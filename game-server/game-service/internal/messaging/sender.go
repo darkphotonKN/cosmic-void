@@ -78,3 +78,12 @@ func (s *MessageSender) BroadcastStateToPlayerList(playerIds []uuid.UUID, state 
 	return nil
 
 }
+
+// SendBytesToPlayer sends binary data (protobuf) to a specific player
+func (s *MessageSender) SendBytesToPlayer(playerID uuid.UUID, data []byte) error {
+	// Wrap binary data in a container that the dispatcher can handle
+	binaryMsg := &types.BinaryMessage{
+		Data: data,
+	}
+	return s.dispatcher.PushMessageToChannelQueue(playerID, binaryMsg)
+}
