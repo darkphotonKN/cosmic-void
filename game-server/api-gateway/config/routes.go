@@ -63,15 +63,16 @@ func SetupRouter(registry discovery.Registry, ch *amqp.Channel) *gin.Engine {
 	authClient := authService.NewClient(registry)
 	authHandler := authService.NewHandler(authClient)
 
-	// -- Member Setup (AMQP RPC - for signup/signin) --
-	amqpAuthHandler := authService.NewAmqpAuthHandler(ch)
+	// Member Setup amqp
+	amqpAuthClient := authService.NewAmqpAuthClient(ch)
 
-	// -- Member Routes --
+	// Member Routes
 	memberRoutes := api.Group("/member")
 
-	// Public Routes (via RabbitMQ RPC)
-	memberRoutes.POST("/signup", amqpAuthHandler.CreateMemberAmqpHandler)
-	memberRoutes.POST("/signin", amqpAuthHandler.LoginMemberAmqpHandler)
+	// Public Routes
+	memberRoutes.POST("/signup", amqpAuthClient.SignupHandler)        // fire-and-forget via AMQP
+	memberRoutes.POST("/signin", authHandler.LoginMemberHandler)      // gRPC
+	memberRoutes.GET("/check-email", authHandler.CheckEmailExistsHandler) // signup polling
 
 	// Private Routes (still via gRPC)
 	memberRoutes.Use(auth.AuthMiddleware())

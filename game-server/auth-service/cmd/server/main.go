@@ -185,7 +185,7 @@ func main() {
 	}
 
 	// rabbitmq consumer
-	consumer := member.NewConsumer(memberService, ch, publishCh)
+	consumer := member.NewConsumer(memberService, ch)
 	if err := consumer.SetupConsumer(); err != nil {
 		log.Fatalf("Failed to setup auth RPC infrastructure: %v", err)
 	}

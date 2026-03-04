@@ -50,14 +50,9 @@ const (
 	//Notification Event
 	NotificationItemCreatedFailed    = "notification.item.created.failed"
 	NotificationMemberSignedupFailed = "notification.member.signedup.failed"
-	NotificationGameEndFailed = "notification.game.end.failed"
-)
+	NotificationGameEndFailed        = "notification.game.end.failed"
 
-/**
-* Auth RPC Routing Keys
-* NOTE: used for RPC-style calls from api-gateway to auth-service via RabbitMQ
-**/
-const (
+	// auth events
 	AuthMemberCreate = "member.create"
 	AuthMemberLogin  = "member.login"
 )
@@ -73,7 +68,7 @@ const (
 	NotificationItemCreatedQueue    = "notification.item.item.created"
 	NotificationGameEndQueue        = "notification.game.end"
 	NotificationDlqQueue            = "notification.dlq"
-	StatsAuthQueue                  = "stats.auth"
+	AuthSignupQueue                 = "auth.signup"
 )
 
 /**

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:7001";
@@ -28,7 +28,55 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isPolling, setIsPolling] = useState(false);
   const [error, setError] = useState("");
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopPolling = useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+    setIsPolling(false);
+  }, []);
+
+  useEffect(() => {
+    return () => stopPolling();
+  }, [stopPolling]);
+
+  const startPolling = useCallback(
+    (targetEmail: string) => {
+      setIsPolling(true);
+      let attempts = 0;
+      const maxAttempts = 15;
+
+      pollingRef.current = setInterval(async () => {
+        attempts++;
+        try {
+          const res = await fetch(
+            `${API_BASE_URL}/api/member/check-email?email=${encodeURIComponent(targetEmail)}`,
+          );
+          const data = await res.json();
+
+          if (data.exists) {
+            stopPolling();
+            router.push("/login");
+            return;
+          }
+        } catch {
+          // ignore, keep trying
+        }
+
+        if (attempts >= maxAttempts) {
+          stopPolling();
+          setError(
+            "Registration is taking longer than expected. Please try logging in or try again.",
+          );
+        }
+      }, 1000);
+    },
+    [router, stopPolling],
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,10 +115,11 @@ export default function RegisterPage() {
         return;
       }
 
-      router.push("/login");
+      // Signup accepted, start polling
+      setIsLoading(false);
+      startPolling(email);
     } catch (err) {
       setError("Connection error. Please try again.");
-    } finally {
       setIsLoading(false);
     }
   };
@@ -146,10 +195,15 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            className={`login-button ${isLoading ? "loading" : ""}`}
-            disabled={isLoading}
+            className={`login-button ${isLoading || isPolling ? "loading" : ""}`}
+            disabled={isLoading || isPolling}
           >
             {isLoading ? (
+              <span className="login-loading">
+                <span className="login-spinner" />
+                Sending...
+              </span>
+            ) : isPolling ? (
               <span className="login-loading">
                 <span className="login-spinner" />
                 Creating Account...

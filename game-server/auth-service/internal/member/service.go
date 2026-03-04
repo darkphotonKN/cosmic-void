@@ -381,3 +381,11 @@ func (s *service) UpdateSubscriptionStatus(ctx context.Context, req *pb.UpdateSu
 
 	return &pb.UpdateSubscriptionStatusResponse{Success: true}, nil
 }
+
+func (s *service) CheckEmailExists(ctx context.Context, req *pb.CheckEmailRequest) (*pb.CheckEmailResponse, error) {
+	_, err := s.Repo.GetMemberByEmail(ctx, req.Email)
+	if err != nil {
+		return &pb.CheckEmailResponse{Exists: false}, nil
+	}
+	return &pb.CheckEmailResponse{Exists: true}, nil
+}

@@ -28,6 +28,50 @@ type Signup struct {
 	Password string `json:"password"`
 }
 
+func (h *Handler) CreateMemberAmqpHandler(c *gin.Context) {
+	ctx := c.Request.Context()
+	ctx, span := tracer.Start(ctx, "service.CreateMember")
+	defer span.End()
+	var req pb.CreateMemberRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"statusCode": http.StatusBadRequest, "message": "Error parsing payload as JSON"})
+		return
+	}
+
+	_, err := h.client.CreateMember(ctx, &req)
+	if err != nil {
+		status, ok := status.FromError(err)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"statusCode": http.StatusInternalServerError,
+				"message":    "Internal server error",
+			})
+			return
+		}
+
+		httpStatus := http.StatusInternalServerError
+		switch status.Code() {
+		case codes.InvalidArgument:
+			httpStatus = http.StatusBadRequest
+		case codes.AlreadyExists:
+			httpStatus = http.StatusConflict
+		}
+
+		c.JSON(httpStatus, gin.H{
+			"statusCode": httpStatus,
+			"message":    status.Message(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"statusCode": http.StatusCreated,
+		"message":    "Successfully created user",
+		// "result":     member,
+	})
+}
+
 func (h *Handler) CreateMemberHandler(c *gin.Context) {
 	ctx := c.Request.Context()
 	ctx, span := tracer.Start(ctx, "service.CreateMember")
@@ -69,6 +113,32 @@ func (h *Handler) CreateMemberHandler(c *gin.Context) {
 		"statusCode": http.StatusCreated,
 		"message":    "Successfully created user",
 		"result":     member,
+	})
+}
+
+func (h *Handler) CheckEmailExistsHandler(c *gin.Context) {
+	email := c.Query("email")
+	if email == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"statusCode": http.StatusBadRequest,
+			"message":    "Email query parameter is required",
+		})
+		return
+	}
+
+	req := &pb.CheckEmailRequest{Email: email}
+	response, err := h.client.CheckEmailExists(c.Request.Context(), req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"statusCode": http.StatusInternalServerError,
+			"message":    "Internal server error",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"statusCode": http.StatusOK,
+		"exists":     response.Exists,
 	})
 }
 

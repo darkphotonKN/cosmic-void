@@ -22,6 +22,7 @@ type Service interface {
 	SetStripeCustomerID(ctx context.Context, req *pb.SetStripeCustomerIDRequest) (*pb.SetStripeCustomerIDResponse, error)
 	GetStripeCustomerID(ctx context.Context, req *pb.GetStripeCustomerIDRequest) (*pb.GetStripeCustomerIDResponse, error)
 	UpdateSubscriptionStatus(ctx context.Context, req *pb.UpdateSubscriptionStatusRequest) (*pb.UpdateSubscriptionStatusResponse, error)
+	CheckEmailExists(ctx context.Context, req *pb.CheckEmailRequest) (*pb.CheckEmailResponse, error)
 	CreateDefaultMembers(members []CreateDefaultMember) error
 }
 
@@ -66,4 +67,8 @@ func (s *Handler) GetStripeCustomerID(ctx context.Context, req *pb.GetStripeCust
 
 func (s *Handler) UpdateSubscriptionStatus(ctx context.Context, req *pb.UpdateSubscriptionStatusRequest) (*pb.UpdateSubscriptionStatusResponse, error) {
 	return s.service.UpdateSubscriptionStatus(ctx, req)
+}
+
+func (s *Handler) CheckEmailExists(ctx context.Context, req *pb.CheckEmailRequest) (*pb.CheckEmailResponse, error) {
+	return s.service.CheckEmailExists(ctx, req)
 }

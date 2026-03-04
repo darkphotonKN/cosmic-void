@@ -133,3 +133,14 @@ func (c *Client) ConfirmAvatarUpload(ctx context.Context, req *pb.ConfirmAvatarU
 	response, err := client.ConfirmAvatarUpload(ctx, req)
 	return response, err
 }
+
+func (c *Client) CheckEmailExists(ctx context.Context, req *pb.CheckEmailRequest) (*pb.CheckEmailResponse, error) {
+	conn, err := discovery.ServiceConnection(ctx, serviceName, c.registry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to auth service: %w", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewAuthServiceClient(conn)
+	return client.CheckEmailExists(ctx, req)
+}
