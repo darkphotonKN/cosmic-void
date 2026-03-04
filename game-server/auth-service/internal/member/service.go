@@ -65,7 +65,7 @@ func memberToProto(m *models.Member) *pb.Member {
 		AverageRating: float32(m.AverageRating),
 		CreatedAt:     timestamppb.New(m.CreatedAt),
 		UpdatedAt:     timestamppb.New(m.UpdatedAt),
-		Role:          dbRoleToProto(m.Role),
+		Role:          m.Role,
 	}
 
 	// Include avatar_url if it exists

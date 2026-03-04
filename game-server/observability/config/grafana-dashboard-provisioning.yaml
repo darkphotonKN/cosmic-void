@@ -1,0 +1,17 @@
+# Dashboard Provisioning
+#
+# Tells Grafana to auto-load dashboard JSON files from a directory.
+# Works the same way grafana-datasources.yaml auto-provisions datasources.
+
+apiVersion: 1
+
+providers:
+  - name: "cosmic-void"
+    orgId: 1
+    folder: "Cosmic Void"
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/dashboards
+      foldersFromFilesStructure: false

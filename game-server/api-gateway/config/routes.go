@@ -23,6 +23,8 @@ import (
 func SetupRouter(registry discovery.Registry, ch *amqp.Channel) *gin.Engine {
 	router := gin.Default()
 
+	// --- Middlewares ---
+
 	// NOTE: debugging middleware
 	router.Use(func(c *gin.Context) {
 		fmt.Println("Incoming request to:", c.Request.Method, c.Request.URL.Path, "from", c.Request.Host)
