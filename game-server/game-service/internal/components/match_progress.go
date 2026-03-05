@@ -9,8 +9,7 @@ type MatchProgressComponent struct {
 	// total players
 	totalPlayers int
 
-	// players that are dead
-	// [uuid]Player
+	// players that are dead [uuid]*ecs.Entity (Player)
 	deadPlayers map[uuid.UUID]*ecs.Entity
 }
 
@@ -18,6 +17,8 @@ func (p *MatchProgressComponent) Type() ecs.ComponentType {
 	return ecs.ComponentTypeMatchProgress
 }
 
-func NewMatchProgressComponent(players *ecs.Entity) *MatchProgressComponent {
-	return &MatchProgressComponent{MemberID: memberID, Username: username}
+func NewMatchProgressComponent(totalPlayers int) *MatchProgressComponent {
+	return &MatchProgressComponent{
+		totalPlayers: totalPlayers, deadPlayers: make(map[uuid.UUID]*ecs.Entity),
+	}
 }

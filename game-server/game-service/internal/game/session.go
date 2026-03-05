@@ -41,6 +41,7 @@ type Session struct {
 
 	// [playerID] - interacted
 	playerInteractedCache map[uuid.UUID]bool
+
 	// [entityID] - interacted
 	containerInteractedCache map[uuid.UUID]bool
 

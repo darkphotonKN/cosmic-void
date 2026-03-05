@@ -17,7 +17,6 @@ func NewRulesSystem() *RulesSystem {
 
 // NOTE: this runs every game tick
 func (s *RulesSystem) Update(deltaTime float64, entities []*ecs.Entity) {
-
 	for _, entity := range entities {
 		// validation for player
 		_, hasPlayer := entity.GetComponent(ecs.ComponentTypePlayer)
@@ -29,8 +28,16 @@ func (s *RulesSystem) Update(deltaTime float64, entities []*ecs.Entity) {
 
 		health := healthComp.(*components.HealthComponent)
 
-		for _, entity := range entities {
+		// search for all players that are eliminated
+		if health.IsEliminated {
+
 		}
 	}
 
+	// find the match progress
+
+	matchProgressComp, hasMatchProgress := .GetComponent(ecs.ComponentTypeMatchProgress)
+
+	if hasMatchProgress {
+	}
 }
