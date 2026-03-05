@@ -22,6 +22,154 @@ func NewStateSerializer(em *ecs.EntityManager) *StateSerializer {
 	return &StateSerializer{em: em}
 }
 
+func (s *StateSerializer) SerializeOnce(ctx context.Context, sessionID uuid.UUID, entities []*ecs.Entity) (*types.ClientGameState, error) {
+	state := &types.ClientGameState{
+		SessionID:     sessionID,
+		CurrentPlayer: nil,
+		OtherPlayers:  make([]*types.PlayerState, 0),
+		Items:         make([]uuid.UUID, 0),
+		Doors:         make([]*types.DoorState, 0),
+		Containers:    make([]*types.ContainerState, 0),
+	}
+
+	for _, entity := range entities {
+		// --- Player ---
+		pc, isPlayer := entity.GetComponent(ecs.ComponentTypePlayer)
+
+		if isPlayer {
+			// -- get all player components --
+			player := pc.(*components.PlayerComponent)
+			tc, _ := entity.GetComponent(ecs.ComponentTypeTransform)
+			transform := tc.(*components.TransformComponent)
+			vc, _ := entity.GetComponent(ecs.ComponentTypeVelocity)
+			velocity := vc.(*components.VelocityComponent)
+			// get player's inventory
+			inventory := []*types.ItemState{}
+			itemIDListC, _ := entity.GetComponent(ecs.ComponentTypeItemIDList)
+			itemIDList := itemIDListC.(*components.ItemIDListComponent)
+			for _, itemID := range itemIDList.ItemIDs {
+				itemEntity, exists := s.em.GetEntity(itemID)
+				if exists {
+					itemC, _ := itemEntity.GetComponent(ecs.ComponentTypeItem)
+					item := itemC.(*components.ItemComponent)
+
+					itemState := &types.ItemState{
+						ItemID:   itemID,
+						EntityID: itemEntity.ID,
+						Name:     item.ItemName,
+						Quantity: 1,
+					}
+
+					populateItemDetails(ctx, item, itemState)
+
+					inventory = append(inventory, itemState)
+				}
+			}
+			playerState := &types.PlayerState{
+				ID:       player.MemberID,
+				EntityID: entity.ID,
+				Username: player.Username,
+				Position: &types.Position{
+					X: transform.X,
+					Y: transform.Y,
+				},
+				Direction: &types.PlayerDirection{
+					VX:    velocity.VX,
+					VY:    velocity.VY,
+					Speed: velocity.Speed,
+				},
+				Inventory: inventory,
+			}
+
+			// Check if this is the recipient player
+			state.OtherPlayers = append(state.OtherPlayers, playerState)
+		}
+
+		// --- Interactables ---
+
+		// -- Doors --
+
+		// -- Containers --
+		containerComp, isContainer := entity.GetComponent(ecs.ComponentTypeContainer)
+		if isContainer {
+			container := containerComp.(*components.ContainerComponent)
+			tc, _ := entity.GetComponent(ecs.ComponentTypeTransform)
+			transform := tc.(*components.TransformComponent)
+
+			isOpen := false
+			openableC, hasOpenable := entity.GetComponent(ecs.ComponentTypeOpenable)
+			if hasOpenable {
+				openable := openableC.(*components.OpenableComponent)
+				isOpen = openable.IsOpen
+			}
+
+			items := make([]*types.ItemState, 0)
+			itemIDListComp, hasItemIDList := entity.GetComponent(ecs.ComponentTypeItemIDList)
+			if hasItemIDList {
+				itemIDList := itemIDListComp.(*components.ItemIDListComponent)
+				for _, itemID := range itemIDList.ItemIDs {
+					itemEntity, exists := s.em.GetEntity(itemID)
+					if exists {
+						itemComp, hasItem := itemEntity.GetComponent(ecs.ComponentTypeItem)
+						if hasItem {
+							item := itemComp.(*components.ItemComponent)
+
+							itemState := &types.ItemState{
+								ItemID:   itemID,
+								EntityID: itemEntity.ID,
+								Name:     item.ItemName,
+								Quantity: 1,
+							}
+
+							populateItemDetails(ctx, item, itemState)
+
+							items = append(items, itemState)
+						}
+					}
+				}
+			}
+
+			slog.Debug("items after extracting and formatting from entity", "items", items)
+
+			containerState := &types.ContainerState{
+				ContainerID: container.ContainerID,
+				EntityID:    entity.ID,
+				Position: &types.Position{
+					X: transform.X,
+					Y: transform.Y,
+				},
+				IsOpen: isOpen,
+				Items:  items,
+			}
+			state.Containers = append(state.Containers, containerState)
+		}
+		// --- Items ---
+		// TODO: add this after item entity is added
+	}
+
+	return state, nil
+}
+
+func (s *StateSerializer) ClientStateAddCurrentPlayer(clientState *types.ClientGameState, playerID uuid.UUID) *types.ClientGameState {
+	state := &types.ClientGameState{
+		SessionID:    clientState.SessionID,
+		Items:        clientState.Items,
+		Doors:        clientState.Doors,
+		Containers:   clientState.Containers,
+		OtherPlayers: make([]*types.PlayerState, 0, len(clientState.OtherPlayers)-1),
+	}
+
+	for _, playerState := range clientState.OtherPlayers {
+		if playerState.ID == playerID {
+			state.CurrentPlayer = playerState
+		} else {
+			state.OtherPlayers = append(state.OtherPlayers, playerState)
+		}
+	}
+
+	return state
+}
+
 func (s *StateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, recipientPlayerID uuid.UUID, entities []*ecs.Entity) (*types.ClientGameState, error) {
 	state := &types.ClientGameState{
 		SessionID:     sessionID,

@@ -472,14 +472,22 @@ func (s *Session) GetPlayerIDs() []uuid.UUID {
 func (s *Session) broadcastFullState(entities []*ecs.Entity) error {
 	ctx := context.Background()
 	// entities := s.EntityManager.GetAllEntities()
+	clientState, err := s.stateSerializer.SerializeOnce(ctx, s.ID, entities)
+	if err != nil {
+		slog.Error("Failed to serialize state", "error", err)
+	}
 
+	if err != nil {
+		slog.Error("Failed to send state to player", "error", err)
+	}
 	// create and send personalized state for each player
 	for _, playerID := range s.playerEntityIDToPlayerID {
-		clientState, err := s.stateSerializer.Serialize(ctx, s.ID, playerID, entities)
-		if err != nil {
-			slog.Error("Failed to serialize state for player", "playerID", playerID, "error", err)
-			continue
-		}
+		// clientState, err := s.stateSerializer.Serialize(ctx, s.ID, playerID, entities)
+		// if err != nil {
+		// 	slog.Error("Failed to serialize state for player", "playerID", playerID, "error", err)
+		// 	continue
+		// }
+		clientState := s.stateSerializer.ClientStateAddCurrentPlayer(clientState, playerID)
 
 		err = s.sender.SendStateToPlayer(playerID, clientState)
 		if err != nil {
