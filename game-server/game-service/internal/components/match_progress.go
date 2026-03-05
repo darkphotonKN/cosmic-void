@@ -6,19 +6,19 @@ import (
 )
 
 type MatchProgressComponent struct {
-	// total players
-	totalPlayers int
+	// total players alive
+	TotalAlivePlayers int
 
 	// players that are dead [uuid]*ecs.Entity (Player)
-	deadPlayers map[uuid.UUID]*ecs.Entity
+	DeadPlayers map[uuid.UUID]ecs.Component
 }
 
 func (p *MatchProgressComponent) Type() ecs.ComponentType {
 	return ecs.ComponentTypeMatchProgress
 }
 
-func NewMatchProgressComponent(totalPlayers int) *MatchProgressComponent {
+func NewMatchProgressComponent(totalAlivePlayers int) *MatchProgressComponent {
 	return &MatchProgressComponent{
-		totalPlayers: totalPlayers, deadPlayers: make(map[uuid.UUID]*ecs.Entity),
+		TotalAlivePlayers: totalAlivePlayers, DeadPlayers: make(map[uuid.UUID]ecs.Component),
 	}
 }
