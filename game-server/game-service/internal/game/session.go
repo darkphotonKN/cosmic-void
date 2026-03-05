@@ -489,10 +489,12 @@ func (s *Session) broadcastFullState(entities []*ecs.Entity) error {
 		// }
 		clientState := s.stateSerializer.ClientStateAddCurrentPlayer(clientState, playerID)
 
-		err = s.sender.SendStateToPlayer(playerID, clientState)
-		if err != nil {
-			slog.Error("Failed to send state to player", "playerID", playerID, "error", err)
-		}
+		go func() {
+			err = s.sender.SendStateToPlayer(playerID, clientState)
+			if err != nil {
+				slog.Error("Failed to send state to player", "playerID", playerID, "error", err)
+			}
+		}()
 	}
 
 	return nil
