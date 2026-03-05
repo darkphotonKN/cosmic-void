@@ -326,7 +326,7 @@ func (s *Session) manageGameLoop() {
 			eliminationSys.Update(deltaTime, entities, s.ID, s.eliminationCh)
 
 			// broadcast state update to all players
-			err := s.broadcastFullState()
+			err := s.broadcastFullState(entities)
 			if err != nil {
 				slog.Error("Error broadcasting state", "error", err)
 				continue
@@ -469,9 +469,9 @@ func (s *Session) GetPlayerIDs() []uuid.UUID {
 * Broadcasts the current game state, after serialization, to all the players in the
 * session. Each player receives a personalized view with their player state separated.
 **/
-func (s *Session) broadcastFullState() error {
+func (s *Session) broadcastFullState(entities []*ecs.Entity) error {
 	ctx := context.Background()
-	entities := s.EntityManager.GetAllEntities()
+	// entities := s.EntityManager.GetAllEntities()
 
 	// create and send personalized state for each player
 	for _, playerID := range s.playerEntityIDToPlayerID {
@@ -791,6 +791,15 @@ type itemTemplate struct {
 	Name          string
 	BaseBuyPrice  int32
 	BaseSellPrice int32
+	AttackPower   int32
+	Durability    int32
+	CriticalRate  float32
+	WeaponType    string
+	DefenseRating int32
+	ArmorSlot     string
+	HealingAmount int32
+	ManaAmount    int32
+	Description   string
 }
 
 /**
@@ -821,6 +830,11 @@ func (s *Session) initItemPool() error {
 				Name:          w.ItemName,
 				BaseBuyPrice:  w.BaseBuyPrice,
 				BaseSellPrice: w.BaseSellPrice,
+				AttackPower:   w.AttackPower,
+				Durability:    w.Durability,
+				CriticalRate:  w.CriticalRate,
+				WeaponType:    w.WeaponType,
+				Description:   w.Description,
 			})
 		}
 	}
@@ -835,6 +849,10 @@ func (s *Session) initItemPool() error {
 				Name:          a.ItemName,
 				BaseBuyPrice:  a.BaseBuyPrice,
 				BaseSellPrice: a.BaseSellPrice,
+				DefenseRating: a.DefenseRating,
+				Durability:    a.Durability,
+				ArmorSlot:     a.ArmorSlot,
+				Description:   a.Description,
 			})
 		}
 	}
@@ -849,6 +867,9 @@ func (s *Session) initItemPool() error {
 				Name:          c.ItemName,
 				BaseBuyPrice:  c.BaseBuyPrice,
 				BaseSellPrice: c.BaseSellPrice,
+				HealingAmount: c.HealingAmount,
+				ManaAmount:    c.ManaAmount,
+				Description:   c.Description,
 			})
 		}
 	}
@@ -932,8 +953,17 @@ func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
 	itemIDs := make([]uuid.UUID, 0, count)
 	for _, item := range selected {
 		config := ItemConfig{
-			Name:     item.Name,
-			ItemTool: s.itemsClient,
+			Name:          item.Name,
+			ItemTool:      s.itemsClient,
+			AttackPower:   item.AttackPower,
+			Durability:    item.Durability,
+			CriticalRate:  item.CriticalRate,
+			WeaponType:    item.WeaponType,
+			DefenseRating: item.DefenseRating,
+			ArmorSlot:     item.ArmorSlot,
+			HealingAmount: item.HealingAmount,
+			ManaAmount:    item.ManaAmount,
+			Description:   item.Description,
 		}
 
 		priceConfig := PriceConfig{

@@ -2,7 +2,6 @@ package serializer
 
 import (
 	"context"
-	"log"
 	"log/slog"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
@@ -155,59 +154,75 @@ func (s *StateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, re
 	return state, nil
 }
 
-// populateItemDetails fetches item details from items-service via the item's
-// ItemTool gRPC client and populates the ItemState accordingly.
+// populateItemDetails reads item details directly from the ItemComponent
+// which are populated at item creation time, avoiding per-tick gRPC calls.
 func populateItemDetails(ctx context.Context, item *components.ItemComponent, itemState *types.ItemState) {
-	if item.ItemTool == nil {
-		return
-	}
-
-	// Try weapons
-	weaponResponse, err := item.ItemTool.ListWeaponsWithTemplate(ctx)
-	if err != nil {
-		log.Printf("Failed to fetch weapons for item %s: %v", item.ItemName, err)
-	} else if weaponResponse != nil {
-		for _, weapon := range weaponResponse.Weapons {
-			if weapon.ItemName == item.ItemName {
-				itemState.AttackPower = weapon.AttackPower
-				itemState.Durability = weapon.Durability
-				itemState.CriticalRate = weapon.CriticalRate
-				itemState.WeaponType = weapon.WeaponType
-				itemState.Description = weapon.Description
-				return
-			}
-		}
-	}
-
-	// Try armors
-	armorResponse, err := item.ItemTool.ListArmorsWithTemplate(ctx)
-	if err != nil {
-		log.Printf("Failed to fetch armors for item %s: %v", item.ItemName, err)
-	} else if armorResponse != nil {
-		for _, armor := range armorResponse.Armors {
-			if armor.ItemName == item.ItemName {
-				itemState.DefenseRating = armor.DefenseRating
-				itemState.ArmorSlot = armor.ArmorSlot
-				itemState.Description = armor.Description
-				return
-			}
-		}
-	}
-
-	// Try consumables
-	consumableResponse, err := item.ItemTool.ListConsumablesWithTemplate(ctx)
-	if err != nil {
-		log.Printf("Failed to fetch consumables for item %s: %v", item.ItemName, err)
-	} else if consumableResponse != nil {
-		for _, consumable := range consumableResponse.Consumables {
-			if consumable.ItemName == item.ItemName {
-				itemState.HealingAmount = consumable.HealingAmount
-				itemState.ManaAmount = consumable.ManaAmount
-				itemState.Description = consumable.Description
-				return
-			}
-		}
-	}
-
-	log.Printf("No matching item details found for: %s", item.ItemName)
+	itemState.AttackPower = item.AttackPower
+	itemState.Durability = item.Durability
+	itemState.CriticalRate = item.CriticalRate
+	itemState.WeaponType = item.WeaponType
+	itemState.DefenseRating = item.DefenseRating
+	itemState.ArmorSlot = item.ArmorSlot
+	itemState.HealingAmount = item.HealingAmount
+	itemState.ManaAmount = item.ManaAmount
+	itemState.Description = item.Description
 }
+
+// populateItemDetailsViaGRPC is the original implementation that fetches item
+// details from items-service via gRPC on every call. Kept for reference.
+// Deprecated: use populateItemDetails instead, which reads from pre-populated ItemComponent.
+//
+// func populateItemDetailsViaGRPC(ctx context.Context, item *components.ItemComponent, itemState *types.ItemState) {
+// 	if item.ItemTool == nil {
+// 		return
+// 	}
+//
+// 	// Try weapons
+// 	weaponResponse, err := item.ItemTool.ListWeaponsWithTemplate(ctx)
+// 	if err != nil {
+// 		log.Printf("Failed to fetch weapons for item %s: %v", item.ItemName, err)
+// 	} else if weaponResponse != nil {
+// 		for _, weapon := range weaponResponse.Weapons {
+// 			if weapon.ItemName == item.ItemName {
+// 				itemState.AttackPower = weapon.AttackPower
+// 				itemState.Durability = weapon.Durability
+// 				itemState.CriticalRate = weapon.CriticalRate
+// 				itemState.WeaponType = weapon.WeaponType
+// 				itemState.Description = weapon.Description
+// 				return
+// 			}
+// 		}
+// 	}
+//
+// 	// Try armors
+// 	armorResponse, err := item.ItemTool.ListArmorsWithTemplate(ctx)
+// 	if err != nil {
+// 		log.Printf("Failed to fetch armors for item %s: %v", item.ItemName, err)
+// 	} else if armorResponse != nil {
+// 		for _, armor := range armorResponse.Armors {
+// 			if armor.ItemName == item.ItemName {
+// 				itemState.DefenseRating = armor.DefenseRating
+// 				itemState.ArmorSlot = armor.ArmorSlot
+// 				itemState.Description = armor.Description
+// 				return
+// 			}
+// 		}
+// 	}
+//
+// 	// Try consumables
+// 	consumableResponse, err := item.ItemTool.ListConsumablesWithTemplate(ctx)
+// 	if err != nil {
+// 		log.Printf("Failed to fetch consumables for item %s: %v", item.ItemName, err)
+// 	} else if consumableResponse != nil {
+// 		for _, consumable := range consumableResponse.Consumables {
+// 			if consumable.ItemName == item.ItemName {
+// 				itemState.HealingAmount = consumable.HealingAmount
+// 				itemState.ManaAmount = consumable.ManaAmount
+// 				itemState.Description = consumable.Description
+// 				return
+// 			}
+// 		}
+// 	}
+//
+// 	log.Printf("No matching item details found for: %s", item.ItemName)
+// }
