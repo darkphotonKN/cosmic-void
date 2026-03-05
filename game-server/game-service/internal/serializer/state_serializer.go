@@ -170,7 +170,12 @@ func (s *StateSerializer) ClientStateAddCurrentPlayer(clientState *types.ClientG
 	return state
 }
 
+type Tester struct {
+	value string
+}
+
 func (s *StateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, recipientPlayerID uuid.UUID, entities []*ecs.Entity) (*types.ClientGameState, error) {
+
 	state := &types.ClientGameState{
 		SessionID:     sessionID,
 		CurrentPlayer: nil,

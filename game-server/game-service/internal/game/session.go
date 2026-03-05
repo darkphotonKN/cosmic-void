@@ -1043,7 +1043,6 @@ func (s *Session) manageEliminations() {
 		s.eliminations[player.ID] = len(s.eliminations)
 		s.mu.Unlock()
 	}
-
 }
 
 /**
