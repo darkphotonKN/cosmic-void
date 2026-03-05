@@ -16,6 +16,8 @@ import (
 type ComponentType string
 
 const (
+	ComponentTypeMatchProgress ComponentType = "Entity"
+
 	ComponentTypePlayer ComponentType = "Player"
 	ComponentTypeNPC    ComponentType = "NPC"
 	ComponentTypeEnemy  ComponentType = "Enemy"
