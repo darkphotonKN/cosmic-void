@@ -28,6 +28,13 @@ func (s *InteractionSystem) Update(entities []*ecs.Entity) {
 		// --- check door within range ---
 
 		for _, entity := range entities {
+			// Skip escape doors and switches - they require E key interaction
+			_, isEscapeDoor := entity.GetComponent(ecs.ComponentTypeEscapeDoor)
+			_, isSwitch := entity.GetComponent(ecs.ComponentTypeSwitch)
+			if isEscapeDoor || isSwitch {
+				continue
+			}
+
 			interactableComp, hasInteractable := entity.GetComponent(ecs.ComponentTypeInteractable)
 			openableComp, hasOpenable := entity.GetComponent(ecs.ComponentTypeOpenable)
 			doorTransformComp, hasTransform := entity.GetComponent(ecs.ComponentTypeTransform)

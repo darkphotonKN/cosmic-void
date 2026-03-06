@@ -8,7 +8,7 @@ type InteractableComponent struct {
 }
 
 func (i *InteractableComponent) Type() ecs.ComponentType {
-	return ecs.ComponentTypePlayer
+	return ecs.ComponentTypeInteractable
 }
 
 func NewInteractableComponent(interactableRange float64) *InteractableComponent {

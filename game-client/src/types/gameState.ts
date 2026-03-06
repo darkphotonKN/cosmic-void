@@ -51,6 +51,22 @@ export interface ContainerState {
   items: ItemState[];
 }
 
+// Escape door state
+export interface EscapeDoorState {
+  entity_id: UUID;
+  position: Position;
+  is_open: boolean;
+  is_locked: boolean;
+}
+
+// Switch/button state
+export interface SwitchState {
+  entity_id: UUID;
+  position: Position;
+  switch_id: number;
+  is_activated: boolean;
+}
+
 // Complete game state received from server
 export interface ClientGameState {
   session_id: UUID;
@@ -59,6 +75,8 @@ export interface ClientGameState {
   items: string[];                     // TODO: Update when items are structured
   doors: DoorState[];
   containers: ContainerState[];
+  escape_doors: EscapeDoorState[];     // Escape doors with lock state
+  switches: SwitchState[];             // Switches/buttons for puzzles
 }
 
 // Type guard to check if a message is a game state update

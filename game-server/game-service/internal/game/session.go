@@ -330,9 +330,6 @@ func (s *Session) manageGameLoop() {
 			eliminationSys := systems.EliminationSystem{}
 			eliminationSys.Update(deltaTime, entities, s.ID, s.eliminationCh)
 
-			// escape
-			s.checkEscapeCondition()
-
 			// broadcast state update to all players
 			err := s.broadcastFullState(entities)
 			if err != nil {
@@ -586,8 +583,9 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 	_, isDoorEntity := targetEntity.GetComponent(ecs.ComponentTypeDoor)
 	_, isContainerEntity := targetEntity.GetComponent(ecs.ComponentTypeContainer)
 	switchComp, isSwitch := targetEntity.GetComponent(ecs.ComponentTypeSwitch)
+	_, isEscapeDoor := targetEntity.GetComponent(ecs.ComponentTypeEscapeDoor)
 
-	if !isDoorEntity && !isContainerEntity && !isSwitch {
+	if !isDoorEntity && !isContainerEntity && !isSwitch && !isEscapeDoor {
 		slog.Debug("Entity type did not match any interactable entity", "targetEntityID", targetEntityID)
 		return fmt.Errorf("entity type did not match any interactable entity")
 	}
@@ -764,8 +762,26 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		}()
 	}
 	// Check if the switch is on so we can open the emergency exit
-	// -- escape entity --
+	// -- switch entity --
 	if isSwitch {
+		// get location
+		switchTransformComponent, hasTransform := targetEntity.GetComponent(ecs.ComponentTypeTransform)
+
+		if !hasTransform {
+			slog.Error("Failed to retrieve switch entity transform component", "targetEntityID", targetEntityID)
+			return fmt.Errorf("Error when attempting to retrieve switch entity transform component with entityID %s", targetEntityID)
+		}
+
+		switchTransform := switchTransformComponent.(*components.TransformComponent)
+		// validate is within distance from player
+		isWithinDistance := s.calcWithinDistance(playerTransform.X, playerTransform.Y, switchTransform.X, switchTransform.Y)
+
+		if !isWithinDistance {
+			slog.Debug("Switch entity out of range for interaction", "targetID", targetEntityID, "playerID", playerID)
+			s.sendErrorToPlayer(playerID, string(constants.ActionInteract), "too far away to interact")
+			return ErrOutOfRange
+		}
+
 		switchComponent := switchComp.(*components.SwitchComponent)
 		if switchComponent.IsActivated {
 			return fmt.Errorf("switch already activated")
@@ -790,6 +806,75 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 				})
 			}
 		}
+
+		// add player to interacted cache
+		s.mu.Lock()
+		s.playerInteractedCache[playerEntityID] = true
+		s.mu.Unlock()
+
+		// remove them from cache after a short while
+		go func() {
+			time.Sleep(time.Millisecond * 100)
+			s.mu.Lock()
+			delete(s.playerInteractedCache, playerEntityID)
+			s.mu.Unlock()
+		}()
+	}
+
+	// -- escape door entity --
+	if isEscapeDoor {
+		// get location
+		escapeDoorTransformComponent, hasTransform := targetEntity.GetComponent(ecs.ComponentTypeTransform)
+
+		if !hasTransform {
+			slog.Error("Failed to retrieve escape door entity transform component", "targetEntityID", targetEntityID)
+			return fmt.Errorf("Error when attempting to retrieve escape door entity transform component with entityID %s", targetEntityID)
+		}
+
+		escapeDoorTransform := escapeDoorTransformComponent.(*components.TransformComponent)
+		// validate is within distance from player
+		isWithinDistance := s.calcWithinDistance(playerTransform.X, playerTransform.Y, escapeDoorTransform.X, escapeDoorTransform.Y)
+
+		if !isWithinDistance {
+			slog.Debug("Escape door entity out of range for interaction", "targetID", targetEntityID, "playerID", playerID)
+			s.sendErrorToPlayer(playerID, string(constants.ActionInteract), "too far away to interact")
+			return ErrOutOfRange
+		}
+
+		// check if door is locked
+		lockableComp, hasLockable := targetEntity.GetComponent(ecs.ComponentTypeLockable)
+		if !hasLockable {
+			slog.Error("Escape door does not have lockable component", "targetEntityID", targetEntityID)
+			return fmt.Errorf("escape door does not have lockable component")
+		}
+
+		lockable := lockableComp.(*components.LockableComponents)
+		if lockable.IsLocked {
+			slog.Debug("Escape door is still locked", "targetID", targetEntityID, "playerID", playerID)
+			s.sendErrorToPlayer(playerID, string(constants.ActionInteract), "escape door is locked! Find the switch to unlock it.")
+			return fmt.Errorf("escape door is locked")
+		}
+
+		// door is unlocked, open it and let player escape!
+		openableComp, hasOpenable := targetEntity.GetComponent(ecs.ComponentTypeOpenable)
+		if hasOpenable {
+			openable := openableComp.(*components.OpenableComponent)
+			openable.IsOpen = true
+			slog.Info("Escape door opened!", "playerID", playerID)
+		}
+
+		// send confirmation to player
+		s.sender.SendMessageToPlayer(playerID, types.Message{
+			Action: string(constants.ActionInteract),
+			Payload: map[string]interface{}{
+				"success": true,
+				"message": "Escaping through the door!",
+			},
+		})
+
+		// trigger escape after a short delay to allow door animation
+		slog.Info("Player is escaping through the door!", "playerID", playerID)
+		s.handlePlayerEscape(playerID)
 	}
 
 	return nil
@@ -843,61 +928,6 @@ func (s *Session) handleLoot(playerID uuid.UUID, containerEntityID uuid.UUID, lo
 	containerItemIDs.ItemIDs = newItemIDs
 
 	return nil
-}
-
-// checkEscapeCondition 檢查玩家是否到達逃脫門
-func (s *Session) checkEscapeCondition() {
-	// 如果已經有人逃脫，不再檢查
-	if s.escapeSuccess {
-		return
-	}
-
-	// 獲取逃脫門
-	exitDoor, exists := s.EntityManager.GetEntity(s.exitDoorEntityID)
-	if !exists {
-		return
-	}
-
-	// 檢查門是否解鎖
-	lockableComp, hasLockable := exitDoor.GetComponent(ecs.ComponentTypeLockable)
-	if !hasLockable {
-		return
-	}
-	lockable := lockableComp.(*components.LockableComponents)
-	if lockable.IsLocked {
-		return // 門還鎖著，不能逃脫
-	}
-
-	// 獲取門的位置
-	doorTransformComp, hasDoorTransform := exitDoor.GetComponent(ecs.ComponentTypeTransform)
-	if !hasDoorTransform {
-		return
-	}
-	doorTransform := doorTransformComp.(*components.TransformComponent)
-
-	// 檢查每個玩家是否在門附近
-	for playerID, playerEntityID := range s.playerIDToEntitiesID {
-		playerEntity, exists := s.EntityManager.GetEntity(playerEntityID)
-		if !exists {
-			continue
-		}
-
-		playerTransformComp, hasPlayerTransform := playerEntity.GetComponent(ecs.ComponentTypeTransform)
-		if !hasPlayerTransform {
-			continue
-		}
-		playerTransform := playerTransformComp.(*components.TransformComponent)
-
-		// 檢查距離
-		if s.calcWithinDistance(
-			playerTransform.X, playerTransform.Y,
-			doorTransform.X, doorTransform.Y,
-		) {
-			// 玩家逃脫成功！
-			s.handlePlayerEscape(playerID)
-			return
-		}
-	}
 }
 
 // handlePlayerEscape 處理玩家成功逃脫
