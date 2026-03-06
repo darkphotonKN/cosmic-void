@@ -202,53 +202,195 @@ export class TreasureHuntScene extends Phaser.Scene {
   }
 
   private createEscapeDoorTextures(): void {
-    const width = 50;
-    const height = 70;
+    const size = 80;
+    const centerX = size / 2;
+    const centerY = size / 2;
 
-    // 鎖定的逃脫門 (紅色帶鎖)
+    // ⚫ 鎖定的逃脫門 - 灰色魔法陣 (未啟動)
     const locked = this.make.graphics({});
-    // 門框
-    locked.fillStyle(0x8b0000, 1);
-    locked.fillRect(0, 0, width, height);
-    // 門板
-    locked.fillStyle(0xa52a2a, 1);
-    locked.fillRect(4, 4, width - 8, height - 8);
-    // 警告條紋
-    locked.lineStyle(3, 0xffff00, 1);
-    locked.strokeRect(2, 2, width - 4, height - 4);
-    // 鎖圖示
-    locked.fillStyle(0xffd700, 1);
-    locked.fillCircle(width / 2, height / 2 - 5, 8);
-    locked.fillRect(width / 2 - 4, height / 2, 8, 12);
-    locked.generateTexture("escape_door_locked", width, height);
+
+    // 外圈 - 灰色
+    locked.lineStyle(3, 0x666666, 0.8);
+    locked.strokeCircle(centerX, centerY, 35);
+    locked.strokeCircle(centerX, centerY, 30);
+
+    // 內圈 - 灰色
+    locked.lineStyle(2, 0x888888, 0.7);
+    locked.strokeCircle(centerX, centerY, 20);
+
+    // 魔法陣符文 (6個點)
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      const radius = 28;
+      const x = centerX + Math.cos(angle) * radius;
+      const y = centerY + Math.sin(angle) * radius;
+      locked.fillStyle(0x666666, 0.8);
+      locked.fillCircle(x, y, 3);
+    }
+
+    // 六芒星 (灰色)
+    locked.lineStyle(2, 0x777777, 0.6);
+    for (let i = 0; i < 6; i++) {
+      const angle1 = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      const angle2 = ((i + 2) / 6) * Math.PI * 2 - Math.PI / 2;
+      const radius = 25;
+      const x1 = centerX + Math.cos(angle1) * radius;
+      const y1 = centerY + Math.sin(angle1) * radius;
+      const x2 = centerX + Math.cos(angle2) * radius;
+      const y2 = centerY + Math.sin(angle2) * radius;
+      locked.beginPath();
+      locked.moveTo(x1, y1);
+      locked.lineTo(x2, y2);
+      locked.strokePath();
+    }
+
+    // 中心鎖圖示 (灰色)
+    locked.fillStyle(0x555555, 1);
+    locked.fillCircle(centerX, centerY, 8);
+    locked.fillStyle(0x333333, 1);
+    locked.fillCircle(centerX, centerY, 5);
+    locked.fillCircle(centerX, centerY + 2, 2);
+
+    locked.generateTexture("escape_door_locked", size, size);
     locked.destroy();
 
-    // 解鎖的逃脫門 (綠色)
+    // 🟢 解鎖的逃脫門 - 綠色魔法陣 (已解鎖但未啟動)
     const unlocked = this.make.graphics({});
-    // 門框
-    unlocked.fillStyle(0x006400, 1);
-    unlocked.fillRect(0, 0, width, height);
-    // 門板
-    unlocked.fillStyle(0x228b22, 1);
-    unlocked.fillRect(4, 4, width - 8, height - 8);
-    // 發光效果
-    unlocked.fillStyle(0x00ff00, 0.3);
-    unlocked.fillRect(6, 6, width - 12, height - 12);
-    // 箭頭指示
+
+    // 外圈 - 綠色發光
+    unlocked.lineStyle(3, 0x44ff88, 0.9);
+    unlocked.strokeCircle(centerX, centerY, 35);
+    unlocked.lineStyle(2, 0x66ffaa, 0.7);
+    unlocked.strokeCircle(centerX, centerY, 30);
+
+    // 內圈 - 亮綠色
+    unlocked.lineStyle(2, 0x88ffcc, 0.8);
+    unlocked.strokeCircle(centerX, centerY, 20);
+
+    // 發光光暈
+    unlocked.fillStyle(0x44ff88, 0.15);
+    unlocked.fillCircle(centerX, centerY, 35);
+
+    // 魔法陣符文 (6個發光點)
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      const radius = 28;
+      const x = centerX + Math.cos(angle) * radius;
+      const y = centerY + Math.sin(angle) * radius;
+      // 發光效果
+      unlocked.fillStyle(0x44ff88, 0.3);
+      unlocked.fillCircle(x, y, 5);
+      unlocked.fillStyle(0x88ffcc, 1);
+      unlocked.fillCircle(x, y, 3);
+    }
+
+    // 六芒星 (綠色發光)
+    unlocked.lineStyle(2, 0x66ffaa, 0.7);
+    for (let i = 0; i < 6; i++) {
+      const angle1 = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      const angle2 = ((i + 2) / 6) * Math.PI * 2 - Math.PI / 2;
+      const radius = 25;
+      const x1 = centerX + Math.cos(angle1) * radius;
+      const y1 = centerY + Math.sin(angle1) * radius;
+      const x2 = centerX + Math.cos(angle2) * radius;
+      const y2 = centerY + Math.sin(angle2) * radius;
+      unlocked.beginPath();
+      unlocked.moveTo(x1, y1);
+      unlocked.lineTo(x2, y2);
+      unlocked.strokePath();
+    }
+
+    // 中心圖示 - 解鎖符號 (亮綠色)
+    unlocked.fillStyle(0xaaffdd, 1);
+    unlocked.fillCircle(centerX, centerY, 8);
+    unlocked.fillStyle(0x44ff88, 1);
+    unlocked.fillCircle(centerX, centerY, 6);
+    // 向上箭頭
     unlocked.fillStyle(0xffffff, 1);
     unlocked.fillTriangle(
-      width / 2, height / 2 - 10,
-      width / 2 - 10, height / 2 + 10,
-      width / 2 + 10, height / 2 + 10
+      centerX, centerY - 4,
+      centerX - 3, centerY + 2,
+      centerX + 3, centerY + 2
     );
-    unlocked.generateTexture("escape_door_unlocked", width, height);
+
+    unlocked.generateTexture("escape_door_unlocked", size, size);
     unlocked.destroy();
 
-    // 打開的逃脫門
+    // ✨ 打開的逃脫門 - 激活的綠色魔法陣 (透明發光)
     const open = this.make.graphics({});
-    open.fillStyle(0x228b22, 0.5);
-    open.fillRect(0, 0, width, height);
-    open.generateTexture("escape_door_open", width, height);
+
+    // 最外層發光
+    for (let i = 0; i < 4; i++) {
+      const alpha = 0.2 - i * 0.04;
+      const radius = 38 + i * 3;
+      open.fillStyle(0x44ff88, alpha);
+      open.fillCircle(centerX, centerY, radius);
+    }
+
+    // 外圈 - 強烈綠光
+    open.lineStyle(4, 0x44ff88, 1);
+    open.strokeCircle(centerX, centerY, 35);
+    open.lineStyle(3, 0xaaffdd, 0.8);
+    open.strokeCircle(centerX, centerY, 30);
+
+    // 內圈 - 亮綠色
+    open.lineStyle(3, 0xccffee, 0.9);
+    open.strokeCircle(centerX, centerY, 20);
+
+    // 傳送門中心 - 綠色帶透明
+    open.fillStyle(0x66ffaa, 0.4);
+    open.fillCircle(centerX, centerY, 30);
+    open.fillStyle(0xaaffdd, 0.3);
+    open.fillCircle(centerX, centerY, 20);
+
+    // 魔法陣符文 (6個強烈發光點)
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      const radius = 28;
+      const x = centerX + Math.cos(angle) * radius;
+      const y = centerY + Math.sin(angle) * radius;
+      // 強烈發光
+      open.fillStyle(0x44ff88, 0.5);
+      open.fillCircle(x, y, 6);
+      open.fillStyle(0xffffff, 1);
+      open.fillCircle(x, y, 3);
+    }
+
+    // 旋轉的六芒星 (強烈綠光)
+    open.lineStyle(3, 0xaaffdd, 0.9);
+    for (let i = 0; i < 6; i++) {
+      const angle1 = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      const angle2 = ((i + 2) / 6) * Math.PI * 2 - Math.PI / 2;
+      const radius = 25;
+      const x1 = centerX + Math.cos(angle1) * radius;
+      const y1 = centerY + Math.sin(angle1) * radius;
+      const x2 = centerX + Math.cos(angle2) * radius;
+      const y2 = centerY + Math.sin(angle2) * radius;
+      open.beginPath();
+      open.moveTo(x1, y1);
+      open.lineTo(x2, y2);
+      open.strokePath();
+    }
+
+    // 中心強烈發光
+    open.fillStyle(0xffffff, 0.9);
+    open.fillCircle(centerX, centerY, 10);
+    open.fillStyle(0xaaffdd, 0.7);
+    open.fillCircle(centerX, centerY, 15);
+    open.fillStyle(0x44ff88, 0.4);
+    open.fillCircle(centerX, centerY, 20);
+
+    // 粒子效果 (8個旋轉的光點)
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const radius = 18;
+      const x = centerX + Math.cos(angle) * radius;
+      const y = centerY + Math.sin(angle) * radius;
+      open.fillStyle(0xffffff, 0.9);
+      open.fillCircle(x, y, 2);
+    }
+
+    open.generateTexture("escape_door_open", size, size);
     open.destroy();
   }
 
