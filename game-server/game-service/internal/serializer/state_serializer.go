@@ -30,6 +30,8 @@ func (s *StateSerializer) SerializeOnce(ctx context.Context, sessionID uuid.UUID
 		Items:         make([]uuid.UUID, 0),
 		Doors:         make([]*types.DoorState, 0),
 		Containers:    make([]*types.ContainerState, 0),
+		EscapeDoor:    make([]*types.EscapeDoorState, 0),
+		Switch:        make([]*types.SwitchState, 0),
 	}
 
 	for _, entity := range entities {
@@ -88,6 +90,63 @@ func (s *StateSerializer) SerializeOnce(ctx context.Context, sessionID uuid.UUID
 		// --- Interactables ---
 
 		// -- Doors --
+
+		// -- Escape Doors --
+		_, isEscapeDoor := entity.GetComponent(ecs.ComponentTypeEscapeDoor)
+		if isEscapeDoor {
+			tc, hasTransform := entity.GetComponent(ecs.ComponentTypeTransform)
+			if !hasTransform {
+				continue
+			}
+			transform := tc.(*components.TransformComponent)
+
+			isOpen := false
+			openableC, hasOpenable := entity.GetComponent(ecs.ComponentTypeOpenable)
+			if hasOpenable {
+				openable := openableC.(*components.OpenableComponent)
+				isOpen = openable.IsOpen
+			}
+
+			isLocked := true
+			lockableC, hasLockable := entity.GetComponent(ecs.ComponentTypeLockable)
+			if hasLockable {
+				lockable := lockableC.(*components.LockableComponents)
+				isLocked = lockable.IsLocked
+			}
+
+			escapeDoorState := &types.EscapeDoorState{
+				EntityID: entity.ID,
+				Position: &types.Position{
+					X: transform.X,
+					Y: transform.Y,
+				},
+				IsOpen:   isOpen,
+				IsLocked: isLocked,
+			}
+			state.EscapeDoor = append(state.EscapeDoor, escapeDoorState)
+		}
+
+		// -- Switches --
+		switchComp, isSwitch := entity.GetComponent(ecs.ComponentTypeSwitch)
+		if isSwitch {
+			tc, hasTransform := entity.GetComponent(ecs.ComponentTypeTransform)
+			if !hasTransform {
+				continue
+			}
+			transform := tc.(*components.TransformComponent)
+			switchComponent := switchComp.(*components.SwitchComponent)
+
+			switchState := &types.SwitchState{
+				EntityID: entity.ID,
+				Position: &types.Position{
+					X: transform.X,
+					Y: transform.Y,
+				},
+				SwitchID:    switchComponent.SwitchID,
+				IsActivated: switchComponent.IsActivated,
+			}
+			state.Switch = append(state.Switch, switchState)
+		}
 
 		// -- Containers --
 		containerComp, isContainer := entity.GetComponent(ecs.ComponentTypeContainer)
@@ -157,6 +216,8 @@ func (s *StateSerializer) ClientStateAddCurrentPlayer(clientState *types.ClientG
 		Doors:        clientState.Doors,
 		Containers:   clientState.Containers,
 		OtherPlayers: make([]*types.PlayerState, 0, len(clientState.OtherPlayers)-1),
+		EscapeDoor:   clientState.EscapeDoor,
+		Switch:       clientState.Switch,
 	}
 
 	for _, playerState := range clientState.OtherPlayers {
@@ -183,6 +244,8 @@ func (s *StateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, re
 		Items:         make([]uuid.UUID, 0),
 		Doors:         make([]*types.DoorState, 0),
 		Containers:    make([]*types.ContainerState, 0),
+		EscapeDoor:    make([]*types.EscapeDoorState, 0),
+		Switch:        make([]*types.SwitchState, 0),
 	}
 
 	for _, entity := range entities {
@@ -244,7 +307,62 @@ func (s *StateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, re
 
 		// --- Interactables ---
 
-		// -- Doors --
+		// -- Escape Doors --
+		_, isEscapeDoor := entity.GetComponent(ecs.ComponentTypeEscapeDoor)
+		if isEscapeDoor {
+			tc, hasTransform := entity.GetComponent(ecs.ComponentTypeTransform)
+			if !hasTransform {
+				continue
+			}
+			transform := tc.(*components.TransformComponent)
+
+			isOpen := false
+			openableC, hasOpenable := entity.GetComponent(ecs.ComponentTypeOpenable)
+			if hasOpenable {
+				openable := openableC.(*components.OpenableComponent)
+				isOpen = openable.IsOpen
+			}
+
+			isLocked := true
+			lockableC, hasLockable := entity.GetComponent(ecs.ComponentTypeLockable)
+			if hasLockable {
+				lockable := lockableC.(*components.LockableComponents)
+				isLocked = lockable.IsLocked
+			}
+
+			escapeDoorState := &types.EscapeDoorState{
+				EntityID: entity.ID,
+				Position: &types.Position{
+					X: transform.X,
+					Y: transform.Y,
+				},
+				IsOpen:   isOpen,
+				IsLocked: isLocked,
+			}
+			state.EscapeDoor = append(state.EscapeDoor, escapeDoorState)
+		}
+
+		// -- Switches --
+		switchComp, isSwitch := entity.GetComponent(ecs.ComponentTypeSwitch)
+		if isSwitch {
+			tc, hasTransform := entity.GetComponent(ecs.ComponentTypeTransform)
+			if !hasTransform {
+				continue
+			}
+			transform := tc.(*components.TransformComponent)
+			switchComponent := switchComp.(*components.SwitchComponent)
+
+			switchState := &types.SwitchState{
+				EntityID: entity.ID,
+				Position: &types.Position{
+					X: transform.X,
+					Y: transform.Y,
+				},
+				SwitchID:    switchComponent.SwitchID,
+				IsActivated: switchComponent.IsActivated,
+			}
+			state.Switch = append(state.Switch, switchState)
+		}
 
 		// -- Containers --
 		containerComp, isContainer := entity.GetComponent(ecs.ComponentTypeContainer)

@@ -104,3 +104,31 @@ func CreateItemEntity(em *ecs.EntityManager, itemconfig ItemConfig, priceconfig 
 
 	return entity
 }
+
+type EscapeConfig struct {
+	X, Y float64
+}
+
+func CreateEscapeDoorEntity(em *ecs.EntityManager, config EscapeConfig) *ecs.Entity {
+	entity := em.CreateEntity()
+	entity.AddComponent(components.NewEscapeDoorComponent())
+	entity.AddComponent(components.NewLockableComponent(true))
+	entity.AddComponent(components.NewTransformComponent(config.X, config.Y))
+	entity.AddComponent(components.NewOpenableComponent(false))
+	entity.AddComponent(components.NewInteractableComponent(constants.DefaultInteractableRange))
+	return entity
+}
+
+type SwitchConfig struct {
+	X, Y     float64
+	SwitchID int
+}
+
+func CreateSwitchEntity(em *ecs.EntityManager, config SwitchConfig) *ecs.Entity {
+	entity := em.CreateEntity()
+	entity.AddComponent(components.NewSwitchComponent(config.SwitchID))
+	entity.AddComponent(components.NewTransformComponent(config.X, config.Y))
+	entity.AddComponent(components.NewInteractableComponent(constants.DefaultInteractableRange))
+	return entity
+
+}
