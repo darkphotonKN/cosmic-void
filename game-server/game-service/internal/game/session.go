@@ -50,6 +50,9 @@ type Session struct {
 	// [memberID] finish position
 	eliminations map[uuid.UUID]int
 
+	// end session signal
+	endSessionCh chan bool
+
 	// TEST: testing only
 	TestMessageSpy chan types.Message
 
@@ -98,6 +101,8 @@ func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSer
 		eliminationCh: make(chan *types.Player),
 		eliminations:  make(map[uuid.UUID]int),
 
+		endSessionCh: make(chan bool),
+
 		sender:          sender,
 		stateSerializer: serializer,
 		eventEmitter:    eventEmitter,
@@ -131,6 +136,9 @@ func (s *Session) Start() {
 
 	// eliminations processing
 	go s.manageEliminations()
+
+	// end game processing
+	go s.manageEndSession()
 }
 
 /**
@@ -326,6 +334,10 @@ func (s *Session) manageGameLoop() {
 			eliminationSys := systems.EliminationSystem{}
 			eliminationSys.Update(deltaTime, entities, s.ID, s.eliminationCh)
 
+			// rules
+			rulesSys := systems.RulesSystem{}
+			rulesSys.Update(deltaTime, entities, s.endSessionCh)
+
 			// broadcast state update to all players
 			err := s.broadcastFullState()
 			if err != nil {
@@ -344,6 +356,18 @@ func (s *Session) manageGameLoop() {
 		case <-s.stopChan:
 			slog.Info("Game session game loop stopped", "sessionID", s.ID)
 			return
+		}
+	}
+}
+
+/**
+* Tracks end game status sent over by the rules system.
+**/
+
+func (s *Session) manageEndSession() {
+	for endSession := range s.endSessionCh {
+		if endSession {
+			s.endSession()
 		}
 	}
 }
@@ -450,6 +474,7 @@ func (s *Session) Shutdown() {
 	close(s.stopChan)
 	close(s.MessageCh)
 	close(s.eliminationCh)
+	close(s.endSessionCh)
 }
 
 /**

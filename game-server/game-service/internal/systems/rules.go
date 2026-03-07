@@ -17,7 +17,7 @@ func NewRulesSystem() *RulesSystem {
 }
 
 // NOTE: this runs every game tick
-func (s *RulesSystem) Update(deltaTime float64, entities []*ecs.Entity) {
+func (s *RulesSystem) Update(deltaTime float64, entities []*ecs.Entity, endSessionCh chan bool) {
 	var matchProgressFound bool
 	var matchProgressComp ecs.Component
 	deadPlayers := make(map[uuid.UUID]ecs.Component)
@@ -64,8 +64,8 @@ func (s *RulesSystem) Update(deltaTime float64, entities []*ecs.Entity) {
 
 	matchProgress.TotalAlivePlayers = matchProgress.TotalAlivePlayers - len(deadPlayers)
 
-	if matchProgress.TotalAlivePlayers <= 0 {
+	if matchProgress.TotalAlivePlayers <= 1 {
 		// signal end game
-
+		endSessionCh <- true
 	}
 }

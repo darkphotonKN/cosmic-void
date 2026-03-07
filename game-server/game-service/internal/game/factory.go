@@ -5,7 +5,6 @@ import (
 	grpcitems "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/items"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
-	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 )
 
@@ -15,7 +14,7 @@ type MatchConfig struct {
 
 func CreateMatchEntity(em *ecs.EntityManager, config PlayerConfig) *ecs.Entity {
 	entity := em.CreateEntity()
-	entity.AddComponent(components.NewMatchProgressComponent())
+	entity.AddComponent(components.NewMatchProgressComponent(constants.DefautMaxSessionPlayers))
 
 	return entity
 }
