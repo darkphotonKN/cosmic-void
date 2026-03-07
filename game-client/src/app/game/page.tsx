@@ -46,8 +46,10 @@ export default function GamePage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center">
-      <PhaserGame />
+    <main className="min-h-screen bg-black">
+      <div className="h-[calc(100vh-4rem)] flex items-center justify-center pt-16">
+        <PhaserGame />
+      </div>
     </main>
   );
 }

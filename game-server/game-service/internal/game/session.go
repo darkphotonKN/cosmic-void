@@ -121,7 +121,7 @@ func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSer
 
 /**
 * Handles all inner workings inside a single game session.
-* NOTE: this method should be run inside a goroutine.
+* NOTE: this method needs to be run inside a goroutine.
 **/
 func (s *Session) Start() {
 	s.mu.Lock()

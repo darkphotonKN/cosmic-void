@@ -1,0 +1,3 @@
+[submodule "game-server/tools/mothership"]
+	path = game-server/tools/mothership
+	url = git@github.com:darkphotonKN/mothership.git
