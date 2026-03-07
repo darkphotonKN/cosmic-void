@@ -80,8 +80,17 @@ func CreateContainerEntity(em *ecs.EntityManager, containerconfig ContainerConfi
 }
 
 type ItemConfig struct {
-	Name     string
-	ItemTool grpcitems.ItemsClient
+	Name          string
+	ItemTool      grpcitems.ItemsClient
+	AttackPower   int32
+	Durability    int32
+	CriticalRate  float32
+	WeaponType    string
+	DefenseRating int32
+	ArmorSlot     string
+	HealingAmount int32
+	ManaAmount    int32
+	Description   string
 }
 
 type PriceConfig struct {
@@ -91,8 +100,46 @@ type PriceConfig struct {
 
 func CreateItemEntity(em *ecs.EntityManager, itemconfig ItemConfig, priceconfig PriceConfig) *ecs.Entity {
 	entity := em.CreateEntity()
-	entity.AddComponent(components.NewItemComponent(itemconfig.Name, itemconfig.ItemTool))
+	itemComp := components.NewItemComponent(itemconfig.Name, itemconfig.ItemTool)
+	itemComp.AttackPower = itemconfig.AttackPower
+	itemComp.Durability = itemconfig.Durability
+	itemComp.CriticalRate = itemconfig.CriticalRate
+	itemComp.WeaponType = itemconfig.WeaponType
+	itemComp.DefenseRating = itemconfig.DefenseRating
+	itemComp.ArmorSlot = itemconfig.ArmorSlot
+	itemComp.HealingAmount = itemconfig.HealingAmount
+	itemComp.ManaAmount = itemconfig.ManaAmount
+	itemComp.Description = itemconfig.Description
+	entity.AddComponent(itemComp)
 	entity.AddComponent(components.NewPriceComponent(priceconfig.BaseBuyPrice, priceconfig.BaseSellPrice))
 
 	return entity
+}
+
+type EscapeConfig struct {
+	X, Y float64
+}
+
+func CreateEscapeDoorEntity(em *ecs.EntityManager, config EscapeConfig) *ecs.Entity {
+	entity := em.CreateEntity()
+	entity.AddComponent(components.NewEscapeDoorComponent())
+	entity.AddComponent(components.NewLockableComponent(true))
+	entity.AddComponent(components.NewTransformComponent(config.X, config.Y))
+	entity.AddComponent(components.NewOpenableComponent(false))
+	entity.AddComponent(components.NewInteractableComponent(constants.DefaultInteractableRange))
+	return entity
+}
+
+type SwitchConfig struct {
+	X, Y     float64
+	SwitchID int
+}
+
+func CreateSwitchEntity(em *ecs.EntityManager, config SwitchConfig) *ecs.Entity {
+	entity := em.CreateEntity()
+	entity.AddComponent(components.NewSwitchComponent(config.SwitchID))
+	entity.AddComponent(components.NewTransformComponent(config.X, config.Y))
+	entity.AddComponent(components.NewInteractableComponent(constants.DefaultInteractableRange))
+	return entity
+
 }

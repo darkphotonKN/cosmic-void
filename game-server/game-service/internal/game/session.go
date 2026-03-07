@@ -65,6 +65,11 @@ type Session struct {
 	stateSerializer *serializer.StateSerializer
 	eventEmitter    EventEmitter
 	itemsClient     grpcitems.ItemsClient
+
+	// escape
+	switchEntityIDs  []uuid.UUID
+	exitDoorEntityID uuid.UUID
+	escapeSuccess    bool
 }
 
 type SessionSender interface {
@@ -339,7 +344,7 @@ func (s *Session) manageGameLoop() {
 			rulesSys.Update(deltaTime, entities, s.endSessionCh)
 
 			// broadcast state update to all players
-			err := s.broadcastFullState()
+			err := s.broadcastFullState(entities)
 			if err != nil {
 				slog.Error("Error broadcasting state", "error", err)
 				continue
@@ -451,6 +456,18 @@ func (s *Session) AddContainer(x, y float64) uuid.UUID {
 	return entity.ID
 }
 
+func (s *Session) AddEscape(x, y float64) uuid.UUID {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	Config := EscapeConfig{
+		X: x,
+		Y: y,
+	}
+	entity := CreateEscapeDoorEntity(s.EntityManager, Config)
+	return entity.ID
+}
+
 func (s *Session) Update(deltaTime float64) {
 	// fmt.Printf("Session %s updating...\n", s.ID)
 	// entities := s.EntityManager.GetAllEntities()
@@ -495,22 +512,32 @@ func (s *Session) GetPlayerIDs() []uuid.UUID {
 * Broadcasts the current game state, after serialization, to all the players in the
 * session. Each player receives a personalized view with their player state separated.
 **/
-func (s *Session) broadcastFullState() error {
+func (s *Session) broadcastFullState(entities []*ecs.Entity) error {
 	ctx := context.Background()
-	entities := s.EntityManager.GetAllEntities()
+	// entities := s.EntityManager.GetAllEntities()
+	clientState, err := s.stateSerializer.SerializeOnce(ctx, s.ID, entities)
+	if err != nil {
+		slog.Error("Failed to serialize state", "error", err)
+	}
 
+	if err != nil {
+		slog.Error("Failed to send state to player", "error", err)
+	}
 	// create and send personalized state for each player
 	for _, playerID := range s.playerEntityIDToPlayerID {
-		clientState, err := s.stateSerializer.Serialize(ctx, s.ID, playerID, entities)
-		if err != nil {
-			slog.Error("Failed to serialize state for player", "playerID", playerID, "error", err)
-			continue
-		}
+		// clientState, err := s.stateSerializer.Serialize(ctx, s.ID, playerID, entities)
+		// if err != nil {
+		// 	slog.Error("Failed to serialize state for player", "playerID", playerID, "error", err)
+		// 	continue
+		// }
+		clientState := s.stateSerializer.ClientStateAddCurrentPlayer(clientState, playerID)
 
-		err = s.sender.SendStateToPlayer(playerID, clientState)
-		if err != nil {
-			slog.Error("Failed to send state to player", "playerID", playerID, "error", err)
-		}
+		go func() {
+			err = s.sender.SendStateToPlayer(playerID, clientState)
+			if err != nil {
+				slog.Error("Failed to send state to player", "playerID", playerID, "error", err)
+			}
+		}()
 	}
 
 	return nil
@@ -581,8 +608,10 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 	// get that entity's type and decide on the effect
 	_, isDoorEntity := targetEntity.GetComponent(ecs.ComponentTypeDoor)
 	_, isContainerEntity := targetEntity.GetComponent(ecs.ComponentTypeContainer)
+	switchComp, isSwitch := targetEntity.GetComponent(ecs.ComponentTypeSwitch)
+	_, isEscapeDoor := targetEntity.GetComponent(ecs.ComponentTypeEscapeDoor)
 
-	if !isDoorEntity && !isContainerEntity {
+	if !isDoorEntity && !isContainerEntity && !isSwitch && !isEscapeDoor {
 		slog.Debug("Entity type did not match any interactable entity", "targetEntityID", targetEntityID)
 		return fmt.Errorf("entity type did not match any interactable entity")
 	}
@@ -758,6 +787,121 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 			s.mu.Unlock()
 		}()
 	}
+	// Check if the switch is on so we can open the emergency exit
+	// -- switch entity --
+	if isSwitch {
+		// get location
+		switchTransformComponent, hasTransform := targetEntity.GetComponent(ecs.ComponentTypeTransform)
+
+		if !hasTransform {
+			slog.Error("Failed to retrieve switch entity transform component", "targetEntityID", targetEntityID)
+			return fmt.Errorf("Error when attempting to retrieve switch entity transform component with entityID %s", targetEntityID)
+		}
+
+		switchTransform := switchTransformComponent.(*components.TransformComponent)
+		// validate is within distance from player
+		isWithinDistance := s.calcWithinDistance(playerTransform.X, playerTransform.Y, switchTransform.X, switchTransform.Y)
+
+		if !isWithinDistance {
+			slog.Debug("Switch entity out of range for interaction", "targetID", targetEntityID, "playerID", playerID)
+			s.sendErrorToPlayer(playerID, string(constants.ActionInteract), "too far away to interact")
+			return ErrOutOfRange
+		}
+
+		switchComponent := switchComp.(*components.SwitchComponent)
+		if switchComponent.IsActivated {
+			return fmt.Errorf("switch already activated")
+		}
+		switchComponent.IsActivated = true
+		slog.Info("Switch activated!", "playerID", playerID)
+
+		exitDoor, exists := s.EntityManager.GetEntity(s.exitDoorEntityID)
+		if exists {
+			lockableComp, hasLockable := exitDoor.GetComponent(ecs.ComponentTypeLockable)
+			if hasLockable {
+				lockable := lockableComp.(*components.LockableComponents)
+				lockable.IsLocked = false
+
+				slog.Info("Exit door unlocked!")
+
+				s.sender.BroadcastToPlayerList(s.GetPlayerIDs(), types.Message{
+					Action: "exit_door_unlocked",
+					Payload: map[string]interface{}{
+						"message": "Exit door unlocked! Run to escape!",
+					},
+				})
+			}
+		}
+
+		// add player to interacted cache
+		s.mu.Lock()
+		s.playerInteractedCache[playerEntityID] = true
+		s.mu.Unlock()
+
+		// remove them from cache after a short while
+		go func() {
+			time.Sleep(time.Millisecond * 100)
+			s.mu.Lock()
+			delete(s.playerInteractedCache, playerEntityID)
+			s.mu.Unlock()
+		}()
+	}
+
+	// -- escape door entity --
+	if isEscapeDoor {
+		// get location
+		escapeDoorTransformComponent, hasTransform := targetEntity.GetComponent(ecs.ComponentTypeTransform)
+
+		if !hasTransform {
+			slog.Error("Failed to retrieve escape door entity transform component", "targetEntityID", targetEntityID)
+			return fmt.Errorf("Error when attempting to retrieve escape door entity transform component with entityID %s", targetEntityID)
+		}
+
+		escapeDoorTransform := escapeDoorTransformComponent.(*components.TransformComponent)
+		// validate is within distance from player
+		isWithinDistance := s.calcWithinDistance(playerTransform.X, playerTransform.Y, escapeDoorTransform.X, escapeDoorTransform.Y)
+
+		if !isWithinDistance {
+			slog.Debug("Escape door entity out of range for interaction", "targetID", targetEntityID, "playerID", playerID)
+			s.sendErrorToPlayer(playerID, string(constants.ActionInteract), "too far away to interact")
+			return ErrOutOfRange
+		}
+
+		// check if door is locked
+		lockableComp, hasLockable := targetEntity.GetComponent(ecs.ComponentTypeLockable)
+		if !hasLockable {
+			slog.Error("Escape door does not have lockable component", "targetEntityID", targetEntityID)
+			return fmt.Errorf("escape door does not have lockable component")
+		}
+
+		lockable := lockableComp.(*components.LockableComponents)
+		if lockable.IsLocked {
+			slog.Debug("Escape door is still locked", "targetID", targetEntityID, "playerID", playerID)
+			s.sendErrorToPlayer(playerID, string(constants.ActionInteract), "escape door is locked! Find the switch to unlock it.")
+			return fmt.Errorf("escape door is locked")
+		}
+
+		// door is unlocked, open it and let player escape!
+		openableComp, hasOpenable := targetEntity.GetComponent(ecs.ComponentTypeOpenable)
+		if hasOpenable {
+			openable := openableComp.(*components.OpenableComponent)
+			openable.IsOpen = true
+			slog.Info("Escape door opened!", "playerID", playerID)
+		}
+
+		// send confirmation to player
+		s.sender.SendMessageToPlayer(playerID, types.Message{
+			Action: string(constants.ActionInteract),
+			Payload: map[string]interface{}{
+				"success": true,
+				"message": "Escaping through the door!",
+			},
+		})
+
+		// trigger escape after a short delay to allow door animation
+		slog.Info("Player is escaping through the door!", "playerID", playerID)
+		s.handlePlayerEscape(playerID)
+	}
 
 	return nil
 }
@@ -812,11 +956,59 @@ func (s *Session) handleLoot(playerID uuid.UUID, containerEntityID uuid.UUID, lo
 	return nil
 }
 
+// handlePlayerEscape 處理玩家成功逃脫
+func (s *Session) handlePlayerEscape(playerID uuid.UUID) {
+	// 標記逃脫成功
+	s.mu.Lock()
+	s.escapeSuccess = true
+	s.mu.Unlock()
+
+	// 獲取玩家資訊
+	playerEntityID, ok := s.playerIDToEntitiesID[playerID]
+	if !ok {
+		slog.Error("Player entity ID not found", "playerID", playerID)
+		return
+	}
+
+	playerEntity, exists := s.EntityManager.GetEntity(playerEntityID)
+	if !exists {
+		slog.Error("Player entity not found", "playerEntityID", playerEntityID)
+		return
+	}
+
+	playerComp, hasPlayer := playerEntity.GetComponent(ecs.ComponentTypePlayer)
+	if !hasPlayer {
+		slog.Error("Player component not found", "playerEntityID", playerEntityID)
+		return
+	}
+	player := playerComp.(*components.PlayerComponent)
+
+	slog.Info("Player escaped!", "playerID", playerID, "username", player.Username)
+
+	// 通知所有玩家
+	s.sender.BroadcastToPlayerList(s.GetPlayerIDs(), types.Message{
+		Action: "player_escaped",
+		Payload: map[string]interface{}{
+			"winner":  player.Username,
+			"message": fmt.Sprintf("%s escaped successfully!", player.Username),
+		},
+	})
+}
+
 // itemTemplate is a unified representation of an item from items-service
 type itemTemplate struct {
 	Name          string
 	BaseBuyPrice  int32
 	BaseSellPrice int32
+	AttackPower   int32
+	Durability    int32
+	CriticalRate  float32
+	WeaponType    string
+	DefenseRating int32
+	ArmorSlot     string
+	HealingAmount int32
+	ManaAmount    int32
+	Description   string
 }
 
 /**
@@ -847,6 +1039,11 @@ func (s *Session) initItemPool() error {
 				Name:          w.ItemName,
 				BaseBuyPrice:  w.BaseBuyPrice,
 				BaseSellPrice: w.BaseSellPrice,
+				AttackPower:   w.AttackPower,
+				Durability:    w.Durability,
+				CriticalRate:  w.CriticalRate,
+				WeaponType:    w.WeaponType,
+				Description:   w.Description,
 			})
 		}
 	}
@@ -861,6 +1058,10 @@ func (s *Session) initItemPool() error {
 				Name:          a.ItemName,
 				BaseBuyPrice:  a.BaseBuyPrice,
 				BaseSellPrice: a.BaseSellPrice,
+				DefenseRating: a.DefenseRating,
+				Durability:    a.Durability,
+				ArmorSlot:     a.ArmorSlot,
+				Description:   a.Description,
 			})
 		}
 	}
@@ -875,6 +1076,9 @@ func (s *Session) initItemPool() error {
 				Name:          c.ItemName,
 				BaseBuyPrice:  c.BaseBuyPrice,
 				BaseSellPrice: c.BaseSellPrice,
+				HealingAmount: c.HealingAmount,
+				ManaAmount:    c.ManaAmount,
+				Description:   c.Description,
 			})
 		}
 	}
@@ -958,8 +1162,17 @@ func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
 	itemIDs := make([]uuid.UUID, 0, count)
 	for _, item := range selected {
 		config := ItemConfig{
-			Name:     item.Name,
-			ItemTool: s.itemsClient,
+			Name:          item.Name,
+			ItemTool:      s.itemsClient,
+			AttackPower:   item.AttackPower,
+			Durability:    item.Durability,
+			CriticalRate:  item.CriticalRate,
+			WeaponType:    item.WeaponType,
+			DefenseRating: item.DefenseRating,
+			ArmorSlot:     item.ArmorSlot,
+			HealingAmount: item.HealingAmount,
+			ManaAmount:    item.ManaAmount,
+			Description:   item.Description,
 		}
 
 		priceConfig := PriceConfig{
@@ -1090,4 +1303,24 @@ func (s *Session) InitialMapObjects() {
 	containerX := constants.ContainerWidthRadius + rand.Float64()*(constants.MapWidth-2*constants.ContainerWidthRadius)
 	containerY := constants.ContainerHeightRadius + rand.Float64()*(constants.MapHeight-2*constants.ContainerHeightRadius)
 	s.AddContainer(containerX, containerY)
+
+	// add EscapeDoor
+	exitDoorX := constants.ContainerWidthRadius + rand.Float64()*(constants.MapWidth-2*constants.ContainerWidthRadius)
+	exitDoorY := constants.ContainerHeightRadius + rand.Float64()*(constants.MapHeight-2*constants.ContainerHeightRadius)
+	exitDoor := CreateEscapeDoorEntity(s.EntityManager, EscapeConfig{
+		X: exitDoorX,
+		Y: exitDoorY,
+	})
+	s.exitDoorEntityID = exitDoor.ID
+
+	// add Switch
+	switchX := constants.ContainerWidthRadius + rand.Float64()*(constants.MapWidth-2*constants.ContainerWidthRadius)
+	switchY := constants.ContainerHeightRadius + rand.Float64()*(constants.MapHeight-2*constants.ContainerHeightRadius)
+	switchEntity := CreateSwitchEntity(s.EntityManager, SwitchConfig{
+		X:        switchX,
+		Y:        switchY,
+		SwitchID: 1,
+	})
+
+	s.switchEntityIDs = []uuid.UUID{switchEntity.ID}
 }

@@ -36,8 +36,8 @@ type PlayerDirection struct {
 
 type DoorState struct {
 	EntityID uuid.UUID `json:"entity_id"`
-	Position Position
-	IsOpen   bool `json:"is_open"`
+	Position *Position `json:"position"`
+	IsOpen   bool      `json:"is_open"`
 }
 
 type ItemState struct {
@@ -87,4 +87,18 @@ type RankedPlayerState struct {
 	Deaths        int32
 	FinalPosition int32
 	Win           bool
+}
+
+type EscapeDoorState struct {
+	EntityID uuid.UUID `json:"entity_id"`
+	Position *Position `json:"position"`
+	IsOpen   bool      `json:"is_open"`
+	IsLocked bool      `json:"is_locked"`
+}
+
+type SwitchState struct {
+	EntityID    uuid.UUID `json:"entity_id"`
+	Position    *Position `json:"position"`
+	SwitchID    int       `json:"switch_id"`
+	IsActivated bool      `json:"is_activated"`
 }

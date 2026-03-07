@@ -6,7 +6,7 @@
 import Phaser from "phaser";
 import { ActionType } from "@/assets/types/client";
 import { socketManager } from "@/utils/class/SocketManager";
-import { ClientGameState, ContainerState, ItemState } from "@/types/gameState";
+import { ClientGameState, ContainerState, ItemState, EscapeDoorState, SwitchState } from "@/types/gameState";
 import { GameStateLogger } from "@/utils/gameStateLogger";
 
 interface Building {
@@ -65,6 +65,12 @@ export class TreasureHuntScene extends Phaser.Scene {
   // 寶箱 (從後端同步)
   private chests: Map<string, { sprite: Phaser.GameObjects.Sprite; entityId: string }> = new Map();
 
+  // 逃脫門 (從後端同步)
+  private escapeDoors: Map<string, { sprite: Phaser.GameObjects.Sprite; entityId: string }> = new Map();
+
+  // 開關/按鈕 (從後端同步)
+  private switches: Map<string, { sprite: Phaser.GameObjects.Sprite; entityId: string }> = new Map();
+
   // 寶箱跳窗
   private chestPopup?: Phaser.GameObjects.Container;
   private isPopupOpen = false;
@@ -95,6 +101,8 @@ export class TreasureHuntScene extends Phaser.Scene {
     this.createPlayerTexture();
     this.createOtherPlayerTexture();
     this.createChestTextures();
+    this.createEscapeDoorTextures();
+    this.createSwitchTextures();
   }
 
   private createPlayerTexture(): void {
@@ -193,6 +201,234 @@ export class TreasureHuntScene extends Phaser.Scene {
     open.destroy();
   }
 
+  private createEscapeDoorTextures(): void {
+    const size = 80;
+    const centerX = size / 2;
+    const centerY = size / 2;
+
+    // ⚫ 鎖定的逃脫門 - 灰色魔法陣 (未啟動)
+    const locked = this.make.graphics({});
+
+    // 外圈 - 灰色
+    locked.lineStyle(3, 0x666666, 0.8);
+    locked.strokeCircle(centerX, centerY, 35);
+    locked.strokeCircle(centerX, centerY, 30);
+
+    // 內圈 - 灰色
+    locked.lineStyle(2, 0x888888, 0.7);
+    locked.strokeCircle(centerX, centerY, 20);
+
+    // 魔法陣符文 (6個點)
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      const radius = 28;
+      const x = centerX + Math.cos(angle) * radius;
+      const y = centerY + Math.sin(angle) * radius;
+      locked.fillStyle(0x666666, 0.8);
+      locked.fillCircle(x, y, 3);
+    }
+
+    // 六芒星 (灰色)
+    locked.lineStyle(2, 0x777777, 0.6);
+    for (let i = 0; i < 6; i++) {
+      const angle1 = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      const angle2 = ((i + 2) / 6) * Math.PI * 2 - Math.PI / 2;
+      const radius = 25;
+      const x1 = centerX + Math.cos(angle1) * radius;
+      const y1 = centerY + Math.sin(angle1) * radius;
+      const x2 = centerX + Math.cos(angle2) * radius;
+      const y2 = centerY + Math.sin(angle2) * radius;
+      locked.beginPath();
+      locked.moveTo(x1, y1);
+      locked.lineTo(x2, y2);
+      locked.strokePath();
+    }
+
+    // 中心鎖圖示 (灰色)
+    locked.fillStyle(0x555555, 1);
+    locked.fillCircle(centerX, centerY, 8);
+    locked.fillStyle(0x333333, 1);
+    locked.fillCircle(centerX, centerY, 5);
+    locked.fillCircle(centerX, centerY + 2, 2);
+
+    locked.generateTexture("escape_door_locked", size, size);
+    locked.destroy();
+
+    // 🟢 解鎖的逃脫門 - 綠色魔法陣 (已解鎖但未啟動)
+    const unlocked = this.make.graphics({});
+
+    // 外圈 - 綠色發光
+    unlocked.lineStyle(3, 0x44ff88, 0.9);
+    unlocked.strokeCircle(centerX, centerY, 35);
+    unlocked.lineStyle(2, 0x66ffaa, 0.7);
+    unlocked.strokeCircle(centerX, centerY, 30);
+
+    // 內圈 - 亮綠色
+    unlocked.lineStyle(2, 0x88ffcc, 0.8);
+    unlocked.strokeCircle(centerX, centerY, 20);
+
+    // 發光光暈
+    unlocked.fillStyle(0x44ff88, 0.15);
+    unlocked.fillCircle(centerX, centerY, 35);
+
+    // 魔法陣符文 (6個發光點)
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      const radius = 28;
+      const x = centerX + Math.cos(angle) * radius;
+      const y = centerY + Math.sin(angle) * radius;
+      // 發光效果
+      unlocked.fillStyle(0x44ff88, 0.3);
+      unlocked.fillCircle(x, y, 5);
+      unlocked.fillStyle(0x88ffcc, 1);
+      unlocked.fillCircle(x, y, 3);
+    }
+
+    // 六芒星 (綠色發光)
+    unlocked.lineStyle(2, 0x66ffaa, 0.7);
+    for (let i = 0; i < 6; i++) {
+      const angle1 = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      const angle2 = ((i + 2) / 6) * Math.PI * 2 - Math.PI / 2;
+      const radius = 25;
+      const x1 = centerX + Math.cos(angle1) * radius;
+      const y1 = centerY + Math.sin(angle1) * radius;
+      const x2 = centerX + Math.cos(angle2) * radius;
+      const y2 = centerY + Math.sin(angle2) * radius;
+      unlocked.beginPath();
+      unlocked.moveTo(x1, y1);
+      unlocked.lineTo(x2, y2);
+      unlocked.strokePath();
+    }
+
+    // 中心圖示 - 解鎖符號 (亮綠色)
+    unlocked.fillStyle(0xaaffdd, 1);
+    unlocked.fillCircle(centerX, centerY, 8);
+    unlocked.fillStyle(0x44ff88, 1);
+    unlocked.fillCircle(centerX, centerY, 6);
+    // 向上箭頭
+    unlocked.fillStyle(0xffffff, 1);
+    unlocked.fillTriangle(
+      centerX, centerY - 4,
+      centerX - 3, centerY + 2,
+      centerX + 3, centerY + 2
+    );
+
+    unlocked.generateTexture("escape_door_unlocked", size, size);
+    unlocked.destroy();
+
+    // ✨ 打開的逃脫門 - 激活的綠色魔法陣 (透明發光)
+    const open = this.make.graphics({});
+
+    // 最外層發光
+    for (let i = 0; i < 4; i++) {
+      const alpha = 0.2 - i * 0.04;
+      const radius = 38 + i * 3;
+      open.fillStyle(0x44ff88, alpha);
+      open.fillCircle(centerX, centerY, radius);
+    }
+
+    // 外圈 - 強烈綠光
+    open.lineStyle(4, 0x44ff88, 1);
+    open.strokeCircle(centerX, centerY, 35);
+    open.lineStyle(3, 0xaaffdd, 0.8);
+    open.strokeCircle(centerX, centerY, 30);
+
+    // 內圈 - 亮綠色
+    open.lineStyle(3, 0xccffee, 0.9);
+    open.strokeCircle(centerX, centerY, 20);
+
+    // 傳送門中心 - 綠色帶透明
+    open.fillStyle(0x66ffaa, 0.4);
+    open.fillCircle(centerX, centerY, 30);
+    open.fillStyle(0xaaffdd, 0.3);
+    open.fillCircle(centerX, centerY, 20);
+
+    // 魔法陣符文 (6個強烈發光點)
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      const radius = 28;
+      const x = centerX + Math.cos(angle) * radius;
+      const y = centerY + Math.sin(angle) * radius;
+      // 強烈發光
+      open.fillStyle(0x44ff88, 0.5);
+      open.fillCircle(x, y, 6);
+      open.fillStyle(0xffffff, 1);
+      open.fillCircle(x, y, 3);
+    }
+
+    // 旋轉的六芒星 (強烈綠光)
+    open.lineStyle(3, 0xaaffdd, 0.9);
+    for (let i = 0; i < 6; i++) {
+      const angle1 = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      const angle2 = ((i + 2) / 6) * Math.PI * 2 - Math.PI / 2;
+      const radius = 25;
+      const x1 = centerX + Math.cos(angle1) * radius;
+      const y1 = centerY + Math.sin(angle1) * radius;
+      const x2 = centerX + Math.cos(angle2) * radius;
+      const y2 = centerY + Math.sin(angle2) * radius;
+      open.beginPath();
+      open.moveTo(x1, y1);
+      open.lineTo(x2, y2);
+      open.strokePath();
+    }
+
+    // 中心強烈發光
+    open.fillStyle(0xffffff, 0.9);
+    open.fillCircle(centerX, centerY, 10);
+    open.fillStyle(0xaaffdd, 0.7);
+    open.fillCircle(centerX, centerY, 15);
+    open.fillStyle(0x44ff88, 0.4);
+    open.fillCircle(centerX, centerY, 20);
+
+    // 粒子效果 (8個旋轉的光點)
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const radius = 18;
+      const x = centerX + Math.cos(angle) * radius;
+      const y = centerY + Math.sin(angle) * radius;
+      open.fillStyle(0xffffff, 0.9);
+      open.fillCircle(x, y, 2);
+    }
+
+    open.generateTexture("escape_door_open", size, size);
+    open.destroy();
+  }
+
+  private createSwitchTextures(): void {
+    const size = 30;
+
+    // 未激活的開關 (灰色按鈕)
+    const inactive = this.make.graphics({});
+    // 底座
+    inactive.fillStyle(0x404040, 1);
+    inactive.fillRect(0, 0, size, size);
+    // 按鈕
+    inactive.fillStyle(0x808080, 1);
+    inactive.fillCircle(size / 2, size / 2, size / 3);
+    // 邊框
+    inactive.lineStyle(2, 0x202020, 1);
+    inactive.strokeRect(0, 0, size, size);
+    inactive.generateTexture("switch_inactive", size, size);
+    inactive.destroy();
+
+    // 激活的開關 (綠色發光)
+    const active = this.make.graphics({});
+    // 底座
+    active.fillStyle(0x404040, 1);
+    active.fillRect(0, 0, size, size);
+    // 按鈕發光效果
+    active.fillStyle(0x00ff00, 0.4);
+    active.fillCircle(size / 2, size / 2, size / 2.5);
+    // 按鈕
+    active.fillStyle(0x00ff00, 1);
+    active.fillCircle(size / 2, size / 2, size / 3);
+    // 邊框
+    active.lineStyle(2, 0x00ff00, 1);
+    active.strokeRect(0, 0, size, size);
+    active.generateTexture("switch_active", size, size);
+    active.destroy();
+  }
+
   private updateContainers(containers: ContainerState[]): void {
     const activeEntityIds = new Set(containers.map(c => c.entity_id));
 
@@ -231,6 +467,88 @@ export class TreasureHuntScene extends Phaser.Scene {
     });
   }
 
+  private updateEscapeDoors(escapeDoors: EscapeDoorState[]): void {
+    const activeEntityIds = new Set(escapeDoors.map(d => d.entity_id));
+
+    // 移除不存在的逃脫門
+    this.escapeDoors.forEach((door, entityId) => {
+      if (!activeEntityIds.has(entityId)) {
+        door.sprite.destroy();
+        this.escapeDoors.delete(entityId);
+      }
+    });
+
+    // 新增或更新逃脫門
+    escapeDoors.forEach((door) => {
+      let escapeDoor = this.escapeDoors.get(door.entity_id);
+
+      if (!escapeDoor) {
+        // 根據狀態選擇 texture
+        let texture = "escape_door_locked";
+        if (door.is_open) {
+          texture = "escape_door_open";
+        } else if (!door.is_locked) {
+          texture = "escape_door_unlocked";
+        }
+
+        // 新增逃脫門
+        const sprite = this.add.sprite(
+          door.position.x,
+          door.position.y,
+          texture
+        );
+        sprite.setDepth(55); // 比寶箱稍高一點
+        escapeDoor = { sprite, entityId: door.entity_id };
+        this.escapeDoors.set(door.entity_id, escapeDoor);
+      } else {
+        // 更新逃脫門狀態
+        let texture = "escape_door_locked";
+        if (door.is_open) {
+          texture = "escape_door_open";
+        } else if (!door.is_locked) {
+          texture = "escape_door_unlocked";
+        }
+        escapeDoor.sprite.setTexture(texture);
+        escapeDoor.sprite.setPosition(door.position.x, door.position.y);
+      }
+    });
+  }
+
+  private updateSwitches(switches: SwitchState[]): void {
+    const activeEntityIds = new Set(switches.map(s => s.entity_id));
+
+    // 移除不存在的開關
+    this.switches.forEach((switchObj, entityId) => {
+      if (!activeEntityIds.has(entityId)) {
+        switchObj.sprite.destroy();
+        this.switches.delete(entityId);
+      }
+    });
+
+    // 新增或更新開關
+    switches.forEach((switchState) => {
+      let switchObj = this.switches.get(switchState.entity_id);
+
+      if (!switchObj) {
+        // 新增開關
+        const sprite = this.add.sprite(
+          switchState.position.x,
+          switchState.position.y,
+          switchState.is_activated ? "switch_active" : "switch_inactive"
+        );
+        sprite.setDepth(50);
+        switchObj = { sprite, entityId: switchState.entity_id };
+        this.switches.set(switchState.entity_id, switchObj);
+      } else {
+        // 更新開關狀態
+        switchObj.sprite.setTexture(
+          switchState.is_activated ? "switch_active" : "switch_inactive"
+        );
+        switchObj.sprite.setPosition(switchState.position.x, switchState.position.y);
+      }
+    });
+  }
+
   private toggleChest(entityId: string): void {
     // 發送互動請求到後端
     socketManager.sendMessage(ActionType.Interact, {
@@ -246,6 +564,22 @@ export class TreasureHuntScene extends Phaser.Scene {
       this.openedChestEntityId = entityId;
       this.showChestPopup();
     }
+  }
+
+  private interactWithSwitch(entityId: string): void {
+    console.log("Interacting with switch:", entityId);
+    // 發送互動請求到後端
+    socketManager.sendMessage(ActionType.Interact, {
+      entity_id: entityId,
+    });
+  }
+
+  private interactWithEscapeDoor(entityId: string): void {
+    console.log("Interacting with escape door:", entityId);
+    // 發送互動請求到後端
+    socketManager.sendMessage(ActionType.Interact, {
+      entity_id: entityId,
+    });
   }
 
   private checkChestDistance(): void {
@@ -575,6 +909,42 @@ export class TreasureHuntScene extends Phaser.Scene {
     return null;
   }
 
+  private getNearbySwitch(): { entityId: string } | null {
+    if (!this.player) return null;
+    const interactDistance = 60;
+
+    for (const [entityId, switchObj] of this.switches) {
+      const distance = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        switchObj.sprite.x,
+        switchObj.sprite.y,
+      );
+      if (distance < interactDistance) {
+        return { entityId };
+      }
+    }
+    return null;
+  }
+
+  private getNearbyEscapeDoor(): { entityId: string } | null {
+    if (!this.player) return null;
+    const interactDistance = 60;
+
+    for (const [entityId, escapeDoor] of this.escapeDoors) {
+      const distance = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        escapeDoor.sprite.x,
+        escapeDoor.sprite.y,
+      );
+      if (distance < interactDistance) {
+        return { entityId };
+      }
+    }
+    return null;
+  }
+
   private createPlayer(x: number, y: number): void {
     this.player = this.physics.add.sprite(x, y, 'player');
     this.player.setCollideWorldBounds(true);
@@ -630,12 +1000,24 @@ export class TreasureHuntScene extends Phaser.Scene {
       this.scene.start("MainMenuScene");
     });
 
-    // E 鍵互動（門、寶箱）
+    // E 鍵互動（門、寶箱、開關、逃脫門）
     this.input.keyboard?.on("keydown-E", () => {
       // 檢查門
       const nearbyBuilding = this.getNearbyBuilding();
       if (nearbyBuilding) {
         this.toggleDoor(nearbyBuilding);
+        return;
+      }
+      // 檢查開關
+      const nearbySwitch = this.getNearbySwitch();
+      if (nearbySwitch) {
+        this.interactWithSwitch(nearbySwitch.entityId);
+        return;
+      }
+      // 檢查逃脫門
+      const nearbyEscapeDoor = this.getNearbyEscapeDoor();
+      if (nearbyEscapeDoor) {
+        this.interactWithEscapeDoor(nearbyEscapeDoor.entityId);
         return;
       }
       // 檢查寶箱
@@ -739,6 +1121,21 @@ export class TreasureHuntScene extends Phaser.Scene {
       },
     );
 
+    // Listen for exit door unlocked message
+    socketManager.on("exit_door_unlocked", (payload: { message: string }) => {
+      console.log("Exit door unlocked!", payload);
+      this.showNotification(payload.message, "#4ecca3");
+    });
+
+    // Listen for interact responses (success/error messages)
+    socketManager.on("interact", (payload: { success: boolean; message: string }) => {
+      console.log("Interact response:", payload);
+      if (payload.message) {
+        const color = payload.success ? "#4ecca3" : "#ff4444";
+        this.showNotification(payload.message, color);
+      }
+    });
+
     // Reset the logger for new session
     GameStateLogger.reset();
   }
@@ -775,6 +1172,12 @@ export class TreasureHuntScene extends Phaser.Scene {
 
     // Update containers from server
     this.updateContainers(state.containers || []);
+
+    // Update escape doors from server
+    this.updateEscapeDoors(state.escape_doors || []);
+
+    // Update switches from server
+    this.updateSwitches(state.switches || []);
   }
 
   private updateOtherPlayers(
@@ -1362,6 +1765,35 @@ export class TreasureHuntScene extends Phaser.Scene {
     if (this.onStatusChange) {
       this.onStatusChange(status, color);
     }
+  }
+
+  private showNotification(message: string, color: string): void {
+    // Create notification text at top center of screen
+    const notification = this.add.text(
+      this.cameras.main.centerX,
+      100,
+      message,
+      {
+        fontSize: "20px",
+        color: "#ffffff",
+        backgroundColor: color,
+        padding: { x: 20, y: 10 },
+      }
+    );
+    notification.setOrigin(0.5);
+    notification.setScrollFactor(0);
+    notification.setDepth(2000);
+
+    // Fade out and destroy after 3 seconds
+    this.tweens.add({
+      targets: notification,
+      alpha: 0,
+      duration: 2000,
+      delay: 1000,
+      onComplete: () => {
+        notification.destroy();
+      },
+    });
   }
 
   destroy(): void {
