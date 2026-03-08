@@ -1,7 +1,6 @@
 package systems_test
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -43,6 +42,9 @@ func TestRulesSystem_Update_EndsGameWhenOnePlayerLeft(t *testing.T) {
 			Username: player.Username,
 		})
 	}
+
+	// create match progress component
+	game.CreateMatchEntity(em)
 
 	entities := em.GetAllEntities()
 
