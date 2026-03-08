@@ -43,6 +43,7 @@ type BackendGameState struct {
 	SessionID  uuid.UUID
 	Players    map[uuid.UUID]*PlayerState
 	Items      []uuid.UUID
+	Doors      []*DoorState
 	Containers []*ContainerState
 	EscapeDoor []*EscapeDoorState
 	Switch     []*SwitchState
