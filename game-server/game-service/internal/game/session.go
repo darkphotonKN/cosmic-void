@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	commonTypes "github.com/darkphotonKN/cosmic-void-server/common/constants/types"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	grpcitems "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/items"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
@@ -514,26 +515,18 @@ func (s *Session) GetPlayerIDs() []uuid.UUID {
 **/
 func (s *Session) broadcastFullState(entities []*ecs.Entity) error {
 	ctx := context.Background()
-	// entities := s.EntityManager.GetAllEntities()
-	clientState, err := s.stateSerializer.SerializeOnce(ctx, s.ID, entities)
+	backendState, err := s.stateSerializer.SerializeBackendState(ctx, s.ID, entities)
 	if err != nil {
 		slog.Error("Failed to serialize state", "error", err)
+		return err
 	}
 
-	if err != nil {
-		slog.Error("Failed to send state to player", "error", err)
-	}
 	// create and send personalized state for each player
 	for _, playerID := range s.playerEntityIDToPlayerID {
-		// clientState, err := s.stateSerializer.Serialize(ctx, s.ID, playerID, entities)
-		// if err != nil {
-		// 	slog.Error("Failed to serialize state for player", "playerID", playerID, "error", err)
-		// 	continue
-		// }
-		clientState := s.stateSerializer.ClientStateAddCurrentPlayer(clientState, playerID)
+		clientState := s.stateSerializer.FormatStateToClientState(backendState, playerID)
 
 		go func() {
-			err = s.sender.SendStateToPlayer(playerID, clientState)
+			err := s.sender.SendStateToPlayer(playerID, clientState)
 			if err != nil {
 				slog.Error("Failed to send state to player", "playerID", playerID, "error", err)
 			}
@@ -1161,7 +1154,7 @@ func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
 	// Create item entities from selected templates
 	itemIDs := make([]uuid.UUID, 0, count)
 	for _, item := range selected {
-		config := ItemConfig{
+		config := commonTypes.ItemConfig{
 			Name:          item.Name,
 			ItemTool:      s.itemsClient,
 			AttackPower:   item.AttackPower,
@@ -1220,7 +1213,7 @@ func (s *Session) calcWithinDistance(x, y, xTarget, yTarget float64) bool {
 /**
 * addItem creates an item entity from config and returns its ID
 **/
-func (s *Session) AddItem(itemConfig ItemConfig, priceConfig PriceConfig) uuid.UUID {
+func (s *Session) AddItem(itemConfig commonTypes.ItemConfig, priceConfig PriceConfig) uuid.UUID {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	entity := CreateItemEntity(s.EntityManager, itemConfig, priceConfig)

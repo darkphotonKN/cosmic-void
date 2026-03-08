@@ -39,6 +39,15 @@ type ClientGameState struct {
 	Switch        []*SwitchState     `json:"switches"`
 }
 
+type BackendGameState struct {
+	SessionID  uuid.UUID
+	Players    map[uuid.UUID]*PlayerState
+	Items      []uuid.UUID
+	Containers []*ContainerState
+	EscapeDoor []*EscapeDoorState
+	Switch     []*SwitchState
+}
+
 func (m *Message) ParsePayload() (interface{}, error) {
 	switch constants.Action(m.Action) {
 	case constants.ActionMove:

@@ -1,6 +1,7 @@
 package components
 
 import (
+	"github.com/darkphotonKN/cosmic-void-server/common/constants/types"
 	grpcitems "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/items"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 )
@@ -24,6 +25,18 @@ func (i *ItemComponent) Type() ecs.ComponentType {
 	return ecs.ComponentTypeItem
 }
 
-func NewItemComponent(itemName string, itemTool grpcitems.ItemsClient) *ItemComponent {
-	return &ItemComponent{ItemName: itemName, ItemTool: itemTool}
+func NewItemComponent(itemConfig types.ItemConfig, itemTool grpcitems.ItemsClient) *ItemComponent {
+	return &ItemComponent{
+		ItemName:      itemConfig.Name,
+		AttackPower:   itemConfig.AttackPower,
+		Durability:    itemConfig.Durability,
+		CriticalRate:  itemConfig.CriticalRate,
+		WeaponType:    itemConfig.WeaponType,
+		DefenseRating: itemConfig.DefenseRating,
+		ArmorSlot:     itemConfig.ArmorSlot,
+		HealingAmount: itemConfig.HealingAmount,
+		ManaAmount:    itemConfig.ManaAmount,
+		Description:   itemConfig.Description,
+		ItemTool:      itemTool,
+	}
 }
