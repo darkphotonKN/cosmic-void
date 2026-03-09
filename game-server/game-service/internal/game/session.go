@@ -957,7 +957,9 @@ func (s *Session) handlePlayerEscape(playerID uuid.UUID) {
 	s.mu.Unlock()
 
 	// 獲取玩家資訊
+	s.mu.Lock()
 	playerEntityID, ok := s.playerIDToEntitiesID[playerID]
+	s.mu.Unlock()
 	if !ok {
 		slog.Error("Player entity ID not found", "playerID", playerID)
 		return
@@ -1292,6 +1294,9 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 }
 
 func (s *Session) InitialMapObjects() {
+	// Create match progress entity to track game state
+	CreateMatchEntity(s.EntityManager)
+
 	// add container (ensure it's not cut off at edges)
 	containerX := constants.ContainerWidthRadius + rand.Float64()*(constants.MapWidth-2*constants.ContainerWidthRadius)
 	containerY := constants.ContainerHeightRadius + rand.Float64()*(constants.MapHeight-2*constants.ContainerHeightRadius)
