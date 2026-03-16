@@ -43,6 +43,11 @@ func (p *TestPublisher) PublishWithContext(_ context.Context, exchange, key stri
 	return nil
 }
 
+type TestFramework struct {
+	sample  string
+	success string
+}
+
 func TestPublishMatchComplete_DataStructure(t *testing.T) {
 
 	// create test data player match results

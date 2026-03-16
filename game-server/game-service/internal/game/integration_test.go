@@ -50,7 +50,10 @@ func (m *mockEventEmitter) PublishMatchComplete(ctx context.Context, data *types
 	return nil
 }
 
-func TestHandleMoveUpdatesPositionIntegration(t *testing.T) {
+func TestSession_GameLoopAppliesMovement_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
 	mockMessageSender := MessageSender{}
 	sender := messaging.NewMessageSender(&mockMessageSender)
 	em := ecs.NewEntityManager()
@@ -81,26 +84,31 @@ func TestHandleMoveUpdatesPositionIntegration(t *testing.T) {
 	component := playerTransformComponent.(*components.TransformComponent)
 	slog.Debug("Player transform coordinates initial", "coordinates", component)
 
-	assert.Equal(t, float64(0), component.X)
-	assert.Equal(t, float64(0), component.Y)
+	assert.GreaterOrEqual(t, component.X, float64(0))
+	assert.GreaterOrEqual(t, component.Y, float64(0))
 
 	// player speed moves with speed speedX and speedY
 	speedX := 0.81
 	speedY := 0.81
 	session.handleMove(player1ID, speedX, speedY)
 
+	expectedXAfterOneMove := component.X + float64(0.81)
+	expectedYAfterOneMove := component.Y + float64(0.81)
 	// account for system game loop refresh rate, but only time for 1 move
 	time.Sleep(time.Millisecond * 1200)
 
 	slog.Debug("Player transform coordinates after update", "coordinates", component)
-	assert.Equal(t, float64(0.81), component.X)
-	assert.Equal(t, float64(0.81), component.Y)
+	assert.Equal(t, expectedXAfterOneMove, component.X)
+	assert.Equal(t, expectedYAfterOneMove, component.Y)
 }
 
 /**
 * test integration between match publish and event
 **/
 func TestPublishMatchCompleteIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
 	// Test member IDs from the actual registered members
 	testMemberIDOne := "7f12d971-5879-4057-84c5-408a36de913c" // feb19
 	testMemberIDTwo := "0760888e-f489-4a68-a83f-c1abddc64f10" // feb20

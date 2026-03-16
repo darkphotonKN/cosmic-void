@@ -389,7 +389,7 @@ func (s *service) GetLeaderboard(ctx context.Context, req *pbstats.GetLeaderboar
 		Players: playerRankingsProto,
 	}
 
-	// cache results
+	// cache results w with TTL
 	go func() {
 		slog.Debug("Caching results of leaderboard response", "res", res)
 

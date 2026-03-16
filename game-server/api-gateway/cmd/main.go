@@ -42,6 +42,7 @@ var (
 **/
 func main() {
 	ctx := context.Background()
+	fmt.Println("testerson")
 
 	// --- observability ---
 	shutdown, err := commontelemetry.Init(ctx, commontelemetry.Config{

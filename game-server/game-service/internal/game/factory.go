@@ -12,7 +12,7 @@ type MatchConfig struct {
 	players []*ecs.Entity
 }
 
-func CreateMatchEntity(em *ecs.EntityManager) *ecs.Entity {
+func CreateMatchProgressEntity(em *ecs.EntityManager) *ecs.Entity {
 	entity := em.CreateEntity()
 	entity.AddComponent(components.NewMatchProgressComponent(constants.DefautMaxSessionPlayers))
 
@@ -35,6 +35,7 @@ type PlayerConfig struct {
 
 func CreatePlayerEntity(em *ecs.EntityManager, config PlayerConfig) *ecs.Entity {
 	entity := em.CreateEntity()
+
 	entity.AddComponent(components.NewPlayerComponent(config.MemberID, config.Username))
 
 	entity.AddComponent(components.NewTransformComponent(config.X, config.Y))

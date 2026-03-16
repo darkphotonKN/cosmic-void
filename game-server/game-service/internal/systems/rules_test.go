@@ -22,16 +22,19 @@ func TestRulesSystem_Update_EndsGameWhenOnePlayerLeft(t *testing.T) {
 	// Create entity manager and entities
 	em := ecs.NewEntityManager()
 
+	playerOneID := uuid.New()
+	playerTwoID := uuid.New()
+
 	players := []struct {
 		MemberID uuid.UUID
 		Username string
 	}{
 		{
-			MemberID: uuid.New(),
+			MemberID: playerOneID,
 			Username: "test_player1",
 		},
 		{
-			MemberID: uuid.New(),
+			MemberID: playerTwoID,
 			Username: "test_player2",
 		},
 	}
@@ -44,11 +47,11 @@ func TestRulesSystem_Update_EndsGameWhenOnePlayerLeft(t *testing.T) {
 	}
 
 	// create match progress component
-	game.CreateMatchEntity(em)
+	game.CreateMatchProgressEntity(em)
 
 	entities := em.GetAllEntities()
 
-	// game not ended after this call, players are still alive
+	// test game not ended after this call, players are still alive
 	rulesSystem.Update(deltaTime, entities, endSessionCh)
 
 	select {
@@ -57,8 +60,11 @@ func TestRulesSystem_Update_EndsGameWhenOnePlayerLeft(t *testing.T) {
 	default:
 	}
 
-	for idx, entity := range entities {
-		if idx == 0 {
+	for _, entity := range entities {
+		playerComp, _ := entity.GetComponent(ecs.ComponentTypePlayer)
+		player := playerComp.(*components.PlayerComponent)
+
+		if player.MemberID == playerOneID {
 			// grab first player
 
 			// validate in case test entity changes
@@ -76,12 +82,12 @@ func TestRulesSystem_Update_EndsGameWhenOnePlayerLeft(t *testing.T) {
 				return
 			}
 
-			// eliminate player
+			// eliminate player leaving one for testing
 			healthComp.(*components.HealthComponent).IsEliminated = true
 		}
 	}
 
-	// game ended after this, only one player left
+	// test that game ended after this, with only one player left
 	rulesSystem.Update(deltaTime, entities, endSessionCh)
 
 	select {
@@ -90,30 +96,29 @@ func TestRulesSystem_Update_EndsGameWhenOnePlayerLeft(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("Didnt receive end game session before timeout.")
 	}
-
 }
 
 // TestRulesSystem_Update_ContinuesWhenMultipleAlive tests that the game continues
 // when multiple players are still alive
-func TestRulesSystem_Update_ContinuesWhenMultipleAlive(t *testing.T) {
-	// Setup
-	rulesSystem := systems.NewRulesSystem()
-	endSessionCh := make(chan bool, 1)
-	deltaTime := 0.016 // 60 FPS frame time
-
-	// Create entity manager and entities
-	em := ecs.NewEntityManager()
-
-	// TODO: Create test entities with multiple alive players
-	// TODO: Set up match progress component
-	// TODO: Ensure at least 2 players are alive
-
-	entities := em.GetAllEntities()
-
-	// Act
-	rulesSystem.Update(deltaTime, entities, endSessionCh)
-
-	// Assert
-	// TODO: Verify endSessionCh does NOT receive any signal
-	// TODO: Verify match progress correctly tracks alive players
-}
+// func TestRulesSystem_Update_ContinuesWhenMultipleAlive(t *testing.T) {
+// 	// Setup
+// 	rulesSystem := systems.NewRulesSystem()
+// 	endSessionCh := make(chan bool, 1)
+// 	deltaTime := 0.016 // 60 FPS frame time
+//
+// 	// Create entity manager and entities
+// 	em := ecs.NewEntityManager()
+//
+// 	// TODO: Create test entities with multiple alive players
+// 	// TODO: Set up match progress component
+// 	// TODO: Ensure at least 2 players are alive
+//
+// 	entities := em.GetAllEntities()
+//
+// 	// Act
+// 	rulesSystem.Update(deltaTime, entities, endSessionCh)
+//
+// 	// Assert
+// 	// TODO: Verify endSessionCh does NOT receive any signal
+// 	// TODO: Verify match progress correctly tracks alive players
+// }

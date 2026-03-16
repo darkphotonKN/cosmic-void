@@ -9,6 +9,9 @@ build:
 test:
 	@go test -v ./... -cover
 
+test-unit:
+	@go test -v -short ./... -cover
+
 migrate-up:
 	@migrate -path ./migrations -database "postgres://user:password@localhost:5111/cosmic_void_payment_service_db?sslmode=disable" up
 

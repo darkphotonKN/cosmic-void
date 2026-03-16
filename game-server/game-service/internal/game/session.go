@@ -29,6 +29,7 @@ type Session struct {
 	playerIDToEntitiesID     map[uuid.UUID]uuid.UUID
 	playerEntityIDToPlayerID map[uuid.UUID]uuid.UUID
 	mu                       sync.RWMutex
+	wg                       sync.WaitGroup
 
 	movementSystem *systems.MovementSystem
 	combatSystem   *systems.CombatSystem
@@ -430,9 +431,6 @@ func (s *Session) RemovePlayer(userID string) {
 }
 
 func (s *Session) AddDoor(x, y float64) uuid.UUID {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	doorConfig := DoorConfig{
 		X: x,
 		Y: y,
@@ -468,15 +466,6 @@ func (s *Session) AddEscape(x, y float64) uuid.UUID {
 	return entity.ID
 }
 
-func (s *Session) Update(deltaTime float64) {
-	// fmt.Printf("Session %s updating...\n", s.ID)
-	// entities := s.EntityManager.GetAllEntities()
-
-	// s.movementSystem.Update(deltaTime, entities)
-	// s.combatSystem.Update(deltaTime, entities)
-	// s.skillSystem.Update(deltaTime, entities)
-}
-
 func (s *Session) Shutdown() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -486,6 +475,9 @@ func (s *Session) Shutdown() {
 	}
 
 	slog.Info("Shutting down game session", "sessionID", s.ID)
+
+	// wait for all dependencies of channels to clean up
+	s.wg.Wait()
 
 	// clean up channels
 	close(s.stopChan)
@@ -956,14 +948,11 @@ func (s *Session) handleLoot(playerID uuid.UUID, containerEntityID uuid.UUID, lo
 	return nil
 }
 
-// handlePlayerEscape 處理玩家成功逃脫
 func (s *Session) handlePlayerEscape(playerID uuid.UUID) {
-	// 標記逃脫成功
 	s.mu.Lock()
 	s.escapeSuccess = true
 	s.mu.Unlock()
 
-	// 獲取玩家資訊
 	playerEntityID, ok := s.playerIDToEntitiesID[playerID]
 	if !ok {
 		slog.Error("Player entity ID not found", "playerID", playerID)
@@ -985,7 +974,6 @@ func (s *Session) handlePlayerEscape(playerID uuid.UUID) {
 
 	slog.Info("Player escaped!", "playerID", playerID, "username", player.Username)
 
-	// 通知所有玩家
 	s.sender.BroadcastToPlayerList(s.GetPlayerIDs(), types.Message{
 		Action: "player_escaped",
 		Payload: map[string]interface{}{
@@ -1232,6 +1220,8 @@ func (s *Session) AddItem(itemConfig ItemConfig, priceConfig PriceConfig) uuid.U
 * Manages eliminations outside primary game loop to claculate end game results.
 **/
 func (s *Session) manageEliminations() {
+	s.wg.Add(1)
+	defer s.wg.Done()
 
 	for player := range s.eliminationCh {
 		slog.Debug("Player eliminated",
@@ -1244,6 +1234,7 @@ func (s *Session) manageEliminations() {
 		s.eliminations[player.ID] = len(s.eliminations)
 		s.mu.Unlock()
 	}
+
 }
 
 /**
@@ -1296,6 +1287,11 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 		Players:          rawPlayers,
 		EliminationOrder: s.eliminations,
 	}
+}
+
+func (s *Session) InitialSystems() {
+	// creates and setsup match progress entity within the entity manager
+	CreateMatchProgressEntity(s.EntityManager)
 }
 
 func (s *Session) InitialMapObjects() {

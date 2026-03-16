@@ -24,6 +24,10 @@ dev:
 test:
 	@go test -v ./... -cover
 
+# Run unit tests only (skip integration tests)
+test-unit:
+	@go test -v -short ./... -cover
+
 # Run tests with coverage output and preview in a browser
 test-preview:
 	@go test ./filename/ -coverprofile=coverage.out

@@ -32,7 +32,7 @@ test: ## Run all tests
 .PHONY: test-unit
 test-unit: ## Run unit tests only
 	@echo "Running unit tests..."
-	@go test -v ./internal/stats -count=1
+	@go test -v -short ./... -count=1
 
 .PHONY: test-integration
 test-integration: ## Run integration tests only

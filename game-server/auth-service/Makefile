@@ -25,6 +25,10 @@ run:
 test:
 	go test -v ./...
 
+# Run unit tests only (skip integration tests)
+test-unit:
+	go test -v -short ./...
+
 # Clean build artifacts
 clean:
 	rm -rf bin/

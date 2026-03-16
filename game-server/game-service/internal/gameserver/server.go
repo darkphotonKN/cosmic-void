@@ -153,6 +153,7 @@ func (s *Server) CreateGameSession(players []*types.Player) *game.Session {
 	newGameSession := game.NewSession(messaging.NewMessageSender(s), stateSerializer, entityManager, s.eventEmitter, s.itemsClient)
 
 	newGameSession.InitialMapObjects()
+	newGameSession.InitialSystems()
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
