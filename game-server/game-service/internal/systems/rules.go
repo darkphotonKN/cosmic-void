@@ -57,6 +57,10 @@ func (s *RulesSystem) Update(deltaTime float64, entities []*ecs.Entity, endSessi
 	}
 
 	// compare totalPlayers with number that is eliminated
+	if matchProgressComp == nil {
+		return
+	}
+
 	matchProgress := matchProgressComp.(*components.MatchProgressComponent)
 
 	// update match progress dead players state in one go

@@ -82,6 +82,7 @@ func Init(ctx context.Context, cfg Config) (shutdown func(context.Context) error
 	traceExporter, err := otlptracegrpc.New(ctx,
 		otlptracegrpc.WithEndpoint(cfg.CollectorEndpoint),
 		otlptracegrpc.WithInsecure(), // TODO: Use TLS in production!
+		otlptracegrpc.WithTimeout(5*time.Second),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("creating trace exporter: %w", err)
@@ -133,6 +134,7 @@ func Init(ctx context.Context, cfg Config) (shutdown func(context.Context) error
 	metricExporter, err := otlpmetricgrpc.New(ctx,
 		otlpmetricgrpc.WithEndpoint(cfg.CollectorEndpoint),
 		otlpmetricgrpc.WithInsecure(),
+		otlpmetricgrpc.WithTimeout(5*time.Second),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("creating metric exporter: %w", err)

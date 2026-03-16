@@ -61,7 +61,11 @@ func TestRulesSystem_Update_EndsGameWhenOnePlayerLeft(t *testing.T) {
 	}
 
 	for _, entity := range entities {
-		playerComp, _ := entity.GetComponent(ecs.ComponentTypePlayer)
+		playerComp, exists := entity.GetComponent(ecs.ComponentTypePlayer)
+		if !exists {
+			continue
+		}
+
 		player := playerComp.(*components.PlayerComponent)
 
 		if player.MemberID == playerOneID {
