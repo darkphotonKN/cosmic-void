@@ -60,15 +60,13 @@ func stringToRole(roleStr string) commontypes.Role {
 // CreateWeapon creates a new weapon (gRPC endpoint)
 func (h *Handler) CreateWeapon(ctx context.Context, req *pb.CreateWeaponRequest) (*pb.Weapon, error) {
 	// Parse UUIDs
-	typeID, err := uuid.Parse(req.TypeId)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid type_id: %v", err)
-	}
-
 	rarityID, err := uuid.Parse(req.RarityId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid rarity_id: %v", err)
 	}
+
+	// Parse type_id
+	typeID, _ := uuid.Parse(req.TypeId)
 
 	// Create weapon request
 	critRate := float64(req.CriticalRate)
@@ -148,7 +146,6 @@ func (h *Handler) GetWeaponWithTemplateByID(ctx context.Context, req *pb.GetWeap
 	return &pb.WeaponDetail{
 		// Weapon fields
 		Id:           weapon.ID.String(),
-		TypeId:       weapon.TypeID.String(),
 		RarityId:     weapon.RarityID.String(),
 		AttackPower:  int32(weapon.AttackPower),
 		Durability:   int32(weapon.Durability),
@@ -157,12 +154,10 @@ func (h *Handler) GetWeaponWithTemplateByID(ctx context.Context, req *pb.GetWeap
 		Description:  description,
 
 		// ItemTemplate fields
+		TypeId:         weapon.TypeID.String(),
 		ItemTemplateId: weapon.ItemTemplateID.String(),
 		ItemName:       weapon.ItemName,
-		ItemCode:       weapon.ItemCode,
 		IconUrl:        iconURL,
-		IsTradeable:    weapon.IsTradeable,
-		IsDroppable:    weapon.IsDroppable,
 		RequiredLevel:  int32(weapon.RequiredLevel),
 		BaseSellPrice:  int32(weapon.BaseSellPrice),
 		BaseBuyPrice:   int32(weapon.BaseBuyPrice),
@@ -202,7 +197,6 @@ func (h *Handler) ListWeaponsWithTemplate(ctx context.Context, _ *emptypb.Empty)
 		pbWeapons[i] = &pb.WeaponDetail{
 			// Weapon fields
 			Id:           weapon.ID.String(),
-			TypeId:       weapon.TypeID.String(),
 			RarityId:     weapon.RarityID.String(),
 			AttackPower:  int32(weapon.AttackPower),
 			Durability:   int32(weapon.Durability),
@@ -211,12 +205,10 @@ func (h *Handler) ListWeaponsWithTemplate(ctx context.Context, _ *emptypb.Empty)
 			Description:  description,
 
 			// ItemTemplate fields
+			TypeId:         weapon.TypeID.String(),
 			ItemTemplateId: weapon.ItemTemplateID.String(),
 			ItemName:       weapon.ItemName,
-			ItemCode:       weapon.ItemCode,
 			IconUrl:        iconURL,
-			IsTradeable:    weapon.IsTradeable,
-			IsDroppable:    weapon.IsDroppable,
 			RequiredLevel:  int32(weapon.RequiredLevel),
 			BaseSellPrice:  int32(weapon.BaseSellPrice),
 			BaseBuyPrice:   int32(weapon.BaseBuyPrice),
@@ -257,7 +249,6 @@ func (h *Handler) ListArmorsWithTemplate(ctx context.Context, _ *emptypb.Empty) 
 
 		pbArmors[i] = &pb.ArmorDetail{
 			Id:              armor.ID.String(),
-			TypeId:          armor.TypeID.String(),
 			RarityId:        armor.RarityID.String(),
 			DefenseRating:   int32(armor.DefenseRating),
 			Durability:      int32(armor.Durability),
@@ -265,12 +256,10 @@ func (h *Handler) ListArmorsWithTemplate(ctx context.Context, _ *emptypb.Empty) 
 			ArmorSlot:       armorSlot,
 			Description:     description,
 
+			TypeId:         armor.TypeID.String(),
 			ItemTemplateId: armor.ItemTemplateID.String(),
 			ItemName:       armor.ItemName,
-			ItemCode:       armor.ItemCode,
 			IconUrl:        iconURL,
-			IsTradeable:    armor.IsTradeable,
-			IsDroppable:    armor.IsDroppable,
 			RequiredLevel:  int32(armor.RequiredLevel),
 			BaseSellPrice:  int32(armor.BaseSellPrice),
 			BaseBuyPrice:   int32(armor.BaseBuyPrice),
@@ -314,7 +303,6 @@ func (h *Handler) ListConsumablesWithTemplate(ctx context.Context, _ *emptypb.Em
 
 		pbConsumables[i] = &pb.ConsumableDetail{
 			Id:            consumable.ID.String(),
-			TypeId:        consumable.TypeID.String(),
 			RarityId:      consumable.RarityID.String(),
 			HealingAmount: healingAmount,
 			ManaAmount:    manaAmount,
@@ -322,12 +310,10 @@ func (h *Handler) ListConsumablesWithTemplate(ctx context.Context, _ *emptypb.Em
 			MaxStackSize:  int32(consumable.MaxStackSize),
 			Description:   description,
 
+			TypeId:         consumable.TypeID.String(),
 			ItemTemplateId: consumable.ItemTemplateID.String(),
 			ItemName:       consumable.ItemName,
-			ItemCode:       consumable.ItemCode,
 			IconUrl:        iconURL,
-			IsTradeable:    consumable.IsTradeable,
-			IsDroppable:    consumable.IsDroppable,
 			RequiredLevel:  int32(consumable.RequiredLevel),
 			BaseSellPrice:  int32(consumable.BaseSellPrice),
 			BaseBuyPrice:   int32(consumable.BaseBuyPrice),
@@ -352,27 +338,24 @@ func (h *Handler) CreateItemTemplate(ctx context.Context, req *pb.CreateItemTemp
 		return nil, err
 	}
 	// Parse UUIDs
-	typeID, err := uuid.Parse(req.TypeId)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid type_id: %v", err)
-	}
-
 	rarityID, err := uuid.Parse(req.RarityId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid rarity_id: %v", err)
 	}
 
-	itemID, err := uuid.Parse(req.ItemId)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid item_id: %v", err)
+	// Parse item_id if provided
+	var itemID uuid.UUID
+	if req.ItemId != "" {
+		itemID, err = uuid.Parse(req.ItemId)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid item_id: %v", err)
+		}
 	}
 
 	// Build service request with optional fields
 	createReq := &CreateItemTemplateRequest{
 		UserId:   req.UserId,
 		ItemName: req.ItemName,
-		ItemCode: req.ItemCode,
-		TypeID:   typeID,
 		RarityID: rarityID,
 		ItemType: req.ItemType,
 		ItemID:   itemID,
@@ -381,12 +364,6 @@ func (h *Handler) CreateItemTemplate(ctx context.Context, req *pb.CreateItemTemp
 	// Handle optional fields
 	if req.IconUrl != nil {
 		createReq.IconURL = req.IconUrl
-	}
-	if req.IsTradeable != nil {
-		createReq.IsTradeable = req.IsTradeable
-	}
-	if req.IsDroppable != nil {
-		createReq.IsDroppable = req.IsDroppable
 	}
 	if req.RequiredLevel != nil {
 		reqLevel := int(*req.RequiredLevel)
@@ -416,14 +393,10 @@ func (h *Handler) CreateItemTemplate(ctx context.Context, req *pb.CreateItemTemp
 	return &pb.ItemTemplate{
 		Id:            template.ID.String(),
 		ItemName:      template.ItemName,
-		ItemCode:      template.ItemCode,
-		TypeId:        template.TypeID.String(),
 		RarityId:      template.RarityID.String(),
 		ItemType:      template.ItemType,
 		ItemId:        template.ItemID.String(),
 		IconUrl:       iconURL,
-		IsTradeable:   template.IsTradeable,
-		IsDroppable:   template.IsDroppable,
 		RequiredLevel: int32(template.RequiredLevel),
 		BaseSellPrice: int32(template.BaseSellPrice),
 		BaseBuyPrice:  int32(template.BaseBuyPrice),
@@ -442,11 +415,6 @@ func (h *Handler) CreateCompleteWeapon(ctx context.Context, req *pb.CreateComple
 	}
 
 	// Parse UUIDs
-	typeID, err := uuid.Parse(req.TypeId)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid type_id: %v", err)
-	}
-
 	rarityID, err := uuid.Parse(req.RarityId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid rarity_id: %v", err)
@@ -454,12 +422,12 @@ func (h *Handler) CreateCompleteWeapon(ctx context.Context, req *pb.CreateComple
 
 	// Build service request
 	critRate := float64(req.CriticalRate)
+	typeID, _ := uuid.Parse(req.TypeId)
 	createReq := &CreateCompleteWeaponRequest{
-		UserId:       req.UserId,
-		ItemName:     req.ItemName,
-		ItemCode:     req.ItemCode,
-		TypeID:       typeID,
-		RarityID:     rarityID,
+		UserId:   req.UserId,
+		ItemName: req.ItemName,
+		TypeID:   typeID,
+		RarityID: rarityID,
 		AttackPower:  int(req.AttackPower),
 		Durability:   int(req.Durability),
 		CriticalRate: &critRate,
@@ -470,12 +438,6 @@ func (h *Handler) CreateCompleteWeapon(ctx context.Context, req *pb.CreateComple
 	// Handle optional template fields
 	if req.IconUrl != nil {
 		createReq.IconURL = req.IconUrl
-	}
-	if req.IsTradeable != nil {
-		createReq.IsTradeable = req.IsTradeable
-	}
-	if req.IsDroppable != nil {
-		createReq.IsDroppable = req.IsDroppable
 	}
 	if req.RequiredLevel != nil {
 		reqLevel := int(*req.RequiredLevel)
@@ -514,9 +476,8 @@ func (h *Handler) CreateCompleteWeapon(ctx context.Context, req *pb.CreateComple
 
 	return &pb.WeaponDetail{
 		// Weapon fields
-		Id:           weaponWithTemplate.ID.String(),
-		TypeId:       weaponWithTemplate.TypeID.String(),
-		RarityId:     weaponWithTemplate.RarityID.String(),
+		Id:       weaponWithTemplate.ID.String(),
+		RarityId: weaponWithTemplate.RarityID.String(),
 		AttackPower:  int32(weaponWithTemplate.AttackPower),
 		Durability:   int32(weaponWithTemplate.Durability),
 		CriticalRate: critRatePb,
@@ -524,12 +485,10 @@ func (h *Handler) CreateCompleteWeapon(ctx context.Context, req *pb.CreateComple
 		Description:  description,
 
 		// ItemTemplate fields
+		TypeId:         weaponWithTemplate.TypeID.String(),
 		ItemTemplateId: weaponWithTemplate.ItemTemplateID.String(),
 		ItemName:       weaponWithTemplate.ItemName,
-		ItemCode:       weaponWithTemplate.ItemCode,
 		IconUrl:        iconURL,
-		IsTradeable:    weaponWithTemplate.IsTradeable,
-		IsDroppable:    weaponWithTemplate.IsDroppable,
 		RequiredLevel:  int32(weaponWithTemplate.RequiredLevel),
 		BaseSellPrice:  int32(weaponWithTemplate.BaseSellPrice),
 		BaseBuyPrice:   int32(weaponWithTemplate.BaseBuyPrice),
@@ -548,11 +507,6 @@ func (h *Handler) CreateCompleteArmor(ctx context.Context, req *pb.CreateComplet
 	}
 
 	// Parse UUIDs
-	typeID, err := uuid.Parse(req.TypeId)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid type_id: %v", err)
-	}
-
 	rarityID, err := uuid.Parse(req.RarityId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid rarity_id: %v", err)
@@ -560,10 +514,10 @@ func (h *Handler) CreateCompleteArmor(ctx context.Context, req *pb.CreateComplet
 
 	// Build service request
 	magicRes := int(req.MagicResistance)
+	typeID, _ := uuid.Parse(req.TypeId)
 	createReq := &CreateCompleteArmorRequest{
 		UserId:          req.UserId,
 		ItemName:        req.ItemName,
-		ItemCode:        req.ItemCode,
 		TypeID:          typeID,
 		RarityID:        rarityID,
 		DefenseRating:   int(req.DefenseRating),
@@ -576,12 +530,6 @@ func (h *Handler) CreateCompleteArmor(ctx context.Context, req *pb.CreateComplet
 	// Handle optional template fields
 	if req.IconUrl != nil {
 		createReq.IconURL = req.IconUrl
-	}
-	if req.IsTradeable != nil {
-		createReq.IsTradeable = req.IsTradeable
-	}
-	if req.IsDroppable != nil {
-		createReq.IsDroppable = req.IsDroppable
 	}
 	if req.RequiredLevel != nil {
 		reqLevel := int(*req.RequiredLevel)
@@ -619,21 +567,18 @@ func (h *Handler) CreateCompleteArmor(ctx context.Context, req *pb.CreateComplet
 	}
 
 	return &pb.ArmorDetail{
-		Id:              armorWithTemplate.ID.String(),
-		TypeId:          armorWithTemplate.TypeID.String(),
-		RarityId:        armorWithTemplate.RarityID.String(),
+		Id:       armorWithTemplate.ID.String(),
+		RarityId: armorWithTemplate.RarityID.String(),
 		DefenseRating:   int32(armorWithTemplate.DefenseRating),
 		Durability:      int32(armorWithTemplate.Durability),
 		MagicResistance: magicResPb,
 		ArmorSlot:       armorSlot,
 		Description:     description,
 
+		TypeId:         armorWithTemplate.TypeID.String(),
 		ItemTemplateId: armorWithTemplate.ItemTemplateID.String(),
 		ItemName:       armorWithTemplate.ItemName,
-		ItemCode:       armorWithTemplate.ItemCode,
 		IconUrl:        iconURL,
-		IsTradeable:    armorWithTemplate.IsTradeable,
-		IsDroppable:    armorWithTemplate.IsDroppable,
 		RequiredLevel:  int32(armorWithTemplate.RequiredLevel),
 		BaseSellPrice:  int32(armorWithTemplate.BaseSellPrice),
 		BaseBuyPrice:   int32(armorWithTemplate.BaseBuyPrice),
@@ -652,11 +597,6 @@ func (h *Handler) CreateCompleteConsumable(ctx context.Context, req *pb.CreateCo
 	}
 
 	// Parse UUIDs
-	typeID, err := uuid.Parse(req.TypeId)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid type_id: %v", err)
-	}
-
 	rarityID, err := uuid.Parse(req.RarityId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid rarity_id: %v", err)
@@ -666,12 +606,12 @@ func (h *Handler) CreateCompleteConsumable(ctx context.Context, req *pb.CreateCo
 	healingAmt := int(req.HealingAmount)
 	manaAmt := int(req.ManaAmount)
 	buffDur := int(req.BuffDuration)
+	typeID, _ := uuid.Parse(req.TypeId)
 	createReq := &CreateCompleteConsumableRequest{
-		UserId:        req.UserId,
-		ItemName:      req.ItemName,
-		ItemCode:      req.ItemCode,
-		TypeID:        typeID,
-		RarityID:      rarityID,
+		UserId:   req.UserId,
+		ItemName: req.ItemName,
+		TypeID:   typeID,
+		RarityID: rarityID,
 		HealingAmount: &healingAmt,
 		ManaAmount:    &manaAmt,
 		BuffDuration:  &buffDur,
@@ -682,12 +622,6 @@ func (h *Handler) CreateCompleteConsumable(ctx context.Context, req *pb.CreateCo
 	// Handle optional template fields
 	if req.IconUrl != nil {
 		createReq.IconURL = req.IconUrl
-	}
-	if req.IsTradeable != nil {
-		createReq.IsTradeable = req.IsTradeable
-	}
-	if req.IsDroppable != nil {
-		createReq.IsDroppable = req.IsDroppable
 	}
 	if req.RequiredLevel != nil {
 		reqLevel := int(*req.RequiredLevel)
@@ -728,21 +662,18 @@ func (h *Handler) CreateCompleteConsumable(ctx context.Context, req *pb.CreateCo
 	}
 
 	return &pb.ConsumableDetail{
-		Id:            consumableWithTemplate.ID.String(),
-		TypeId:        consumableWithTemplate.TypeID.String(),
-		RarityId:      consumableWithTemplate.RarityID.String(),
+		Id:       consumableWithTemplate.ID.String(),
+		RarityId: consumableWithTemplate.RarityID.String(),
 		HealingAmount: healingAmtPb,
 		ManaAmount:    manaAmtPb,
 		BuffDuration:  buffDurPb,
 		MaxStackSize:  int32(consumableWithTemplate.MaxStackSize),
 		Description:   description,
 
+		TypeId:         consumableWithTemplate.TypeID.String(),
 		ItemTemplateId: consumableWithTemplate.ItemTemplateID.String(),
 		ItemName:       consumableWithTemplate.ItemName,
-		ItemCode:       consumableWithTemplate.ItemCode,
 		IconUrl:        iconURL,
-		IsTradeable:    consumableWithTemplate.IsTradeable,
-		IsDroppable:    consumableWithTemplate.IsDroppable,
 		RequiredLevel:  int32(consumableWithTemplate.RequiredLevel),
 		BaseSellPrice:  int32(consumableWithTemplate.BaseSellPrice),
 		BaseBuyPrice:   int32(consumableWithTemplate.BaseBuyPrice),

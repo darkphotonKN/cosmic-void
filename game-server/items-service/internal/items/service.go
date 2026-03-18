@@ -236,16 +236,6 @@ func (s *service) ListConsumables(ctx context.Context) ([]*Consumable, error) {
 
 func (s *service) CreateItemTemplate(ctx context.Context, req *CreateItemTemplateRequest) (*ItemTemplate, error) {
 	// Set defaults
-	isTradeable := true
-	if req.IsTradeable != nil {
-		isTradeable = *req.IsTradeable
-	}
-
-	isDroppable := true
-	if req.IsDroppable != nil {
-		isDroppable = *req.IsDroppable
-	}
-
 	requiredLevel := 1
 	if req.RequiredLevel != nil {
 		requiredLevel = *req.RequiredLevel
@@ -263,14 +253,10 @@ func (s *service) CreateItemTemplate(ctx context.Context, req *CreateItemTemplat
 
 	template := &ItemTemplate{
 		ItemName:      req.ItemName,
-		ItemCode:      req.ItemCode,
-		TypeID:        req.TypeID,
 		RarityID:      req.RarityID,
 		ItemType:      req.ItemType,
 		ItemID:        req.ItemID,
 		IconURL:       req.IconURL,
-		IsTradeable:   isTradeable,
-		IsDroppable:   isDroppable,
 		RequiredLevel: requiredLevel,
 		BaseSellPrice: baseSellPrice,
 		BaseBuyPrice:  baseBuyPrice,
@@ -282,7 +268,7 @@ func (s *service) CreateItemTemplate(ctx context.Context, req *CreateItemTemplat
 
 	// Send message to RabbitMQ
 	protoData, err := proto.Marshal(&pb.ItemCreatedEvent{
-		UserId:   req.UserId, // User ID from authenticated request
+		UserId:   req.UserId,
 		Name:     req.ItemName,
 		ItemType: req.ItemType,
 	})
@@ -363,14 +349,10 @@ func (s *service) CreateCompleteWeapon(ctx context.Context, req *CreateCompleteW
 	templateReq := &CreateItemTemplateRequest{
 		UserId:        req.UserId,
 		ItemName:      req.ItemName,
-		ItemCode:      req.ItemCode,
-		TypeID:        req.TypeID,
 		RarityID:      req.RarityID,
 		ItemType:      "weapon",
 		ItemID:        weapon.ID,
 		IconURL:       req.IconURL,
-		IsTradeable:   req.IsTradeable,
-		IsDroppable:   req.IsDroppable,
 		RequiredLevel: req.RequiredLevel,
 		BaseSellPrice: req.BaseSellPrice,
 		BaseBuyPrice:  req.BaseBuyPrice,
@@ -404,10 +386,7 @@ func (s *service) CreateCompleteWeapon(ctx context.Context, req *CreateCompleteW
 		// Template fields
 		ItemTemplateID: template.ID,
 		ItemName:       template.ItemName,
-		ItemCode:       template.ItemCode,
 		IconURL:        template.IconURL,
-		IsTradeable:    template.IsTradeable,
-		IsDroppable:    template.IsDroppable,
 		RequiredLevel:  template.RequiredLevel,
 		BaseSellPrice:  template.BaseSellPrice,
 		BaseBuyPrice:   template.BaseBuyPrice,
@@ -436,14 +415,10 @@ func (s *service) CreateCompleteArmor(ctx context.Context, req *CreateCompleteAr
 	templateReq := &CreateItemTemplateRequest{
 		UserId:        req.UserId,
 		ItemName:      req.ItemName,
-		ItemCode:      req.ItemCode,
-		TypeID:        req.TypeID,
 		RarityID:      req.RarityID,
 		ItemType:      "armor",
 		ItemID:        armor.ID,
 		IconURL:       req.IconURL,
-		IsTradeable:   req.IsTradeable,
-		IsDroppable:   req.IsDroppable,
 		RequiredLevel: req.RequiredLevel,
 		BaseSellPrice: req.BaseSellPrice,
 		BaseBuyPrice:  req.BaseBuyPrice,
@@ -476,10 +451,7 @@ func (s *service) CreateCompleteArmor(ctx context.Context, req *CreateCompleteAr
 		// Template fields
 		ItemTemplateID: template.ID,
 		ItemName:       template.ItemName,
-		ItemCode:       template.ItemCode,
 		IconURL:        template.IconURL,
-		IsTradeable:    template.IsTradeable,
-		IsDroppable:    template.IsDroppable,
 		RequiredLevel:  template.RequiredLevel,
 		BaseSellPrice:  template.BaseSellPrice,
 		BaseBuyPrice:   template.BaseBuyPrice,
@@ -508,14 +480,10 @@ func (s *service) CreateCompleteConsumable(ctx context.Context, req *CreateCompl
 	templateReq := &CreateItemTemplateRequest{
 		UserId:        req.UserId,
 		ItemName:      req.ItemName,
-		ItemCode:      req.ItemCode,
-		TypeID:        req.TypeID,
 		RarityID:      req.RarityID,
 		ItemType:      "consumable",
 		ItemID:        consumable.ID,
 		IconURL:       req.IconURL,
-		IsTradeable:   req.IsTradeable,
-		IsDroppable:   req.IsDroppable,
 		RequiredLevel: req.RequiredLevel,
 		BaseSellPrice: req.BaseSellPrice,
 		BaseBuyPrice:  req.BaseBuyPrice,
@@ -548,10 +516,7 @@ func (s *service) CreateCompleteConsumable(ctx context.Context, req *CreateCompl
 		// Template fields
 		ItemTemplateID: template.ID,
 		ItemName:       template.ItemName,
-		ItemCode:       template.ItemCode,
 		IconURL:        template.IconURL,
-		IsTradeable:    template.IsTradeable,
-		IsDroppable:    template.IsDroppable,
 		RequiredLevel:  template.RequiredLevel,
 		BaseSellPrice:  template.BaseSellPrice,
 		BaseBuyPrice:   template.BaseBuyPrice,

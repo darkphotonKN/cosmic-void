@@ -109,8 +109,6 @@ func (h *Handler) CreateItemTemplateHandler(c *gin.Context) {
 		ItemType      string `json:"item_type" binding:"required"`
 		ItemID        string `json:"item_id" binding:"required"`
 		IconURL       string `json:"icon_url"`
-		IsTradeable   *bool  `json:"is_tradeable"`
-		IsDroppable   *bool  `json:"is_droppable"`
 		RequiredLevel *int32 `json:"required_level"`
 		BaseSellPrice *int32 `json:"base_sell_price"`
 		BaseBuyPrice  *int32 `json:"base_buy_price"`
@@ -137,12 +135,6 @@ func (h *Handler) CreateItemTemplateHandler(c *gin.Context) {
 
 	if httpReq.IconURL != "" {
 		grpcReq.IconUrl = &httpReq.IconURL
-	}
-	if httpReq.IsTradeable != nil {
-		grpcReq.IsTradeable = httpReq.IsTradeable
-	}
-	if httpReq.IsDroppable != nil {
-		grpcReq.IsDroppable = httpReq.IsDroppable
 	}
 	if httpReq.RequiredLevel != nil {
 		grpcReq.RequiredLevel = httpReq.RequiredLevel
@@ -205,8 +197,6 @@ func (h *Handler) CreateCompleteWeaponHandler(c *gin.Context) {
 		ItemName      string  `json:"item_name" binding:"required"`
 		ItemCode      string  `json:"item_code" binding:"required"`
 		IconURL       *string `json:"icon_url"`
-		IsTradeable   *bool   `json:"is_tradeable"`
-		IsDroppable   *bool   `json:"is_droppable"`
 		RequiredLevel *int32  `json:"required_level"`
 		BaseSellPrice *int32  `json:"base_sell_price"`
 		BaseBuyPrice  *int32  `json:"base_buy_price"`
@@ -247,12 +237,6 @@ func (h *Handler) CreateCompleteWeaponHandler(c *gin.Context) {
 	// Handle optional fields
 	if httpReq.IconURL != nil {
 		grpcReq.IconUrl = httpReq.IconURL
-	}
-	if httpReq.IsTradeable != nil {
-		grpcReq.IsTradeable = httpReq.IsTradeable
-	}
-	if httpReq.IsDroppable != nil {
-		grpcReq.IsDroppable = httpReq.IsDroppable
 	}
 	if httpReq.RequiredLevel != nil {
 		grpcReq.RequiredLevel = httpReq.RequiredLevel
@@ -317,8 +301,6 @@ func (h *Handler) CreateCompleteArmorHandler(c *gin.Context) {
 		ItemName      string  `json:"item_name" binding:"required"`
 		ItemCode      string  `json:"item_code" binding:"required"`
 		IconURL       *string `json:"icon_url"`
-		IsTradeable   *bool   `json:"is_tradeable"`
-		IsDroppable   *bool   `json:"is_droppable"`
 		RequiredLevel *int32  `json:"required_level"`
 		BaseSellPrice *int32  `json:"base_sell_price"`
 		BaseBuyPrice  *int32  `json:"base_buy_price"`
@@ -359,12 +341,6 @@ func (h *Handler) CreateCompleteArmorHandler(c *gin.Context) {
 	// Handle optional fields
 	if httpReq.IconURL != nil {
 		grpcReq.IconUrl = httpReq.IconURL
-	}
-	if httpReq.IsTradeable != nil {
-		grpcReq.IsTradeable = httpReq.IsTradeable
-	}
-	if httpReq.IsDroppable != nil {
-		grpcReq.IsDroppable = httpReq.IsDroppable
 	}
 	if httpReq.RequiredLevel != nil {
 		grpcReq.RequiredLevel = httpReq.RequiredLevel
@@ -429,8 +405,6 @@ func (h *Handler) CreateCompleteConsumableHandler(c *gin.Context) {
 		ItemName      string  `json:"item_name" binding:"required"`
 		ItemCode      string  `json:"item_code" binding:"required"`
 		IconURL       *string `json:"icon_url"`
-		IsTradeable   *bool   `json:"is_tradeable"`
-		IsDroppable   *bool   `json:"is_droppable"`
 		RequiredLevel *int32  `json:"required_level"`
 		BaseSellPrice *int32  `json:"base_sell_price"`
 		BaseBuyPrice  *int32  `json:"base_buy_price"`
@@ -471,12 +445,6 @@ func (h *Handler) CreateCompleteConsumableHandler(c *gin.Context) {
 	// Handle optional fields
 	if httpReq.IconURL != nil {
 		grpcReq.IconUrl = httpReq.IconURL
-	}
-	if httpReq.IsTradeable != nil {
-		grpcReq.IsTradeable = httpReq.IsTradeable
-	}
-	if httpReq.IsDroppable != nil {
-		grpcReq.IsDroppable = httpReq.IsDroppable
 	}
 	if httpReq.RequiredLevel != nil {
 		grpcReq.RequiredLevel = httpReq.RequiredLevel

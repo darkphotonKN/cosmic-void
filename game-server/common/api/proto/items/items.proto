@@ -65,8 +65,8 @@ message WeaponDetail {
   string item_name = 10;
   string item_code = 11;
   string icon_url = 12;
-  bool is_tradeable = 13;
-  bool is_droppable = 14;
+  reserved 13, 14;
+  reserved "is_tradeable", "is_droppable";
   int32 required_level = 15;
   int32 base_sell_price = 16;
   int32 base_buy_price = 17;
@@ -138,8 +138,8 @@ message ArmorDetail {
   string item_name = 10;
   string item_code = 11;
   string icon_url = 12;
-  bool is_tradeable = 13;
-  bool is_droppable = 14;
+  reserved 13, 14;
+  reserved "is_tradeable", "is_droppable";
   int32 required_level = 15;
   int32 base_sell_price = 16;
   int32 base_buy_price = 17;
@@ -169,8 +169,8 @@ message ConsumableDetail {
   string item_name = 10;
   string item_code = 11;
   string icon_url = 12;
-  bool is_tradeable = 13;
-  bool is_droppable = 14;
+  reserved 13, 14;
+  reserved "is_tradeable", "is_droppable";
   int32 required_level = 15;
   int32 base_sell_price = 16;
   int32 base_buy_price = 17;
@@ -193,8 +193,8 @@ message ItemTemplate {
   string item_type = 6;  // 'weapon', 'armor', 'consumable'
   string item_id = 7;    // references weapon/armor/consumable id
   string icon_url = 8;
-  bool is_tradeable = 9;
-  bool is_droppable = 10;
+  reserved 9, 10;
+  reserved "is_tradeable", "is_droppable";
   int32 required_level = 11;
   int32 base_sell_price = 12;
   int32 base_buy_price = 13;
@@ -213,8 +213,8 @@ message CreateItemTemplateRequest {
   string item_type = 6;       // 'weapon', 'armor', 'consumable'
   string item_id = 7;         // references weapon/armor/consumable id
   optional string icon_url = 8;
-  optional bool is_tradeable = 9;
-  optional bool is_droppable = 10;
+  reserved 9, 10;
+  reserved "is_tradeable", "is_droppable";
   optional int32 required_level = 11;
   optional int32 base_sell_price = 12;
   optional int32 base_buy_price = 13;
@@ -230,8 +230,8 @@ message CreateCompleteWeaponRequest {
   string item_name = 2;
   string item_code = 3;
   optional string icon_url = 4;
-  optional bool is_tradeable = 5;
-  optional bool is_droppable = 6;
+  reserved 5, 6;
+  reserved "is_tradeable", "is_droppable";
   optional int32 required_level = 7;
   optional int32 base_sell_price = 8;
   optional int32 base_buy_price = 9;
@@ -255,8 +255,8 @@ message CreateCompleteArmorRequest {
   string item_name = 2;
   string item_code = 3;
   optional string icon_url = 4;
-  optional bool is_tradeable = 5;
-  optional bool is_droppable = 6;
+  reserved 5, 6;
+  reserved "is_tradeable", "is_droppable";
   optional int32 required_level = 7;
   optional int32 base_sell_price = 8;
   optional int32 base_buy_price = 9;
@@ -280,8 +280,8 @@ message CreateCompleteConsumableRequest {
   string item_name = 2;
   string item_code = 3;
   optional string icon_url = 4;
-  optional bool is_tradeable = 5;
-  optional bool is_droppable = 6;
+  reserved 5, 6;
+  reserved "is_tradeable", "is_droppable";
   optional int32 required_level = 7;
   optional int32 base_sell_price = 8;
   optional int32 base_buy_price = 9;

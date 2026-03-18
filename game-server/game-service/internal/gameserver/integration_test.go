@@ -84,8 +84,6 @@ func (m *MockItemsClient) GetWeaponWithTemplateByID(ctx context.Context, req *it
 		ItemName:       "Test Sword",
 		ItemCode:       "TEST_SWORD",
 		IconUrl:        "/icons/test-sword.png",
-		IsTradeable:    true,
-		IsDroppable:    true,
 		RequiredLevel:  1,
 		BaseSellPrice:  100,
 		BaseBuyPrice:   200,

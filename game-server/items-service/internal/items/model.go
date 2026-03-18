@@ -86,14 +86,10 @@ type Consumable struct {
 type ItemTemplate struct {
 	ID            uuid.UUID  `db:"id" json:"id"`
 	ItemName      string     `db:"item_name" json:"item_name"`
-	ItemCode      string     `db:"item_code" json:"item_code"` // unique identifier
-	TypeID        uuid.UUID  `db:"type_id" json:"type_id"`
 	RarityID      uuid.UUID  `db:"rarity_id" json:"rarity_id"`
-	ItemType      string     `db:"item_type" json:"item_type"` // 'weapon', 'armor', 'consumable'
-	ItemID        uuid.UUID  `db:"item_id" json:"item_id"`     // references weapon/armor/consumable id
+	ItemType      string     `db:"item_type" json:"item_type"`
+	ItemID        uuid.UUID  `db:"item_id" json:"item_id"`
 	IconURL       *string    `db:"icon_url" json:"icon_url"`
-	IsTradeable   bool       `db:"is_tradeable" json:"is_tradeable"`
-	IsDroppable   bool       `db:"is_droppable" json:"is_droppable"`
 	RequiredLevel int        `db:"required_level" json:"required_level"`
 	BaseSellPrice int        `db:"base_sell_price" json:"base_sell_price"`
 	BaseBuyPrice  int        `db:"base_buy_price" json:"base_buy_price"`
@@ -122,7 +118,7 @@ type CreateItemRarityRequest struct {
 
 // CreateWeaponRequest represents the request to create a weapon
 type CreateWeaponRequest struct {
-	TypeID       uuid.UUID `json:"type_id" binding:"required"`
+	TypeID       uuid.UUID `json:"type_id"`
 	RarityID     uuid.UUID `json:"rarity_id" binding:"required"`
 	AttackPower  int       `json:"attack_power" binding:"required,gte=0"`
 	Durability   int       `json:"durability" binding:"required,gte=0"`
@@ -133,7 +129,7 @@ type CreateWeaponRequest struct {
 
 // CreateArmorRequest represents the request to create an armor
 type CreateArmorRequest struct {
-	TypeID          uuid.UUID `json:"type_id" binding:"required"`
+	TypeID          uuid.UUID `json:"type_id"`
 	RarityID        uuid.UUID `json:"rarity_id" binding:"required"`
 	DefenseRating   int       `json:"defense_rating" binding:"required,gte=0"`
 	Durability      int       `json:"durability" binding:"required,gte=0"`
@@ -144,7 +140,7 @@ type CreateArmorRequest struct {
 
 // CreateConsumableRequest represents the request to create a consumable
 type CreateConsumableRequest struct {
-	TypeID        uuid.UUID `json:"type_id" binding:"required"`
+	TypeID        uuid.UUID `json:"type_id"`
 	RarityID      uuid.UUID `json:"rarity_id" binding:"required"`
 	HealingAmount *int      `json:"healing_amount"`
 	ManaAmount    *int      `json:"mana_amount"`
@@ -157,14 +153,10 @@ type CreateConsumableRequest struct {
 type CreateItemTemplateRequest struct {
 	UserId        string    `json:"user_id" binding:"required"`
 	ItemName      string    `json:"item_name" binding:"required"`
-	ItemCode      string    `json:"item_code" binding:"required"`
-	TypeID        uuid.UUID `json:"type_id" binding:"required"`
 	RarityID      uuid.UUID `json:"rarity_id" binding:"required"`
-	ItemType      string    `json:"item_type" binding:"required,oneof=weapon armor consumable"`
-	ItemID        uuid.UUID `json:"item_id" binding:"required"`
+	ItemType      string    `json:"item_type"`
+	ItemID        uuid.UUID `json:"item_id"`
 	IconURL       *string   `json:"icon_url"`
-	IsTradeable   *bool     `json:"is_tradeable"`
-	IsDroppable   *bool     `json:"is_droppable"`
 	RequiredLevel *int      `json:"required_level"`
 	BaseSellPrice *int      `json:"base_sell_price"`
 	BaseBuyPrice  *int      `json:"base_buy_price"`
@@ -177,7 +169,6 @@ type CreateCompleteWeaponRequest struct {
 
 	// Template fields (common attributes)
 	ItemName      string  `json:"item_name" binding:"required"`
-	ItemCode      string  `json:"item_code" binding:"required"`
 	IconURL       *string `json:"icon_url"`
 	IsTradeable   *bool   `json:"is_tradeable"`
 	IsDroppable   *bool   `json:"is_droppable"`
@@ -186,7 +177,7 @@ type CreateCompleteWeaponRequest struct {
 	BaseBuyPrice  *int    `json:"base_buy_price"`
 
 	// Weapon-specific fields
-	TypeID       uuid.UUID `json:"type_id" binding:"required"`
+	TypeID       uuid.UUID `json:"type_id"`
 	RarityID     uuid.UUID `json:"rarity_id" binding:"required"`
 	AttackPower  int       `json:"attack_power" binding:"required,gte=0"`
 	Durability   int       `json:"durability" binding:"required,gte=0"`
@@ -202,7 +193,6 @@ type CreateCompleteArmorRequest struct {
 
 	// Template fields (common attributes)
 	ItemName      string  `json:"item_name" binding:"required"`
-	ItemCode      string  `json:"item_code" binding:"required"`
 	IconURL       *string `json:"icon_url"`
 	IsTradeable   *bool   `json:"is_tradeable"`
 	IsDroppable   *bool   `json:"is_droppable"`
@@ -211,7 +201,7 @@ type CreateCompleteArmorRequest struct {
 	BaseBuyPrice  *int    `json:"base_buy_price"`
 
 	// Armor-specific fields
-	TypeID          uuid.UUID `json:"type_id" binding:"required"`
+	TypeID          uuid.UUID `json:"type_id"`
 	RarityID        uuid.UUID `json:"rarity_id" binding:"required"`
 	DefenseRating   int       `json:"defense_rating" binding:"required,gte=0"`
 	Durability      int       `json:"durability" binding:"required,gte=0"`
@@ -227,7 +217,6 @@ type CreateCompleteConsumableRequest struct {
 
 	// Template fields (common attributes)
 	ItemName      string  `json:"item_name" binding:"required"`
-	ItemCode      string  `json:"item_code" binding:"required"`
 	IconURL       *string `json:"icon_url"`
 	IsTradeable   *bool   `json:"is_tradeable"`
 	IsDroppable   *bool   `json:"is_droppable"`
@@ -236,7 +225,7 @@ type CreateCompleteConsumableRequest struct {
 	BaseBuyPrice  *int    `json:"base_buy_price"`
 
 	// Consumable-specific fields
-	TypeID        uuid.UUID `json:"type_id" binding:"required"`
+	TypeID        uuid.UUID `json:"type_id"`
 	RarityID      uuid.UUID `json:"rarity_id" binding:"required"`
 	HealingAmount *int      `json:"healing_amount"`
 	ManaAmount    *int      `json:"mana_amount"`
@@ -262,12 +251,8 @@ type ArmorWithTemplate struct {
 	// ItemTemplate fields
 	ItemTemplateID uuid.UUID `db:"item_template_id"`
 	ItemName       string    `db:"item_name"`
-	ItemCode       string    `db:"item_code"`
 	IconURL        *string   `db:"icon_url"`
 	RequiredLevel  int       `db:"required_level"`
-
-	IsTradeable bool `db:"is_tradeable"`
-	IsDroppable bool `db:"is_droppable"`
 
 	BaseSellPrice int `db:"base_sell_price"`
 	BaseBuyPrice  int `db:"base_buy_price"`
@@ -290,10 +275,7 @@ type ConsumableWithTemplate struct {
 	// ItemTemplate fields
 	ItemTemplateID uuid.UUID `db:"item_template_id"`
 	ItemName       string    `db:"item_name"`
-	ItemCode       string    `db:"item_code"`
 	IconURL        *string   `db:"icon_url"`
-	IsTradeable    bool      `db:"is_tradeable"`
-	IsDroppable    bool      `db:"is_droppable"`
 	RequiredLevel  int       `db:"required_level"`
 	BaseSellPrice  int       `db:"base_sell_price"`
 	BaseBuyPrice   int       `db:"base_buy_price"`
@@ -317,10 +299,7 @@ type WeaponWithTemplate struct {
 	// ItemTemplate fields
 	ItemTemplateID uuid.UUID `db:"item_template_id"`
 	ItemName       string    `db:"item_name"`
-	ItemCode       string    `db:"item_code"`
 	IconURL        *string   `db:"icon_url"`
-	IsTradeable    bool      `db:"is_tradeable"`
-	IsDroppable    bool      `db:"is_droppable"`
 	RequiredLevel  int       `db:"required_level"`
 	BaseSellPrice  int       `db:"base_sell_price"`
 	BaseBuyPrice   int       `db:"base_buy_price"`

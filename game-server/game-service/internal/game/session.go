@@ -985,18 +985,22 @@ func (s *Session) handlePlayerEscape(playerID uuid.UUID) {
 
 // itemTemplate is a unified representation of an item from items-service
 type itemTemplate struct {
-	Name          string
-	BaseBuyPrice  int32
-	BaseSellPrice int32
-	AttackPower   int32
-	Durability    int32
-	CriticalRate  float32
-	WeaponType    string
-	DefenseRating int32
-	ArmorSlot     string
-	HealingAmount int32
-	ManaAmount    int32
-	Description   string
+	TemplateID      uuid.UUID
+	ItemType        string
+	Name            string
+	AttackPower     int
+	CriticalRate    float64
+	WeaponType      string
+	DefenseRating   int
+	MagicResistance int
+	ArmorSlot       string
+	HealingAmount   int
+	ManaAmount      int
+	BuffDuration    int
+	Durability      int
+	BuyPrice        int
+	SellPrice       int
+	Description     string
 }
 
 /**
@@ -1023,15 +1027,19 @@ func (s *Session) initItemPool() error {
 		fmt.Printf("Warning: failed to fetch weapons: %v\n", err)
 	} else {
 		for _, w := range weapons.Weapons {
+			// Parse template ID from string if needed
+			templateID := uuid.New() // Use actual ID if available from w
 			weaponTemplates = append(weaponTemplates, itemTemplate{
-				Name:          w.ItemName,
-				BaseBuyPrice:  w.BaseBuyPrice,
-				BaseSellPrice: w.BaseSellPrice,
-				AttackPower:   w.AttackPower,
-				Durability:    w.Durability,
-				CriticalRate:  w.CriticalRate,
-				WeaponType:    w.WeaponType,
-				Description:   w.Description,
+				TemplateID:   templateID,
+				ItemType:     "weapon",
+				Name:         w.ItemName,
+				AttackPower:  int(w.AttackPower),
+				CriticalRate: float64(w.CriticalRate),
+				WeaponType:   w.WeaponType,
+				Durability:   int(w.Durability),
+				BuyPrice:     int(w.BaseBuyPrice),
+				SellPrice:    int(w.BaseSellPrice),
+				Description:  w.Description,
 			})
 		}
 	}
@@ -1042,14 +1050,19 @@ func (s *Session) initItemPool() error {
 		fmt.Printf("Warning: failed to fetch armors: %v\n", err)
 	} else {
 		for _, a := range armors.Armors {
+			// Parse template ID from string if needed
+			templateID := uuid.New() // Use actual ID if available from a
 			armorTemplates = append(armorTemplates, itemTemplate{
-				Name:          a.ItemName,
-				BaseBuyPrice:  a.BaseBuyPrice,
-				BaseSellPrice: a.BaseSellPrice,
-				DefenseRating: a.DefenseRating,
-				Durability:    a.Durability,
-				ArmorSlot:     a.ArmorSlot,
-				Description:   a.Description,
+				TemplateID:      templateID,
+				ItemType:        "armor",
+				Name:            a.ItemName,
+				DefenseRating:   int(a.DefenseRating),
+				MagicResistance: int(a.MagicResistance),
+				ArmorSlot:       a.ArmorSlot,
+				Durability:      int(a.Durability),
+				BuyPrice:        int(a.BaseBuyPrice),
+				SellPrice:       int(a.BaseSellPrice),
+				Description:     a.Description,
 			})
 		}
 	}
@@ -1060,12 +1073,17 @@ func (s *Session) initItemPool() error {
 		fmt.Printf("Warning: failed to fetch consumables: %v\n", err)
 	} else {
 		for _, c := range consumables.Consumables {
+			// Parse template ID from string if needed
+			templateID := uuid.New() // Use actual ID if available from c
 			consumableTemplates = append(consumableTemplates, itemTemplate{
+				TemplateID:    templateID,
+				ItemType:      "consumable",
 				Name:          c.ItemName,
-				BaseBuyPrice:  c.BaseBuyPrice,
-				BaseSellPrice: c.BaseSellPrice,
-				HealingAmount: c.HealingAmount,
-				ManaAmount:    c.ManaAmount,
+				HealingAmount: int(c.HealingAmount),
+				ManaAmount:    int(c.ManaAmount),
+				BuffDuration:  int(c.BuffDuration),
+				BuyPrice:      int(c.BaseBuyPrice),
+				SellPrice:     int(c.BaseSellPrice),
 				Description:   c.Description,
 			})
 		}
@@ -1150,24 +1168,25 @@ func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
 	itemIDs := make([]uuid.UUID, 0, count)
 	for _, item := range selected {
 		config := ItemConfig{
-			Name:          item.Name,
-			ItemTool:      s.itemsClient,
-			AttackPower:   item.AttackPower,
-			Durability:    item.Durability,
-			CriticalRate:  item.CriticalRate,
-			WeaponType:    item.WeaponType,
-			DefenseRating: item.DefenseRating,
-			ArmorSlot:     item.ArmorSlot,
-			HealingAmount: item.HealingAmount,
-			ManaAmount:    item.ManaAmount,
-			Description:   item.Description,
+			TemplateID:      item.TemplateID,
+			ItemType:        item.ItemType,
+			Name:            item.Name,
+			AttackPower:     item.AttackPower,
+			CriticalRate:    item.CriticalRate,
+			WeaponType:      item.WeaponType,
+			DefenseRating:   item.DefenseRating,
+			MagicResistance: item.MagicResistance,
+			ArmorSlot:       item.ArmorSlot,
+			HealingAmount:   item.HealingAmount,
+			ManaAmount:      item.ManaAmount,
+			BuffDuration:    item.BuffDuration,
+			Durability:      item.Durability,
+			BuyPrice:        item.BuyPrice,
+			SellPrice:       item.SellPrice,
+			Description:     item.Description,
 		}
 
-		priceConfig := PriceConfig{
-			BaseBuyPrice:  item.BaseBuyPrice,
-			BaseSellPrice: item.BaseSellPrice,
-		}
-		itemID := s.AddItem(config, priceConfig)
+		itemID := s.AddItem(config)
 		itemIDs = append(itemIDs, itemID)
 	}
 
@@ -1208,10 +1227,10 @@ func (s *Session) calcWithinDistance(x, y, xTarget, yTarget float64) bool {
 /**
 * addItem creates an item entity from config and returns its ID
 **/
-func (s *Session) AddItem(itemConfig ItemConfig, priceConfig PriceConfig) uuid.UUID {
+func (s *Session) AddItem(itemConfig ItemConfig) uuid.UUID {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	entity := CreateItemEntity(s.EntityManager, itemConfig, priceConfig)
+	entity := CreateItemEntity(s.EntityManager, itemConfig)
 
 	return entity.ID
 }

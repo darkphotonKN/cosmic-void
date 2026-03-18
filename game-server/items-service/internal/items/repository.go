@@ -350,13 +350,11 @@ func (r *repository) CreateItemTemplate(ctx context.Context, template *ItemTempl
 
 	query := `
 		INSERT INTO item_templates (
-			id, item_name, item_code, type_id, rarity_id,
-			item_type, item_id, icon_url, is_tradeable, is_droppable,
-			required_level, base_sell_price, base_buy_price
+			id, item_name, rarity_id, item_type, item_id,
+			icon_url, required_level, base_sell_price, base_buy_price
 		) VALUES (
-			:id, :item_name, :item_code, :type_id, :rarity_id,
-			:item_type, :item_id, :icon_url, :is_tradeable, :is_droppable,
-			:required_level, :base_sell_price, :base_buy_price
+			:id, :item_name, :rarity_id, :item_type, :item_id,
+			:icon_url, :required_level, :base_sell_price, :base_buy_price
 		)`
 
 	_, err := r.DB.NamedExecContext(ctx, query, template)
@@ -386,16 +384,9 @@ func (r *repository) GetItemTemplateByID(ctx context.Context, id uuid.UUID) (*It
 }
 
 func (r *repository) GetItemTemplateByCode(ctx context.Context, code string) (*ItemTemplate, error) {
-	var template ItemTemplate
-
-	query := `SELECT * FROM item_templates WHERE item_code = $1`
-
-	err := r.DB.GetContext(ctx, &template, query, code)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get item template by code: %w", err)
-	}
-
-	return &template, nil
+	// This method is deprecated as item_code no longer exists
+	// Return nil for now, to be removed in future refactor
+	return nil, fmt.Errorf("GetItemTemplateByCode is deprecated: item_code column no longer exists")
 }
 
 func (r *repository) ListItemTemplates(ctx context.Context) ([]*ItemTemplate, error) {
@@ -412,39 +403,23 @@ func (r *repository) ListItemTemplates(ctx context.Context) ([]*ItemTemplate, er
 }
 
 func (r *repository) GetWeaponWithTemplateByID(ctx context.Context, id uuid.UUID) (*WeaponWithTemplate, error) {
-	var template WeaponWithTemplate
+	var weapon WeaponWithTemplate
 
 	query := `
-		SELECT
-			w.id,
-			w.type_id,
-			w.rarity_id,
-			w.attack_power,
-			w.durability,
-			w.critical_rate,
-			w.weapon_type,
-			w.description,
-			w.created_at,
-			w.updated_at,
-			t.id AS item_template_id,
-			t.item_name,
-			t.item_code,
-			t.icon_url,
-			t.is_tradeable,
-			t.is_droppable,
-			t.required_level,
-			t.base_sell_price,
-			t.base_buy_price
-		FROM weapons AS w
-		INNER JOIN item_templates AS t ON t.item_id = w.id AND t.item_type = 'weapon'
-		WHERE w.id = $1
-	`
-	err := r.DB.GetContext(ctx, &template, query, id)
+		SELECT w.id, w.type_id, w.rarity_id, w.attack_power, w.durability,
+		       w.critical_rate, w.weapon_type, w.description, w.created_at, w.updated_at,
+		       t.id AS item_template_id, t.item_name, t.icon_url,
+		       t.required_level, t.base_sell_price, t.base_buy_price
+		FROM weapons w
+		JOIN item_templates t ON t.item_id = w.id AND t.item_type = 'weapon'
+		WHERE w.id = $1`
+
+	err := r.DB.GetContext(ctx, &weapon, query, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get weapon with template: %w", err)
 	}
 
-	return &template, nil
+	return &weapon, nil
 }
 
 // ListArmorsWithTemplate retrieves all armors with their item template information
@@ -452,42 +427,23 @@ func (r *repository) ListArmorsWithTemplate(ctx context.Context) ([]*ArmorWithTe
 	ctx, span := itemRepositoryTracer.Start(ctx, "Repo.ListArmorsWithTemplate")
 	defer span.End()
 
-	slog.Info("[TRACE] ListArmorsWithTemplate called")
-
-	var armorDetails []*ArmorWithTemplate
+	var armors []*ArmorWithTemplate
 
 	query := `
-		SELECT
-			a.id,
-			a.type_id,
-			a.rarity_id,
-			a.defense_rating,
-			a.durability,
-			a.magic_resistance,
-			a.armor_slot,
-			a.description,
-			a.created_at,
-			a.updated_at,
-			t.id AS item_template_id,
-			t.item_name,
-			t.item_code,
-			t.icon_url,
-			t.is_tradeable,
-			t.is_droppable,
-			t.required_level,
-			t.base_sell_price,
-			t.base_buy_price
-		FROM armors AS a
-		INNER JOIN item_templates AS t ON t.item_id = a.id AND t.item_type = 'armor'
-		ORDER BY a.created_at DESC
-	`
+		SELECT a.id, a.type_id, a.rarity_id, a.defense_rating, a.durability,
+		       a.magic_resistance, a.armor_slot, a.description, a.created_at, a.updated_at,
+		       t.id AS item_template_id, t.item_name, t.icon_url,
+		       t.required_level, t.base_sell_price, t.base_buy_price
+		FROM armors a
+		JOIN item_templates t ON t.item_id = a.id AND t.item_type = 'armor'
+		ORDER BY a.created_at DESC`
 
-	err := r.DB.SelectContext(ctx, &armorDetails, query)
+	err := r.DB.SelectContext(ctx, &armors, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list armors with template: %w", err)
 	}
 
-	return armorDetails, nil
+	return armors, nil
 }
 
 // ListConsumablesWithTemplate retrieves all consumables with their item template information
@@ -495,42 +451,23 @@ func (r *repository) ListConsumablesWithTemplate(ctx context.Context) ([]*Consum
 	ctx, span := itemRepositoryTracer.Start(ctx, "Repo.ListConsumablesWithTemplate")
 	defer span.End()
 
-	slog.Info("[TRACE] ListConsumablesWithTemplate called")
-
-	var consumableDetails []*ConsumableWithTemplate
+	var consumables []*ConsumableWithTemplate
 
 	query := `
-		SELECT
-			c.id,
-			c.type_id,
-			c.rarity_id,
-			c.healing_amount,
-			c.mana_amount,
-			c.buff_duration,
-			c.max_stack_size,
-			c.description,
-			c.created_at,
-			c.updated_at,
-			t.id AS item_template_id,
-			t.item_name,
-			t.item_code,
-			t.icon_url,
-			t.is_tradeable,
-			t.is_droppable,
-			t.required_level,
-			t.base_sell_price,
-			t.base_buy_price
-		FROM consumables AS c
-		INNER JOIN item_templates AS t ON t.item_id = c.id AND t.item_type = 'consumable'
-		ORDER BY c.created_at DESC
-	`
+		SELECT c.id, c.type_id, c.rarity_id, c.healing_amount, c.mana_amount,
+		       c.buff_duration, c.max_stack_size, c.description, c.created_at, c.updated_at,
+		       t.id AS item_template_id, t.item_name, t.icon_url,
+		       t.required_level, t.base_sell_price, t.base_buy_price
+		FROM consumables c
+		JOIN item_templates t ON t.item_id = c.id AND t.item_type = 'consumable'
+		ORDER BY c.created_at DESC`
 
-	err := r.DB.SelectContext(ctx, &consumableDetails, query)
+	err := r.DB.SelectContext(ctx, &consumables, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list consumables with template: %w", err)
 	}
 
-	return consumableDetails, nil
+	return consumables, nil
 }
 
 // ListWeaponsWithTemplate retrieves all weapons with their item template information
@@ -538,40 +475,21 @@ func (r *repository) ListWeaponsWithTemplate(ctx context.Context) ([]*WeaponWith
 	ctx, span := itemRepositoryTracer.Start(ctx, "Repo.ListWeaponsWithTemplate")
 	defer span.End()
 
-	slog.Info("[TRACE] ListWeaponsWithTemplate called")
-
-	var weaponDetails []*WeaponWithTemplate
+	var weapons []*WeaponWithTemplate
 
 	query := `
-		SELECT
-			w.id,
-			w.type_id,
-			w.rarity_id,
-			w.attack_power,
-			w.durability,
-			w.critical_rate,
-			w.weapon_type,
-			w.description,
-			w.created_at,
-			w.updated_at,
-			t.id AS item_template_id,
-			t.item_name,
-			t.item_code,
-			t.icon_url,
-			t.is_tradeable,
-			t.is_droppable,
-			t.required_level,
-			t.base_sell_price,
-			t.base_buy_price
-		FROM weapons AS w
-		INNER JOIN item_templates AS t ON t.item_id = w.id AND t.item_type = 'weapon'
-		ORDER BY w.created_at DESC
-	`
+		SELECT w.id, w.type_id, w.rarity_id, w.attack_power, w.durability,
+		       w.critical_rate, w.weapon_type, w.description, w.created_at, w.updated_at,
+		       t.id AS item_template_id, t.item_name, t.icon_url,
+		       t.required_level, t.base_sell_price, t.base_buy_price
+		FROM weapons w
+		JOIN item_templates t ON t.item_id = w.id AND t.item_type = 'weapon'
+		ORDER BY w.created_at DESC`
 
-	err := r.DB.SelectContext(ctx, &weaponDetails, query)
+	err := r.DB.SelectContext(ctx, &weapons, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list weapons with template: %w", err)
 	}
 
-	return weaponDetails, nil
+	return weapons, nil
 }
