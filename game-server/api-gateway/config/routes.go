@@ -70,8 +70,8 @@ func SetupRouter(registry discovery.Registry, ch *amqp.Channel) *gin.Engine {
 	memberRoutes := api.Group("/member")
 
 	// Public Routes
-	memberRoutes.POST("/signup", amqpAuthClient.SignupHandler)        // fire-and-forget via AMQP
-	memberRoutes.POST("/signin", authHandler.LoginMemberHandler)      // gRPC
+	memberRoutes.POST("/signup", amqpAuthClient.SignupHandler)            // fire-and-forget via AMQP
+	memberRoutes.POST("/signin", authHandler.LoginMemberHandler)          // gRPC
 	memberRoutes.GET("/check-email", authHandler.CheckEmailExistsHandler) // signup polling
 
 	// Private Routes (still via gRPC)
