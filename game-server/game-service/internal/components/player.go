@@ -6,14 +6,18 @@ import (
 )
 
 type PlayerComponent struct {
-	MemberID uuid.UUID
-	Username string
+	MemberID             uuid.UUID
+	Username             string
+	HasHit               bool
+	AttackActive         bool
+	AttackCooldown       float64
+	AttackTargetEntityID uuid.UUID
 }
 
 func (p *PlayerComponent) Type() ecs.ComponentType {
 	return ecs.ComponentTypePlayer
 }
 
-func NewPlayerComponent(memberID uuid.UUID, username string) *PlayerComponent {
-	return &PlayerComponent{MemberID: memberID, Username: username}
+func NewPlayerComponent(memberID uuid.UUID, username string, hasHit, attackActive bool) *PlayerComponent {
+	return &PlayerComponent{MemberID: memberID, Username: username, HasHit: hasHit, AttackActive: attackActive}
 }

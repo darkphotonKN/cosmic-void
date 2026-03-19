@@ -1,5 +1,7 @@
 package types
 
+import grpcitems "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/items"
+
 // List of Item Types
 
 // top level category
@@ -30,3 +32,17 @@ const (
 	Map      EquipmentItemType = "map"
 	Gem      EquipmentItemType = "gem"
 )
+
+type ItemConfig struct {
+	Name          string
+	ItemTool      grpcitems.ItemsClient
+	AttackPower   int32
+	Durability    int32
+	CriticalRate  float32
+	WeaponType    string
+	DefenseRating int32
+	ArmorSlot     string
+	HealingAmount int32
+	ManaAmount    int32
+	Description   string
+}

@@ -30,12 +30,14 @@ type PlayerConfig struct {
 	ItemQuantity  int
 	Vx, Vy        float64
 	ItemIDList    []uuid.UUID
+	AttackActive  bool
+	HasHit        bool
 }
 
 func CreatePlayerEntity(em *ecs.EntityManager, config PlayerConfig) *ecs.Entity {
 	entity := em.CreateEntity()
 
-	entity.AddComponent(components.NewPlayerComponent(config.MemberID, config.Username))
+	entity.AddComponent(components.NewPlayerComponent(config.MemberID, config.Username, config.HasHit, config.AttackActive))
 
 	entity.AddComponent(components.NewTransformComponent(config.X, config.Y))
 
@@ -101,6 +103,7 @@ type ItemConfig struct {
 func CreateItemEntity(em *ecs.EntityManager, itemconfig ItemConfig) *ecs.Entity {
 	entity := em.CreateEntity()
 	itemComp := components.NewItemComponent(itemconfig.TemplateID, itemconfig.ItemType, itemconfig.Name)
+
 	itemComp.AttackPower = itemconfig.AttackPower
 	itemComp.CriticalRate = itemconfig.CriticalRate
 	itemComp.WeaponType = itemconfig.WeaponType
@@ -114,6 +117,7 @@ func CreateItemEntity(em *ecs.EntityManager, itemconfig ItemConfig) *ecs.Entity 
 	itemComp.BuyPrice = itemconfig.BuyPrice
 	itemComp.SellPrice = itemconfig.SellPrice
 	itemComp.Description = itemconfig.Description
+
 	entity.AddComponent(itemComp)
 
 	return entity

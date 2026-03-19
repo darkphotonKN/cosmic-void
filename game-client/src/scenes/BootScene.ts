@@ -32,11 +32,11 @@ export class BootScene extends Phaser.Scene {
       return;
     }
 
-    // Remove auth error callback - we don't want to kick out on WebSocket errors
-    // socketManager.setOnAuthError(() => {
-    //   localStorage.removeItem("auth-storage");
-    //   window.location.href = "/login";
-    // });
+    // Handle auth errors (close code 4001 from server)
+    socketManager.setOnAuthError(() => {
+      localStorage.removeItem("auth-storage");
+      window.location.href = "/login";
+    });
 
     console.log("token: ", token);
     console.log("name: ", name);

@@ -39,6 +39,16 @@ type ClientGameState struct {
 	Switch        []*SwitchState     `json:"switches"`
 }
 
+type BackendGameState struct {
+	SessionID  uuid.UUID
+	Players    map[uuid.UUID]*PlayerState
+	Items      []uuid.UUID
+	Doors      []*DoorState
+	Containers []*ContainerState
+	EscapeDoor []*EscapeDoorState
+	Switch     []*SwitchState
+}
+
 func (m *Message) ParsePayload() (interface{}, error) {
 	switch constants.Action(m.Action) {
 	case constants.ActionMove:
@@ -85,6 +95,19 @@ func (m *Message) ParsePayload() (interface{}, error) {
 		}
 
 		fmt.Printf("\n\npayload of action loot was: %+v\n", parsedPayload)
+
+		return parsedPayload, nil
+
+	case constants.ActionAttack:
+		parsedPayload := PlayerSectionAttackPayload{
+			PlayerSessionPayload: PlayerSessionPayload{
+				SessionID: m.Payload["session_id"].(string),
+				PlayerID:  m.Payload["player_id"].(string),
+			},
+			EnemyEntityID: m.Payload["enemy_entity_id"].(string),
+		}
+
+		fmt.Printf("\n\npayload of action attack was: %+v\n", parsedPayload)
 
 		return parsedPayload, nil
 	default:
@@ -137,4 +160,9 @@ type PlayerSessionLootPayload struct {
 	PlayerSessionPayload
 	ContainerEntityID string   `json:"container_entity_id"`
 	ItemEntityIDs     []string `json:"item_entity_ids"`
+}
+
+type PlayerSectionAttackPayload struct {
+	PlayerSessionPayload
+	EnemyEntityID string `json:"enemy_entity_id"`
 }

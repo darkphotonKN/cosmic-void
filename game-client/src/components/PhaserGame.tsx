@@ -72,12 +72,16 @@ export default function PhaserGame() {
         <>
           <div className="treasure-hunt-controls">
             <div className="treasure-hunt-control-group">
-              <h3>🎮 Move</h3>
-              <p>WASD or Arrow Keys</p>
+              <h3>Move</h3>
+              <p>WASD / Arrow Keys</p>
             </div>
             <div className="treasure-hunt-control-group">
-              <h3>🚪 Back</h3>
-              <p>ESC Key</p>
+              <h3>Attack</h3>
+              <p>Click Enemy</p>
+            </div>
+            <div className="treasure-hunt-control-group">
+              <h3>Back</h3>
+              <p>ESC</p>
             </div>
           </div>
 

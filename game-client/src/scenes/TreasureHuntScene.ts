@@ -29,6 +29,7 @@ interface Building {
 export class TreasureHuntScene extends Phaser.Scene {
   private player?: Phaser.Physics.Arcade.Sprite;
   private otherPlayers: Map<string, Phaser.Physics.Arcade.Sprite> = new Map();
+  private otherPlayersEntityIds: Map<string, string> = new Map(); // player_id → entity_id
   private otherPlayersTargets: Map<string, { x: number; y: number }> =
     new Map();
 
@@ -86,6 +87,7 @@ export class TreasureHuntScene extends Phaser.Scene {
   // 當前寶箱的物品（用於 F 鍵取得）
   private currentChestItems: ItemState[] = [];
   private chestLootedAtMap = new Map<string, number>(); // entityId → loot 時間戳
+  private canAttack = true;
   private readonly PENDING_DURATION = 1000; // 1 秒內不比對剛拿的物品
 
   constructor() {
@@ -103,6 +105,160 @@ export class TreasureHuntScene extends Phaser.Scene {
     this.createChestTextures();
     this.createEscapeDoorTextures();
     this.createSwitchTextures();
+    this.createMetalFloorTexture();
+    this.createHullTexture();
+  }
+
+  private createHullTexture(): void {
+    const size = 128;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d")!;
+
+    // dark rusty brown-green industrial wall
+    ctx.fillStyle = "#2e2a22";
+    ctx.fillRect(0, 0, size, size);
+
+    // heavy wall grain
+    for (let i = 0; i < 5000; i++) {
+      const x = Math.random() * size;
+      const y = Math.random() * size;
+      const brightness = 30 + Math.random() * 30;
+      const r = brightness + Math.random() * 8;
+      const g = brightness - 2 + Math.random() * 5;
+      const b = brightness - 8;
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.15 + Math.random() * 0.2})`;
+      ctx.fillRect(x, y, 1, 1);
+    }
+
+    // rust streaks - vertical drips
+    for (let i = 0; i < 5; i++) {
+      const sx = Math.random() * size;
+      const sy = Math.random() * size * 0.3;
+      const len = 20 + Math.random() * 40;
+      ctx.strokeStyle = `rgba(60, 40, 25, ${0.1 + Math.random() * 0.12})`;
+      ctx.lineWidth = 1 + Math.random() * 2;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx + (Math.random() - 0.5) * 5, sy + len);
+      ctx.stroke();
+    }
+
+    // horizontal wear lines - old paint
+    for (let i = 0; i < 40; i++) {
+      const y = Math.random() * size;
+      const len = 10 + Math.random() * 50;
+      const x = Math.random() * (size - len);
+      ctx.strokeStyle = `rgba(50, 45, 35, ${0.15 + Math.random() * 0.2})`;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + len, y);
+      ctx.stroke();
+    }
+
+    // scratches
+    for (let i = 0; i < 8; i++) {
+      const x1 = Math.random() * size;
+      const y1 = Math.random() * size;
+      const x2 = x1 + (Math.random() - 0.5) * 35;
+      const y2 = y1 + (Math.random() - 0.5) * 35;
+      ctx.strokeStyle = `rgba(55, 48, 38, ${0.15 + Math.random() * 0.15})`;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+
+    // panel edge highlight
+    ctx.strokeStyle = "rgba(55, 48, 38, 0.6)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, size - 1);
+    ctx.lineTo(size - 1, size - 1);
+    ctx.lineTo(size - 1, 0);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(15, 12, 8, 0.6)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(size - 1, 0);
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, size - 1);
+    ctx.stroke();
+
+    this.textures.addCanvas("hullMetal", canvas);
+  }
+
+  private createMetalFloorTexture(): void {
+    const size = 128;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d")!;
+
+    // base - worn concrete
+    ctx.fillStyle = "#6d6f62";
+    ctx.fillRect(0, 0, size, size);
+
+    // concrete grain - uneven surface
+    for (let i = 0; i < 5000; i++) {
+      const x = Math.random() * size;
+      const y = Math.random() * size;
+      const brightness = 85 + Math.random() * 45;
+      const g = brightness - 3 + Math.random() * 6;
+      ctx.fillStyle = `rgba(${brightness}, ${g}, ${brightness - 8}, ${0.12 + Math.random() * 0.15})`;
+      ctx.fillRect(x, y, 1, 1);
+    }
+
+    // darker patches - wear from foot traffic
+    for (let i = 0; i < 6; i++) {
+      const sx = Math.random() * size;
+      const sy = Math.random() * size;
+      const w = 10 + Math.random() * 25;
+      const h = 3 + Math.random() * 8;
+      ctx.fillStyle = `rgba(55, 53, 48, ${0.06 + Math.random() * 0.06})`;
+      ctx.fillRect(sx, sy, w, h);
+    }
+
+    // thin cracks
+    for (let i = 0; i < 3; i++) {
+      const x1 = Math.random() * size;
+      const y1 = Math.random() * size;
+      ctx.strokeStyle = `rgba(50, 48, 42, ${0.12 + Math.random() * 0.12})`;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      for (let j = 0; j < 3; j++) {
+        const nx = x1 + (Math.random() - 0.5) * 50;
+        const ny = y1 + (Math.random() - 0.3) * 50;
+        ctx.lineTo(nx, ny);
+      }
+      ctx.stroke();
+    }
+
+    // panel edge highlight (bottom & right)
+    ctx.strokeStyle = "rgba(95, 92, 80, 0.5)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, size - 1);
+    ctx.lineTo(size - 1, size - 1);
+    ctx.lineTo(size - 1, 0);
+    ctx.stroke();
+
+    // panel edge shadow (top & left)
+    ctx.strokeStyle = "rgba(45, 43, 38, 0.5)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(size - 1, 0);
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, size - 1);
+    ctx.stroke();
+
+    this.textures.addCanvas("metalFloor", canvas);
   }
 
   private createPlayerTexture(): void {
@@ -135,6 +291,39 @@ export class TreasureHuntScene extends Phaser.Scene {
     // no eyes here, they'll be drawn separately
     graphics.generateTexture("otherPlayer", 40, 40);
     graphics.destroy();
+  }
+
+  private playAttackEffect(enemySprite: Phaser.Physics.Arcade.Sprite): void {
+    if (!this.player) return;
+
+    // --- 揮擊弧線 ---
+    const slash = this.add.graphics();
+    slash.setDepth(150);
+
+    const px = this.player.x;
+    const py = this.player.y;
+    const angle = Phaser.Math.Angle.Between(px, py, enemySprite.x, enemySprite.y);
+    const radius = 35;
+
+    slash.lineStyle(3, 0xffffff, 1);
+    slash.beginPath();
+    slash.arc(px, py, radius, angle - 0.8, angle + 0.8, false);
+    slash.strokePath();
+
+    // 弧線淡出
+    this.tweens.add({
+      targets: slash,
+      alpha: 0,
+      duration: 300,
+      ease: "Power2",
+      onComplete: () => slash.destroy(),
+    });
+
+    // --- 敵人閃紅 ---
+    enemySprite.setTint(0xff0000);
+    this.time.delayedCall(200, () => {
+      enemySprite.clearTint();
+    });
   }
 
   private drawEyes(graphics: Phaser.GameObjects.Graphics, x: number, y: number, vx: number, vy: number, isPlayer: boolean): void {
@@ -983,8 +1172,12 @@ export class TreasureHuntScene extends Phaser.Scene {
 
     // 寶箱由後端同步，不在這裡創建
 
-    // 設置相機邊界（玩家建立後再 follow）
-    this.cameras.main.setBounds(0, 0, this.mapWidth, this.mapHeight);
+    // 設置相機邊界（擴大讓玩家能看到船外太空）
+    const outerMargin = 200;
+    this.cameras.main.setBounds(
+      -outerMargin, -outerMargin,
+      this.mapWidth + outerMargin * 2, this.mapHeight + outerMargin * 2
+    );
 
     // 輸入控制
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -1036,6 +1229,7 @@ export class TreasureHuntScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown-F", () => {
       this.pickupItemFromChest();
     });
+
 
     // 創建室內遮罩（用於遮住建築外面）
     this.indoorMask = this.add.graphics();
@@ -1222,7 +1416,30 @@ export class TreasureHuntScene extends Phaser.Scene {
         // set circular physics body
         sprite.body.setCircle(20);
 
+        // 點擊攻擊
+        sprite.setInteractive();
+        sprite.on("pointerdown", () => {
+          if (!this.canAttack || !this.player) return;
+          const distance = Phaser.Math.Distance.Between(
+            this.player.x, this.player.y,
+            sprite!.x, sprite!.y,
+          );
+          if (distance > 60) return;
+          const entityId = this.otherPlayersEntityIds.get(playerData.id);
+          if (entityId) {
+            socketManager.sendMessage(ActionType.Attack, {
+              enemy_entity_id: entityId,
+            });
+            this.playAttackEffect(sprite!);
+            this.canAttack = false;
+            this.time.delayedCall(500, () => {
+              this.canAttack = true;
+            });
+          }
+        });
+
         this.otherPlayers.set(playerData.id, sprite);
+        this.otherPlayersEntityIds.set(playerData.id, playerData.entity_id);
 
         // create eyes for this other player
         const eyes = this.add.graphics();
@@ -1241,78 +1458,338 @@ export class TreasureHuntScene extends Phaser.Scene {
 
   private createMapBackground(): void {
     const graphics = this.add.graphics();
+    const outerMargin = 200;
 
-    // cosmic background gradient
-    const gradient = this.add.graphics();
-    for (let i = 0; i < this.mapHeight; i++) {
-      const ratio = i / this.mapHeight;
-      const color = Phaser.Display.Color.Interpolate.ColorWithColor(
-        { r: 10, g: 10, b: 20 },
-        { r: 30, g: 15, b: 60 },
-        1,
-        ratio
-      );
-      gradient.fillStyle(Phaser.Display.Color.GetColor(color.r, color.g, color.b), 1);
-      gradient.fillRect(0, i, this.mapWidth, 1);
+    // === outer hull structure (fills entire outer area) ===
+    const hw2 = this.mapWidth;
+    const hh2 = this.mapHeight;
+
+    // hull plating with metal texture
+    // top
+    const hullTop = this.add.tileSprite(-outerMargin, -outerMargin, hw2 + outerMargin * 2, outerMargin, "hullMetal");
+    hullTop.setOrigin(0, 0);
+    hullTop.setDepth(-1);
+    // bottom
+    const hullBottom = this.add.tileSprite(-outerMargin, hh2, hw2 + outerMargin * 2, outerMargin, "hullMetal");
+    hullBottom.setOrigin(0, 0);
+    hullBottom.setDepth(-1);
+    // left
+    const hullLeft = this.add.tileSprite(-outerMargin, 0, outerMargin, hh2, "hullMetal");
+    hullLeft.setOrigin(0, 0);
+    hullLeft.setDepth(-1);
+    // right
+    const hullRight = this.add.tileSprite(hw2, 0, outerMargin, hh2, "hullMetal");
+    hullRight.setOrigin(0, 0);
+    hullRight.setDepth(-1);
+    // corners
+    const hullTopLeft = this.add.tileSprite(-outerMargin, -outerMargin, outerMargin, outerMargin, "hullMetal");
+    hullTopLeft.setOrigin(0, 0);
+    hullTopLeft.setDepth(-1);
+    const hullTopRight = this.add.tileSprite(hw2, -outerMargin, outerMargin, outerMargin, "hullMetal");
+    hullTopRight.setOrigin(0, 0);
+    hullTopRight.setDepth(-1);
+    const hullBottomLeft = this.add.tileSprite(-outerMargin, hh2, outerMargin, outerMargin, "hullMetal");
+    hullBottomLeft.setOrigin(0, 0);
+    hullBottomLeft.setDepth(-1);
+    const hullBottomRight = this.add.tileSprite(hw2, hh2, outerMargin, outerMargin, "hullMetal");
+    hullBottomRight.setOrigin(0, 0);
+    hullBottomRight.setDepth(-1);
+
+    // === viewports (windows to see space) ===
+    const viewportGraphics = this.add.graphics();
+
+    const viewports = [
+      // top windows
+      { x: 120, y: -outerMargin + 20, w: 140, h: 80 },
+      { x: 450, y: -outerMargin + 15, w: 160, h: 90 },
+      { x: 800, y: -outerMargin + 25, w: 130, h: 75 },
+      // bottom windows
+      { x: 170, y: hh2 + outerMargin - 100, w: 150, h: 80 },
+      { x: 550, y: hh2 + outerMargin - 95, w: 140, h: 80 },
+      { x: 900, y: hh2 + outerMargin - 105, w: 120, h: 75 },
+      // left windows
+      { x: -outerMargin + 20, y: 120, w: 80, h: 120 },
+      { x: -outerMargin + 15, y: 420, w: 85, h: 130 },
+      // right windows
+      { x: hw2 + outerMargin - 100, y: 170, w: 80, h: 120 },
+      { x: hw2 + outerMargin - 105, y: 500, w: 85, h: 125 },
+    ];
+
+    viewports.forEach((vp) => {
+      // space visible through viewport
+      viewportGraphics.fillStyle(0x050510, 1);
+      viewportGraphics.fillRoundedRect(vp.x, vp.y, vp.w, vp.h, 6);
+      // window frame
+      viewportGraphics.lineStyle(3, 0x3a4556, 1);
+      viewportGraphics.strokeRoundedRect(vp.x, vp.y, vp.w, vp.h, 6);
+      viewportGraphics.lineStyle(1, 0x4a5568, 1);
+      viewportGraphics.strokeRoundedRect(vp.x + 3, vp.y + 3, vp.w - 6, vp.h - 6, 4);
+
+    });
+
+    // parallax stars in viewports
+    viewports.forEach((vp) => {
+      for (let i = 0; i < 8; i++) {
+        const star = this.add.graphics();
+        const size = Phaser.Math.FloatBetween(0.5, 2);
+        const color = i < 5 ? 0xffffff : 0xaaddff;
+        star.fillStyle(color, Phaser.Math.FloatBetween(0.6, 1));
+        star.fillCircle(0, 0, size);
+        const sx = Phaser.Math.Between(vp.x + 10, vp.x + vp.w - 10);
+        const sy = Phaser.Math.Between(vp.y + 10, vp.y + vp.h - 10);
+        star.setPosition(sx, sy);
+        star.setScrollFactor(Phaser.Math.FloatBetween(0.85, 0.95));
+        star.setDepth(0);
+
+        if (i < 3) {
+          this.tweens.add({
+            targets: star,
+            alpha: 0.1,
+            duration: Phaser.Math.Between(800, 2000),
+            ease: "Sine.easeInOut",
+            yoyo: true,
+            repeat: -1,
+            delay: Phaser.Math.Between(0, 1500),
+          });
+        }
+      }
+    });
+
+    viewportGraphics.setDepth(0);
+
+    // === spaceship hull exterior ===
+    const hullGraphics = this.add.graphics();
+    const hw = this.mapWidth;
+    const hh = this.mapHeight;
+    const hullPad = 8;
+
+    // outer hull shell - thick border around the ship
+    hullGraphics.lineStyle(10, 0x2a3040, 1);
+    hullGraphics.strokeRoundedRect(-hullPad, -hullPad, hw + hullPad * 2, hh + hullPad * 2, 12);
+    hullGraphics.lineStyle(3, 0x4a5568, 1);
+    hullGraphics.strokeRoundedRect(-hullPad - 5, -hullPad - 5, hw + hullPad * 2 + 10, hh + hullPad * 2 + 10, 16);
+    hullGraphics.lineStyle(1, 0x6b7280, 1);
+    hullGraphics.strokeRoundedRect(-hullPad - 8, -hullPad - 8, hw + hullPad * 2 + 16, hh + hullPad * 2 + 16, 18);
+
+
+
+    // ventilation grilles (top)
+    const ventGraphics = this.add.graphics();
+    const ventPositions = [
+      { x: 150, y: -60, w: 80, h: 35, horizontal: true },
+      { x: 450, y: -55, w: 60, h: 30, horizontal: true },
+      { x: 800, y: -65, w: 70, h: 35, horizontal: true },
+      // bottom
+      { x: 250, y: hh + 25, w: 80, h: 35, horizontal: true },
+      { x: 650, y: hh + 30, w: 60, h: 30, horizontal: true },
+      // left
+      { x: -70, y: 200, w: 35, h: 60, horizontal: false },
+      { x: -60, y: 500, w: 30, h: 70, horizontal: false },
+      // right (away from engines)
+      { x: hw + 25, y: 100, w: 35, h: 50, horizontal: false },
+    ];
+    ventPositions.forEach((v) => {
+      // vent frame
+      ventGraphics.fillStyle(0x1a2030, 1);
+      ventGraphics.fillRect(v.x, v.y, v.w, v.h);
+      ventGraphics.lineStyle(1, 0x3a4556, 1);
+      ventGraphics.strokeRect(v.x, v.y, v.w, v.h);
+      // grille slats
+      ventGraphics.lineStyle(1, 0x2a3545, 1);
+      if (v.horizontal) {
+        for (let ly = v.y + 5; ly < v.y + v.h - 2; ly += 5) {
+          ventGraphics.lineBetween(v.x + 3, ly, v.x + v.w - 3, ly);
+        }
+      } else {
+        for (let lx = v.x + 5; lx < v.x + v.w - 2; lx += 5) {
+          ventGraphics.lineBetween(lx, v.y + 3, lx, v.y + v.h - 3);
+        }
+      }
+    });
+    ventGraphics.setDepth(0);
+
+    // pipes / conduits along hull
+    const pipeGraphics = this.add.graphics();
+    const pipeMax = outerMargin - 40;
+    // top pipes
+    pipeGraphics.lineStyle(4, 0x3a4556, 1);
+    pipeGraphics.lineBetween(40, -25, hw - 40, -25);
+    pipeGraphics.lineStyle(2, 0x4a5568, 1);
+    pipeGraphics.lineBetween(40, -30, hw - 40, -30);
+    // bottom pipes
+    pipeGraphics.lineStyle(4, 0x3a4556, 1);
+    pipeGraphics.lineBetween(40, hh + 25, hw - 40, hh + 25);
+    pipeGraphics.lineStyle(2, 0x4a5568, 1);
+    pipeGraphics.lineBetween(40, hh + 30, hw - 40, hh + 30);
+    // left pipes
+    pipeGraphics.lineStyle(4, 0x3a4556, 1);
+    pipeGraphics.lineBetween(-25, 40, -25, hh - 40);
+    pipeGraphics.lineStyle(2, 0x4a5568, 1);
+    pipeGraphics.lineBetween(-30, 40, -30, hh - 40);
+    // right pipes
+    pipeGraphics.lineStyle(4, 0x3a4556, 1);
+    pipeGraphics.lineBetween(hw + 25, 40, hw + 25, hh - 40);
+    pipeGraphics.lineStyle(2, 0x4a5568, 1);
+    pipeGraphics.lineBetween(hw + 30, 40, hw + 30, hh - 40);
+    pipeGraphics.setDepth(0);
+
+    // engines (right side - 3 engines)
+    const engineGraphics = this.add.graphics();
+    const engineX = hw + outerMargin - 20;
+    const enginePositions = [hh * 0.2, hh * 0.5, hh * 0.8];
+
+    enginePositions.forEach((ey) => {
+      // engine housing
+      engineGraphics.fillStyle(0x1e2530, 1);
+      engineGraphics.fillRoundedRect(hw + 10, ey - 30, outerMargin - 25, 60, 6);
+      engineGraphics.lineStyle(2, 0x4a5568, 1);
+      engineGraphics.strokeRoundedRect(hw + 10, ey - 30, outerMargin - 25, 60, 6);
+      // inner detail
+      engineGraphics.fillStyle(0x2a3040, 1);
+      engineGraphics.fillRoundedRect(hw + 20, ey - 20, outerMargin - 45, 40, 4);
+      engineGraphics.lineStyle(1, 0x5a6577, 1);
+      engineGraphics.strokeRoundedRect(hw + 20, ey - 20, outerMargin - 45, 40, 4);
+      // exhaust glow layers
+      engineGraphics.fillStyle(0x0066cc, 1);
+      engineGraphics.fillCircle(engineX, ey, 45);
+      engineGraphics.fillStyle(0x00aaff, 1);
+      engineGraphics.fillCircle(engineX, ey, 28);
+      engineGraphics.fillStyle(0xffaa44, 1);
+      engineGraphics.fillCircle(engineX, ey, 15);
+      engineGraphics.fillStyle(0xccffff, 1);
+      engineGraphics.fillCircle(engineX, ey, 6);
+    });
+    engineGraphics.setDepth(0);
+
+    // engine glow pulse
+    this.tweens.add({
+      targets: engineGraphics,
+      alpha: 0.5,
+      duration: 1500,
+      ease: "Sine.easeInOut",
+      yoyo: true,
+      repeat: -1,
+    });
+
+    // corner structural beams
+    const beamGraphics = this.add.graphics();
+    // top-left
+    beamGraphics.lineStyle(5, 0x3a4556, 1);
+    beamGraphics.lineBetween(-outerMargin + 10, -outerMargin + 10, -5, -5);
+    beamGraphics.lineStyle(3, 0x4a5568, 1);
+    beamGraphics.lineBetween(-outerMargin + 15, -outerMargin + 5, 0, -10);
+    // top-right
+    beamGraphics.lineStyle(5, 0x3a4556, 1);
+    beamGraphics.lineBetween(hw + outerMargin - 10, -outerMargin + 10, hw + 5, -5);
+    beamGraphics.lineStyle(3, 0x4a5568, 1);
+    beamGraphics.lineBetween(hw + outerMargin - 15, -outerMargin + 5, hw, -10);
+    // bottom-left
+    beamGraphics.lineStyle(5, 0x3a4556, 1);
+    beamGraphics.lineBetween(-outerMargin + 10, hh + outerMargin - 10, -5, hh + 5);
+    beamGraphics.lineStyle(3, 0x4a5568, 1);
+    beamGraphics.lineBetween(-outerMargin + 15, hh + outerMargin - 5, 0, hh + 10);
+    // bottom-right
+    beamGraphics.lineStyle(5, 0x3a4556, 1);
+    beamGraphics.lineBetween(hw + outerMargin - 10, hh + outerMargin - 10, hw + 5, hh + 5);
+    beamGraphics.lineStyle(3, 0x4a5568, 1);
+    beamGraphics.lineBetween(hw + outerMargin - 15, hh + outerMargin - 5, hw, hh + 10);
+    beamGraphics.setDepth(0);
+
+    // hull warning stripes at corners
+    const stripeGraphics = this.add.graphics();
+    const corners = [
+      { x: -outerMargin + 15, y: -outerMargin + 15 },
+      { x: hw + outerMargin - 45, y: -outerMargin + 15 },
+      { x: -outerMargin + 15, y: hh + outerMargin - 45 },
+      { x: hw + outerMargin - 45, y: hh + outerMargin - 45 },
+    ];
+    corners.forEach((c) => {
+      for (let i = 0; i < 3; i++) {
+        stripeGraphics.fillStyle(0xddaa00, 1);
+        stripeGraphics.fillRect(c.x + i * 10, c.y, 5, 30);
+      }
+    });
+    stripeGraphics.setDepth(0);
+
+    hullGraphics.setDepth(0);
+
+    // spaceship floor - tiled metal texture
+    const floorTile = this.add.tileSprite(0, 0, this.mapWidth, this.mapHeight, "metalFloor");
+    floorTile.setOrigin(0, 0);
+    floorTile.setDepth(-2);
+
+    // viewport windows - see space outside
+    const windowPositions = [
+      { x: 100, y: 0, w: 120, h: 8 },
+      { x: 350, y: 0, w: 120, h: 8 },
+      { x: 600, y: 0, w: 120, h: 8 },
+      { x: 850, y: 0, w: 120, h: 8 },
+      { x: 100, y: this.mapHeight - 8, w: 120, h: 8 },
+      { x: 350, y: this.mapHeight - 8, w: 120, h: 8 },
+      { x: 600, y: this.mapHeight - 8, w: 120, h: 8 },
+      { x: 850, y: this.mapHeight - 8, w: 120, h: 8 },
+    ];
+
+    const windowGraphics = this.add.graphics();
+    windowPositions.forEach((win) => {
+      // space visible through window
+      windowGraphics.fillStyle(0x0a0a1a, 1);
+      windowGraphics.fillRect(win.x, win.y, win.w, win.h);
+      // window frame
+      windowGraphics.lineStyle(2, 0x5a6577, 0.8);
+      windowGraphics.strokeRect(win.x, win.y, win.w, win.h);
+      // stars through window
+      for (let i = 0; i < 5; i++) {
+        const sx = Phaser.Math.Between(win.x + 5, win.x + win.w - 5);
+        const sy = Phaser.Math.Between(win.y + 2, win.y + win.h - 2);
+        windowGraphics.fillStyle(0xffffff, Phaser.Math.FloatBetween(0.4, 1));
+        windowGraphics.fillCircle(sx, sy, 1);
+      }
+    });
+    windowGraphics.setDepth(-1);
+
+    // ambient hull lights along edges
+    const lightGraphics = this.add.graphics();
+    for (let x = 40; x < this.mapWidth; x += 200) {
+      // top edge lights
+      lightGraphics.fillStyle(0xffaa44, 0.15);
+      lightGraphics.fillCircle(x, 15, 30);
+      lightGraphics.fillStyle(0xffaa44, 0.4);
+      lightGraphics.fillCircle(x, 15, 3);
+      // bottom edge lights
+      lightGraphics.fillStyle(0xffaa44, 0.15);
+      lightGraphics.fillCircle(x, this.mapHeight - 15, 30);
+      lightGraphics.fillStyle(0xffaa44, 0.4);
+      lightGraphics.fillCircle(x, this.mapHeight - 15, 3);
     }
-    gradient.setDepth(-2);
+    lightGraphics.setDepth(-1);
 
-    // add stars for cosmic effect
-    const starGraphics = this.add.graphics();
-    for (let i = 0; i < 100; i++) {
-      const x = Phaser.Math.Between(0, this.mapWidth);
-      const y = Phaser.Math.Between(0, this.mapHeight);
-      const size = Phaser.Math.FloatBetween(0.5, 2);
-      const alpha = Phaser.Math.FloatBetween(0.3, 0.9);
+    // pulsing light animation
+    this.tweens.add({
+      targets: lightGraphics,
+      alpha: 0.5,
+      duration: 2000,
+      ease: "Sine.easeInOut",
+      yoyo: true,
+      repeat: -1,
+    });
 
-      starGraphics.fillStyle(0xffffff, alpha);
-      starGraphics.fillCircle(x, y, size);
-    }
-
-    // add some twinkling stars
-    for (let i = 0; i < 20; i++) {
-      const x = Phaser.Math.Between(0, this.mapWidth);
-      const y = Phaser.Math.Between(0, this.mapHeight);
-      const star = this.add.graphics();
-      star.fillStyle(0xffffcc, 1);
-      star.fillCircle(0, 0, 1.5);
-      star.setPosition(x, y);
-      star.setDepth(-1);
-
-      this.tweens.add({
-        targets: star,
-        alpha: 0.2,
-        duration: Phaser.Math.Between(1000, 3000),
-        ease: 'Sine.easeInOut',
-        yoyo: true,
-        repeat: -1,
-        delay: Phaser.Math.Between(0, 2000)
-      });
-    }
-
-    starGraphics.setDepth(-1);
-
-    // grid lines with lower opacity and cosmic color
-    graphics.lineStyle(1, 0x4a4a8e, 0.15);
-    for (let x = 0; x <= this.mapWidth; x += 50) {
-      graphics.lineBetween(x, 0, x, this.mapHeight);
-    }
-    for (let y = 0; y <= this.mapHeight; y += 50) {
-      graphics.lineBetween(0, y, this.mapWidth, y);
-    }
-
-    // boundary with cosmic glow effect
-    graphics.lineStyle(2, 0x00ffcc, 0.4);
-    graphics.strokeRect(2, 2, this.mapWidth - 4, this.mapHeight - 4);
-    graphics.lineStyle(3, 0x4ecca3, 0.6);
+    // hull boundary - industrial metal frame
+    graphics.lineStyle(6, 0x3a3428, 1);
     graphics.strokeRect(0, 0, this.mapWidth, this.mapHeight);
+    graphics.lineStyle(2, 0x554a38, 1);
+    graphics.strokeRect(3, 3, this.mapWidth - 6, this.mapHeight - 6);
+    // inner warn trim
+    graphics.lineStyle(1, 0xffaa44, 0.15);
+    graphics.strokeRect(6, 6, this.mapWidth - 12, this.mapHeight - 12);
 
     graphics.setDepth(-1);
 
     // save as outdoor objects
     this.outsideObjects.push(graphics);
-    this.outsideObjects.push(gradient);
-    this.outsideObjects.push(starGraphics);
+    this.outsideObjects.push(floorTile);
+    this.outsideObjects.push(windowGraphics);
+    this.outsideObjects.push(lightGraphics);
   }
 
   private createBuildings(): void {
@@ -1345,15 +1822,15 @@ export class TreasureHuntScene extends Phaser.Scene {
     const wallThickness = 12;
     const doorWidth = 50;
 
-    // 地板
+    // 艙室地板 - 金屬格紋
     const floor = this.add.graphics();
-    floor.fillStyle(0x8b7355, 1);
+    floor.fillStyle(0x2a3040, 1);
     floor.fillRect(x, y, width, height);
-    floor.lineStyle(1, 0x000000, 0.2);
-    for (let tx = x; tx < x + width; tx += 30) {
+    floor.lineStyle(1, 0x3d4556, 0.4);
+    for (let tx = x; tx < x + width; tx += 40) {
       floor.lineBetween(tx, y, tx, y + height);
     }
-    for (let ty = y; ty < y + height; ty += 30) {
+    for (let ty = y; ty < y + height; ty += 40) {
       floor.lineBetween(x, ty, x + width, ty);
     }
     floor.setDepth(1);
@@ -1364,10 +1841,10 @@ export class TreasureHuntScene extends Phaser.Scene {
     wallGraphics.setDepth(50);
 
     const createWall = (wx: number, wy: number, ww: number, wh: number) => {
-      // 視覺牆壁
-      wallGraphics.fillStyle(0x654321, 1);
+      // 艙壁 - 金屬質感
+      wallGraphics.fillStyle(0x4a5568, 1);
       wallGraphics.fillRect(wx, wy, ww, wh);
-      wallGraphics.lineStyle(1, 0x000000, 0.5);
+      wallGraphics.lineStyle(1, 0x6b7280, 0.6);
       wallGraphics.strokeRect(wx, wy, ww, wh);
 
       // 碰撞牆壁
@@ -1427,11 +1904,11 @@ export class TreasureHuntScene extends Phaser.Scene {
       );
     }
 
-    // 屋頂（遮蓋建築內部）
+    // 艙頂（遮蓋建築內部）
     const roof = this.add.graphics();
-    roof.fillStyle(0x8b4513, 0.97);
+    roof.fillStyle(0x2d3748, 0.97);
     roof.fillRect(x - 5, y - 5, width + 10, height + 10);
-    roof.lineStyle(2, 0x5a2d0a, 1);
+    roof.lineStyle(2, 0x4a5568, 1);
     roof.strokeRect(x - 5, y - 5, width + 10, height + 10);
     roof.setDepth(200);
 
@@ -1458,8 +1935,8 @@ export class TreasureHuntScene extends Phaser.Scene {
       doorY = y + height / 2;
     }
 
-    // 畫入口標示（黃色箭頭指向門口）
-    doorMarker.fillStyle(0xffcc00, 1);
+    // 畫入口標示（青色箭頭指向門口）
+    doorMarker.fillStyle(0xffaa44, 1);
 
     // 根據門的方向畫箭頭（從外面指向建築內部）
     if (doorSide === "top") {
@@ -1505,7 +1982,7 @@ export class TreasureHuntScene extends Phaser.Scene {
     }
 
     // 入口圓圈
-    doorMarker.lineStyle(3, 0xffcc00, 0.8);
+    doorMarker.lineStyle(3, 0xffaa44, 0.8);
     doorMarker.strokeCircle(doorX, doorY, 18);
 
     // 閃爍動畫
@@ -1554,10 +2031,10 @@ export class TreasureHuntScene extends Phaser.Scene {
       doorRectH = doorWidth;
     }
 
-    // 畫門 (棕色)
-    door.fillStyle(0x8b4513, 1);
+    // 畫門 (金屬艙門)
+    door.fillStyle(0x5a6577, 1);
     door.fillRect(doorRectX, doorRectY, doorRectW, doorRectH);
-    door.lineStyle(2, 0x5a2d0a, 1);
+    door.lineStyle(2, 0x6b7280, 1);
     door.strokeRect(doorRectX, doorRectY, doorRectW, doorRectH);
 
     // 創建門的碰撞體 (Rectangle)

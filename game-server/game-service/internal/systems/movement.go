@@ -6,6 +6,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
+	"github.com/google/uuid"
 )
 
 type MovementSystem struct{}
@@ -16,10 +17,12 @@ func NewMovementSystem() *MovementSystem {
 
 // NOTE: this runs every game tick
 func (s *MovementSystem) Update(deltaTime float64, entities []*ecs.Entity) {
-	// O(n)
-	// player collision
+	// O(n) spatial hashing for collision + entity lookup
 	entitiesMap := make(map[int]*ecs.Entity, 0)
+	entityByID := make(map[uuid.UUID]*ecs.Entity, len(entities))
 	for _, entity := range entities {
+
+		entityByID[entity.ID] = entity
 		transformComp, hasTransform := entity.GetComponent(ecs.ComponentTypeTransform)
 		_, hasVelocity := entity.GetComponent(ecs.ComponentTypeVelocity)
 
@@ -51,7 +54,7 @@ func (s *MovementSystem) Update(deltaTime float64, entities []*ecs.Entity) {
 		newX := transform.X + velocity.VX*velocity.Speed*deltaTime
 		newY := transform.Y + velocity.VY*velocity.Speed*deltaTime
 
-		// check collision in 9-grid and resolve position
+		// check collision in 9-grid and resolve position by hashmap
 		for i := -1; i <= 1; i++ {
 			for j := -1; j <= 1; j++ {
 				cellKey := (cellX+i)<<8 | (cellY + j)
@@ -67,6 +70,41 @@ func (s *MovementSystem) Update(deltaTime float64, entities []*ecs.Entity) {
 				}
 			}
 		}
+
+		playerC, _ := targetEntity.GetComponent(ecs.ComponentTypePlayer)
+		player := playerC.(*components.PlayerComponent)
+
+		// tick down cooldown
+		if player.AttackCooldown > 0 {
+			player.AttackCooldown -= deltaTime
+		}
+
+		// attack
+		if player.AttackActive && player.AttackCooldown <= 0 && player.AttackTargetEntityID != uuid.Nil {
+			if enemyEntity, ok := entityByID[player.AttackTargetEntityID]; ok {
+				enemyTransformC, hasTransform := enemyEntity.GetComponent(ecs.ComponentTypeTransform)
+				if hasTransform {
+					enemyTransform := enemyTransformC.(*components.TransformComponent)
+					dx := newX - enemyTransform.X
+					dy := newY - enemyTransform.Y
+					distance := math.Hypot(dx, dy)
+
+					attackRange := float64(60)
+					if distance <= attackRange {
+						enemyHealthC, hasHealth := enemyEntity.GetComponent(ecs.ComponentTypeHealth)
+						if hasHealth {
+							enemyHealth := enemyHealthC.(*components.HealthComponent)
+							enemyHealth.CurrentHealth -= 10
+						}
+					}
+				}
+			}
+			player.HasHit = false
+			player.AttackActive = false
+			player.AttackTargetEntityID = uuid.Nil
+			player.AttackCooldown = 0.5
+		}
+
 		// clamp position to map boundaries
 		if newX < constants.PlayerRadius {
 			newX = constants.PlayerRadius

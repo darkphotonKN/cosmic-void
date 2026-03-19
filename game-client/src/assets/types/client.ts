@@ -8,7 +8,7 @@ export interface MovePayload {
 }
 
 export interface AttackPayload {
-  targetId: string;
+  enemy_entity_id: string;
 }
 
 export interface PickupPayload {

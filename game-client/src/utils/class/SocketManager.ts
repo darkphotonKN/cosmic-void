@@ -76,17 +76,23 @@ class SocketManager {
       console.error("WebSocket error:", error);
       this.setConnectionStatus("error");
       this.updateStatus("WebSocket Error", "#ff4444");
-      // Don't trigger auth error on WebSocket errors - we handle these separately
-      // if (this.onAuthError) {
-      //   this.onAuthError();
-      // }
     };
 
     this.socket.onclose = (event) => {
-      console.log("WebSocket disconnected, code:", event.code);
+      console.log("WebSocket disconnected, code:", event.code, "reason:", event.reason);
+      this.socket = null;
+
+      // Close code 4001 = auth error (token invalid/expired)
+      if (event.code === 4001) {
+        console.log("Auth error detected, redirecting to login...");
+        if (this.onAuthError) {
+          this.onAuthError();
+        }
+        return;
+      }
+
       this.setConnectionStatus("disconnected");
       this.updateStatus("WebSocket Disconnected", "#ffcc00");
-      this.socket = null;
     };
 
     this.socket.onmessage = (event) => {

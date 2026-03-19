@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	commonTypes "github.com/darkphotonKN/cosmic-void-server/common/constants/types"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	grpcitems "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/items"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
@@ -301,6 +302,46 @@ func (s *Session) manageClientMessages() {
 				if err != nil {
 					s.sender.SendMessageToPlayer(playerID, types.Message{})
 				}
+
+			case constants.ActionAttack:
+				slog.Debug("Action from client was attack")
+				parsedPayload, err := msg.Message.ParsePayload()
+
+				if err != nil {
+					slog.Error("Failed to parse loot payload", "error", err)
+					if playerIDStr, ok := msg.Message.Payload["player_id"].(string); ok {
+						if playerID, parseErr := uuid.Parse(playerIDStr); parseErr == nil {
+							s.sendErrorToPlayer(playerID, msg.Message.Action, "failed to parse loot request")
+						}
+					}
+					continue
+				}
+				attackPayload := parsedPayload.(types.PlayerSectionAttackPayload)
+				slog.Debug("Parse attack payload", attackPayload)
+
+				playerID, err := uuid.Parse(attackPayload.PlayerID)
+
+				if err != nil {
+					slog.Error("Invalid PlayerID from session payload", "playerID", attackPayload.PlayerID, "error", err)
+					continue
+				}
+
+				enemyEntityID, err := uuid.Parse(attackPayload.EnemyEntityID)
+
+				if err != nil {
+					slog.Error("Invalid ContainerEntityID from session payload",
+						"containerEntityID", attackPayload.EnemyEntityID,
+						"playerID", playerID,
+						"error", err)
+					s.sendErrorToPlayer(playerID, msg.Message.Action, "invalid container target")
+					continue
+				}
+
+				err = s.handleAttack(playerID, enemyEntityID)
+
+				if err != nil {
+					s.sender.SendMessageToPlayer(playerID, types.Message{})
+				}
 			}
 
 		case <-s.stopChan:
@@ -511,26 +552,18 @@ func (s *Session) GetPlayerIDs() []uuid.UUID {
 **/
 func (s *Session) broadcastFullState(entities []*ecs.Entity) error {
 	ctx := context.Background()
-	// entities := s.EntityManager.GetAllEntities()
-	clientState, err := s.stateSerializer.SerializeOnce(ctx, s.ID, entities)
+	backendState, err := s.stateSerializer.SerializeBackendState(ctx, s.ID, entities)
 	if err != nil {
 		slog.Error("Failed to serialize state", "error", err)
+		return err
 	}
 
-	if err != nil {
-		slog.Error("Failed to send state to player", "error", err)
-	}
 	// create and send personalized state for each player
 	for _, playerID := range s.playerEntityIDToPlayerID {
-		// clientState, err := s.stateSerializer.Serialize(ctx, s.ID, playerID, entities)
-		// if err != nil {
-		// 	slog.Error("Failed to serialize state for player", "playerID", playerID, "error", err)
-		// 	continue
-		// }
-		clientState := s.stateSerializer.ClientStateAddCurrentPlayer(clientState, playerID)
+		clientState := s.stateSerializer.FormatStateToClientState(backendState, playerID)
 
 		go func() {
-			err = s.sender.SendStateToPlayer(playerID, clientState)
+			err := s.sender.SendStateToPlayer(playerID, clientState)
 			if err != nil {
 				slog.Error("Failed to send state to player", "playerID", playerID, "error", err)
 			}
@@ -958,7 +991,10 @@ func (s *Session) handlePlayerEscape(playerID uuid.UUID) {
 	s.escapeSuccess = true
 	s.mu.Unlock()
 
+	s.mu.Lock()
 	playerEntityID, ok := s.playerIDToEntitiesID[playerID]
+	s.mu.Unlock()
+
 	if !ok {
 		slog.Error("Player entity ID not found", "playerID", playerID)
 		return
@@ -986,6 +1022,38 @@ func (s *Session) handlePlayerEscape(playerID uuid.UUID) {
 			"message": fmt.Sprintf("%s escaped successfully!", player.Username),
 		},
 	})
+}
+
+func (s *Session) handleAttack(playerID uuid.UUID, enemyEntityID uuid.UUID) error {
+	playerEntityID, ok := s.playerIDToEntitiesID[playerID]
+	if !ok {
+		return fmt.Errorf("Player %s not found", playerID)
+	}
+
+	playerEntity, ok := s.EntityManager.GetEntity(playerEntityID)
+	if !ok {
+		return fmt.Errorf("Player %s is not exists", playerID)
+	}
+	// enemyEntity, ok := s.EntityManager.GetEntity(enemyEntityID)
+	// if !ok {
+	// 	slog.Error("Enemy entity does not exist", "enemyEntityID", enemyEntityID)
+	// 	return fmt.Errorf("entity %s is not exists", enemyEntityID)
+	// }
+	// 確認目標存在
+	_, enemyExists := s.EntityManager.GetEntity(enemyEntityID)
+	if !enemyExists {
+		return fmt.Errorf("Enemy entity %s does not exist", enemyEntityID)
+	}
+
+	playerC, hasPlayer := playerEntity.GetComponent(ecs.ComponentTypePlayer)
+	if !hasPlayer {
+		return fmt.Errorf("Player does not have player component")
+	}
+	player := playerC.(*components.PlayerComponent)
+	player.HasHit = true
+	player.AttackActive = true
+	player.AttackTargetEntityID = enemyEntityID
+	return nil
 }
 
 // itemTemplate is a unified representation of an item from items-service
@@ -1311,6 +1379,9 @@ func (s *Session) InitialSystems() {
 }
 
 func (s *Session) InitialMapObjects() {
+	// Create match progress entity to track game state
+	CreateMatchEntity(s.EntityManager)
+
 	// add container (ensure it's not cut off at edges)
 	containerX := constants.ContainerWidthRadius + rand.Float64()*(constants.MapWidth-2*constants.ContainerWidthRadius)
 	containerY := constants.ContainerHeightRadius + rand.Float64()*(constants.MapHeight-2*constants.ContainerHeightRadius)
@@ -1353,23 +1424,24 @@ func (s *Session) InitializeBaseArmors(ctx context.Context) error {
 	}
 
 	for _, armor := range armorData.Armors {
-		templateId, err := uuid.Parse(armor.Id)
+		templateId, err := uuid.Parse(armor.ItemTemplateId)
 
 		if err != nil {
-			slog.Error("Error when attempting to parse template id as uuid iduring game creation.",
+			slog.Error("Error when attempting to parse template id as uuid during game creation.",
 				"error", err,
-				"armor.id", armor.Id,
+				"armor.ItemTemplateId", armor.ItemTemplateId,
 			)
 			return err
 		}
 
 		newArmor := ItemConfig{
-			TemplateID: templateId,
-			Name:       armor.ItemName,
-			// ItemType:   armor.ItemType, // TODO: check why new type isnt included
-
+			TemplateID:      templateId,
+			ItemType:        "armor",
+			Name:            armor.ItemName,
 			DefenseRating:   int(armor.DefenseRating),
+			Durability:      int(armor.Durability),
 			MagicResistance: int(armor.MagicResistance),
+			ArmorSlot:       armor.ArmorSlot,
 			BuyPrice:        int(armor.BaseBuyPrice),
 			SellPrice:       int(armor.BaseSellPrice),
 			Description:     armor.Description,

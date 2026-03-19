@@ -22,16 +22,15 @@ func NewStateSerializer(em *ecs.EntityManager) *StateSerializer {
 	return &StateSerializer{em: em}
 }
 
-func (s *StateSerializer) SerializeOnce(ctx context.Context, sessionID uuid.UUID, entities []*ecs.Entity) (*types.ClientGameState, error) {
-	state := &types.ClientGameState{
-		SessionID:     sessionID,
-		CurrentPlayer: nil,
-		OtherPlayers:  make([]*types.PlayerState, 0),
-		Items:         make([]uuid.UUID, 0),
-		Doors:         make([]*types.DoorState, 0),
-		Containers:    make([]*types.ContainerState, 0),
-		EscapeDoor:    make([]*types.EscapeDoorState, 0),
-		Switch:        make([]*types.SwitchState, 0),
+func (s *StateSerializer) SerializeBackendState(ctx context.Context, sessionID uuid.UUID, entities []*ecs.Entity) (*types.BackendGameState, error) {
+	backendState := &types.BackendGameState{
+		SessionID:  sessionID,
+		Players:    make(map[uuid.UUID]*types.PlayerState, 0),
+		Items:      make([]uuid.UUID, 0),
+		Doors:      make([]*types.DoorState, 0),
+		Containers: make([]*types.ContainerState, 0),
+		EscapeDoor: make([]*types.EscapeDoorState, 0),
+		Switch:     make([]*types.SwitchState, 0),
 	}
 
 	for _, entity := range entities {
@@ -89,7 +88,7 @@ func (s *StateSerializer) SerializeOnce(ctx context.Context, sessionID uuid.UUID
 			}
 
 			// Check if this is the recipient player
-			state.OtherPlayers = append(state.OtherPlayers, playerState)
+			backendState.Players[player.MemberID] = playerState
 		}
 
 		// --- Interactables ---
@@ -128,7 +127,7 @@ func (s *StateSerializer) SerializeOnce(ctx context.Context, sessionID uuid.UUID
 				IsOpen:   isOpen,
 				IsLocked: isLocked,
 			}
-			state.EscapeDoor = append(state.EscapeDoor, escapeDoorState)
+			backendState.EscapeDoor = append(backendState.EscapeDoor, escapeDoorState)
 		}
 
 		// -- Switches --
@@ -150,7 +149,7 @@ func (s *StateSerializer) SerializeOnce(ctx context.Context, sessionID uuid.UUID
 				SwitchID:    switchComponent.SwitchID,
 				IsActivated: switchComponent.IsActivated,
 			}
-			state.Switch = append(state.Switch, switchState)
+			backendState.Switch = append(backendState.Switch, switchState)
 		}
 
 		// -- Containers --
@@ -205,7 +204,7 @@ func (s *StateSerializer) SerializeOnce(ctx context.Context, sessionID uuid.UUID
 				IsOpen: isOpen,
 				Items:  items,
 			}
-			state.Containers = append(state.Containers, containerState)
+			backendState.Containers = append(backendState.Containers, containerState)
 		}
 		// --- Items ---
 		// TODO: add this after item entity is added
@@ -220,26 +219,26 @@ func (s *StateSerializer) SerializeOnce(ctx context.Context, sessionID uuid.UUID
 		}
 	}
 
-	return state, nil
+	return backendState, nil
 }
 
-func (s *StateSerializer) ClientStateAddCurrentPlayer(clientState *types.ClientGameState, playerID uuid.UUID) *types.ClientGameState {
-	state := &types.ClientGameState{
-		SessionID:    clientState.SessionID,
-		Items:        clientState.Items,
-		Doors:        clientState.Doors,
-		Containers:   clientState.Containers,
-		OtherPlayers: make([]*types.PlayerState, 0, len(clientState.OtherPlayers)-1),
-		EscapeDoor:   clientState.EscapeDoor,
-		Switch:       clientState.Switch,
+func (s *StateSerializer) FormatStateToClientState(backendState *types.BackendGameState, playerID uuid.UUID) *types.ClientGameState {
+	otherPlayers := make([]*types.PlayerState, 0, len(backendState.Players)-1)
+	for id, playerState := range backendState.Players {
+		if id != playerID {
+			otherPlayers = append(otherPlayers, playerState)
+		}
 	}
 
-	for _, playerState := range clientState.OtherPlayers {
-		if playerState.ID == playerID {
-			state.CurrentPlayer = playerState
-		} else {
-			state.OtherPlayers = append(state.OtherPlayers, playerState)
-		}
+	state := &types.ClientGameState{
+		SessionID:     backendState.SessionID,
+		Items:         backendState.Items,
+		Doors:         backendState.Doors,
+		Containers:    backendState.Containers,
+		CurrentPlayer: backendState.Players[playerID],
+		OtherPlayers:  otherPlayers,
+		EscapeDoor:    backendState.EscapeDoor,
+		Switch:        backendState.Switch,
 	}
 
 	return state
