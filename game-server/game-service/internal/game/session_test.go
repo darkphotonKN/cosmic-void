@@ -7,7 +7,8 @@ import (
 	"testing"
 	"time"
 
-	grpcitems "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/items"
+	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/items"
+
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
@@ -16,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -324,12 +326,121 @@ func TestSession_InitializeBaseArmors_CreateItemEntities(t *testing.T) {
 	em := ecs.NewEntityManager()
 	mockEmitter := &mockEventEmitter{}
 
-	// TODO: inject mock gRPC items client
-	var itemsClient grpcitems.ItemsClient
+	mockClient := mockItemsClient{}
 
-	session := NewSession(sender, &mockStateSerializer{}, em, mockEmitter, itemsClient)
+	mockClient.On("ListArmorsWithTemplate", mock.Anything, mock.Anything).Return(&pb.ListArmorsResponse{
+		Armors: []*pb.ArmorDetail{
+			{
+				Id:            "550e8400-e29b-41d4-a716-446655440001", // fake armor 1
+				ItemName:      "Iron Armor",
+				DefenseRating: 50,
+			},
+			{
+				Id:            "550e8400-e29b-41d4-a716-446655440002", // fake armor 2
+				ItemName:      "Steel Armor",
+				DefenseRating: 100,
+			},
+		},
+	},
+		nil, // [D] No error
+	)
+
+	session := NewSession(sender, &mockStateSerializer{}, em, mockEmitter, &mockClient)
 	defer session.Shutdown()
 
+	err := session.InitializeBaseArmors(context.Background())
+
+	assert.NoError(t, err)
+
+	slog.Info("Testerson")
+}
+
+type mockItemsClient struct {
+	mock.Mock
+}
+
+func (c *mockItemsClient) CreateWeapon(ctx context.Context, req *pb.CreateWeaponRequest) (*pb.Weapon, error) {
+	return nil, nil
+}
+
+func (c *mockItemsClient) GetWeaponWithTemplateByID(ctx context.Context, req *pb.GetWeaponRequest) (*pb.WeaponDetail, error) {
+	return nil, nil
+}
+
+func (c *mockItemsClient) ListWeaponsWithTemplate(ctx context.Context) (*pb.ListWeaponsResponse, error) {
+
+	return nil, nil
+}
+
+func (c *mockItemsClient) ListArmorsWithTemplate(ctx context.Context) (*pb.ListArmorsResponse, error) {
+	return &pb.ListArmorsResponse{
+		Armors: []*pb.ArmorDetail{
+			{
+				Id:              "88000000-0000-0000-0000-000000000001",
+				RarityId:        "660e8400-e29b-41d4-a716-446655440001",
+				DefenseRating:   3,
+				Durability:      7,
+				MagicResistance: 1,
+				ArmorSlot:       "head",
+				Description:     "Standard-issue titanium alloy combat helmet",
+				ItemTemplateId:  "aa000000-0000-0000-0000-000000000007",
+				ItemName:        "Titanium Helmet",
+				IconUrl:         "/icons/armor/titanium_helmet.png",
+				RequiredLevel:   1,
+				BaseSellPrice:   1,
+				BaseBuyPrice:    4,
+			},
+			{
+				Id:              "88000000-0000-0000-0000-000000000002",
+				RarityId:        "660e8400-e29b-41d4-a716-446655440001",
+				DefenseRating:   6,
+				Durability:      10,
+				MagicResistance: 2,
+				ArmorSlot:       "chest",
+				Description:     "Titanium alloy chest plate with ballistic lining",
+				ItemTemplateId:  "aa000000-0000-0000-0000-000000000008",
+				ItemName:        "Titanium Chest Plate",
+				IconUrl:         "/icons/armor/titanium_chest_plate.png",
+				RequiredLevel:   1,
+				BaseSellPrice:   3,
+				BaseBuyPrice:    6,
+			},
+			{
+				Id:              "88000000-0000-0000-0000-000000000003",
+				RarityId:        "660e8400-e29b-41d4-a716-446655440001",
+				DefenseRating:   4,
+				Durability:      8,
+				MagicResistance: 1,
+				ArmorSlot:       "legs",
+				Description:     "Reinforced titanium alloy leg guards",
+				ItemTemplateId:  "aa000000-0000-0000-0000-000000000009",
+				ItemName:        "Titanium Leg Guards",
+				IconUrl:         "/icons/armor/titanium_leg_guards.png",
+				RequiredLevel:   1,
+				BaseSellPrice:   2,
+				BaseBuyPrice:    5,
+			},
+			{
+				Id:              "88000000-0000-0000-0000-000000000004",
+				RarityId:        "660e8400-e29b-41d4-a716-446655440001",
+				DefenseRating:   2,
+				Durability:      6,
+				MagicResistance: 1,
+				ArmorSlot:       "gloves",
+				Description:     "Articulated titanium alloy combat gauntlets",
+				ItemTemplateId:  "aa000000-0000-0000-0000-000000000010",
+				ItemName:        "Titanium Gauntlets",
+				IconUrl:         "/icons/armor/titanium_gauntlets.png",
+				RequiredLevel:   1,
+				BaseSellPrice:   1,
+				BaseBuyPrice:    3,
+			},
+		},
+	}, nil
+}
+
+func (c *mockItemsClient) ListConsumablesWithTemplate(ctx context.Context) (*pb.ListConsumablesResponse, error) {
+	return nil, nil
 }
 
 type mockStateSerializer struct {
