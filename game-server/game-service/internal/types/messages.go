@@ -97,6 +97,19 @@ func (m *Message) ParsePayload() (interface{}, error) {
 		fmt.Printf("\n\npayload of action loot was: %+v\n", parsedPayload)
 
 		return parsedPayload, nil
+
+	case constants.ActionAttack:
+		parsedPayload := PlayerSectionAttackPayload{
+			PlayerSessionPayload: PlayerSessionPayload{
+				SessionID: m.Payload["session_id"].(string),
+				PlayerID:  m.Payload["player_id"].(string),
+			},
+			EnemyEntityID: m.Payload["enemy_entity_id"].(string),
+		}
+
+		fmt.Printf("\n\npayload of action attack was: %+v\n", parsedPayload)
+
+		return parsedPayload, nil
 	default:
 		return nil, fmt.Errorf("No matching actions.")
 	}
@@ -147,4 +160,9 @@ type PlayerSessionLootPayload struct {
 	PlayerSessionPayload
 	ContainerEntityID string   `json:"container_entity_id"`
 	ItemEntityIDs     []string `json:"item_entity_ids"`
+}
+
+type PlayerSectionAttackPayload struct {
+	PlayerSessionPayload
+	EnemyEntityID string `json:"enemy_entity_id"`
 }

@@ -29,6 +29,7 @@ interface Building {
 export class TreasureHuntScene extends Phaser.Scene {
   private player?: Phaser.Physics.Arcade.Sprite;
   private otherPlayers: Map<string, Phaser.Physics.Arcade.Sprite> = new Map();
+  private otherPlayersEntityIds: Map<string, string> = new Map(); // player_id → entity_id
   private otherPlayersTargets: Map<string, { x: number; y: number }> =
     new Map();
 
@@ -86,6 +87,7 @@ export class TreasureHuntScene extends Phaser.Scene {
   // 當前寶箱的物品（用於 F 鍵取得）
   private currentChestItems: ItemState[] = [];
   private chestLootedAtMap = new Map<string, number>(); // entityId → loot 時間戳
+  private canAttack = true;
   private readonly PENDING_DURATION = 1000; // 1 秒內不比對剛拿的物品
 
   constructor() {
@@ -135,6 +137,39 @@ export class TreasureHuntScene extends Phaser.Scene {
     // no eyes here, they'll be drawn separately
     graphics.generateTexture("otherPlayer", 40, 40);
     graphics.destroy();
+  }
+
+  private playAttackEffect(enemySprite: Phaser.Physics.Arcade.Sprite): void {
+    if (!this.player) return;
+
+    // --- 揮擊弧線 ---
+    const slash = this.add.graphics();
+    slash.setDepth(150);
+
+    const px = this.player.x;
+    const py = this.player.y;
+    const angle = Phaser.Math.Angle.Between(px, py, enemySprite.x, enemySprite.y);
+    const radius = 35;
+
+    slash.lineStyle(3, 0xffffff, 1);
+    slash.beginPath();
+    slash.arc(px, py, radius, angle - 0.8, angle + 0.8, false);
+    slash.strokePath();
+
+    // 弧線淡出
+    this.tweens.add({
+      targets: slash,
+      alpha: 0,
+      duration: 300,
+      ease: "Power2",
+      onComplete: () => slash.destroy(),
+    });
+
+    // --- 敵人閃紅 ---
+    enemySprite.setTint(0xff0000);
+    this.time.delayedCall(200, () => {
+      enemySprite.clearTint();
+    });
   }
 
   private drawEyes(graphics: Phaser.GameObjects.Graphics, x: number, y: number, vx: number, vy: number, isPlayer: boolean): void {
@@ -1037,6 +1072,7 @@ export class TreasureHuntScene extends Phaser.Scene {
       this.pickupItemFromChest();
     });
 
+
     // 創建室內遮罩（用於遮住建築外面）
     this.indoorMask = this.add.graphics();
     this.indoorMask.setDepth(500);
@@ -1222,7 +1258,30 @@ export class TreasureHuntScene extends Phaser.Scene {
         // set circular physics body
         sprite.body.setCircle(20);
 
+        // 點擊攻擊
+        sprite.setInteractive();
+        sprite.on("pointerdown", () => {
+          if (!this.canAttack || !this.player) return;
+          const distance = Phaser.Math.Distance.Between(
+            this.player.x, this.player.y,
+            sprite!.x, sprite!.y,
+          );
+          if (distance > 60) return;
+          const entityId = this.otherPlayersEntityIds.get(playerData.id);
+          if (entityId) {
+            socketManager.sendMessage(ActionType.Attack, {
+              enemy_entity_id: entityId,
+            });
+            this.playAttackEffect(sprite!);
+            this.canAttack = false;
+            this.time.delayedCall(500, () => {
+              this.canAttack = true;
+            });
+          }
+        });
+
         this.otherPlayers.set(playerData.id, sprite);
+        this.otherPlayersEntityIds.set(playerData.id, playerData.entity_id);
 
         // create eyes for this other player
         const eyes = this.add.graphics();

@@ -31,11 +31,13 @@ type PlayerConfig struct {
 	ItemQuantity  int
 	Vx, Vy        float64
 	ItemIDList    []uuid.UUID
+	AttackActive  bool
+	HasHit        bool
 }
 
 func CreatePlayerEntity(em *ecs.EntityManager, config PlayerConfig) *ecs.Entity {
 	entity := em.CreateEntity()
-	entity.AddComponent(components.NewPlayerComponent(config.MemberID, config.Username))
+	entity.AddComponent(components.NewPlayerComponent(config.MemberID, config.Username, config.HasHit, config.AttackActive))
 
 	entity.AddComponent(components.NewTransformComponent(config.X, config.Y))
 

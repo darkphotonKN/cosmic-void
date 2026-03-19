@@ -296,6 +296,46 @@ func (s *Session) manageClientMessages() {
 				if err != nil {
 					s.sender.SendMessageToPlayer(playerID, types.Message{})
 				}
+
+			case constants.ActionAttack:
+				slog.Debug("Action from client was attack")
+				parsedPayload, err := msg.Message.ParsePayload()
+
+				if err != nil {
+					slog.Error("Failed to parse loot payload", "error", err)
+					if playerIDStr, ok := msg.Message.Payload["player_id"].(string); ok {
+						if playerID, parseErr := uuid.Parse(playerIDStr); parseErr == nil {
+							s.sendErrorToPlayer(playerID, msg.Message.Action, "failed to parse loot request")
+						}
+					}
+					continue
+				}
+				attackPayload := parsedPayload.(types.PlayerSectionAttackPayload)
+				slog.Debug("Parse attack payload", attackPayload)
+
+				playerID, err := uuid.Parse(attackPayload.PlayerID)
+
+				if err != nil {
+					slog.Error("Invalid PlayerID from session payload", "playerID", attackPayload.PlayerID, "error", err)
+					continue
+				}
+
+				enemyEntityID, err := uuid.Parse(attackPayload.EnemyEntityID)
+
+				if err != nil {
+					slog.Error("Invalid ContainerEntityID from session payload",
+						"containerEntityID", attackPayload.EnemyEntityID,
+						"playerID", playerID,
+						"error", err)
+					s.sendErrorToPlayer(playerID, msg.Message.Action, "invalid container target")
+					continue
+				}
+
+				err = s.handleAttack(playerID, enemyEntityID)
+
+				if err != nil {
+					s.sender.SendMessageToPlayer(playerID, types.Message{})
+				}
 			}
 
 		case <-s.stopChan:
@@ -988,6 +1028,38 @@ func (s *Session) handlePlayerEscape(playerID uuid.UUID) {
 			"message": fmt.Sprintf("%s escaped successfully!", player.Username),
 		},
 	})
+}
+
+func (s *Session) handleAttack(playerID uuid.UUID, enemyEntityID uuid.UUID) error {
+	playerEntityID, ok := s.playerIDToEntitiesID[playerID]
+	if !ok {
+		return fmt.Errorf("Player %s not found", playerID)
+	}
+
+	playerEntity, ok := s.EntityManager.GetEntity(playerEntityID)
+	if !ok {
+		return fmt.Errorf("Player %s is not exists", playerID)
+	}
+	// enemyEntity, ok := s.EntityManager.GetEntity(enemyEntityID)
+	// if !ok {
+	// 	slog.Error("Enemy entity does not exist", "enemyEntityID", enemyEntityID)
+	// 	return fmt.Errorf("entity %s is not exists", enemyEntityID)
+	// }
+	// 確認目標存在
+	_, enemyExists := s.EntityManager.GetEntity(enemyEntityID)
+	if !enemyExists {
+		return fmt.Errorf("Enemy entity %s does not exist", enemyEntityID)
+	}
+
+	playerC, hasPlayer := playerEntity.GetComponent(ecs.ComponentTypePlayer)
+	if !hasPlayer {
+		return fmt.Errorf("Player does not have player component")
+	}
+	player := playerC.(*components.PlayerComponent)
+	player.HasHit = true
+	player.AttackActive = true
+	player.AttackTargetEntityID = enemyEntityID
+	return nil
 }
 
 // itemTemplate is a unified representation of an item from items-service
