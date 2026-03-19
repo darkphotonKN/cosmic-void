@@ -49,16 +49,21 @@ func (s *StateSerializer) SerializeOnce(ctx context.Context, sessionID uuid.UUID
 			inventory := []*types.ItemState{}
 			itemIDListC, _ := entity.GetComponent(ecs.ComponentTypeItemIDList)
 			itemIDList := itemIDListC.(*components.ItemIDListComponent)
+
 			for _, itemID := range itemIDList.ItemIDs {
 				itemEntity, exists := s.em.GetEntity(itemID)
 				if exists {
 					itemC, _ := itemEntity.GetComponent(ecs.ComponentTypeItem)
 					item := itemC.(*components.ItemComponent)
 
+					slog.Debug("Item found before serialization.",
+						"item", item,
+					)
+
 					itemState := &types.ItemState{
 						ItemID:   itemID,
 						EntityID: itemEntity.ID,
-						Name:     item.ItemName,
+						Name:     item.Name,
 						Quantity: 1,
 					}
 
@@ -176,7 +181,7 @@ func (s *StateSerializer) SerializeOnce(ctx context.Context, sessionID uuid.UUID
 							itemState := &types.ItemState{
 								ItemID:   itemID,
 								EntityID: itemEntity.ID,
-								Name:     item.ItemName,
+								Name:     item.Name,
 								Quantity: 1,
 							}
 
@@ -204,6 +209,15 @@ func (s *StateSerializer) SerializeOnce(ctx context.Context, sessionID uuid.UUID
 		}
 		// --- Items ---
 		// TODO: add this after item entity is added
+		itemComp, hasItem := entity.GetComponent(ecs.ComponentTypeItem)
+
+		if hasItem {
+			item := itemComp.(*components.ItemComponent)
+
+			slog.Debug("item component found in game",
+				"item", item,
+			)
+		}
 	}
 
 	return state, nil
@@ -272,7 +286,7 @@ func (s *StateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, re
 					itemState := &types.ItemState{
 						ItemID:   itemID,
 						EntityID: itemEntity.ID,
-						Name:     item.ItemName,
+						Name:     item.Name,
 						Quantity: 1,
 					}
 
@@ -392,7 +406,7 @@ func (s *StateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, re
 							itemState := &types.ItemState{
 								ItemID:   itemID,
 								EntityID: itemEntity.ID,
-								Name:     item.ItemName,
+								Name:     item.Name,
 								Quantity: 1,
 							}
 
@@ -418,8 +432,10 @@ func (s *StateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, re
 			}
 			state.Containers = append(state.Containers, containerState)
 		}
+
 		// --- Items ---
 		// TODO: add this after item entity is added
+
 	}
 
 	return state, nil
@@ -428,14 +444,14 @@ func (s *StateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, re
 // populateItemDetails reads item details directly from the ItemComponent
 // which are populated at item creation time, avoiding per-tick gRPC calls.
 func populateItemDetails(ctx context.Context, item *components.ItemComponent, itemState *types.ItemState) {
-	itemState.AttackPower = item.AttackPower
-	itemState.Durability = item.Durability
-	itemState.CriticalRate = item.CriticalRate
+	itemState.AttackPower = int32(item.AttackPower)
+	itemState.Durability = int32(item.Durability)
+	itemState.CriticalRate = float32(item.CriticalRate)
 	itemState.WeaponType = item.WeaponType
-	itemState.DefenseRating = item.DefenseRating
+	itemState.DefenseRating = int32(item.DefenseRating)
 	itemState.ArmorSlot = item.ArmorSlot
-	itemState.HealingAmount = item.HealingAmount
-	itemState.ManaAmount = item.ManaAmount
+	itemState.HealingAmount = int32(item.HealingAmount)
+	itemState.ManaAmount = int32(item.ManaAmount)
 	itemState.Description = item.Description
 }
 

@@ -15,7 +15,6 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components/metrics"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
-	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/serializer"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/systems"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
@@ -58,12 +57,12 @@ type Session struct {
 	TestMessageSpy chan types.Message
 
 	// item pool (session-level, items are removed once assigned to a container)
-	itemPool            []itemTemplate
+	itemPool            []itemTemplate // 1 , 2, 3, 4, 5
 	itemPoolInitialized bool
 
 	// dependency injections
 	sender          SessionSender
-	stateSerializer *serializer.StateSerializer
+	stateSerializer StateSerializer
 	eventEmitter    EventEmitter
 	itemsClient     grpcitems.ItemsClient
 
@@ -84,7 +83,13 @@ type EventEmitter interface {
 	PublishMatchComplete(ctx context.Context, data *types.RawMatchState) error
 }
 
-func NewSession(sender *messaging.MessageSender, serializer *serializer.StateSerializer, em *ecs.EntityManager, eventEmitter EventEmitter, itemsClient grpcitems.ItemsClient) *Session {
+type StateSerializer interface {
+	ClientStateAddCurrentPlayer(clientState *types.ClientGameState, playerID uuid.UUID) *types.ClientGameState
+	Serialize(ctx context.Context, sessionID uuid.UUID, recipientPlayerID uuid.UUID, entities []*ecs.Entity) (*types.ClientGameState, error)
+	SerializeOnce(ctx context.Context, sessionID uuid.UUID, entities []*ecs.Entity) (*types.ClientGameState, error)
+}
+
+func NewSession(sender *messaging.MessageSender, serializer StateSerializer, em *ecs.EntityManager, eventEmitter EventEmitter, itemsClient grpcitems.ItemsClient) *Session {
 	sessionId := uuid.New()
 
 	s := &Session{
@@ -1136,13 +1141,6 @@ func (s *Session) initItemPool() error {
 * removes them from the pool, creates item entities, and returns their IDs.
 **/
 func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
-	// Initialize pool on first call
-	if !s.itemPoolInitialized {
-		if err := s.initItemPool(); err != nil {
-			return nil, err
-		}
-	}
-
 	if len(s.itemPool) == 0 {
 		return nil, fmt.Errorf("item pool is empty, no more items available")
 	}
@@ -1231,7 +1229,6 @@ func (s *Session) AddItem(itemConfig ItemConfig) uuid.UUID {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	entity := CreateItemEntity(s.EntityManager, itemConfig)
-
 	return entity.ID
 }
 
@@ -1338,4 +1335,52 @@ func (s *Session) InitialMapObjects() {
 	})
 
 	s.switchEntityIDs = []uuid.UUID{switchEntity.ID}
+
+	// --- Create Items ---
+	ctx := context.Background()
+
+	// -- Armor --
+	s.InitializeBaseArmors(ctx)
+}
+
+func (s *Session) InitializeBaseArmors(ctx context.Context) error {
+	armorData, err := s.itemsClient.ListArmorsWithTemplate(ctx)
+
+	if err != nil {
+		slog.Error("Error when attempting to get list of base armors for game creation.",
+			"error", err,
+		)
+	}
+
+	for _, armor := range armorData.Armors {
+		templateId, err := uuid.Parse(armor.Id)
+
+		if err != nil {
+			slog.Error("Error when attempting to parse template id as uuid iduring game creation.",
+				"error", err,
+				"armor.id", armor.Id,
+			)
+			return err
+		}
+
+		newArmor := ItemConfig{
+			TemplateID: templateId,
+			Name:       armor.ItemName,
+			// ItemType:   armor.ItemType, // TODO: check why new type isnt included
+
+			DefenseRating:   int(armor.DefenseRating),
+			MagicResistance: int(armor.MagicResistance),
+			BuyPrice:        int(armor.BaseBuyPrice),
+			SellPrice:       int(armor.BaseSellPrice),
+			Description:     armor.Description,
+		}
+
+		slog.Debug("adding new armor entity",
+			"newArmor", newArmor,
+		)
+
+		s.AddItem(newArmor)
+	}
+
+	return nil
 }

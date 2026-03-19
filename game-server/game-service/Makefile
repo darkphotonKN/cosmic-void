@@ -60,15 +60,14 @@ test: ## Run all tests
 	@go test -v ./... -count=1
 
 .PHONY: test-unit
-test-unit: ## Run unit tests only
+test-unit: ## Run unit tests only (skips integration via -short)
 	@echo "Running unit tests..."
-	@go test -v -short ./internal/systems -count=1
+	@go test -v -short ./... -count=1
 
 .PHONY: test-integration
 test-integration: ## Run integration tests only
 	@echo "Running integration tests..."
-	@go test -v ./internal/gameserver -run Integration -count=1
-	@go test -v ./internal/game -run Integration -count=1
+	@go test -v -run Integration ./... -count=1
 
 .PHONY: test-cover
 test-cover: ## Run tests with coverage

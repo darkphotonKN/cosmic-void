@@ -1,15 +1,18 @@
 package game
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"testing"
 	"time"
 
+	grpcitems "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/items"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/serializer"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
@@ -314,4 +317,30 @@ func TestHandleInteractContainer(t *testing.T) {
 		containerItemIDList2 := containerItemIDListComponent2.(*components.ItemIDListComponent)
 		assert.Equal(t, firstOpenItemIDs, containerItemIDList2.ItemIDs)
 	}
+}
+
+func TestSession_InitializeBaseArmors_CreateItemEntities(t *testing.T) {
+	sender := createMockSender()
+	em := ecs.NewEntityManager()
+	mockEmitter := &mockEventEmitter{}
+
+	// TODO: inject mock gRPC items client
+	var itemsClient grpcitems.ItemsClient
+
+	session := NewSession(sender, &mockStateSerializer{}, em, mockEmitter, itemsClient)
+	defer session.Shutdown()
+
+}
+
+type mockStateSerializer struct {
+}
+
+func (s *mockStateSerializer) ClientStateAddCurrentPlayer(clientState *types.ClientGameState, playerID uuid.UUID) *types.ClientGameState {
+	return nil
+}
+func (s *mockStateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, recipientPlayerID uuid.UUID, entities []*ecs.Entity) (*types.ClientGameState, error) {
+	return nil, nil
+}
+func (s *mockStateSerializer) SerializeOnce(ctx context.Context, sessionID uuid.UUID, entities []*ecs.Entity) (*types.ClientGameState, error) {
+	return nil, nil
 }
