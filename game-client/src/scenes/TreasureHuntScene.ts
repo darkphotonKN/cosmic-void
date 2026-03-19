@@ -116,25 +116,41 @@ export class TreasureHuntScene extends Phaser.Scene {
     canvas.height = size;
     const ctx = canvas.getContext("2d")!;
 
-    // dark metal base
-    ctx.fillStyle = "#12181f";
+    // dark rusty brown-green industrial wall
+    ctx.fillStyle = "#2e2a22";
     ctx.fillRect(0, 0, size, size);
 
-    // noise grain
-    for (let i = 0; i < 3000; i++) {
+    // heavy wall grain
+    for (let i = 0; i < 5000; i++) {
       const x = Math.random() * size;
       const y = Math.random() * size;
-      const brightness = 15 + Math.random() * 20;
-      ctx.fillStyle = `rgba(${brightness}, ${brightness + 3}, ${brightness + 6}, 0.4)`;
+      const brightness = 30 + Math.random() * 30;
+      const r = brightness + Math.random() * 8;
+      const g = brightness - 2 + Math.random() * 5;
+      const b = brightness - 8;
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.15 + Math.random() * 0.2})`;
       ctx.fillRect(x, y, 1, 1);
     }
 
-    // brushed metal lines (darker)
-    for (let i = 0; i < 50; i++) {
+    // rust streaks - vertical drips
+    for (let i = 0; i < 5; i++) {
+      const sx = Math.random() * size;
+      const sy = Math.random() * size * 0.3;
+      const len = 20 + Math.random() * 40;
+      ctx.strokeStyle = `rgba(60, 40, 25, ${0.1 + Math.random() * 0.12})`;
+      ctx.lineWidth = 1 + Math.random() * 2;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx + (Math.random() - 0.5) * 5, sy + len);
+      ctx.stroke();
+    }
+
+    // horizontal wear lines - old paint
+    for (let i = 0; i < 40; i++) {
       const y = Math.random() * size;
-      const len = 15 + Math.random() * 50;
+      const len = 10 + Math.random() * 50;
       const x = Math.random() * (size - len);
-      ctx.strokeStyle = `rgba(30, 35, 42, ${0.2 + Math.random() * 0.3})`;
+      ctx.strokeStyle = `rgba(50, 45, 35, ${0.15 + Math.random() * 0.2})`;
       ctx.lineWidth = 0.5;
       ctx.beginPath();
       ctx.moveTo(x, y);
@@ -143,12 +159,12 @@ export class TreasureHuntScene extends Phaser.Scene {
     }
 
     // scratches
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 8; i++) {
       const x1 = Math.random() * size;
       const y1 = Math.random() * size;
-      const x2 = x1 + (Math.random() - 0.5) * 30;
-      const y2 = y1 + (Math.random() - 0.5) * 30;
-      ctx.strokeStyle = `rgba(35, 40, 50, ${0.15 + Math.random() * 0.15})`;
+      const x2 = x1 + (Math.random() - 0.5) * 35;
+      const y2 = y1 + (Math.random() - 0.5) * 35;
+      ctx.strokeStyle = `rgba(55, 48, 38, ${0.15 + Math.random() * 0.15})`;
       ctx.lineWidth = 0.5;
       ctx.beginPath();
       ctx.moveTo(x1, y1);
@@ -156,15 +172,16 @@ export class TreasureHuntScene extends Phaser.Scene {
       ctx.stroke();
     }
 
-    // panel edge
-    ctx.strokeStyle = "rgba(25, 30, 38, 0.5)";
-    ctx.lineWidth = 1;
+    // panel edge highlight
+    ctx.strokeStyle = "rgba(55, 48, 38, 0.6)";
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(0, size - 1);
     ctx.lineTo(size - 1, size - 1);
     ctx.lineTo(size - 1, 0);
     ctx.stroke();
-    ctx.strokeStyle = "rgba(10, 12, 16, 0.5)";
+    ctx.strokeStyle = "rgba(15, 12, 8, 0.6)";
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.lineTo(size - 1, 0);
@@ -182,49 +199,49 @@ export class TreasureHuntScene extends Phaser.Scene {
     canvas.height = size;
     const ctx = canvas.getContext("2d")!;
 
-    // base metal color
-    ctx.fillStyle = "#4a4f58";
+    // base - worn concrete
+    ctx.fillStyle = "#6d6f62";
     ctx.fillRect(0, 0, size, size);
 
-    // noise grain
-    for (let i = 0; i < 3000; i++) {
+    // concrete grain - uneven surface
+    for (let i = 0; i < 5000; i++) {
       const x = Math.random() * size;
       const y = Math.random() * size;
-      const brightness = 60 + Math.random() * 30;
-      ctx.fillStyle = `rgba(${brightness}, ${brightness + 5}, ${brightness + 10}, 0.3)`;
+      const brightness = 85 + Math.random() * 45;
+      const g = brightness - 3 + Math.random() * 6;
+      ctx.fillStyle = `rgba(${brightness}, ${g}, ${brightness - 8}, ${0.12 + Math.random() * 0.15})`;
       ctx.fillRect(x, y, 1, 1);
     }
 
-    // horizontal brushed metal lines
-    for (let i = 0; i < 40; i++) {
-      const y = Math.random() * size;
-      const len = 20 + Math.random() * 60;
-      const x = Math.random() * (size - len);
-      ctx.strokeStyle = `rgba(90, 95, 105, ${0.1 + Math.random() * 0.2})`;
-      ctx.lineWidth = 0.5;
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + len, y);
-      ctx.stroke();
+    // darker patches - wear from foot traffic
+    for (let i = 0; i < 6; i++) {
+      const sx = Math.random() * size;
+      const sy = Math.random() * size;
+      const w = 10 + Math.random() * 25;
+      const h = 3 + Math.random() * 8;
+      ctx.fillStyle = `rgba(55, 53, 48, ${0.06 + Math.random() * 0.06})`;
+      ctx.fillRect(sx, sy, w, h);
     }
 
-    // subtle scratch marks
-    for (let i = 0; i < 8; i++) {
+    // thin cracks
+    for (let i = 0; i < 3; i++) {
       const x1 = Math.random() * size;
       const y1 = Math.random() * size;
-      const x2 = x1 + (Math.random() - 0.5) * 40;
-      const y2 = y1 + (Math.random() - 0.5) * 40;
-      ctx.strokeStyle = `rgba(100, 105, 115, ${0.1 + Math.random() * 0.15})`;
+      ctx.strokeStyle = `rgba(50, 48, 42, ${0.12 + Math.random() * 0.12})`;
       ctx.lineWidth = 0.5;
       ctx.beginPath();
       ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
+      for (let j = 0; j < 3; j++) {
+        const nx = x1 + (Math.random() - 0.5) * 50;
+        const ny = y1 + (Math.random() - 0.3) * 50;
+        ctx.lineTo(nx, ny);
+      }
       ctx.stroke();
     }
 
     // panel edge highlight (bottom & right)
-    ctx.strokeStyle = "rgba(80, 85, 95, 0.4)";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(95, 92, 80, 0.5)";
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(0, size - 1);
     ctx.lineTo(size - 1, size - 1);
@@ -232,7 +249,8 @@ export class TreasureHuntScene extends Phaser.Scene {
     ctx.stroke();
 
     // panel edge shadow (top & left)
-    ctx.strokeStyle = "rgba(40, 42, 48, 0.4)";
+    ctx.strokeStyle = "rgba(45, 43, 38, 0.5)";
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.lineTo(size - 1, 0);
@@ -1636,7 +1654,7 @@ export class TreasureHuntScene extends Phaser.Scene {
       engineGraphics.fillCircle(engineX, ey, 45);
       engineGraphics.fillStyle(0x00aaff, 1);
       engineGraphics.fillCircle(engineX, ey, 28);
-      engineGraphics.fillStyle(0x00ccff, 1);
+      engineGraphics.fillStyle(0xffaa44, 1);
       engineGraphics.fillCircle(engineX, ey, 15);
       engineGraphics.fillStyle(0xccffff, 1);
       engineGraphics.fillCircle(engineX, ey, 6);
@@ -1687,7 +1705,7 @@ export class TreasureHuntScene extends Phaser.Scene {
     ];
     corners.forEach((c) => {
       for (let i = 0; i < 3; i++) {
-        stripeGraphics.fillStyle(0xccaa00, 1);
+        stripeGraphics.fillStyle(0xddaa00, 1);
         stripeGraphics.fillRect(c.x + i * 10, c.y, 5, 30);
       }
     });
@@ -1734,14 +1752,14 @@ export class TreasureHuntScene extends Phaser.Scene {
     const lightGraphics = this.add.graphics();
     for (let x = 40; x < this.mapWidth; x += 200) {
       // top edge lights
-      lightGraphics.fillStyle(0x00ccff, 0.15);
+      lightGraphics.fillStyle(0xffaa44, 0.15);
       lightGraphics.fillCircle(x, 15, 30);
-      lightGraphics.fillStyle(0x00ccff, 0.4);
+      lightGraphics.fillStyle(0xffaa44, 0.4);
       lightGraphics.fillCircle(x, 15, 3);
       // bottom edge lights
-      lightGraphics.fillStyle(0x00ccff, 0.15);
+      lightGraphics.fillStyle(0xffaa44, 0.15);
       lightGraphics.fillCircle(x, this.mapHeight - 15, 30);
-      lightGraphics.fillStyle(0x00ccff, 0.4);
+      lightGraphics.fillStyle(0xffaa44, 0.4);
       lightGraphics.fillCircle(x, this.mapHeight - 15, 3);
     }
     lightGraphics.setDepth(-1);
@@ -1762,7 +1780,7 @@ export class TreasureHuntScene extends Phaser.Scene {
     graphics.lineStyle(2, 0x5a6577, 0.8);
     graphics.strokeRect(3, 3, this.mapWidth - 6, this.mapHeight - 6);
     // inner glow trim
-    graphics.lineStyle(1, 0x00ccff, 0.2);
+    graphics.lineStyle(1, 0xffaa44, 0.2);
     graphics.strokeRect(6, 6, this.mapWidth - 12, this.mapHeight - 12);
 
     graphics.setDepth(-1);
@@ -1918,7 +1936,7 @@ export class TreasureHuntScene extends Phaser.Scene {
     }
 
     // 畫入口標示（青色箭頭指向門口）
-    doorMarker.fillStyle(0x00ccff, 1);
+    doorMarker.fillStyle(0xffaa44, 1);
 
     // 根據門的方向畫箭頭（從外面指向建築內部）
     if (doorSide === "top") {
@@ -1964,7 +1982,7 @@ export class TreasureHuntScene extends Phaser.Scene {
     }
 
     // 入口圓圈
-    doorMarker.lineStyle(3, 0x00ccff, 0.8);
+    doorMarker.lineStyle(3, 0xffaa44, 0.8);
     doorMarker.strokeCircle(doorX, doorY, 18);
 
     // 閃爍動畫
