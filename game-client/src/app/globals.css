@@ -357,12 +357,11 @@ h1, h2, h3, h4, h5, h6 {
 
 #game-container {
   transition: 0.3s;
-  border: 2px solid #ff00ff;
+  border: 2px solid #ff8c00;
   box-shadow:
-    0 0 5px #ff00ff,
-    0 0 10px #ff00ff,
-    0 0 20px #ff00ff,
-    0 0 40px #ff00ff;
+    0 0 5px rgba(255, 140, 0, 0.4),
+    0 0 10px rgba(255, 140, 0, 0.2),
+    0 0 20px rgba(255, 140, 0, 0.1);
 }
 
 #game-container.danger {
@@ -370,17 +369,15 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow:
     0 0 5px #ff0000,
     0 0 10px #ff0000,
-    0 0 20px #ff0000,
-    0 0 40px #ff0000;
+    0 0 20px #ff0000;
 }
 
 #game-container.safe {
-  border: 2px solid #ff00ff;
+  border: 2px solid #ff8c00;
   box-shadow:
-    0 0 5px #ff00ff,
-    0 0 10px #ff00ff,
-    0 0 20px #ff00ff,
-    0 0 40px #ff00ff;
+    0 0 5px rgba(255, 140, 0, 0.4),
+    0 0 10px rgba(255, 140, 0, 0.2),
+    0 0 20px rgba(255, 140, 0, 0.1);
 }
 
 /* Treasure Hunt Game Styles */
@@ -411,9 +408,9 @@ h1, h2, h3, h4, h5, h6 {
   overflow: hidden;
   box-shadow:
     0 10px 40px rgba(0, 0, 0, 0.8),
-    0 0 60px rgba(78, 204, 163, 0.1),
-    inset 0 0 1px rgba(78, 204, 163, 0.3);
-  border: 1px solid rgba(78, 204, 163, 0.2);
+    0 0 60px rgba(255, 170, 68, 0.1),
+    inset 0 0 1px rgba(255, 170, 68, 0.3);
+  border: 1px solid rgba(255, 170, 68, 0.2);
 }
 
 .treasure-hunt-controls {

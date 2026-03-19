@@ -1774,13 +1774,13 @@ export class TreasureHuntScene extends Phaser.Scene {
       repeat: -1,
     });
 
-    // hull boundary - thick metal walls
-    graphics.lineStyle(6, 0x3a4556, 1);
+    // hull boundary - industrial metal frame
+    graphics.lineStyle(6, 0x3a3428, 1);
     graphics.strokeRect(0, 0, this.mapWidth, this.mapHeight);
-    graphics.lineStyle(2, 0x5a6577, 0.8);
+    graphics.lineStyle(2, 0x554a38, 1);
     graphics.strokeRect(3, 3, this.mapWidth - 6, this.mapHeight - 6);
-    // inner glow trim
-    graphics.lineStyle(1, 0xffaa44, 0.2);
+    // inner warn trim
+    graphics.lineStyle(1, 0xffaa44, 0.15);
     graphics.strokeRect(6, 6, this.mapWidth - 12, this.mapHeight - 12);
 
     graphics.setDepth(-1);
