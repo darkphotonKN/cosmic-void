@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	commonTypes "github.com/darkphotonKN/cosmic-void-server/common/constants/types"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	grpcitems "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/items"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
@@ -85,9 +84,9 @@ type EventEmitter interface {
 }
 
 type StateSerializer interface {
-	ClientStateAddCurrentPlayer(clientState *types.ClientGameState, playerID uuid.UUID) *types.ClientGameState
 	Serialize(ctx context.Context, sessionID uuid.UUID, recipientPlayerID uuid.UUID, entities []*ecs.Entity) (*types.ClientGameState, error)
-	SerializeOnce(ctx context.Context, sessionID uuid.UUID, entities []*ecs.Entity) (*types.ClientGameState, error)
+	SerializeBackendState(ctx context.Context, sessionID uuid.UUID, entities []*ecs.Entity) (*types.BackendGameState, error)
+	FormatStateToClientState(backendState *types.BackendGameState, playerID uuid.UUID) *types.ClientGameState
 }
 
 func NewSession(sender *messaging.MessageSender, serializer StateSerializer, em *ecs.EntityManager, eventEmitter EventEmitter, itemsClient grpcitems.ItemsClient) *Session {
@@ -1379,9 +1378,6 @@ func (s *Session) InitialSystems() {
 }
 
 func (s *Session) InitialMapObjects() {
-	// Create match progress entity to track game state
-	CreateMatchEntity(s.EntityManager)
-
 	// add container (ensure it's not cut off at edges)
 	containerX := constants.ContainerWidthRadius + rand.Float64()*(constants.MapWidth-2*constants.ContainerWidthRadius)
 	containerY := constants.ContainerHeightRadius + rand.Float64()*(constants.MapHeight-2*constants.ContainerHeightRadius)
