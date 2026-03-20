@@ -95,7 +95,6 @@ type ItemConfig struct {
 	HealingAmount   int
 	ManaAmount      int
 	BuffDuration    int
-	Durability      int
 	BuyPrice        int
 	SellPrice       int
 	Description     string
@@ -114,7 +113,6 @@ func CreateItemEntity(em *ecs.EntityManager, itemconfig ItemConfig) *ecs.Entity 
 	itemComp.HealingAmount = itemconfig.HealingAmount
 	itemComp.ManaAmount = itemconfig.ManaAmount
 	itemComp.BuffDuration = itemconfig.BuffDuration
-	itemComp.Durability = itemconfig.Durability
 	itemComp.BuyPrice = itemconfig.BuyPrice
 	itemComp.SellPrice = itemconfig.SellPrice
 	itemComp.Description = itemconfig.Description

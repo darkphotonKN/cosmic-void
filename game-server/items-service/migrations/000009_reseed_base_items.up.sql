@@ -24,42 +24,42 @@ INSERT INTO item_rarities (id, rarity_code, rarity_name, color_hex, drop_rate_mu
 
 -- Step 3: Insert 6 melee weapons (all common rarity)
 --   Archetypes drawn from sci-fi RPG staples (Warframe, Destiny, Cyberpunk, Mass Effect)
-INSERT INTO weapons (id, type_id, rarity_id, attack_power, durability, critical_rate, weapon_type, description) VALUES
-    ('77000000-0000-0000-0000-000000000001', NULL, '660e8400-e29b-41d4-a716-446655440001',  6,  8, 0.08, 'sword',  'Mono-molecular vibrating combat blade'),
-    ('77000000-0000-0000-0000-000000000002', NULL, '660e8400-e29b-41d4-a716-446655440001',  3,  5, 0.12, 'knife',  'Compact energy-pulse combat knife'),
-    ('77000000-0000-0000-0000-000000000003', NULL, '660e8400-e29b-41d4-a716-446655440001',  9, 12, 0.02, 'mace',   'Graviton-charged heavy war hammer'),
-    ('77000000-0000-0000-0000-000000000004', NULL, '660e8400-e29b-41d4-a716-446655440001',  5,  7, 0.06, 'spear',  'Focused hard-light polearm'),
-    ('77000000-0000-0000-0000-000000000005', NULL, '660e8400-e29b-41d4-a716-446655440001',  7, 10, 0.04, 'axe',    'Magnetically accelerated cleaving axe'),
-    ('77000000-0000-0000-0000-000000000006', NULL, '660e8400-e29b-41d4-a716-446655440001',  4,  6, 0.10, 'fist',   'Electrified close-quarters combat gauntlet');
+INSERT INTO weapons (id, rarity_id, attack_power, critical_rate, weapon_type, description) VALUES
+    ('77000000-0000-0000-0000-000000000001', '660e8400-e29b-41d4-a716-446655440001',  6, 0.08, 'sword',  'Mono-molecular vibrating combat blade'),
+    ('77000000-0000-0000-0000-000000000002', '660e8400-e29b-41d4-a716-446655440001',  3, 0.12, 'knife',  'Compact energy-pulse combat knife'),
+    ('77000000-0000-0000-0000-000000000003', '660e8400-e29b-41d4-a716-446655440001',  9, 0.02, 'mace',   'Graviton-charged heavy war hammer'),
+    ('77000000-0000-0000-0000-000000000004', '660e8400-e29b-41d4-a716-446655440001',  5, 0.06, 'spear',  'Focused hard-light polearm'),
+    ('77000000-0000-0000-0000-000000000005', '660e8400-e29b-41d4-a716-446655440001',  7, 0.04, 'axe',    'Magnetically accelerated cleaving axe'),
+    ('77000000-0000-0000-0000-000000000006', '660e8400-e29b-41d4-a716-446655440001',  4, 0.10, 'fist',   'Electrified close-quarters combat gauntlet');
 
 -- Step 4: Insert 16 armors (4 material types × 4 slots)
 --   Slots: head, chest, legs, gloves
-INSERT INTO armors (id, type_id, rarity_id, defense_rating, durability, magic_resistance, armor_slot, description) VALUES
+INSERT INTO armors (id, rarity_id, defense_rating, magic_resistance, armor_slot, description) VALUES
     -- Titanium Alloy (mil-spec balanced plating)
-    ('88000000-0000-0000-0000-000000000001', NULL, '660e8400-e29b-41d4-a716-446655440001', 3,  7, 1, 'head',   'Standard-issue titanium alloy combat helmet'),
-    ('88000000-0000-0000-0000-000000000002', NULL, '660e8400-e29b-41d4-a716-446655440001', 6, 10, 2, 'chest',  'Titanium alloy chest plate with ballistic lining'),
-    ('88000000-0000-0000-0000-000000000003', NULL, '660e8400-e29b-41d4-a716-446655440001', 4,  8, 1, 'legs',   'Reinforced titanium alloy leg guards'),
-    ('88000000-0000-0000-0000-000000000004', NULL, '660e8400-e29b-41d4-a716-446655440001', 2,  6, 1, 'gloves', 'Articulated titanium alloy combat gauntlets'),
+    ('88000000-0000-0000-0000-000000000001', '660e8400-e29b-41d4-a716-446655440001', 3, 1, 'head',   'Standard-issue titanium alloy combat helmet'),
+    ('88000000-0000-0000-0000-000000000002', '660e8400-e29b-41d4-a716-446655440001', 6, 2, 'chest',  'Titanium alloy chest plate with ballistic lining'),
+    ('88000000-0000-0000-0000-000000000003', '660e8400-e29b-41d4-a716-446655440001', 4, 1, 'legs',   'Reinforced titanium alloy leg guards'),
+    ('88000000-0000-0000-0000-000000000004', '660e8400-e29b-41d4-a716-446655440001', 2, 1, 'gloves', 'Articulated titanium alloy combat gauntlets'),
     -- Nanofiber (lightweight woven nano-material)
-    ('88000000-0000-0000-0000-000000000005', NULL, '660e8400-e29b-41d4-a716-446655440001', 2,  5, 1, 'head',   'Low-profile nanofiber tactical hood'),
-    ('88000000-0000-0000-0000-000000000006', NULL, '660e8400-e29b-41d4-a716-446655440001', 4,  7, 1, 'chest',  'Flexible nanofiber weave vest'),
-    ('88000000-0000-0000-0000-000000000007', NULL, '660e8400-e29b-41d4-a716-446655440001', 3,  6, 1, 'legs',   'Nanofiber mesh leggings with joint padding'),
-    ('88000000-0000-0000-0000-000000000008', NULL, '660e8400-e29b-41d4-a716-446655440001', 1,  4, 0, 'gloves', 'Thin nanofiber utility gloves'),
+    ('88000000-0000-0000-0000-000000000005', '660e8400-e29b-41d4-a716-446655440001', 2, 1, 'head',   'Low-profile nanofiber tactical hood'),
+    ('88000000-0000-0000-0000-000000000006', '660e8400-e29b-41d4-a716-446655440001', 4, 1, 'chest',  'Flexible nanofiber weave vest'),
+    ('88000000-0000-0000-0000-000000000007', '660e8400-e29b-41d4-a716-446655440001', 3, 1, 'legs',   'Nanofiber mesh leggings with joint padding'),
+    ('88000000-0000-0000-0000-000000000008', '660e8400-e29b-41d4-a716-446655440001', 1, 0, 'gloves', 'Thin nanofiber utility gloves'),
     -- Plasma-forged (energy-hardened exotic plating)
-    ('88000000-0000-0000-0000-000000000009', NULL, '660e8400-e29b-41d4-a716-446655440001', 5,  9, 2, 'head',   'Plasma-forged full-face battle visor'),
-    ('88000000-0000-0000-0000-000000000010', NULL, '660e8400-e29b-41d4-a716-446655440001', 8, 14, 3, 'chest',  'Plasma-forged heavy assault cuirass'),
-    ('88000000-0000-0000-0000-000000000011', NULL, '660e8400-e29b-41d4-a716-446655440001', 6, 11, 2, 'legs',   'Plasma-forged reinforced greaves'),
-    ('88000000-0000-0000-0000-000000000012', NULL, '660e8400-e29b-41d4-a716-446655440001', 3,  8, 2, 'gloves', 'Plasma-forged armored fist plates'),
+    ('88000000-0000-0000-0000-000000000009', '660e8400-e29b-41d4-a716-446655440001', 5, 2, 'head',   'Plasma-forged full-face battle visor'),
+    ('88000000-0000-0000-0000-000000000010', '660e8400-e29b-41d4-a716-446655440001', 8, 3, 'chest',  'Plasma-forged heavy assault cuirass'),
+    ('88000000-0000-0000-0000-000000000011', '660e8400-e29b-41d4-a716-446655440001', 6, 2, 'legs',   'Plasma-forged reinforced greaves'),
+    ('88000000-0000-0000-0000-000000000012', '660e8400-e29b-41d4-a716-446655440001', 3, 2, 'gloves', 'Plasma-forged armored fist plates'),
     -- Synth-weave (bio-synthetic adaptive mesh, high energy resistance)
-    ('88000000-0000-0000-0000-000000000013', NULL, '660e8400-e29b-41d4-a716-446655440001', 2,  5, 3, 'head',   'Synth-weave neural cowl with dampening field'),
-    ('88000000-0000-0000-0000-000000000014', NULL, '660e8400-e29b-41d4-a716-446655440001', 4,  7, 5, 'chest',  'Synth-weave adaptive torso jacket'),
-    ('88000000-0000-0000-0000-000000000015', NULL, '660e8400-e29b-41d4-a716-446655440001', 3,  6, 4, 'legs',   'Synth-weave bio-mesh leg wraps'),
-    ('88000000-0000-0000-0000-000000000016', NULL, '660e8400-e29b-41d4-a716-446655440001', 1,  4, 2, 'gloves', 'Synth-weave reactive grip wraps');
+    ('88000000-0000-0000-0000-000000000013', '660e8400-e29b-41d4-a716-446655440001', 2, 3, 'head',   'Synth-weave neural cowl with dampening field'),
+    ('88000000-0000-0000-0000-000000000014', '660e8400-e29b-41d4-a716-446655440001', 4, 5, 'chest',  'Synth-weave adaptive torso jacket'),
+    ('88000000-0000-0000-0000-000000000015', '660e8400-e29b-41d4-a716-446655440001', 3, 4, 'legs',   'Synth-weave bio-mesh leg wraps'),
+    ('88000000-0000-0000-0000-000000000016', '660e8400-e29b-41d4-a716-446655440001', 1, 2, 'gloves', 'Synth-weave reactive grip wraps');
 
 -- Step 5: Insert 2 consumables (heal only, all common)
-INSERT INTO consumables (id, type_id, rarity_id, healing_amount, mana_amount, buff_duration, max_stack_size, description) VALUES
-    ('99000000-0000-0000-0000-000000000001', NULL, '660e8400-e29b-41d4-a716-446655440001', 10, 0, 0, 20, 'Basic nano-med stim injection'),
-    ('99000000-0000-0000-0000-000000000002', NULL, '660e8400-e29b-41d4-a716-446655440001', 25, 0, 0, 10, 'Advanced regenerative stim pack');
+INSERT INTO consumables (id, rarity_id, healing_amount, mana_amount, buff_duration, max_stack_size, description) VALUES
+    ('99000000-0000-0000-0000-000000000001', '660e8400-e29b-41d4-a716-446655440001', 10, 0, 0, 20, 'Basic nano-med stim injection'),
+    ('99000000-0000-0000-0000-000000000002', '660e8400-e29b-41d4-a716-446655440001', 25, 0, 0, 10, 'Advanced regenerative stim pack');
 
 -- Step 6: Insert 24 item_templates (6 weapons + 16 armors + 2 consumables)
 INSERT INTO item_templates (id, item_name, rarity_id, item_type, item_id, icon_url, required_level, base_sell_price, base_buy_price) VALUES

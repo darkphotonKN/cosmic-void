@@ -47,7 +47,6 @@ type ItemState struct {
 	Name          string    `json:"name"`
 	Quantity      int       `json:"quantity"`
 	AttackPower   int32     `json:"attack_power,omitempty"`   // weapon
-	Durability    int32     `json:"durability,omitempty"`     // weapon
 	CriticalRate  float32   `json:"critical_rate,omitempty"`  // weapon
 	WeaponType    string    `json:"weapon_type,omitempty"`    // weapon
 	DefenseRating int32     `json:"defense_rating,omitempty"` // armor

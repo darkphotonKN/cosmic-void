@@ -6,6 +6,9 @@ option go_package = "github.com/darkphotonKN/cosmic-void-server/common/api/proto
 
 // ItemsService external API for items
 service ItemsService {
+  // general
+  rpc ListItemTemplates(google.protobuf.Empty) returns (ListItemTemplatesResponse);
+
   // ItemType operations (for dropdown/select options)
   rpc ListItemTypes(google.protobuf.Empty) returns (ListItemTypesResponse);
 
@@ -37,10 +40,10 @@ service ItemsService {
 // Layer 1: Basic Weapon (weapons table only - for create/simple queries)
 message Weapon {
   string id = 1;
-  string type_id = 2;
+  reserved 2, 5;
+  reserved "type_id", "durability";
   string rarity_id = 3;
   int32 attack_power = 4;
-  int32 durability = 5;
   float critical_rate = 6;
   string weapon_type = 7;
   string description = 8;
@@ -52,10 +55,10 @@ message Weapon {
 message WeaponDetail {
   // Weapon specific fields (from weapons table)
   string id = 1;
-  string type_id = 2;
+  reserved 2, 5;
+  reserved "type_id", "durability";
   string rarity_id = 3;
   int32 attack_power = 4;
-  int32 durability = 5;
   float critical_rate = 6;
   string weapon_type = 7;
   string description = 8;
@@ -104,10 +107,10 @@ message ListItemRaritiesResponse {
 }
 
 message CreateWeaponRequest {
-  string type_id = 1;
+  reserved 1, 4;
+  reserved "type_id", "durability";
   string rarity_id = 2;
   int32 attack_power = 3;
-  int32 durability = 4;
   float critical_rate = 5;
   string weapon_type = 6;
   string description = 7;
@@ -125,10 +128,10 @@ message ListWeaponsResponse {
 message ArmorDetail {
   // Armor fields
   string id = 1;
-  string type_id = 2;
+  reserved 2, 5;
+  reserved "type_id", "durability";
   string rarity_id = 3;
   int32 defense_rating = 4;
-  int32 durability = 5;
   int32 magic_resistance = 6;
   string armor_slot = 7;
   string description = 8;
@@ -148,6 +151,10 @@ message ArmorDetail {
   google.protobuf.Timestamp updated_at = 19;
 }
 
+message ListItemTemplatesResponse {
+  repeated ItemTemplate items = 1;
+}
+
 message ListArmorsResponse {
   repeated ArmorDetail armors = 1;
 }
@@ -156,7 +163,8 @@ message ListArmorsResponse {
 message ConsumableDetail {
   // Consumable fields
   string id = 1;
-  string type_id = 2;
+  reserved 2;
+  reserved "type_id";
   string rarity_id = 3;
   int32 healing_amount = 4;
   int32 mana_amount = 5;
@@ -183,23 +191,40 @@ message ListConsumablesResponse {
   repeated ConsumableDetail consumables = 1;
 }
 
-// ItemTemplate (unified item template)
+// ItemTemplate (unified aggregate: item_templates joined with weapons/armors/consumables/rarities)
 message ItemTemplate {
+  // base template
   string id = 1;
   string item_name = 2;
-  string item_code = 3;
-  string type_id = 4;
-  string rarity_id = 5;
-  string item_type = 6;  // 'weapon', 'armor', 'consumable'
-  string item_id = 7;    // references weapon/armor/consumable id
-  string icon_url = 8;
-  reserved 9, 10;
-  reserved "is_tradeable", "is_droppable";
-  int32 required_level = 11;
-  int32 base_sell_price = 12;
-  int32 base_buy_price = 13;
-  google.protobuf.Timestamp created_at = 14;
-  google.protobuf.Timestamp updated_at = 15;
+  string rarity = 3;
+  string item_type = 4;
+  string icon_url = 5;
+  int32 required_level = 6;
+  int32 base_sell_price = 7;
+  int32 base_buy_price = 8;
+
+  // weapon
+  int32 attack_power = 9;
+  float critical_rate = 10;
+  string weapon_type = 11;
+
+  // armor
+  int32 defense_rating = 12;
+  int32 magic_resistance = 13;
+  string armor_slot = 14;
+
+  // consumable
+  int32 healing_amount = 15;
+  int32 mana_amount = 16;
+  int32 buff_duration = 17;
+  int32 max_stack_size = 18;
+
+  // coalesced
+  string description = 19;
+
+  // timestamps
+  google.protobuf.Timestamp created_at = 20;
+  google.protobuf.Timestamp updated_at = 21;
 }
 
 // CreateItemTemplateRequest for creating item templates
@@ -237,10 +262,10 @@ message CreateCompleteWeaponRequest {
   optional int32 base_buy_price = 9;
 
   // Weapon-specific fields
-  string type_id = 10;
+  reserved 10, 13;
+  reserved "type_id", "durability";
   string rarity_id = 11;
   int32 attack_power = 12;
-  int32 durability = 13;
   float critical_rate = 14;
   string weapon_type = 15;
   string description = 16;
@@ -262,10 +287,10 @@ message CreateCompleteArmorRequest {
   optional int32 base_buy_price = 9;
 
   // Armor-specific fields
-  string type_id = 10;
+  reserved 10, 13;
+  reserved "type_id", "durability";
   string rarity_id = 11;
   int32 defense_rating = 12;
-  int32 durability = 13;
   int32 magic_resistance = 14;
   string armor_slot = 15;
   string description = 16;
@@ -287,7 +312,8 @@ message CreateCompleteConsumableRequest {
   optional int32 base_buy_price = 9;
 
   // Consumable-specific fields
-  string type_id = 10;
+  reserved 10;
+  reserved "type_id";
   string rarity_id = 11;
   int32 healing_amount = 12;
   int32 mana_amount = 13;

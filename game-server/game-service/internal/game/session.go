@@ -900,7 +900,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		lockable := lockableComp.(*components.LockableComponents)
 		if lockable.IsLocked {
 			slog.Debug("Escape door is still locked", "targetID", targetEntityID, "playerID", playerID)
-			
+
 			return fmt.Errorf("escape door is locked")
 		}
 
@@ -1047,7 +1047,6 @@ type itemTemplate struct {
 	HealingAmount   int
 	ManaAmount      int
 	BuffDuration    int
-	Durability      int
 	BuyPrice        int
 	SellPrice       int
 	Description     string
@@ -1086,7 +1085,6 @@ func (s *Session) initItemPool() error {
 				AttackPower:  int(w.AttackPower),
 				CriticalRate: float64(w.CriticalRate),
 				WeaponType:   w.WeaponType,
-				Durability:   int(w.Durability),
 				BuyPrice:     int(w.BaseBuyPrice),
 				SellPrice:    int(w.BaseSellPrice),
 				Description:  w.Description,
@@ -1109,7 +1107,6 @@ func (s *Session) initItemPool() error {
 				DefenseRating:   int(a.DefenseRating),
 				MagicResistance: int(a.MagicResistance),
 				ArmorSlot:       a.ArmorSlot,
-				Durability:      int(a.Durability),
 				BuyPrice:        int(a.BaseBuyPrice),
 				SellPrice:       int(a.BaseSellPrice),
 				Description:     a.Description,
@@ -1223,7 +1220,6 @@ func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
 			HealingAmount:   item.HealingAmount,
 			ManaAmount:      item.ManaAmount,
 			BuffDuration:    item.BuffDuration,
-			Durability:      item.Durability,
 			BuyPrice:        item.BuyPrice,
 			SellPrice:       item.SellPrice,
 			Description:     item.Description,
@@ -1389,7 +1385,7 @@ func (s *Session) InitialMapObjects() {
 }
 
 func (s *Session) InitializeBaseArmors(ctx context.Context) error {
-	armorData, err := s.itemsClient.ListArmorsWithTemplate(ctx)
+	armorData, err := s.itemsClient.ListItemTemplates(ctx)
 
 	if err != nil {
 		slog.Error("Error when attempting to get list of base armors for game creation.",
@@ -1413,7 +1409,6 @@ func (s *Session) InitializeBaseArmors(ctx context.Context) error {
 			ItemType:        "armor",
 			Name:            armor.ItemName,
 			DefenseRating:   int(armor.DefenseRating),
-			Durability:      int(armor.Durability),
 			MagicResistance: int(armor.MagicResistance),
 			ArmorSlot:       armor.ArmorSlot,
 			BuyPrice:        int(armor.BaseBuyPrice),

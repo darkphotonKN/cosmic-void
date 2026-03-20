@@ -445,7 +445,6 @@ func (s *StateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, re
 // which are populated at item creation time, avoiding per-tick gRPC calls.
 func populateItemDetails(ctx context.Context, item *components.ItemComponent, itemState *types.ItemState) {
 	itemState.AttackPower = int32(item.AttackPower)
-	itemState.Durability = int32(item.Durability)
 	itemState.CriticalRate = float32(item.CriticalRate)
 	itemState.WeaponType = item.WeaponType
 	itemState.DefenseRating = int32(item.DefenseRating)

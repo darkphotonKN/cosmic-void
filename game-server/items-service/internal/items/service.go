@@ -44,6 +44,7 @@ type Service interface {
 	GetItemTemplate(ctx context.Context, id uuid.UUID) (*ItemTemplate, error)
 	GetItemTemplateByCode(ctx context.Context, code string) (*ItemTemplate, error)
 	ListItemTemplates(ctx context.Context) ([]*ItemTemplate, error)
+	ListItemTemplateAggregates(ctx context.Context) ([]*ItemTemplateAggregate, error)
 
 	// Weapon operations with item template (JOIN queries)
 	GetWeaponWithTemplateByID(ctx context.Context, id uuid.UUID) (*WeaponWithTemplate, error)
@@ -143,10 +144,8 @@ func (s *service) ListItemRarities(ctx context.Context) ([]*ItemRarity, error) {
 
 func (s *service) CreateWeapon(ctx context.Context, req *CreateWeaponRequest) (*Weapon, error) {
 	weapon := &Weapon{
-		TypeID:       req.TypeID,
 		RarityID:     req.RarityID,
 		AttackPower:  req.AttackPower,
-		Durability:   req.Durability,
 		CriticalRate: req.CriticalRate,
 		WeaponType:   req.WeaponType,
 		Description:  req.Description,
@@ -176,10 +175,8 @@ func (s *service) ListWeapons(ctx context.Context) ([]*Weapon, error) {
 
 func (s *service) CreateArmor(ctx context.Context, req *CreateArmorRequest) (*Armor, error) {
 	armor := &Armor{
-		TypeID:          req.TypeID,
 		RarityID:        req.RarityID,
 		DefenseRating:   req.DefenseRating,
-		Durability:      req.Durability,
 		MagicResistance: req.MagicResistance,
 		ArmorSlot:       req.ArmorSlot,
 		Description:     req.Description,
@@ -206,7 +203,6 @@ func (s *service) ListArmors(ctx context.Context) ([]*Armor, error) {
 
 func (s *service) CreateConsumable(ctx context.Context, req *CreateConsumableRequest) (*Consumable, error) {
 	consumable := &Consumable{
-		TypeID:        req.TypeID,
 		RarityID:      req.RarityID,
 		HealingAmount: req.HealingAmount,
 		ManaAmount:    req.ManaAmount,
@@ -302,6 +298,10 @@ func (s *service) ListItemTemplates(ctx context.Context) ([]*ItemTemplate, error
 	return s.repo.ListItemTemplates(ctx)
 }
 
+func (s *service) ListItemTemplateAggregates(ctx context.Context) ([]*ItemTemplateAggregate, error) {
+	return s.repo.ListItemTemplateAggregates(ctx)
+}
+
 // ==========================================
 // Weapon with Template Service Methods
 // ==========================================
@@ -330,10 +330,8 @@ func (s *service) ListConsumablesWithTemplate(ctx context.Context) ([]*Consumabl
 func (s *service) CreateCompleteWeapon(ctx context.Context, req *CreateCompleteWeaponRequest) (*WeaponWithTemplate, error) {
 	// Step 1: Create the weapon with specific attributes
 	weaponReq := &CreateWeaponRequest{
-		TypeID:       req.TypeID,
 		RarityID:     req.RarityID,
 		AttackPower:  req.AttackPower,
-		Durability:   req.Durability,
 		CriticalRate: req.CriticalRate,
 		WeaponType:   req.WeaponType,
 		Description:  req.Description,
@@ -374,10 +372,8 @@ func (s *service) CreateCompleteWeapon(ctx context.Context, req *CreateCompleteW
 	// Step 3: Return the combined result
 	return &WeaponWithTemplate{
 		ID:           weapon.ID,
-		TypeID:       weapon.TypeID,
 		RarityID:     weapon.RarityID,
 		AttackPower:  weapon.AttackPower,
-		Durability:   weapon.Durability,
 		CriticalRate: weapon.CriticalRate,
 		WeaponType:   weapon.WeaponType,
 		Description:  weapon.Description,
@@ -396,10 +392,8 @@ func (s *service) CreateCompleteWeapon(ctx context.Context, req *CreateCompleteW
 func (s *service) CreateCompleteArmor(ctx context.Context, req *CreateCompleteArmorRequest) (*ArmorWithTemplate, error) {
 	// Step 1: Create the armor with specific attributes
 	armorReq := &CreateArmorRequest{
-		TypeID:          req.TypeID,
 		RarityID:        req.RarityID,
 		DefenseRating:   req.DefenseRating,
-		Durability:      req.Durability,
 		MagicResistance: req.MagicResistance,
 		ArmorSlot:       req.ArmorSlot,
 		Description:     req.Description,
@@ -439,10 +433,8 @@ func (s *service) CreateCompleteArmor(ctx context.Context, req *CreateCompleteAr
 	// Step 3: Return the combined result
 	return &ArmorWithTemplate{
 		ID:              armor.ID,
-		TypeID:          armor.TypeID,
 		RarityID:        armor.RarityID,
 		DefenseRating:   armor.DefenseRating,
-		Durability:      armor.Durability,
 		MagicResistance: armor.MagicResistance,
 		ArmorSlot:       armor.ArmorSlot,
 		Description:     armor.Description,
@@ -461,7 +453,6 @@ func (s *service) CreateCompleteArmor(ctx context.Context, req *CreateCompleteAr
 func (s *service) CreateCompleteConsumable(ctx context.Context, req *CreateCompleteConsumableRequest) (*ConsumableWithTemplate, error) {
 	// Step 1: Create the consumable with specific attributes
 	consumableReq := &CreateConsumableRequest{
-		TypeID:        req.TypeID,
 		RarityID:      req.RarityID,
 		HealingAmount: req.HealingAmount,
 		ManaAmount:    req.ManaAmount,
@@ -504,7 +495,6 @@ func (s *service) CreateCompleteConsumable(ctx context.Context, req *CreateCompl
 	// Step 3: Return the combined result
 	return &ConsumableWithTemplate{
 		ID:            consumable.ID,
-		TypeID:        consumable.TypeID,
 		RarityID:      consumable.RarityID,
 		HealingAmount: consumable.HealingAmount,
 		ManaAmount:    consumable.ManaAmount,

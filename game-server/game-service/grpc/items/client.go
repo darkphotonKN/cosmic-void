@@ -25,6 +25,20 @@ func NewClient(registry discovery.Registry) ItemsClient {
 	}
 }
 
+// get all items under an aggregated type
+func (c *Client) ListItemTemplates(ctx context.Context) (*pb.ListItemTemplatesResponse, error) {
+	conn, err := discovery.ServiceConnection(ctx, serviceName, c.registry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to items service: %w", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewItemsServiceClient(conn)
+
+	items, err := client.ListItemTemplates(ctx, &emptypb.Empty{})
+	return items, err
+}
+
 // CreateWeapon creates a new weapon
 func (c *Client) CreateWeapon(ctx context.Context, req *pb.CreateWeaponRequest) (*pb.Weapon, error) {
 	conn, err := discovery.ServiceConnection(ctx, serviceName, c.registry)

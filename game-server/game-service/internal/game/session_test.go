@@ -379,7 +379,6 @@ func (c *mockItemsClient) ListArmorsWithTemplate(ctx context.Context) (*pb.ListA
 				Id:              "88000000-0000-0000-0000-000000000001",
 				RarityId:        "660e8400-e29b-41d4-a716-446655440001",
 				DefenseRating:   3,
-				Durability:      7,
 				MagicResistance: 1,
 				ArmorSlot:       "head",
 				Description:     "Standard-issue titanium alloy combat helmet",
@@ -394,7 +393,6 @@ func (c *mockItemsClient) ListArmorsWithTemplate(ctx context.Context) (*pb.ListA
 				Id:              "88000000-0000-0000-0000-000000000002",
 				RarityId:        "660e8400-e29b-41d4-a716-446655440001",
 				DefenseRating:   6,
-				Durability:      10,
 				MagicResistance: 2,
 				ArmorSlot:       "chest",
 				Description:     "Titanium alloy chest plate with ballistic lining",
@@ -409,7 +407,6 @@ func (c *mockItemsClient) ListArmorsWithTemplate(ctx context.Context) (*pb.ListA
 				Id:              "88000000-0000-0000-0000-000000000003",
 				RarityId:        "660e8400-e29b-41d4-a716-446655440001",
 				DefenseRating:   4,
-				Durability:      8,
 				MagicResistance: 1,
 				ArmorSlot:       "legs",
 				Description:     "Reinforced titanium alloy leg guards",
@@ -424,7 +421,6 @@ func (c *mockItemsClient) ListArmorsWithTemplate(ctx context.Context) (*pb.ListA
 				Id:              "88000000-0000-0000-0000-000000000004",
 				RarityId:        "660e8400-e29b-41d4-a716-446655440001",
 				DefenseRating:   2,
-				Durability:      6,
 				MagicResistance: 1,
 				ArmorSlot:       "gloves",
 				Description:     "Articulated titanium alloy combat gauntlets",
@@ -446,12 +442,14 @@ func (c *mockItemsClient) ListConsumablesWithTemplate(ctx context.Context) (*pb.
 type mockStateSerializer struct {
 }
 
-func (s *mockStateSerializer) ClientStateAddCurrentPlayer(clientState *types.ClientGameState, playerID uuid.UUID) *types.ClientGameState {
-	return nil
+func (s *mockStateSerializer) SerializeBackendState(ctx context.Context, sessionID uuid.UUID, entities []*ecs.Entity) (*types.BackendGameState, error) {
+	return nil, nil
 }
+
 func (s *mockStateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, recipientPlayerID uuid.UUID, entities []*ecs.Entity) (*types.ClientGameState, error) {
 	return nil, nil
 }
-func (s *mockStateSerializer) SerializeOnce(ctx context.Context, sessionID uuid.UUID, entities []*ecs.Entity) (*types.ClientGameState, error) {
-	return nil, nil
+
+func (s *mockStateSerializer) FormatStateToClientState(backendState *types.BackendGameState, playerID uuid.UUID) *types.ClientGameState {
+	return nil
 }

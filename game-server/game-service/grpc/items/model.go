@@ -8,6 +8,8 @@ import (
 
 // ItemsClient defines the interface for items service gRPC client
 type ItemsClient interface {
+	ListItemTemplates(ctx context.Context) (*pb.ListItemTemplatesResponse, error)
+
 	// CreateWeapon creates a new weapon
 	CreateWeapon(ctx context.Context, req *pb.CreateWeaponRequest) (*pb.Weapon, error)
 

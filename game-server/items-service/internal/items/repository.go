@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"go.opentelemetry.io/otel/attribute"
@@ -54,6 +55,7 @@ type Repository interface {
 	GetItemTemplateByID(ctx context.Context, id uuid.UUID) (*ItemTemplate, error)
 	GetItemTemplateByCode(ctx context.Context, code string) (*ItemTemplate, error)
 	ListItemTemplates(ctx context.Context) ([]*ItemTemplate, error)
+	ListItemTemplateAggregates(ctx context.Context) ([]*ItemTemplateAggregate, error)
 }
 
 type repository struct {
@@ -65,10 +67,6 @@ func NewRepository(db *sqlx.DB) Repository {
 		DB: db,
 	}
 }
-
-// ==========================================
-// ItemType Repository Methods
-// ==========================================
 
 func (r *repository) CreateItemType(ctx context.Context, itemType *ItemType) error {
 	itemType.ID = uuid.New()
@@ -200,10 +198,10 @@ func (r *repository) CreateWeapon(ctx context.Context, weapon *Weapon) error {
 
 	query := `
 		INSERT INTO weapons (
-			id, type_id, rarity_id, attack_power, durability,
+			id, rarity_id, attack_power,
 			critical_rate, weapon_type, description
 		) VALUES (
-			:id, :type_id, :rarity_id, :attack_power, :durability,
+			:id, :rarity_id, :attack_power,
 			:critical_rate, :weapon_type, :description
 		)`
 
@@ -250,10 +248,10 @@ func (r *repository) CreateArmor(ctx context.Context, armor *Armor) error {
 
 	query := `
 		INSERT INTO armors (
-			id, type_id, rarity_id, defense_rating, durability,
+			id, rarity_id, defense_rating,
 			magic_resistance, armor_slot, description
 		) VALUES (
-			:id, :type_id, :rarity_id, :defense_rating, :durability,
+			:id, :rarity_id, :defense_rating,
 			:magic_resistance, :armor_slot, :description
 		)`
 
@@ -300,10 +298,10 @@ func (r *repository) CreateConsumable(ctx context.Context, consumable *Consumabl
 
 	query := `
 		INSERT INTO consumables (
-			id, type_id, rarity_id, healing_amount, mana_amount,
+			id, rarity_id, healing_amount, mana_amount,
 			buff_duration, max_stack_size, description
 		) VALUES (
-			:id, :type_id, :rarity_id, :healing_amount, :mana_amount,
+			:id, :rarity_id, :healing_amount, :mana_amount,
 			:buff_duration, :max_stack_size, :description
 		)`
 
@@ -389,24 +387,60 @@ func (r *repository) GetItemTemplateByCode(ctx context.Context, code string) (*I
 	return nil, fmt.Errorf("GetItemTemplateByCode is deprecated: item_code column no longer exists")
 }
 
-func (r *repository) ListItemTemplates(ctx context.Context) ([]*ItemTemplate, error) {
-	var templates []*ItemTemplate
+func (r *repository) ListItemTemplateAggregates(ctx context.Context) ([]*ItemTemplateAggregate, error) {
 
-	query := `SELECT * FROM item_templates ORDER BY created_at DESC`
+	query := `
+SELECT
+    it.id,
+    it.item_name,
+    it.item_type,
+    it.icon_url,
+    it.required_level,
+    it.base_sell_price,
+    it.base_buy_price,
+    r.rarity_name AS rarity,
+    w.attack_power,
+    w.critical_rate,
+    w.weapon_type,
+    a.defense_rating,
+    a.magic_resistance,
+    a.armor_slot,
+    c.healing_amount,
+    c.mana_amount,
+    c.buff_duration,
+    c.max_stack_size,
+    COALESCE(w.description, a.description, c.description) AS description,
+    it.created_at,
+    it.created_by,
+    it.updated_at,
+    it.updated_by
+FROM item_templates AS it
+LEFT JOIN weapons AS w
+    ON w.id = it.item_id AND it.item_type = 'weapon'
+LEFT JOIN armors AS a
+    ON a.id = it.item_id AND it.item_type = 'armor'
+LEFT JOIN consumables AS c
+    ON c.id = it.item_id AND it.item_type = 'consumable'
+LEFT JOIN item_rarities AS r
+    ON r.id = it.rarity_id
+	`
 
-	err := r.DB.SelectContext(ctx, &templates, query)
+	var items []*ItemTemplateAggregate
+
+	err := r.DB.SelectContext(ctx, &items, query)
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to list item templates: %w", err)
+		return nil, commonhelpers.AnalyzeDBErr(err)
 	}
 
-	return templates, nil
+	return items, nil
 }
 
 func (r *repository) GetWeaponWithTemplateByID(ctx context.Context, id uuid.UUID) (*WeaponWithTemplate, error) {
 	var weapon WeaponWithTemplate
 
 	query := `
-		SELECT w.id, w.type_id, w.rarity_id, w.attack_power, w.durability,
+		SELECT w.id, w.rarity_id, w.attack_power,
 		       w.critical_rate, w.weapon_type, w.description, w.created_at, w.updated_at,
 		       t.id AS item_template_id, t.item_name, t.icon_url,
 		       t.required_level, t.base_sell_price, t.base_buy_price
@@ -430,7 +464,7 @@ func (r *repository) ListArmorsWithTemplate(ctx context.Context) ([]*ArmorWithTe
 	var armors []*ArmorWithTemplate
 
 	query := `
-		SELECT a.id, a.type_id, a.rarity_id, a.defense_rating, a.durability,
+		SELECT a.id, a.rarity_id, a.defense_rating,
 		       a.magic_resistance, a.armor_slot, a.description, a.created_at, a.updated_at,
 		       t.id AS item_template_id, t.item_name, t.icon_url,
 		       t.required_level, t.base_sell_price, t.base_buy_price
@@ -454,7 +488,7 @@ func (r *repository) ListConsumablesWithTemplate(ctx context.Context) ([]*Consum
 	var consumables []*ConsumableWithTemplate
 
 	query := `
-		SELECT c.id, c.type_id, c.rarity_id, c.healing_amount, c.mana_amount,
+		SELECT c.id, c.rarity_id, c.healing_amount, c.mana_amount,
 		       c.buff_duration, c.max_stack_size, c.description, c.created_at, c.updated_at,
 		       t.id AS item_template_id, t.item_name, t.icon_url,
 		       t.required_level, t.base_sell_price, t.base_buy_price
@@ -478,7 +512,7 @@ func (r *repository) ListWeaponsWithTemplate(ctx context.Context) ([]*WeaponWith
 	var weapons []*WeaponWithTemplate
 
 	query := `
-		SELECT w.id, w.type_id, w.rarity_id, w.attack_power, w.durability,
+		SELECT w.id, w.rarity_id, w.attack_power,
 		       w.critical_rate, w.weapon_type, w.description, w.created_at, w.updated_at,
 		       t.id AS item_template_id, t.item_name, t.icon_url,
 		       t.required_level, t.base_sell_price, t.base_buy_price

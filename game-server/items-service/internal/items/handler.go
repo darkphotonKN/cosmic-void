@@ -57,6 +57,88 @@ func stringToRole(roleStr string) commontypes.Role {
 	}
 }
 
+// ListItemTemplates retrieves all item templates as aggregates (gRPC endpoint)
+func (h *Handler) ListItemTemplates(ctx context.Context, _ *emptypb.Empty) (*pb.ListItemTemplatesResponse, error) {
+	items, err := h.service.ListItemTemplateAggregates(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list item templates: %v", err)
+	}
+
+	pbItems := make([]*pb.ItemTemplate, len(items))
+	for i, item := range items {
+		var iconURL, weaponType, armorSlot, description string
+		if item.IconURL != nil {
+			iconURL = *item.IconURL
+		}
+		if item.WeaponType != nil {
+			weaponType = *item.WeaponType
+		}
+		if item.ArmorSlot != nil {
+			armorSlot = *item.ArmorSlot
+		}
+		if item.Description != nil {
+			description = *item.Description
+		}
+
+		var attackPower, defenseRating, magicResistance int32
+		var criticalRate float32
+		var healingAmount, manaAmount, buffDuration, maxStackSize int32
+		if item.AttackPower != nil {
+			attackPower = int32(*item.AttackPower)
+		}
+		if item.CriticalRate != nil {
+			criticalRate = float32(*item.CriticalRate)
+		}
+		if item.DefenseRating != nil {
+			defenseRating = int32(*item.DefenseRating)
+		}
+		if item.MagicResistance != nil {
+			magicResistance = int32(*item.MagicResistance)
+		}
+		if item.HealingAmount != nil {
+			healingAmount = int32(*item.HealingAmount)
+		}
+		if item.ManaAmount != nil {
+			manaAmount = int32(*item.ManaAmount)
+		}
+		if item.BuffDuration != nil {
+			buffDuration = int32(*item.BuffDuration)
+		}
+		if item.MaxStackSize != nil {
+			maxStackSize = int32(*item.MaxStackSize)
+		}
+
+		pbItems[i] = &pb.ItemTemplate{
+			Id:            item.ID.String(),
+			ItemName:      item.ItemName,
+			Rarity:        item.Rarity,
+			ItemType:      item.ItemType,
+			IconUrl:       iconURL,
+			RequiredLevel: int32(item.RequiredLevel),
+			BaseSellPrice: int32(item.BaseSellPrice),
+			BaseBuyPrice:  int32(item.BaseBuyPrice),
+			CreatedAt:     timestamppb.New(item.CreatedAt),
+			UpdatedAt:     timestamppb.New(item.UpdatedAt),
+
+			AttackPower:     attackPower,
+			CriticalRate:    criticalRate,
+			WeaponType:      weaponType,
+			DefenseRating:   defenseRating,
+			MagicResistance: magicResistance,
+			ArmorSlot:       armorSlot,
+			HealingAmount:   healingAmount,
+			ManaAmount:      manaAmount,
+			BuffDuration:    buffDuration,
+			MaxStackSize:    maxStackSize,
+			Description:     description,
+		}
+	}
+
+	return &pb.ListItemTemplatesResponse{
+		Items: pbItems,
+	}, nil
+}
+
 // CreateWeapon creates a new weapon (gRPC endpoint)
 func (h *Handler) CreateWeapon(ctx context.Context, req *pb.CreateWeaponRequest) (*pb.Weapon, error) {
 	// Parse UUIDs
@@ -65,16 +147,12 @@ func (h *Handler) CreateWeapon(ctx context.Context, req *pb.CreateWeaponRequest)
 		return nil, status.Errorf(codes.InvalidArgument, "invalid rarity_id: %v", err)
 	}
 
-	// Parse type_id
-	typeID, _ := uuid.Parse(req.TypeId)
-
 	// Create weapon request
 	critRate := float64(req.CriticalRate)
 	createReq := &CreateWeaponRequest{
-		TypeID:       typeID,
 		RarityID:     rarityID,
 		AttackPower:  int(req.AttackPower),
-		Durability:   int(req.Durability),
+
 		CriticalRate: &critRate,
 		WeaponType:   &req.WeaponType,
 		Description:  &req.Description,
@@ -101,10 +179,10 @@ func (h *Handler) CreateWeapon(ctx context.Context, req *pb.CreateWeaponRequest)
 
 	return &pb.Weapon{
 		Id:           weapon.ID.String(),
-		TypeId:       weapon.TypeID.String(),
+
 		RarityId:     weapon.RarityID.String(),
 		AttackPower:  int32(weapon.AttackPower),
-		Durability:   int32(weapon.Durability),
+
 		CriticalRate: pbCritRate,
 		WeaponType:   pbWeaponType,
 		Description:  pbDescription,
@@ -148,13 +226,13 @@ func (h *Handler) GetWeaponWithTemplateByID(ctx context.Context, req *pb.GetWeap
 		Id:           weapon.ID.String(),
 		RarityId:     weapon.RarityID.String(),
 		AttackPower:  int32(weapon.AttackPower),
-		Durability:   int32(weapon.Durability),
+
 		CriticalRate: critRate,
 		WeaponType:   weaponType,
 		Description:  description,
 
 		// ItemTemplate fields
-		TypeId:         weapon.TypeID.String(),
+
 		ItemTemplateId: weapon.ItemTemplateID.String(),
 		ItemName:       weapon.ItemName,
 		IconUrl:        iconURL,
@@ -199,13 +277,13 @@ func (h *Handler) ListWeaponsWithTemplate(ctx context.Context, _ *emptypb.Empty)
 			Id:           weapon.ID.String(),
 			RarityId:     weapon.RarityID.String(),
 			AttackPower:  int32(weapon.AttackPower),
-			Durability:   int32(weapon.Durability),
+	
 			CriticalRate: critRate,
 			WeaponType:   weaponType,
 			Description:  description,
 
 			// ItemTemplate fields
-			TypeId:         weapon.TypeID.String(),
+	
 			ItemTemplateId: weapon.ItemTemplateID.String(),
 			ItemName:       weapon.ItemName,
 			IconUrl:        iconURL,
@@ -251,12 +329,12 @@ func (h *Handler) ListArmorsWithTemplate(ctx context.Context, _ *emptypb.Empty) 
 			Id:              armor.ID.String(),
 			RarityId:        armor.RarityID.String(),
 			DefenseRating:   int32(armor.DefenseRating),
-			Durability:      int32(armor.Durability),
+	
 			MagicResistance: magicResistance,
 			ArmorSlot:       armorSlot,
 			Description:     description,
 
-			TypeId:         armor.TypeID.String(),
+	
 			ItemTemplateId: armor.ItemTemplateID.String(),
 			ItemName:       armor.ItemName,
 			IconUrl:        iconURL,
@@ -310,7 +388,7 @@ func (h *Handler) ListConsumablesWithTemplate(ctx context.Context, _ *emptypb.Em
 			MaxStackSize:  int32(consumable.MaxStackSize),
 			Description:   description,
 
-			TypeId:         consumable.TypeID.String(),
+	
 			ItemTemplateId: consumable.ItemTemplateID.String(),
 			ItemName:       consumable.ItemName,
 			IconUrl:        iconURL,
@@ -393,9 +471,8 @@ func (h *Handler) CreateItemTemplate(ctx context.Context, req *pb.CreateItemTemp
 	return &pb.ItemTemplate{
 		Id:            template.ID.String(),
 		ItemName:      template.ItemName,
-		RarityId:      template.RarityID.String(),
+		Rarity:        template.Rarity,
 		ItemType:      template.ItemType,
-		ItemId:        template.ItemID.String(),
 		IconUrl:       iconURL,
 		RequiredLevel: int32(template.RequiredLevel),
 		BaseSellPrice: int32(template.BaseSellPrice),
@@ -422,14 +499,12 @@ func (h *Handler) CreateCompleteWeapon(ctx context.Context, req *pb.CreateComple
 
 	// Build service request
 	critRate := float64(req.CriticalRate)
-	typeID, _ := uuid.Parse(req.TypeId)
 	createReq := &CreateCompleteWeaponRequest{
 		UserId:   req.UserId,
 		ItemName: req.ItemName,
-		TypeID:   typeID,
 		RarityID: rarityID,
 		AttackPower:  int(req.AttackPower),
-		Durability:   int(req.Durability),
+
 		CriticalRate: &critRate,
 		WeaponType:   &req.WeaponType,
 		Description:  &req.Description,
@@ -479,13 +554,13 @@ func (h *Handler) CreateCompleteWeapon(ctx context.Context, req *pb.CreateComple
 		Id:       weaponWithTemplate.ID.String(),
 		RarityId: weaponWithTemplate.RarityID.String(),
 		AttackPower:  int32(weaponWithTemplate.AttackPower),
-		Durability:   int32(weaponWithTemplate.Durability),
+
 		CriticalRate: critRatePb,
 		WeaponType:   weaponType,
 		Description:  description,
 
 		// ItemTemplate fields
-		TypeId:         weaponWithTemplate.TypeID.String(),
+
 		ItemTemplateId: weaponWithTemplate.ItemTemplateID.String(),
 		ItemName:       weaponWithTemplate.ItemName,
 		IconUrl:        iconURL,
@@ -514,14 +589,12 @@ func (h *Handler) CreateCompleteArmor(ctx context.Context, req *pb.CreateComplet
 
 	// Build service request
 	magicRes := int(req.MagicResistance)
-	typeID, _ := uuid.Parse(req.TypeId)
 	createReq := &CreateCompleteArmorRequest{
 		UserId:          req.UserId,
 		ItemName:        req.ItemName,
-		TypeID:          typeID,
 		RarityID:        rarityID,
 		DefenseRating:   int(req.DefenseRating),
-		Durability:      int(req.Durability),
+
 		MagicResistance: &magicRes,
 		ArmorSlot:       &req.ArmorSlot,
 		Description:     &req.Description,
@@ -570,12 +643,12 @@ func (h *Handler) CreateCompleteArmor(ctx context.Context, req *pb.CreateComplet
 		Id:       armorWithTemplate.ID.String(),
 		RarityId: armorWithTemplate.RarityID.String(),
 		DefenseRating:   int32(armorWithTemplate.DefenseRating),
-		Durability:      int32(armorWithTemplate.Durability),
+
 		MagicResistance: magicResPb,
 		ArmorSlot:       armorSlot,
 		Description:     description,
 
-		TypeId:         armorWithTemplate.TypeID.String(),
+
 		ItemTemplateId: armorWithTemplate.ItemTemplateID.String(),
 		ItemName:       armorWithTemplate.ItemName,
 		IconUrl:        iconURL,
@@ -606,11 +679,9 @@ func (h *Handler) CreateCompleteConsumable(ctx context.Context, req *pb.CreateCo
 	healingAmt := int(req.HealingAmount)
 	manaAmt := int(req.ManaAmount)
 	buffDur := int(req.BuffDuration)
-	typeID, _ := uuid.Parse(req.TypeId)
 	createReq := &CreateCompleteConsumableRequest{
 		UserId:   req.UserId,
 		ItemName: req.ItemName,
-		TypeID:   typeID,
 		RarityID: rarityID,
 		HealingAmount: &healingAmt,
 		ManaAmount:    &manaAmt,
@@ -670,7 +741,7 @@ func (h *Handler) CreateCompleteConsumable(ctx context.Context, req *pb.CreateCo
 		MaxStackSize:  int32(consumableWithTemplate.MaxStackSize),
 		Description:   description,
 
-		TypeId:         consumableWithTemplate.TypeID.String(),
+
 		ItemTemplateId: consumableWithTemplate.ItemTemplateID.String(),
 		ItemName:       consumableWithTemplate.ItemName,
 		IconUrl:        iconURL,

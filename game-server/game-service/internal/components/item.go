@@ -26,7 +26,6 @@ type ItemComponent struct {
 	BuffDuration    int
 
 	// Shared
-	Durability      int
 	BuyPrice        int
 	SellPrice       int
 	Description     string

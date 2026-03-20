@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.27.1
-// source: common/api/proto/items/items.proto
+// source: api/proto/items/items.proto
 
 package items
 
@@ -20,6 +20,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	ItemsService_ListItemTemplates_FullMethodName           = "/items.ItemsService/ListItemTemplates"
 	ItemsService_ListItemTypes_FullMethodName               = "/items.ItemsService/ListItemTypes"
 	ItemsService_ListItemRarities_FullMethodName            = "/items.ItemsService/ListItemRarities"
 	ItemsService_CreateWeapon_FullMethodName                = "/items.ItemsService/CreateWeapon"
@@ -39,6 +40,8 @@ const (
 //
 // ItemsService external API for items
 type ItemsServiceClient interface {
+	// general
+	ListItemTemplates(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListItemTemplatesResponse, error)
 	// ItemType operations (for dropdown/select options)
 	ListItemTypes(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListItemTypesResponse, error)
 	// ItemRarity operations (for dropdown/select options)
@@ -65,6 +68,16 @@ type itemsServiceClient struct {
 
 func NewItemsServiceClient(cc grpc.ClientConnInterface) ItemsServiceClient {
 	return &itemsServiceClient{cc}
+}
+
+func (c *itemsServiceClient) ListItemTemplates(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListItemTemplatesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListItemTemplatesResponse)
+	err := c.cc.Invoke(ctx, ItemsService_ListItemTemplates_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *itemsServiceClient) ListItemTypes(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListItemTypesResponse, error) {
@@ -183,6 +196,8 @@ func (c *itemsServiceClient) CreateCompleteConsumable(ctx context.Context, in *C
 //
 // ItemsService external API for items
 type ItemsServiceServer interface {
+	// general
+	ListItemTemplates(context.Context, *emptypb.Empty) (*ListItemTemplatesResponse, error)
 	// ItemType operations (for dropdown/select options)
 	ListItemTypes(context.Context, *emptypb.Empty) (*ListItemTypesResponse, error)
 	// ItemRarity operations (for dropdown/select options)
@@ -211,6 +226,9 @@ type ItemsServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedItemsServiceServer struct{}
 
+func (UnimplementedItemsServiceServer) ListItemTemplates(context.Context, *emptypb.Empty) (*ListItemTemplatesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListItemTemplates not implemented")
+}
 func (UnimplementedItemsServiceServer) ListItemTypes(context.Context, *emptypb.Empty) (*ListItemTypesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListItemTypes not implemented")
 }
@@ -263,6 +281,24 @@ func RegisterItemsServiceServer(s grpc.ServiceRegistrar, srv ItemsServiceServer)
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&ItemsService_ServiceDesc, srv)
+}
+
+func _ItemsService_ListItemTemplates_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServiceServer).ListItemTemplates(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ItemsService_ListItemTemplates_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServiceServer).ListItemTemplates(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _ItemsService_ListItemTypes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -471,6 +507,10 @@ var ItemsService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ItemsServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "ListItemTemplates",
+			Handler:    _ItemsService_ListItemTemplates_Handler,
+		},
+		{
 			MethodName: "ListItemTypes",
 			Handler:    _ItemsService_ListItemTypes_Handler,
 		},
@@ -516,5 +556,5 @@ var ItemsService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "common/api/proto/items/items.proto",
+	Metadata: "api/proto/items/items.proto",
 }

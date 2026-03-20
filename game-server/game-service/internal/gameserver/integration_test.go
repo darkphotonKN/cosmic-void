@@ -60,10 +60,8 @@ type MockItemsClient struct{}
 func (m *MockItemsClient) CreateWeapon(ctx context.Context, req *itemspb.CreateWeaponRequest) (*itemspb.Weapon, error) {
 	return &itemspb.Weapon{
 		Id:           uuid.New().String(),
-		TypeId:       "test-type",
 		RarityId:     "common",
 		AttackPower:  15,
-		Durability:   100,
 		CriticalRate: 0.1,
 		WeaponType:   "sword",
 		Description:  "A test weapon",
@@ -73,10 +71,8 @@ func (m *MockItemsClient) CreateWeapon(ctx context.Context, req *itemspb.CreateW
 func (m *MockItemsClient) GetWeaponWithTemplateByID(ctx context.Context, req *itemspb.GetWeaponRequest) (*itemspb.WeaponDetail, error) {
 	return &itemspb.WeaponDetail{
 		Id:             req.Id,
-		TypeId:         "test-type",
 		RarityId:       "common",
 		AttackPower:    15,
-		Durability:     100,
 		CriticalRate:   0.1,
 		WeaponType:     "sword",
 		Description:    "A test weapon",
