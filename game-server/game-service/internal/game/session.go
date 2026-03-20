@@ -443,6 +443,7 @@ func (s *Session) AddPlayer(playerID uuid.UUID, username string) uuid.UUID {
 		Vy: 0,
 
 		ItemIDList: []uuid.UUID{},
+		Escape:     false,
 	}
 
 	// create player state entity
@@ -852,13 +853,6 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 				lockable.IsLocked = false
 
 				slog.Info("Exit door unlocked!")
-
-				s.sender.BroadcastToPlayerList(s.GetPlayerIDs(), types.Message{
-					Action: "exit_door_unlocked",
-					Payload: map[string]interface{}{
-						"message": "Exit door unlocked! Run to escape!",
-					},
-				})
 			}
 		}
 
@@ -906,7 +900,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		lockable := lockableComp.(*components.LockableComponents)
 		if lockable.IsLocked {
 			slog.Debug("Escape door is still locked", "targetID", targetEntityID, "playerID", playerID)
-			s.sendErrorToPlayer(playerID, string(constants.ActionInteract), "escape door is locked! Find the switch to unlock it.")
+			
 			return fmt.Errorf("escape door is locked")
 		}
 
@@ -917,15 +911,6 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 			openable.IsOpen = true
 			slog.Info("Escape door opened!", "playerID", playerID)
 		}
-
-		// send confirmation to player
-		s.sender.SendMessageToPlayer(playerID, types.Message{
-			Action: string(constants.ActionInteract),
-			Payload: map[string]interface{}{
-				"success": true,
-				"message": "Escaping through the door!",
-			},
-		})
 
 		// trigger escape after a short delay to allow door animation
 		slog.Info("Player is escaping through the door!", "playerID", playerID)
@@ -1011,16 +996,9 @@ func (s *Session) handlePlayerEscape(playerID uuid.UUID) {
 		return
 	}
 	player := playerComp.(*components.PlayerComponent)
-
+	player.Escape = true
 	slog.Info("Player escaped!", "playerID", playerID, "username", player.Username)
 
-	s.sender.BroadcastToPlayerList(s.GetPlayerIDs(), types.Message{
-		Action: "player_escaped",
-		Payload: map[string]interface{}{
-			"winner":  player.Username,
-			"message": fmt.Sprintf("%s escaped successfully!", player.Username),
-		},
-	})
 }
 
 func (s *Session) handleAttack(playerID uuid.UUID, enemyEntityID uuid.UUID) error {
@@ -1344,12 +1322,11 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 	// --- player data ---
 	for _, entity := range entities {
 		playerComponent, isPlayer := entity.GetComponent(ecs.ComponentTypePlayer)
+		// escapeDoorComp, _ := entity.GetComponent(ecs.ComponentTypeEscapeDoor)
 
 		if isPlayer {
 			// assert back to component's original type
 			playerState := playerComponent.(*components.PlayerComponent)
-
-			// pull players end game stats state out of its entity
 			statsComp, _ := entity.GetComponent(ecs.ComponentTypeStats)
 			stats := statsComp.(*components.StatsComponent)
 
@@ -1358,6 +1335,7 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 				Username: playerState.Username,
 				Kills:    int32(stats.Kills),
 				Deaths:   int32(stats.Deaths),
+				Escape:   playerState.Escape,
 			})
 		}
 	}

@@ -85,6 +85,7 @@ func (s *StateSerializer) SerializeBackendState(ctx context.Context, sessionID u
 					Speed: velocity.Speed,
 				},
 				Inventory: inventory,
+				Escape:    player.Escape,
 			}
 
 			// Check if this is the recipient player

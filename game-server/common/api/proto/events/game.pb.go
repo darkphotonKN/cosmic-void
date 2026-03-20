@@ -99,6 +99,7 @@ type PlayerMatchResult struct {
 	FinalPosition int32                  `protobuf:"varint,4,opt,name=final_position,json=finalPosition,proto3" json:"final_position,omitempty"`
 	Kills         int32                  `protobuf:"varint,5,opt,name=kills,proto3" json:"kills,omitempty"`
 	Deaths        int32                  `protobuf:"varint,6,opt,name=deaths,proto3" json:"deaths,omitempty"`
+	Escape        bool                   `protobuf:"varint,7,opt,name=escape,proto3" json:"escape,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -175,6 +176,13 @@ func (x *PlayerMatchResult) GetDeaths() int32 {
 	return 0
 }
 
+func (x *PlayerMatchResult) GetEscape() bool {
+	if x != nil {
+		return x.Escape
+	}
+	return false
+}
+
 var File_api_proto_events_game_proto protoreflect.FileDescriptor
 
 const file_api_proto_events_game_proto_rawDesc = "" +
@@ -185,14 +193,15 @@ const file_api_proto_events_game_proto_rawDesc = "" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12D\n" +
 	"\x10match_started_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x0ematchStartedAt\x12@\n" +
 	"\x0ematch_ended_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\fmatchEndedAt\x123\n" +
-	"\aplayers\x18\x04 \x03(\v2\x19.events.PlayerMatchResultR\aplayers\"\xb3\x01\n" +
+	"\aplayers\x18\x04 \x03(\v2\x19.events.PlayerMatchResultR\aplayers\"\xcb\x01\n" +
 	"\x11PlayerMatchResult\x12\x1b\n" +
 	"\tmember_id\x18\x01 \x01(\tR\bmemberId\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x10\n" +
 	"\x03win\x18\x03 \x01(\bR\x03win\x12%\n" +
 	"\x0efinal_position\x18\x04 \x01(\x05R\rfinalPosition\x12\x14\n" +
 	"\x05kills\x18\x05 \x01(\x05R\x05kills\x12\x16\n" +
-	"\x06deaths\x18\x06 \x01(\x05R\x06deathsBDZBgithub.com/darkphotonKN/cosmic-void-server/common/api/proto/eventsb\x06proto3"
+	"\x06deaths\x18\x06 \x01(\x05R\x06deaths\x12\x16\n" +
+	"\x06escape\x18\a \x01(\bR\x06escapeBDZBgithub.com/darkphotonKN/cosmic-void-server/common/api/proto/eventsb\x06proto3"
 
 var (
 	file_api_proto_events_game_proto_rawDescOnce sync.Once

@@ -20,4 +20,5 @@ message PlayerMatchResult {
     int32 final_position = 4;
     int32 kills = 5;
     int32 deaths = 6;
+    bool escape = 7;
 }

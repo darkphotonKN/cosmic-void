@@ -21,6 +21,7 @@ type PlayerState struct {
 	Position  *Position        `json:"position"`
 	Direction *PlayerDirection `json:"direction"`
 	Inventory []*ItemState     `json:"inventory"`
+	Escape    bool             `json:"escape"`
 }
 
 type Position struct {
@@ -78,6 +79,7 @@ type RawPlayerState struct {
 	Username string
 	Kills    int32
 	Deaths   int32
+	Escape   bool
 }
 
 type RankedPlayerState struct {
@@ -87,6 +89,7 @@ type RankedPlayerState struct {
 	Deaths        int32
 	FinalPosition int32
 	Win           bool
+	Escape        bool
 }
 
 type EscapeDoorState struct {

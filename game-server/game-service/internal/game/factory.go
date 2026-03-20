@@ -32,12 +32,13 @@ type PlayerConfig struct {
 	ItemIDList    []uuid.UUID
 	AttackActive  bool
 	HasHit        bool
+	Escape        bool
 }
 
 func CreatePlayerEntity(em *ecs.EntityManager, config PlayerConfig) *ecs.Entity {
 	entity := em.CreateEntity()
 
-	entity.AddComponent(components.NewPlayerComponent(config.MemberID, config.Username, config.HasHit, config.AttackActive))
+	entity.AddComponent(components.NewPlayerComponent(config.MemberID, config.Username, config.HasHit, config.AttackActive, config.Escape))
 
 	entity.AddComponent(components.NewTransformComponent(config.X, config.Y))
 

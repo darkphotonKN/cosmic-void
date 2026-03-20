@@ -18,12 +18,13 @@ export interface PlayerDirection {
 
 // Individual player state
 export interface PlayerState {
-  id: UUID;           // Player's permanent user ID (from signup)
-  entity_id: UUID;    // Temporary entity ID in game session
+  id: UUID; // Player's permanent user ID (from signup)
+  entity_id: UUID; // Temporary entity ID in game session
   username: string;
   position: Position;
   direction: PlayerDirection;
-  inventory?: ItemState[];  // 玩家背包
+  inventory?: ItemState[]; // 玩家背包
+  escape: boolean;
 }
 
 // Door/interactable state
@@ -39,7 +40,7 @@ export interface ItemState {
   entity_id: UUID;
   name: string;
   quantity: number;
-  lootedAt?: number;  // 本地取得時間戳，用於 pending 判斷
+  lootedAt?: number; // 本地取得時間戳，用於 pending 判斷
 }
 
 // Container/chest state
@@ -70,20 +71,20 @@ export interface SwitchState {
 // Complete game state received from server
 export interface ClientGameState {
   session_id: UUID;
-  current_player: PlayerState | null;  // This client's player state
-  other_players: PlayerState[];        // Other players in session
-  items: string[];                     // TODO: Update when items are structured
+  current_player: PlayerState | null; // This client's player state
+  other_players: PlayerState[]; // Other players in session
+  items: string[]; // TODO: Update when items are structured
   doors: DoorState[];
   containers: ContainerState[];
-  escape_doors: EscapeDoorState[];     // Escape doors with lock state
-  switches: SwitchState[];             // Switches/buttons for puzzles
+  escape_doors: EscapeDoorState[]; // Escape doors with lock state
+  switches: SwitchState[]; // Switches/buttons for puzzles
 }
 
 // Type guard to check if a message is a game state update
 export function isGameState(data: any): data is ClientGameState {
   return (
     data &&
-    typeof data.session_id === 'string' &&
+    typeof data.session_id === "string" &&
     (data.current_player !== undefined || data.other_players !== undefined)
   );
 }

@@ -90,6 +90,12 @@ export class TreasureHuntScene extends Phaser.Scene {
   private canAttack = true;
   private readonly PENDING_DURATION = 1000; // 1 秒內不比對剛拿的物品
 
+  // 狀態追蹤：避免重複通知（每秒 33 幀會重複收到相同狀態）
+  private previousEscapeDoorLocked: boolean | null = null;
+  private previousEscapeDoorOpened: boolean | null = null;
+  private previousSwitchActivated: boolean | null = null;
+  private escapedPlayers: Set<string> = new Set();
+
   constructor() {
     super({ key: "TreasureHuntScene" });
   }
@@ -1372,6 +1378,10 @@ export class TreasureHuntScene extends Phaser.Scene {
 
     // Update switches from server
     this.updateSwitches(state.switches || []);
+
+    // 檢測狀態變化並顯示通知（避免重複）
+    this.checkEscapeDoorStateChanges(state);
+    this.checkPlayerEscapedState(state);
   }
 
   private updateOtherPlayers(
@@ -2273,12 +2283,86 @@ export class TreasureHuntScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * 檢測逃生門和開關的狀態變化，並顯示對應通知
+   * 避免重複通知：只在狀態真正改變時才顯示
+   */
+  private checkEscapeDoorStateChanges(state: ClientGameState): void {
+    // 檢查是否有逃生門資料
+    const escapeDoor = state.escape_doors?.[0];
+    if (!escapeDoor) return;
+
+    // 檢查開關是否被激活 → 逃生門解鎖
+    const switchData = state.switches?.[0];
+    if (switchData) {
+      // 開關剛被激活（從 false/null 變成 true）
+      if (
+        switchData.is_activated === true &&
+        this.previousSwitchActivated !== true
+      ) {
+        this.showNotification(
+          "Exit door unlocked! Run to escape!",
+          "#4ecca3"
+        );
+      }
+      this.previousSwitchActivated = switchData.is_activated;
+    }
+
+    // 檢查逃生門是否被打開
+    if (
+      escapeDoor.is_open === true &&
+      this.previousEscapeDoorOpened !== true
+    ) {
+      this.showNotification("Escape door opened!", "#4ecca3");
+    }
+    this.previousEscapeDoorOpened = escapeDoor.is_open;
+
+    // 儲存逃生門鎖定狀態（用於未來可能的需求）
+    this.previousEscapeDoorLocked = escapeDoor.is_locked;
+  }
+
+  /**
+   * 檢測玩家是否逃脫成功
+   * 後端會設置 player.escape = true
+   */
+  private checkPlayerEscapedState(state: ClientGameState): void {
+    // 檢查當前玩家
+    if (state.current_player?.escape === true && state.current_player.id) {
+      if (!this.escapedPlayers.has(state.current_player.id)) {
+        this.showNotification(
+          `${state.current_player.username} escaped successfully!`,
+          "#FFD700"  // 金色
+        );
+        this.escapedPlayers.add(state.current_player.id);
+      }
+    }
+
+    // 檢查其他玩家
+    state.other_players?.forEach((player) => {
+      if (player.escape === true && player.id) {
+        if (!this.escapedPlayers.has(player.id)) {
+          this.showNotification(
+            `${player.username} escaped successfully!`,
+            "#FFD700"
+          );
+          this.escapedPlayers.add(player.id);
+        }
+      }
+    });
+  }
+
   destroy(): void {
     // Clean up subscriptions when scene is destroyed
     if (this.gameStateUnsubscribe) {
       this.gameStateUnsubscribe();
       GameStateLogger.logConnectionStatus("Scene shutting down", "#808080");
     }
+
+    // 重置狀態追蹤
+    this.previousEscapeDoorLocked = null;
+    this.previousEscapeDoorOpened = null;
+    this.previousSwitchActivated = null;
+    this.escapedPlayers.clear();
   }
 
   update(): void {

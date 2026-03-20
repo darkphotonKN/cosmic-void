@@ -82,6 +82,7 @@ func TestUpdatePlayerStats_IncrementWin(t *testing.T) {
 		Kills:         10,
 		Deaths:        1,
 		FinalPosition: 1,
+		Escape:        false,
 	}
 
 	err := service.updatePlayerStats(context.Background(), playerStats)
