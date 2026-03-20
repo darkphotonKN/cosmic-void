@@ -444,6 +444,7 @@ func (s *Session) AddPlayer(playerID uuid.UUID, username string) uuid.UUID {
 		Vy: 0,
 
 		ItemIDList: []uuid.UUID{},
+		Escape:     false,
 	}
 
 	// create player state entity
@@ -1012,7 +1013,7 @@ func (s *Session) handlePlayerEscape(playerID uuid.UUID) {
 		return
 	}
 	player := playerComp.(*components.PlayerComponent)
-
+	player.Escape = true
 	slog.Info("Player escaped!", "playerID", playerID, "username", player.Username)
 
 	s.sender.BroadcastToPlayerList(s.GetPlayerIDs(), types.Message{
@@ -1345,12 +1346,11 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 	// --- player data ---
 	for _, entity := range entities {
 		playerComponent, isPlayer := entity.GetComponent(ecs.ComponentTypePlayer)
+		// escapeDoorComp, _ := entity.GetComponent(ecs.ComponentTypeEscapeDoor)
 
 		if isPlayer {
 			// assert back to component's original type
 			playerState := playerComponent.(*components.PlayerComponent)
-
-			// pull players end game stats state out of its entity
 			statsComp, _ := entity.GetComponent(ecs.ComponentTypeStats)
 			stats := statsComp.(*components.StatsComponent)
 
@@ -1359,6 +1359,7 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 				Username: playerState.Username,
 				Kills:    int32(stats.Kills),
 				Deaths:   int32(stats.Deaths),
+				Escape:   playerState.Escape,
 			})
 		}
 	}

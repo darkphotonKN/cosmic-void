@@ -72,6 +72,7 @@ func (s *service) formatMatchData(sessionID uuid.UUID, startedAt time.Time, ende
 			Deaths:        player.Deaths,
 			FinalPosition: player.FinalPosition,
 			Win:           player.Win,
+			Escape:        player.Escape,
 		}
 	}
 
@@ -118,6 +119,7 @@ func (s *service) rankPlayers(players []types.RawPlayerState, eliminationOrder m
 			Username: player.Username,
 			Kills:    player.Kills,
 			Deaths:   player.Deaths,
+			Escape:   player.Escape,
 		}
 
 		// determining final positions

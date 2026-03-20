@@ -12,12 +12,13 @@ type PlayerComponent struct {
 	AttackActive         bool
 	AttackCooldown       float64
 	AttackTargetEntityID uuid.UUID
+	Escape               bool
 }
 
 func (p *PlayerComponent) Type() ecs.ComponentType {
 	return ecs.ComponentTypePlayer
 }
 
-func NewPlayerComponent(memberID uuid.UUID, username string, hasHit, attackActive bool) *PlayerComponent {
-	return &PlayerComponent{MemberID: memberID, Username: username, HasHit: hasHit, AttackActive: attackActive}
+func NewPlayerComponent(memberID uuid.UUID, username string, hasHit, attackActive bool, escape bool) *PlayerComponent {
+	return &PlayerComponent{MemberID: memberID, Username: username, HasHit: hasHit, AttackActive: attackActive, Escape: escape}
 }
