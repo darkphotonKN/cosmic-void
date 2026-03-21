@@ -2,18 +2,19 @@ package components
 
 import (
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 )
 
 type ItemComponent struct {
-	TemplateID      uuid.UUID
-	ItemType        string  // "weapon", "armor", "consumable"
-	Name            string
+	TemplateID uuid.UUID
+	ItemType   types.ItemType // "weapon", "armor", "consumable"
+	Name       string
 
 	// Weapon stats
-	AttackPower     int
-	CriticalRate    float64
-	WeaponType      string
+	AttackPower  int
+	CriticalRate float64
+	WeaponType   string
 
 	// Armor stats
 	DefenseRating   int
@@ -21,21 +22,21 @@ type ItemComponent struct {
 	ArmorSlot       string
 
 	// Consumable stats
-	HealingAmount   int
-	ManaAmount      int
-	BuffDuration    int
+	HealingAmount int
+	ManaAmount    int
+	BuffDuration  int
 
 	// Shared
-	BuyPrice        int
-	SellPrice       int
-	Description     string
+	BuyPrice    int
+	SellPrice   int
+	Description string
 }
 
 func (i *ItemComponent) Type() ecs.ComponentType {
 	return ecs.ComponentTypeItem
 }
 
-func NewItemComponent(templateID uuid.UUID, itemType string, name string) *ItemComponent {
+func NewItemComponent(templateID uuid.UUID, itemType types.ItemType, name string) *ItemComponent {
 	return &ItemComponent{
 		TemplateID: templateID,
 		ItemType:   itemType,

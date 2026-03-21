@@ -57,7 +57,7 @@ type Session struct {
 	TestMessageSpy chan types.Message
 
 	// item pool (session-level, items are removed once assigned to a container)
-	itemPool            []itemTemplate // 1 , 2, 3, 4, 5
+	itemPool            []item // 1 , 2, 3, 4, 5
 	itemPoolInitialized bool
 
 	// dependency injections
@@ -1033,9 +1033,9 @@ func (s *Session) handleAttack(playerID uuid.UUID, enemyEntityID uuid.UUID) erro
 	return nil
 }
 
-// itemTemplate is a unified representation of an item from items-service
-type itemTemplate struct {
-	TemplateID      uuid.UUID
+// item is a unified representation of an item from items-service
+type item struct {
+	ID              uuid.UUID
 	ItemType        string
 	Name            string
 	AttackPower     int
@@ -1066,20 +1066,20 @@ func (s *Session) initItemPool() error {
 	}
 
 	// Step 1: Fetch all templates from items-service
-	weaponTemplates := []itemTemplate{}
-	armorTemplates := []itemTemplate{}
-	consumableTemplates := []itemTemplate{}
+	weapons := []item{}
+	armors := []item{}
+	consumables := []item{}
 
 	// Fetch weapons
-	weapons, err := s.itemsClient.ListWeaponsWithTemplate(ctx)
+	weapons, err := s.itemsClient.ListWeaponsWith(ctx)
 	if err != nil {
 		fmt.Printf("Warning: failed to fetch weapons: %v\n", err)
 	} else {
 		for _, w := range weapons.Weapons {
 			// Parse template ID from string if needed
 			templateID := uuid.New() // Use actual ID if available from w
-			weaponTemplates = append(weaponTemplates, itemTemplate{
-				TemplateID:   templateID,
+			weapons = append(weapons, item{
+				ID:           templateID,
 				ItemType:     "weapon",
 				Name:         w.ItemName,
 				AttackPower:  int(w.AttackPower),
@@ -1093,15 +1093,15 @@ func (s *Session) initItemPool() error {
 	}
 
 	// Fetch armors
-	armors, err := s.itemsClient.ListArmorsWithTemplate(ctx)
+	armors, err := s.itemsClient.ListArmorsWith(ctx)
 	if err != nil {
 		fmt.Printf("Warning: failed to fetch armors: %v\n", err)
 	} else {
 		for _, a := range armors.Armors {
 			// Parse template ID from string if needed
 			templateID := uuid.New() // Use actual ID if available from a
-			armorTemplates = append(armorTemplates, itemTemplate{
-				TemplateID:      templateID,
+			armors = append(armors, item{
+				ID:              templateID,
 				ItemType:        "armor",
 				Name:            a.ItemName,
 				DefenseRating:   int(a.DefenseRating),
@@ -1115,15 +1115,15 @@ func (s *Session) initItemPool() error {
 	}
 
 	// Fetch consumables
-	consumables, err := s.itemsClient.ListConsumablesWithTemplate(ctx)
+	consumables, err := s.itemsClient.ListConsumablesWith(ctx)
 	if err != nil {
 		fmt.Printf("Warning: failed to fetch consumables: %v\n", err)
 	} else {
 		for _, c := range consumables.Consumables {
 			// Parse template ID from string if needed
 			templateID := uuid.New() // Use actual ID if available from c
-			consumableTemplates = append(consumableTemplates, itemTemplate{
-				TemplateID:    templateID,
+			consumables = append(consumables, item{
+				ID:            templateID,
 				ItemType:      "consumable",
 				Name:          c.ItemName,
 				HealingAmount: int(c.HealingAmount),
@@ -1142,24 +1142,24 @@ func (s *Session) initItemPool() error {
 	consumableCount := (constants.ItemPoolSize * constants.ConsumableRatio) / 100
 
 	// Step 3: Fill pool by ratio with random selection
-	s.itemPool = make([]itemTemplate, 0, constants.ItemPoolSize)
+	s.itemPool = make([]item, 0, constants.ItemPoolSize)
 
 	// Add weapons
-	for i := 0; i < weaponCount && len(weaponTemplates) > 0; i++ {
-		randomIndex := rand.IntN(len(weaponTemplates))
-		s.itemPool = append(s.itemPool, weaponTemplates[randomIndex])
+	for i := 0; i < weaponCount && len(weapons) > 0; i++ {
+		randomIndex := rand.IntN(len(weapons))
+		s.itemPool = append(s.itemPool, weapons[randomIndex])
 	}
 
 	// Add armors
-	for i := 0; i < armorCount && len(armorTemplates) > 0; i++ {
-		randomIndex := rand.IntN(len(armorTemplates))
-		s.itemPool = append(s.itemPool, armorTemplates[randomIndex])
+	for i := 0; i < armorCount && len(armors) > 0; i++ {
+		randomIndex := rand.IntN(len(armors))
+		s.itemPool = append(s.itemPool, armors[randomIndex])
 	}
 
 	// Add consumables
-	for i := 0; i < consumableCount && len(consumableTemplates) > 0; i++ {
-		randomIndex := rand.IntN(len(consumableTemplates))
-		s.itemPool = append(s.itemPool, consumableTemplates[randomIndex])
+	for i := 0; i < consumableCount && len(consumables) > 0; i++ {
+		randomIndex := rand.IntN(len(consumables))
+		s.itemPool = append(s.itemPool, consumables[randomIndex])
 	}
 
 	// Step 4: Shuffle the entire pool (so items are mixed, not grouped by type)
@@ -1200,7 +1200,7 @@ func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
 	}
 
 	// Take from the end and shrink the pool
-	selected := make([]itemTemplate, count)
+	selected := make([]item, count)
 	copy(selected, s.itemPool[len(s.itemPool)-count:])
 	s.itemPool = s.itemPool[:len(s.itemPool)-count]
 
@@ -1208,7 +1208,7 @@ func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
 	itemIDs := make([]uuid.UUID, 0, count)
 	for _, item := range selected {
 		config := ItemConfig{
-			TemplateID:      item.TemplateID,
+			ID:              item.ID,
 			ItemType:        item.ItemType,
 			Name:            item.Name,
 			AttackPower:     item.AttackPower,
@@ -1381,11 +1381,11 @@ func (s *Session) InitialMapObjects() {
 	ctx := context.Background()
 
 	// -- Armor --
-	s.InitializeBaseArmors(ctx)
+	s.InitializeItems(ctx)
 }
 
-func (s *Session) InitializeBaseArmors(ctx context.Context) error {
-	armorData, err := s.itemsClient.ListItemTemplates(ctx)
+func (s *Session) InitializeItems(ctx context.Context) error {
+	data, err := s.itemsClient.ListItemTemplates(ctx)
 
 	if err != nil {
 		slog.Error("Error when attempting to get list of base armors for game creation.",
@@ -1393,34 +1393,72 @@ func (s *Session) InitializeBaseArmors(ctx context.Context) error {
 		)
 	}
 
-	for _, armor := range armorData.Armors {
-		templateId, err := uuid.Parse(armor.ItemTemplateId)
+	for _, item := range data.Items {
+		templateId, err := uuid.Parse(item.Id)
 
 		if err != nil {
 			slog.Error("Error when attempting to parse template id as uuid during game creation.",
 				"error", err,
-				"armor.ItemTemplateId", armor.ItemTemplateId,
+				"armor.ItemId", item.Id,
 			)
 			return err
 		}
 
-		newArmor := ItemConfig{
-			TemplateID:      templateId,
-			ItemType:        "armor",
-			Name:            armor.ItemName,
-			DefenseRating:   int(armor.DefenseRating),
-			MagicResistance: int(armor.MagicResistance),
-			ArmorSlot:       armor.ArmorSlot,
-			BuyPrice:        int(armor.BaseBuyPrice),
-			SellPrice:       int(armor.BaseSellPrice),
-			Description:     armor.Description,
+		itemType := types.ItemType(item.ItemType)
+
+		var newItemConfig ItemConfig
+
+		switch itemType {
+		case types.ItemTypeArmor:
+			newItemConfig = ItemConfig{
+				TemplateID:  templateId,
+				ItemType:    itemType,
+				Name:        item.ItemName,
+				Description: item.Description,
+				BuyPrice:    int(item.BaseBuyPrice),
+				SellPrice:   int(item.BaseSellPrice),
+
+				DefenseRating:   int(item.DefenseRating),
+				MagicResistance: int(item.MagicResistance),
+				ArmorSlot:       item.ArmorSlot,
+			}
+
+		case types.ItemTypeWeapon:
+			newItemConfig = ItemConfig{
+				TemplateID:  templateId,
+				ItemType:    itemType,
+				Name:        item.ItemName,
+				Description: item.Description,
+				BuyPrice:    int(item.BaseBuyPrice),
+				SellPrice:   int(item.BaseSellPrice),
+
+				WeaponType:   item.WeaponType,
+				AttackPower:  int(item.AttackPower),
+				CriticalRate: float64(item.CriticalRate),
+			}
+
+		case types.ItemTypeConsumable:
+			newItemConfig = ItemConfig{
+				TemplateID:  templateId,
+				ItemType:    itemType,
+				Name:        item.ItemName,
+				Description: item.Description,
+				BuyPrice:    int(item.BaseBuyPrice),
+				SellPrice:   int(item.BaseSellPrice),
+
+				HealingAmount: int(item.HealingAmount),
+				ManaAmount:    int(item.ManaAmount),
+				BuffDuration:  int(item.BuffDuration),
+			}
+
+		default:
+			slog.Error("No valid item types match the ItemType that was read from the data",
+				"item.ItemType", item.ItemType,
+			)
+			return fmt.Errorf("No valid item types match the ItemType that was read from the data")
 		}
 
-		slog.Debug("adding new armor entity",
-			"newArmor", newArmor,
-		)
-
-		s.AddItem(newArmor)
+		s.AddItem(newItemConfig)
 	}
 
 	return nil

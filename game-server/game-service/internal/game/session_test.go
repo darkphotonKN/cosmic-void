@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/darkphotonKN/cosmic-void-server/common/api/proto/items"
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/items"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
@@ -328,7 +329,7 @@ func TestSession_InitializeBaseArmors_CreateItemEntities(t *testing.T) {
 
 	mockClient := mockItemsClient{}
 
-	mockClient.On("ListArmorsWithTemplate", mock.Anything, mock.Anything).Return(&pb.ListArmorsResponse{
+	mockClient.On("ListItemTemplates", mock.Anything, mock.Anything).Return(&pb.ListItemTemplatesResponse{
 		Armors: []*pb.ArmorDetail{
 			{
 				Id:            "550e8400-e29b-41d4-a716-446655440001", // fake armor 1
@@ -348,7 +349,7 @@ func TestSession_InitializeBaseArmors_CreateItemEntities(t *testing.T) {
 	session := NewSession(sender, &mockStateSerializer{}, em, mockEmitter, &mockClient)
 	defer session.Shutdown()
 
-	err := session.InitializeBaseArmors(context.Background())
+	err := session.InitializeItems(context.Background())
 
 	assert.NoError(t, err)
 
@@ -370,6 +371,69 @@ func (c *mockItemsClient) GetWeaponWithTemplateByID(ctx context.Context, req *pb
 func (c *mockItemsClient) ListWeaponsWithTemplate(ctx context.Context) (*pb.ListWeaponsResponse, error) {
 
 	return nil, nil
+}
+
+func (c *mockItemsClient) ListItemTemplates(ctx context.Context) (*items.ListItemTemplatesResponse, error) {
+	return &pb.ListItemTemplatesResponse{
+		Items: []*pb.ItemTemplate{
+			{
+				Id:              "88000000-0000-0000-0000-000000000001",
+				Rarity:          "660e8400-e29b-41d4-a716-446655440001",
+				DefenseRating:   3,
+				MagicResistance: 1,
+				ArmorSlot:       "head",
+				Description:     "Standard-issue titanium alloy combat helmet",
+				ItemTemplateId:  "aa000000-0000-0000-0000-000000000007",
+				ItemName:        "Titanium Helmet",
+				IconUrl:         "/icons/armor/titanium_helmet.png",
+				RequiredLevel:   1,
+				BaseSellPrice:   1,
+				BaseBuyPrice:    4,
+			},
+			{
+				Id:              "88000000-0000-0000-0000-000000000002",
+				RarityId:        "660e8400-e29b-41d4-a716-446655440001",
+				DefenseRating:   6,
+				MagicResistance: 2,
+				ArmorSlot:       "chest",
+				Description:     "Titanium alloy chest plate with ballistic lining",
+				ItemTemplateId:  "aa000000-0000-0000-0000-000000000008",
+				ItemName:        "Titanium Chest Plate",
+				IconUrl:         "/icons/armor/titanium_chest_plate.png",
+				RequiredLevel:   1,
+				BaseSellPrice:   3,
+				BaseBuyPrice:    6,
+			},
+			{
+				Id:              "88000000-0000-0000-0000-000000000003",
+				RarityId:        "660e8400-e29b-41d4-a716-446655440001",
+				DefenseRating:   4,
+				MagicResistance: 1,
+				ArmorSlot:       "legs",
+				Description:     "Reinforced titanium alloy leg guards",
+				ItemTemplateId:  "aa000000-0000-0000-0000-000000000009",
+				ItemName:        "Titanium Leg Guards",
+				IconUrl:         "/icons/armor/titanium_leg_guards.png",
+				RequiredLevel:   1,
+				BaseSellPrice:   2,
+				BaseBuyPrice:    5,
+			},
+			{
+				Id:              "88000000-0000-0000-0000-000000000004",
+				RarityId:        "660e8400-e29b-41d4-a716-446655440001",
+				DefenseRating:   2,
+				MagicResistance: 1,
+				ArmorSlot:       "gloves",
+				Description:     "Articulated titanium alloy combat gauntlets",
+				ItemTemplateId:  "aa000000-0000-0000-0000-000000000010",
+				ItemName:        "Titanium Gauntlets",
+				IconUrl:         "/icons/armor/titanium_gauntlets.png",
+				RequiredLevel:   1,
+				BaseSellPrice:   1,
+				BaseBuyPrice:    3,
+			},
+		},
+	}, nil
 }
 
 func (c *mockItemsClient) ListArmorsWithTemplate(ctx context.Context) (*pb.ListArmorsResponse, error) {

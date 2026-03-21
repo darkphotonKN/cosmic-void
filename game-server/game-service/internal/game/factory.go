@@ -4,6 +4,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
 )
 
@@ -84,7 +85,7 @@ func CreateContainerEntity(em *ecs.EntityManager, containerconfig ContainerConfi
 
 type ItemConfig struct {
 	TemplateID      uuid.UUID
-	ItemType        string
+	ItemType        types.ItemType
 	Name            string
 	AttackPower     int
 	CriticalRate    float64
