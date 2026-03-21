@@ -11,40 +11,35 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type Service interface {
+type service struct {
+	repo      Repository
+	publishCh commonbroker.Publisher
+}
+
+func NewService(repo Repository, publishCh commonbroker.Publisher) Service {
+	return &service{
+		repo:      repo,
+		publishCh: publishCh,
+	}
+}
+
+type Repository interface {
 	// ItemType operations
-	CreateItemType(ctx context.Context, req *CreateItemTypeRequest) (*ItemType, error)
-	GetItemType(ctx context.Context, id uuid.UUID) (*ItemType, error)
+	CreateItemType(ctx context.Context, itemType *ItemType) error
+	GetItemTypeByID(ctx context.Context, id uuid.UUID) (*ItemType, error)
 	GetItemTypeByCode(ctx context.Context, code string) (*ItemType, error)
 	ListItemTypes(ctx context.Context) ([]*ItemType, error)
 
 	// ItemRarity operations
-	CreateItemRarity(ctx context.Context, req *CreateItemRarityRequest) (*ItemRarity, error)
-	GetItemRarity(ctx context.Context, id uuid.UUID) (*ItemRarity, error)
+	CreateItemRarity(ctx context.Context, rarity *ItemRarity) error
+	GetItemRarityByID(ctx context.Context, id uuid.UUID) (*ItemRarity, error)
 	GetItemRarityByCode(ctx context.Context, code string) (*ItemRarity, error)
 	ListItemRarities(ctx context.Context) ([]*ItemRarity, error)
 
 	// Weapon operations
-	CreateWeapon(ctx context.Context, req *CreateWeaponRequest) (*Weapon, error)
-	GetWeapon(ctx context.Context, id uuid.UUID) (*Weapon, error)
+	CreateWeapon(ctx context.Context, weapon *Weapon) error
+	GetWeaponByID(ctx context.Context, id uuid.UUID) (*Weapon, error)
 	ListWeapons(ctx context.Context) ([]*Weapon, error)
-
-	// Armor operations
-	CreateArmor(ctx context.Context, req *CreateArmorRequest) (*Armor, error)
-	GetArmor(ctx context.Context, id uuid.UUID) (*Armor, error)
-	ListArmors(ctx context.Context) ([]*Armor, error)
-
-	// Consumable operations
-	CreateConsumable(ctx context.Context, req *CreateConsumableRequest) (*Consumable, error)
-	GetConsumable(ctx context.Context, id uuid.UUID) (*Consumable, error)
-	ListConsumables(ctx context.Context) ([]*Consumable, error)
-
-	// ItemTemplate operations
-	CreateItemTemplate(ctx context.Context, req *CreateItemTemplateRequest) (*ItemTemplate, error)
-	GetItemTemplate(ctx context.Context, id uuid.UUID) (*ItemTemplate, error)
-	GetItemTemplateByCode(ctx context.Context, code string) (*ItemTemplate, error)
-	ListItemTemplates(ctx context.Context) ([]*ItemTemplate, error)
-	ListItemTemplateAggregates(ctx context.Context) ([]*ItemTemplateAggregate, error)
 
 	// Weapon operations with item template (JOIN queries)
 	GetWeaponWithTemplateByID(ctx context.Context, id uuid.UUID) (*WeaponWithTemplate, error)
@@ -56,22 +51,22 @@ type Service interface {
 	// Consumable operations with item template (JOIN queries)
 	ListConsumablesWithTemplate(ctx context.Context) ([]*ConsumableWithTemplate, error)
 
-	// Complete item operations (creates both specific item + template in one transaction)
-	CreateCompleteWeapon(ctx context.Context, req *CreateCompleteWeaponRequest) (*WeaponWithTemplate, error)
-	CreateCompleteArmor(ctx context.Context, req *CreateCompleteArmorRequest) (*ArmorWithTemplate, error)
-	CreateCompleteConsumable(ctx context.Context, req *CreateCompleteConsumableRequest) (*ConsumableWithTemplate, error)
-}
+	// Armor operations
+	CreateArmor(ctx context.Context, armor *Armor) error
+	GetArmorByID(ctx context.Context, id uuid.UUID) (*Armor, error)
+	ListArmors(ctx context.Context) ([]*Armor, error)
 
-type service struct {
-	repo      Repository
-	publishCh commonbroker.Publisher
-}
+	// Consumable operations
+	CreateConsumable(ctx context.Context, consumable *Consumable) error
+	GetConsumableByID(ctx context.Context, id uuid.UUID) (*Consumable, error)
+	ListConsumables(ctx context.Context) ([]*Consumable, error)
 
-func NewService(repo Repository, publishCh commonbroker.Publisher) Service {
-	return &service{
-		repo:      repo,
-		publishCh: publishCh,
-	}
+	// ItemTemplate operations
+	CreateItemTemplate(ctx context.Context, template *ItemTemplate) error
+	GetItemTemplateByID(ctx context.Context, id uuid.UUID) (*ItemTemplate, error)
+	GetItemTemplateByCode(ctx context.Context, code string) (*ItemTemplate, error)
+	ListItemTemplates(ctx context.Context) ([]*ItemTemplate, error)
+	ListItemTemplateAggregates(ctx context.Context) ([]*ItemTemplateAggregate, error)
 }
 
 // ==========================================

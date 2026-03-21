@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/darkphotonKN/cosmic-void-server/common/api/proto/items"
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/items"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
@@ -322,7 +321,7 @@ func TestHandleInteractContainer(t *testing.T) {
 	}
 }
 
-func TestSession_InitializeBaseArmors_CreateItemEntities(t *testing.T) {
+func TestSession_InitializeItems_CreateItemEntities(t *testing.T) {
 	sender := createMockSender()
 	em := ecs.NewEntityManager()
 	mockEmitter := &mockEventEmitter{}
@@ -330,16 +329,95 @@ func TestSession_InitializeBaseArmors_CreateItemEntities(t *testing.T) {
 	mockClient := mockItemsClient{}
 
 	mockClient.On("ListItemTemplates", mock.Anything, mock.Anything).Return(&pb.ListItemTemplatesResponse{
-		Armors: []*pb.ArmorDetail{
+		Items: []*pb.ItemTemplate{
+			// Weapons
 			{
-				Id:            "550e8400-e29b-41d4-a716-446655440001", // fake armor 1
-				ItemName:      "Iron Armor",
-				DefenseRating: 50,
+				Id:            "aa000000-0000-0000-0000-000000000001",
+				ItemName:      "Vibro-blade",
+				Rarity:        "Common",
+				ItemType:      "weapon",
+				IconUrl:       "/icons/weapon/vibro_blade.png",
+				RequiredLevel: 1,
+				BaseSellPrice: 2,
+				BaseBuyPrice:  5,
+				AttackPower:   6,
+				CriticalRate:  0.08,
+				WeaponType:    "sword",
+				Description:   "Mono-molecular vibrating combat blade",
 			},
 			{
-				Id:            "550e8400-e29b-41d4-a716-446655440002", // fake armor 2
-				ItemName:      "Steel Armor",
-				DefenseRating: 100,
+				Id:            "aa000000-0000-0000-0000-000000000002",
+				ItemName:      "Pulse Dagger",
+				Rarity:        "Common",
+				ItemType:      "weapon",
+				IconUrl:       "/icons/weapon/pulse_dagger.png",
+				RequiredLevel: 1,
+				BaseSellPrice: 1,
+				BaseBuyPrice:  3,
+				AttackPower:   3,
+				CriticalRate:  0.12,
+				WeaponType:    "knife",
+				Description:   "Compact energy-pulse combat knife",
+			},
+			// Armors
+			{
+				Id:              "aa000000-0000-0000-0000-000000000007",
+				ItemName:        "Titanium Helmet",
+				Rarity:          "Common",
+				ItemType:        "armor",
+				IconUrl:         "/icons/armor/titanium_helmet.png",
+				RequiredLevel:   1,
+				BaseSellPrice:   1,
+				BaseBuyPrice:    4,
+				DefenseRating:   3,
+				MagicResistance: 1,
+				ArmorSlot:       "head",
+				Description:     "Standard-issue titanium alloy combat helmet",
+			},
+			{
+				Id:              "aa000000-0000-0000-0000-000000000008",
+				ItemName:        "Titanium Chest Plate",
+				Rarity:          "Common",
+				ItemType:        "armor",
+				IconUrl:         "/icons/armor/titanium_chest_plate.png",
+				RequiredLevel:   1,
+				BaseSellPrice:   3,
+				BaseBuyPrice:    6,
+				DefenseRating:   6,
+				MagicResistance: 2,
+				ArmorSlot:       "chest",
+				Description:     "Titanium alloy chest plate with ballistic lining",
+			},
+			// Consumables
+			{
+				Id:            "aa000000-0000-0000-0000-000000000023",
+				ItemName:      "Minor Stim Pack",
+				Rarity:        "Common",
+				ItemType:      "consumable",
+				IconUrl:       "/icons/consumable/minor_stim_pack.png",
+				RequiredLevel: 1,
+				BaseSellPrice: 1,
+				BaseBuyPrice:  2,
+				HealingAmount: 10,
+				ManaAmount:    0,
+				BuffDuration:  0,
+				MaxStackSize:  20,
+				Description:   "Basic nano-med stim injection",
+			},
+			{
+				Id:            "aa000000-0000-0000-0000-000000000024",
+				ItemName:      "Greater Stim Pack",
+				Rarity:        "Common",
+				ItemType:      "consumable",
+				IconUrl:       "/icons/consumable/greater_stim_pack.png",
+				RequiredLevel: 1,
+				BaseSellPrice: 2,
+				BaseBuyPrice:  5,
+				HealingAmount: 25,
+				ManaAmount:    0,
+				BuffDuration:  0,
+				MaxStackSize:  10,
+				Description:   "Advanced regenerative stim pack",
 			},
 		},
 	},
@@ -373,130 +451,104 @@ func (c *mockItemsClient) ListWeaponsWithTemplate(ctx context.Context) (*pb.List
 	return nil, nil
 }
 
-func (c *mockItemsClient) ListItemTemplates(ctx context.Context) (*items.ListItemTemplatesResponse, error) {
+func (c *mockItemsClient) ListItemTemplates(ctx context.Context) (*pb.ListItemTemplatesResponse, error) {
 	return &pb.ListItemTemplatesResponse{
 		Items: []*pb.ItemTemplate{
+			// Weapons
 			{
-				Id:              "88000000-0000-0000-0000-000000000001",
-				Rarity:          "660e8400-e29b-41d4-a716-446655440001",
-				DefenseRating:   3,
-				MagicResistance: 1,
-				ArmorSlot:       "head",
-				Description:     "Standard-issue titanium alloy combat helmet",
-				ItemTemplateId:  "aa000000-0000-0000-0000-000000000007",
+				Id:            "aa000000-0000-0000-0000-000000000001",
+				ItemName:      "Vibro-blade",
+				Rarity:        "Common",
+				ItemType:      "weapon",
+				IconUrl:       "/icons/weapon/vibro_blade.png",
+				RequiredLevel: 1,
+				BaseSellPrice: 2,
+				BaseBuyPrice:  5,
+				AttackPower:   6,
+				CriticalRate:  0.08,
+				WeaponType:    "sword",
+				Description:   "Mono-molecular vibrating combat blade",
+			},
+			{
+				Id:            "aa000000-0000-0000-0000-000000000002",
+				ItemName:      "Pulse Dagger",
+				Rarity:        "Common",
+				ItemType:      "weapon",
+				IconUrl:       "/icons/weapon/pulse_dagger.png",
+				RequiredLevel: 1,
+				BaseSellPrice: 1,
+				BaseBuyPrice:  3,
+				AttackPower:   3,
+				CriticalRate:  0.12,
+				WeaponType:    "knife",
+				Description:   "Compact energy-pulse combat knife",
+			},
+			// Armors
+			{
+				Id:              "aa000000-0000-0000-0000-000000000007",
 				ItemName:        "Titanium Helmet",
+				Rarity:          "Common",
+				ItemType:        "armor",
 				IconUrl:         "/icons/armor/titanium_helmet.png",
 				RequiredLevel:   1,
 				BaseSellPrice:   1,
 				BaseBuyPrice:    4,
+				DefenseRating:   3,
+				MagicResistance: 1,
+				ArmorSlot:       "head",
+				Description:     "Standard-issue titanium alloy combat helmet",
 			},
 			{
-				Id:              "88000000-0000-0000-0000-000000000002",
-				RarityId:        "660e8400-e29b-41d4-a716-446655440001",
-				DefenseRating:   6,
-				MagicResistance: 2,
-				ArmorSlot:       "chest",
-				Description:     "Titanium alloy chest plate with ballistic lining",
-				ItemTemplateId:  "aa000000-0000-0000-0000-000000000008",
+				Id:              "aa000000-0000-0000-0000-000000000008",
 				ItemName:        "Titanium Chest Plate",
+				Rarity:          "Common",
+				ItemType:        "armor",
 				IconUrl:         "/icons/armor/titanium_chest_plate.png",
 				RequiredLevel:   1,
 				BaseSellPrice:   3,
 				BaseBuyPrice:    6,
+				DefenseRating:   6,
+				MagicResistance: 2,
+				ArmorSlot:       "chest",
+				Description:     "Titanium alloy chest plate with ballistic lining",
+			},
+			// Consumables
+			{
+				Id:            "aa000000-0000-0000-0000-000000000023",
+				ItemName:      "Minor Stim Pack",
+				Rarity:        "Common",
+				ItemType:      "consumable",
+				IconUrl:       "/icons/consumable/minor_stim_pack.png",
+				RequiredLevel: 1,
+				BaseSellPrice: 1,
+				BaseBuyPrice:  2,
+				HealingAmount: 10,
+				ManaAmount:    0,
+				BuffDuration:  0,
+				MaxStackSize:  20,
+				Description:   "Basic nano-med stim injection",
 			},
 			{
-				Id:              "88000000-0000-0000-0000-000000000003",
-				RarityId:        "660e8400-e29b-41d4-a716-446655440001",
-				DefenseRating:   4,
-				MagicResistance: 1,
-				ArmorSlot:       "legs",
-				Description:     "Reinforced titanium alloy leg guards",
-				ItemTemplateId:  "aa000000-0000-0000-0000-000000000009",
-				ItemName:        "Titanium Leg Guards",
-				IconUrl:         "/icons/armor/titanium_leg_guards.png",
-				RequiredLevel:   1,
-				BaseSellPrice:   2,
-				BaseBuyPrice:    5,
-			},
-			{
-				Id:              "88000000-0000-0000-0000-000000000004",
-				RarityId:        "660e8400-e29b-41d4-a716-446655440001",
-				DefenseRating:   2,
-				MagicResistance: 1,
-				ArmorSlot:       "gloves",
-				Description:     "Articulated titanium alloy combat gauntlets",
-				ItemTemplateId:  "aa000000-0000-0000-0000-000000000010",
-				ItemName:        "Titanium Gauntlets",
-				IconUrl:         "/icons/armor/titanium_gauntlets.png",
-				RequiredLevel:   1,
-				BaseSellPrice:   1,
-				BaseBuyPrice:    3,
+				Id:            "aa000000-0000-0000-0000-000000000024",
+				ItemName:      "Greater Stim Pack",
+				Rarity:        "Common",
+				ItemType:      "consumable",
+				IconUrl:       "/icons/consumable/greater_stim_pack.png",
+				RequiredLevel: 1,
+				BaseSellPrice: 2,
+				BaseBuyPrice:  5,
+				HealingAmount: 25,
+				ManaAmount:    0,
+				BuffDuration:  0,
+				MaxStackSize:  10,
+				Description:   "Advanced regenerative stim pack",
 			},
 		},
 	}, nil
 }
 
 func (c *mockItemsClient) ListArmorsWithTemplate(ctx context.Context) (*pb.ListArmorsResponse, error) {
-	return &pb.ListArmorsResponse{
-		Armors: []*pb.ArmorDetail{
-			{
-				Id:              "88000000-0000-0000-0000-000000000001",
-				RarityId:        "660e8400-e29b-41d4-a716-446655440001",
-				DefenseRating:   3,
-				MagicResistance: 1,
-				ArmorSlot:       "head",
-				Description:     "Standard-issue titanium alloy combat helmet",
-				ItemTemplateId:  "aa000000-0000-0000-0000-000000000007",
-				ItemName:        "Titanium Helmet",
-				IconUrl:         "/icons/armor/titanium_helmet.png",
-				RequiredLevel:   1,
-				BaseSellPrice:   1,
-				BaseBuyPrice:    4,
-			},
-			{
-				Id:              "88000000-0000-0000-0000-000000000002",
-				RarityId:        "660e8400-e29b-41d4-a716-446655440001",
-				DefenseRating:   6,
-				MagicResistance: 2,
-				ArmorSlot:       "chest",
-				Description:     "Titanium alloy chest plate with ballistic lining",
-				ItemTemplateId:  "aa000000-0000-0000-0000-000000000008",
-				ItemName:        "Titanium Chest Plate",
-				IconUrl:         "/icons/armor/titanium_chest_plate.png",
-				RequiredLevel:   1,
-				BaseSellPrice:   3,
-				BaseBuyPrice:    6,
-			},
-			{
-				Id:              "88000000-0000-0000-0000-000000000003",
-				RarityId:        "660e8400-e29b-41d4-a716-446655440001",
-				DefenseRating:   4,
-				MagicResistance: 1,
-				ArmorSlot:       "legs",
-				Description:     "Reinforced titanium alloy leg guards",
-				ItemTemplateId:  "aa000000-0000-0000-0000-000000000009",
-				ItemName:        "Titanium Leg Guards",
-				IconUrl:         "/icons/armor/titanium_leg_guards.png",
-				RequiredLevel:   1,
-				BaseSellPrice:   2,
-				BaseBuyPrice:    5,
-			},
-			{
-				Id:              "88000000-0000-0000-0000-000000000004",
-				RarityId:        "660e8400-e29b-41d4-a716-446655440001",
-				DefenseRating:   2,
-				MagicResistance: 1,
-				ArmorSlot:       "gloves",
-				Description:     "Articulated titanium alloy combat gauntlets",
-				ItemTemplateId:  "aa000000-0000-0000-0000-000000000010",
-				ItemName:        "Titanium Gauntlets",
-				IconUrl:         "/icons/armor/titanium_gauntlets.png",
-				RequiredLevel:   1,
-				BaseSellPrice:   1,
-				BaseBuyPrice:    3,
-			},
-		},
-	}, nil
+	return nil, nil
 }
 
 func (c *mockItemsClient) ListConsumablesWithTemplate(ctx context.Context) (*pb.ListConsumablesResponse, error) {

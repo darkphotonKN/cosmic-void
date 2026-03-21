@@ -207,8 +207,8 @@ func (s *StateSerializer) SerializeBackendState(ctx context.Context, sessionID u
 			}
 			backendState.Containers = append(backendState.Containers, containerState)
 		}
+
 		// --- Items ---
-		// TODO: add this after item entity is added
 		itemComp, hasItem := entity.GetComponent(ecs.ComponentTypeItem)
 
 		if hasItem {

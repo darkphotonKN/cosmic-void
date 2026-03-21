@@ -316,7 +316,8 @@ func (s *Session) manageClientMessages() {
 					continue
 				}
 				attackPayload := parsedPayload.(types.PlayerSectionAttackPayload)
-				slog.Debug("Parse attack payload", attackPayload)
+				slog.Debug("Parse attack payload",
+					"attackPayload", attackPayload)
 
 				playerID, err := uuid.Parse(attackPayload.PlayerID)
 
@@ -358,6 +359,26 @@ func (s *Session) manageGameLoop() {
 	ticker := time.NewTicker((1 * time.Second) / time.Duration(constants.GameFrameRate))
 	defer ticker.Stop()
 
+	// --- debugging ---
+	itemsState := make([]*components.ItemComponent, 0)
+
+	for _, entity := range s.EntityManager.GetAllEntities() {
+		itemComp, hasItem := entity.GetComponent(ecs.ComponentTypeItem)
+
+		if hasItem {
+			itemState := itemComp.(*components.ItemComponent)
+
+			itemsState = append(itemsState, itemState)
+		}
+	}
+
+	slog.Debug("Showing all item entities that was created at the start of the game session.",
+		"itemsState", itemsState,
+	)
+
+	// --- end debugging ---
+
+	// --- core game loop --
 	for {
 		select {
 		case <-ticker.C:
@@ -1053,183 +1074,11 @@ type item struct {
 }
 
 /**
-* initItemPool fetches all item templates from items-service via gRPC once
-* and fills the pool according to configured ratios (weapons, armors, consumables).
-**/
-func (s *Session) initItemPool() error {
-	ctx := context.Background()
-	ctx, span := gameItemPoolTracer.Start(ctx, "game.initItemPool")
-	defer span.End()
-
-	if s.itemsClient == nil {
-		return fmt.Errorf("itemsClient is not initialized")
-	}
-
-	// Step 1: Fetch all templates from items-service
-	weapons := []item{}
-	armors := []item{}
-	consumables := []item{}
-
-	// Fetch weapons
-	weapons, err := s.itemsClient.ListWeaponsWith(ctx)
-	if err != nil {
-		fmt.Printf("Warning: failed to fetch weapons: %v\n", err)
-	} else {
-		for _, w := range weapons.Weapons {
-			// Parse template ID from string if needed
-			templateID := uuid.New() // Use actual ID if available from w
-			weapons = append(weapons, item{
-				ID:           templateID,
-				ItemType:     "weapon",
-				Name:         w.ItemName,
-				AttackPower:  int(w.AttackPower),
-				CriticalRate: float64(w.CriticalRate),
-				WeaponType:   w.WeaponType,
-				BuyPrice:     int(w.BaseBuyPrice),
-				SellPrice:    int(w.BaseSellPrice),
-				Description:  w.Description,
-			})
-		}
-	}
-
-	// Fetch armors
-	armors, err := s.itemsClient.ListArmorsWith(ctx)
-	if err != nil {
-		fmt.Printf("Warning: failed to fetch armors: %v\n", err)
-	} else {
-		for _, a := range armors.Armors {
-			// Parse template ID from string if needed
-			templateID := uuid.New() // Use actual ID if available from a
-			armors = append(armors, item{
-				ID:              templateID,
-				ItemType:        "armor",
-				Name:            a.ItemName,
-				DefenseRating:   int(a.DefenseRating),
-				MagicResistance: int(a.MagicResistance),
-				ArmorSlot:       a.ArmorSlot,
-				BuyPrice:        int(a.BaseBuyPrice),
-				SellPrice:       int(a.BaseSellPrice),
-				Description:     a.Description,
-			})
-		}
-	}
-
-	// Fetch consumables
-	consumables, err := s.itemsClient.ListConsumablesWith(ctx)
-	if err != nil {
-		fmt.Printf("Warning: failed to fetch consumables: %v\n", err)
-	} else {
-		for _, c := range consumables.Consumables {
-			// Parse template ID from string if needed
-			templateID := uuid.New() // Use actual ID if available from c
-			consumables = append(consumables, item{
-				ID:            templateID,
-				ItemType:      "consumable",
-				Name:          c.ItemName,
-				HealingAmount: int(c.HealingAmount),
-				ManaAmount:    int(c.ManaAmount),
-				BuffDuration:  int(c.BuffDuration),
-				BuyPrice:      int(c.BaseBuyPrice),
-				SellPrice:     int(c.BaseSellPrice),
-				Description:   c.Description,
-			})
-		}
-	}
-
-	// Step 2: Calculate quantities based on ratios
-	weaponCount := (constants.ItemPoolSize * constants.WeaponRatio) / 100
-	armorCount := (constants.ItemPoolSize * constants.ArmorRatio) / 100
-	consumableCount := (constants.ItemPoolSize * constants.ConsumableRatio) / 100
-
-	// Step 3: Fill pool by ratio with random selection
-	s.itemPool = make([]item, 0, constants.ItemPoolSize)
-
-	// Add weapons
-	for i := 0; i < weaponCount && len(weapons) > 0; i++ {
-		randomIndex := rand.IntN(len(weapons))
-		s.itemPool = append(s.itemPool, weapons[randomIndex])
-	}
-
-	// Add armors
-	for i := 0; i < armorCount && len(armors) > 0; i++ {
-		randomIndex := rand.IntN(len(armors))
-		s.itemPool = append(s.itemPool, armors[randomIndex])
-	}
-
-	// Add consumables
-	for i := 0; i < consumableCount && len(consumables) > 0; i++ {
-		randomIndex := rand.IntN(len(consumables))
-		s.itemPool = append(s.itemPool, consumables[randomIndex])
-	}
-
-	// Step 4: Shuffle the entire pool (so items are mixed, not grouped by type)
-	for i := len(s.itemPool) - 1; i > 0; i-- {
-		j := rand.IntN(i + 1)
-		s.itemPool[i], s.itemPool[j] = s.itemPool[j], s.itemPool[i]
-	}
-
-	if len(s.itemPool) == 0 {
-		return fmt.Errorf("no items available from items-service")
-	}
-
-	s.itemPoolInitialized = true
-	fmt.Printf("Item pool initialized with %d items (weapons: %d, armors: %d, consumables: %d)\n",
-		len(s.itemPool), weaponCount, armorCount, consumableCount)
-	return nil
-}
-
-/**
 * generateContainerItems picks 1-4 unique items from the session item pool,
 * removes them from the pool, creates item entities, and returns their IDs.
 **/
 func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
-	if len(s.itemPool) == 0 {
-		return nil, fmt.Errorf("item pool is empty, no more items available")
-	}
-
-	// Randomly select 1-4 items (capped by remaining pool size)
-	count := rand.IntN(4) + 1
-	if count > len(s.itemPool) {
-		count = len(s.itemPool)
-	}
-
-	// Fisher-Yates shuffle the pool
-	for i := len(s.itemPool) - 1; i > 0; i-- {
-		j := rand.IntN(i + 1)
-		s.itemPool[i], s.itemPool[j] = s.itemPool[j], s.itemPool[i]
-	}
-
-	// Take from the end and shrink the pool
-	selected := make([]item, count)
-	copy(selected, s.itemPool[len(s.itemPool)-count:])
-	s.itemPool = s.itemPool[:len(s.itemPool)-count]
-
-	// Create item entities from selected templates
-	itemIDs := make([]uuid.UUID, 0, count)
-	for _, item := range selected {
-		config := ItemConfig{
-			ID:              item.ID,
-			ItemType:        item.ItemType,
-			Name:            item.Name,
-			AttackPower:     item.AttackPower,
-			CriticalRate:    item.CriticalRate,
-			WeaponType:      item.WeaponType,
-			DefenseRating:   item.DefenseRating,
-			MagicResistance: item.MagicResistance,
-			ArmorSlot:       item.ArmorSlot,
-			HealingAmount:   item.HealingAmount,
-			ManaAmount:      item.ManaAmount,
-			BuffDuration:    item.BuffDuration,
-			BuyPrice:        item.BuyPrice,
-			SellPrice:       item.SellPrice,
-			Description:     item.Description,
-		}
-
-		itemID := s.AddItem(config)
-		itemIDs = append(itemIDs, itemID)
-	}
-
-	return itemIDs, nil
+	return nil, nil
 }
 
 /**
@@ -1291,7 +1140,6 @@ func (s *Session) manageEliminations() {
 		s.eliminations[player.ID] = len(s.eliminations)
 		s.mu.Unlock()
 	}
-
 }
 
 /**
@@ -1378,9 +1226,9 @@ func (s *Session) InitialMapObjects() {
 	s.switchEntityIDs = []uuid.UUID{switchEntity.ID}
 
 	// --- Create Items ---
+
 	ctx := context.Background()
 
-	// -- Armor --
 	s.InitializeItems(ctx)
 }
 
