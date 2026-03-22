@@ -24,7 +24,7 @@ func SetupServices(db *sqlx.DB, amqpChannel *amqp.Channel, registry discovery.Re
 
 	// Create service with repository and AMQP channel
 	publishCh := commonbroker.NewAmqpPublisher(amqpChannel)
-	service := items.NewService(repo, publishCh)
+	service := items.NewService(repo, db, publishCh)
 
 	// Create gRPC handler with service and auth client
 	handler := items.NewHandler(service, authClient)

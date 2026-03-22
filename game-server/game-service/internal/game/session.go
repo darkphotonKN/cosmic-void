@@ -1241,6 +1241,11 @@ func (s *Session) InitializeItems(ctx context.Context) error {
 		)
 	}
 
+	if data.Items == nil {
+		slog.Error("No items returned from ListItemTemplates")
+		return fmt.Errorf("No items returned from ListItemTemplates")
+	}
+
 	for _, item := range data.Items {
 		templateId, err := uuid.Parse(item.Id)
 

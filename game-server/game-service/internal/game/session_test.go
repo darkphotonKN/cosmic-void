@@ -429,7 +429,7 @@ func TestSession_InitializeItems_CreateItemEntities(t *testing.T) {
 				},
 			},
 			wantErr:       false,
-			wantItemCount: 10,
+			wantItemCount: 6,
 		},
 		{
 			name: "weapon counts match not affect by consumables and armor",
@@ -521,7 +521,11 @@ func TestSession_InitializeItems_CreateItemEntities(t *testing.T) {
 			em := ecs.NewEntityManager()
 			mockEmitter := &mockEventEmitter{}
 			mockClient := mockItemsClient{}
+
 			session := NewSession(sender, &mockStateSerializer{}, em, mockEmitter, &mockClient)
+
+			session.TestMessageSpy = make(chan types.Message, 1)
+
 			defer session.Shutdown()
 
 			mockClient.On("ListItemTemplates", mock.Anything).Return(

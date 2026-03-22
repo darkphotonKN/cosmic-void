@@ -228,96 +228,60 @@ message ItemTemplate {
 }
 
 // CreateItemTemplateRequest for creating item templates
-// Note: user_id will be extracted from JWT token in API Gateway
 message CreateItemTemplateRequest {
-  string user_id = 1;         // Admin user ID (from JWT)
+  string user_id = 1;
   string item_name = 2;
-  string item_code = 3;
-  string type_id = 4;
-  string rarity_id = 5;
-  string item_type = 6;       // 'weapon', 'armor', 'consumable'
-  string item_id = 7;         // references weapon/armor/consumable id
-  optional string icon_url = 8;
-  reserved 9, 10;
-  reserved "is_tradeable", "is_droppable";
-  optional int32 required_level = 11;
-  optional int32 base_sell_price = 12;
-  optional int32 base_buy_price = 13;
+  string rarity_id = 3;
+  string item_type = 4;       // 'weapon', 'armor', 'consumable'
+  string item_id = 5;         // references weapon/armor/consumable id
+  optional string icon_url = 6;
+  optional int32 required_level = 7;
+  optional int32 base_sell_price = 8;
+  optional int32 base_buy_price = 9;
 }
 
-// CreateCompleteWeaponRequest for creating a complete weapon (weapon + template)
-// This creates both the weapon entry and its item template in one operation
+// CreateCompleteWeaponRequest creates weapon + template in one transaction
 message CreateCompleteWeaponRequest {
-  // User info (from JWT)
   string user_id = 1;
-
-  // Template fields (common attributes)
   string item_name = 2;
-  string item_code = 3;
-  optional string icon_url = 4;
-  reserved 5, 6;
-  reserved "is_tradeable", "is_droppable";
-  optional int32 required_level = 7;
-  optional int32 base_sell_price = 8;
-  optional int32 base_buy_price = 9;
-
-  // Weapon-specific fields
-  reserved 10, 13;
-  reserved "type_id", "durability";
-  string rarity_id = 11;
-  int32 attack_power = 12;
-  float critical_rate = 14;
-  string weapon_type = 15;
-  string description = 16;
+  optional string icon_url = 3;
+  optional int32 required_level = 4;
+  optional int32 base_sell_price = 5;
+  optional int32 base_buy_price = 6;
+  string rarity_id = 7;
+  int32 attack_power = 8;
+  float critical_rate = 9;
+  string weapon_type = 10;
+  string description = 11;
 }
 
-// CreateCompleteArmorRequest for creating a complete armor (armor + template)
+// CreateCompleteArmorRequest creates armor + template in one transaction
 message CreateCompleteArmorRequest {
-  // User info (from JWT)
   string user_id = 1;
-
-  // Template fields (common attributes)
   string item_name = 2;
-  string item_code = 3;
-  optional string icon_url = 4;
-  reserved 5, 6;
-  reserved "is_tradeable", "is_droppable";
-  optional int32 required_level = 7;
-  optional int32 base_sell_price = 8;
-  optional int32 base_buy_price = 9;
-
-  // Armor-specific fields
-  reserved 10, 13;
-  reserved "type_id", "durability";
-  string rarity_id = 11;
-  int32 defense_rating = 12;
-  int32 magic_resistance = 14;
-  string armor_slot = 15;
-  string description = 16;
+  optional string icon_url = 3;
+  optional int32 required_level = 4;
+  optional int32 base_sell_price = 5;
+  optional int32 base_buy_price = 6;
+  string rarity_id = 7;
+  int32 defense_rating = 8;
+  int32 magic_resistance = 9;
+  string armor_slot = 10;
+  string description = 11;
 }
 
-// CreateCompleteConsumableRequest for creating a complete consumable (consumable + template)
+// CreateCompleteConsumableRequest creates consumable + template in one transaction
 message CreateCompleteConsumableRequest {
-  // User info (from JWT)
   string user_id = 1;
-
-  // Template fields (common attributes)
   string item_name = 2;
-  string item_code = 3;
-  optional string icon_url = 4;
-  reserved 5, 6;
-  reserved "is_tradeable", "is_droppable";
-  optional int32 required_level = 7;
-  optional int32 base_sell_price = 8;
-  optional int32 base_buy_price = 9;
-
-  // Consumable-specific fields
-  reserved 10;
-  reserved "type_id";
-  string rarity_id = 11;
-  int32 healing_amount = 12;
-  int32 mana_amount = 13;
-  int32 buff_duration = 14;
-  int32 max_stack_size = 15;
-  string description = 16;
+  optional string icon_url = 3;
+  optional int32 required_level = 4;
+  optional int32 base_sell_price = 5;
+  optional int32 base_buy_price = 6;
+  string rarity_id = 7;
+  int32 healing_amount = 8;
+  int32 mana_amount = 9;
+  int32 buff_duration = 10;
+  int32 max_stack_size = 11;
+  string description = 12;
 }

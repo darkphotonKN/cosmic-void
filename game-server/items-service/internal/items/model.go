@@ -77,12 +77,14 @@ type Consumable struct {
 	UpdatedBy     *uuid.UUID `db:"updated_by" json:"updated_by"`
 }
 
-// ItemTemplate represents the unified item template (polymorphic pattern)
+// ItemTemplate is the write model — mirrors item_templates table columns directly.
+// For read queries with joins, use ItemTemplateAggregate instead.
 type ItemTemplate struct {
 	ID            uuid.UUID  `db:"id" json:"id"`
 	ItemName      string     `db:"item_name" json:"item_name"`
-	Rarity        string     `db:"rarity" json:"rarity"`
+	RarityID      uuid.UUID  `db:"rarity_id" json:"rarity_id"`
 	ItemType      string     `db:"item_type" json:"item_type"`
+	ItemID        uuid.UUID  `db:"item_id" json:"item_id"`
 	IconURL       *string    `db:"icon_url" json:"icon_url"`
 	RequiredLevel int        `db:"required_level" json:"required_level"`
 	BaseSellPrice int        `db:"base_sell_price" json:"base_sell_price"`
@@ -199,8 +201,7 @@ type CreateCompleteWeaponRequest struct {
 	// Template fields (common attributes)
 	ItemName      string  `json:"item_name" binding:"required"`
 	IconURL       *string `json:"icon_url"`
-	IsTradeable   *bool   `json:"is_tradeable"`
-	IsDroppable   *bool   `json:"is_droppable"`
+
 	RequiredLevel *int    `json:"required_level"`
 	BaseSellPrice *int    `json:"base_sell_price"`
 	BaseBuyPrice  *int    `json:"base_buy_price"`
@@ -221,8 +222,7 @@ type CreateCompleteArmorRequest struct {
 	// Template fields (common attributes)
 	ItemName      string  `json:"item_name" binding:"required"`
 	IconURL       *string `json:"icon_url"`
-	IsTradeable   *bool   `json:"is_tradeable"`
-	IsDroppable   *bool   `json:"is_droppable"`
+
 	RequiredLevel *int    `json:"required_level"`
 	BaseSellPrice *int    `json:"base_sell_price"`
 	BaseBuyPrice  *int    `json:"base_buy_price"`
@@ -243,8 +243,7 @@ type CreateCompleteConsumableRequest struct {
 	// Template fields (common attributes)
 	ItemName      string  `json:"item_name" binding:"required"`
 	IconURL       *string `json:"icon_url"`
-	IsTradeable   *bool   `json:"is_tradeable"`
-	IsDroppable   *bool   `json:"is_droppable"`
+
 	RequiredLevel *int    `json:"required_level"`
 	BaseSellPrice *int    `json:"base_sell_price"`
 	BaseBuyPrice  *int    `json:"base_buy_price"`

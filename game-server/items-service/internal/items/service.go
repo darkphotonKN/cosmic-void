@@ -2,23 +2,28 @@ package items
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
+	commonutils "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
 	"google.golang.org/protobuf/proto"
 )
 
 type service struct {
 	repo      Repository
+	db        *sqlx.DB
 	publishCh commonbroker.Publisher
 }
 
-func NewService(repo Repository, publishCh commonbroker.Publisher) Service {
+func NewService(repo Repository, db *sqlx.DB, publishCh commonbroker.Publisher) *service {
 	return &service{
 		repo:      repo,
+		db:        db,
 		publishCh: publishCh,
 	}
 }
@@ -67,6 +72,12 @@ type Repository interface {
 	GetItemTemplateByCode(ctx context.Context, code string) (*ItemTemplate, error)
 	ListItemTemplates(ctx context.Context) ([]*ItemTemplate, error)
 	ListItemTemplateAggregates(ctx context.Context) ([]*ItemTemplateAggregate, error)
+
+	// Transaction aware create methods (for CreateComplete* flows)
+	CreateWeaponTx(ctx context.Context, tx *sqlx.Tx, weapon *Weapon) error
+	CreateArmorTx(ctx context.Context, tx *sqlx.Tx, armor *Armor) error
+	CreateConsumableTx(ctx context.Context, tx *sqlx.Tx, consumable *Consumable) error
+	CreateItemTemplateTx(ctx context.Context, tx *sqlx.Tx, template *ItemTemplate) error
 }
 
 // ==========================================
@@ -226,6 +237,11 @@ func (s *service) ListConsumables(ctx context.Context) ([]*Consumable, error) {
 // ==========================================
 
 func (s *service) CreateItemTemplate(ctx context.Context, req *CreateItemTemplateRequest) (*ItemTemplate, error) {
+	// Validate rarity exists
+	if _, err := s.repo.GetItemRarityByID(ctx, req.RarityID); err != nil {
+		return nil, fmt.Errorf("invalid rarity_id: %w", err)
+	}
+
 	// Set defaults
 	requiredLevel := 1
 	if req.RequiredLevel != nil {
@@ -289,10 +305,6 @@ func (s *service) GetItemTemplateByCode(ctx context.Context, code string) (*Item
 	return s.repo.GetItemTemplateByCode(ctx, code)
 }
 
-func (s *service) ListItemTemplates(ctx context.Context) ([]*ItemTemplate, error) {
-	return s.repo.ListItemTemplates(ctx)
-}
-
 func (s *service) ListItemTemplateAggregates(ctx context.Context) ([]*ItemTemplateAggregate, error) {
 	return s.repo.ListItemTemplateAggregates(ctx)
 }
@@ -323,58 +335,62 @@ func (s *service) ListConsumablesWithTemplate(ctx context.Context) ([]*Consumabl
 // ==========================================
 
 func (s *service) CreateCompleteWeapon(ctx context.Context, req *CreateCompleteWeaponRequest) (*WeaponWithTemplate, error) {
-	// Step 1: Create the weapon with specific attributes
-	weaponReq := &CreateWeaponRequest{
-		RarityID:     req.RarityID,
-		AttackPower:  req.AttackPower,
-		CriticalRate: req.CriticalRate,
-		WeaponType:   req.WeaponType,
-		Description:  req.Description,
+	if _, err := s.repo.GetItemRarityByID(ctx, req.RarityID); err != nil {
+		return nil, fmt.Errorf("invalid rarity_id: %w", err)
 	}
 
-	weapon, err := s.CreateWeapon(ctx, weaponReq)
+	var weapon Weapon
+	var template ItemTemplate
+
+	requiredLevel, baseSellPrice, baseBuyPrice := resolveTemplateDefaults(req.RequiredLevel, req.BaseSellPrice, req.BaseBuyPrice)
+
+	err := commonutils.ExecTx(ctx, s.db, func(tx *sqlx.Tx) error {
+		w := &Weapon{
+			RarityID:     req.RarityID,
+			AttackPower:  req.AttackPower,
+			CriticalRate: req.CriticalRate,
+			WeaponType:   req.WeaponType,
+			Description:  req.Description,
+		}
+		if err := s.repo.CreateWeaponTx(ctx, tx, w); err != nil {
+			return err
+		}
+		weapon = *w
+
+		t := &ItemTemplate{
+			ItemName:      req.ItemName,
+			RarityID:      req.RarityID,
+			ItemType:      "weapon",
+			ItemID:        weapon.ID,
+			IconURL:       req.IconURL,
+			RequiredLevel: requiredLevel,
+			BaseSellPrice: baseSellPrice,
+			BaseBuyPrice:  baseBuyPrice,
+		}
+		if err := s.repo.CreateItemTemplateTx(ctx, tx, t); err != nil {
+			return err
+		}
+		template = *t
+
+		return nil
+	})
+
 	if err != nil {
-		slog.Error("Failed to create weapon", "error", err)
+		slog.Error("Failed to create complete weapon", "error", err)
 		return nil, err
 	}
 
-	// Step 2: Create the item template with common attributes
-	templateReq := &CreateItemTemplateRequest{
-		UserId:        req.UserId,
-		ItemName:      req.ItemName,
-		RarityID:      req.RarityID,
-		ItemType:      "weapon",
-		ItemID:        weapon.ID,
-		IconURL:       req.IconURL,
-		RequiredLevel: req.RequiredLevel,
-		BaseSellPrice: req.BaseSellPrice,
-		BaseBuyPrice:  req.BaseBuyPrice,
-	}
+	s.publishItemCreatedEvent(ctx, req.UserId, req.ItemName, "weapon")
 
-	template, err := s.CreateItemTemplate(ctx, templateReq)
-	if err != nil {
-		slog.Error("Failed to create item template for weapon", "weapon_id", weapon.ID, "error", err)
-		// TODO: Consider rollback weapon creation here
-		return nil, err
-	}
-
-	slog.Info("Complete weapon created successfully",
-		"weapon_id", weapon.ID,
-		"template_id", template.ID,
-		"item_name", template.ItemName,
-	)
-
-	// Step 3: Return the combined result
 	return &WeaponWithTemplate{
-		ID:           weapon.ID,
-		RarityID:     weapon.RarityID,
-		AttackPower:  weapon.AttackPower,
-		CriticalRate: weapon.CriticalRate,
-		WeaponType:   weapon.WeaponType,
-		Description:  weapon.Description,
-		CreatedAt:    weapon.CreatedAt,
-		UpdatedAt:    weapon.UpdatedAt,
-		// Template fields
+		ID:             weapon.ID,
+		RarityID:       weapon.RarityID,
+		AttackPower:    weapon.AttackPower,
+		CriticalRate:   weapon.CriticalRate,
+		WeaponType:     weapon.WeaponType,
+		Description:    weapon.Description,
+		CreatedAt:      weapon.CreatedAt,
+		UpdatedAt:      weapon.UpdatedAt,
 		ItemTemplateID: template.ID,
 		ItemName:       template.ItemName,
 		IconURL:        template.IconURL,
@@ -385,47 +401,53 @@ func (s *service) CreateCompleteWeapon(ctx context.Context, req *CreateCompleteW
 }
 
 func (s *service) CreateCompleteArmor(ctx context.Context, req *CreateCompleteArmorRequest) (*ArmorWithTemplate, error) {
-	// Step 1: Create the armor with specific attributes
-	armorReq := &CreateArmorRequest{
-		RarityID:        req.RarityID,
-		DefenseRating:   req.DefenseRating,
-		MagicResistance: req.MagicResistance,
-		ArmorSlot:       req.ArmorSlot,
-		Description:     req.Description,
+	if _, err := s.repo.GetItemRarityByID(ctx, req.RarityID); err != nil {
+		return nil, fmt.Errorf("invalid rarity_id: %w", err)
 	}
 
-	armor, err := s.CreateArmor(ctx, armorReq)
+	var armor Armor
+	var template ItemTemplate
+
+	requiredLevel, baseSellPrice, baseBuyPrice := resolveTemplateDefaults(req.RequiredLevel, req.BaseSellPrice, req.BaseBuyPrice)
+
+	err := commonutils.ExecTx(ctx, s.db, func(tx *sqlx.Tx) error {
+		a := &Armor{
+			RarityID:        req.RarityID,
+			DefenseRating:   req.DefenseRating,
+			MagicResistance: req.MagicResistance,
+			ArmorSlot:       req.ArmorSlot,
+			Description:     req.Description,
+		}
+		if err := s.repo.CreateArmorTx(ctx, tx, a); err != nil {
+			return err
+		}
+		armor = *a
+
+		t := &ItemTemplate{
+			ItemName:      req.ItemName,
+			RarityID:      req.RarityID,
+			ItemType:      "armor",
+			ItemID:        armor.ID,
+			IconURL:       req.IconURL,
+			RequiredLevel: requiredLevel,
+			BaseSellPrice: baseSellPrice,
+			BaseBuyPrice:  baseBuyPrice,
+		}
+		if err := s.repo.CreateItemTemplateTx(ctx, tx, t); err != nil {
+			return err
+		}
+		template = *t
+
+		return nil
+	})
+
 	if err != nil {
-		slog.Error("Failed to create armor", "error", err)
+		slog.Error("Failed to create complete armor", "error", err)
 		return nil, err
 	}
 
-	// Step 2: Create the item template with common attributes
-	templateReq := &CreateItemTemplateRequest{
-		UserId:        req.UserId,
-		ItemName:      req.ItemName,
-		RarityID:      req.RarityID,
-		ItemType:      "armor",
-		ItemID:        armor.ID,
-		IconURL:       req.IconURL,
-		RequiredLevel: req.RequiredLevel,
-		BaseSellPrice: req.BaseSellPrice,
-		BaseBuyPrice:  req.BaseBuyPrice,
-	}
+	s.publishItemCreatedEvent(ctx, req.UserId, req.ItemName, "armor")
 
-	template, err := s.CreateItemTemplate(ctx, templateReq)
-	if err != nil {
-		slog.Error("Failed to create item template for armor", "armor_id", armor.ID, "error", err)
-		return nil, err
-	}
-
-	slog.Info("Complete armor created successfully",
-		"armor_id", armor.ID,
-		"template_id", template.ID,
-		"item_name", template.ItemName,
-	)
-
-	// Step 3: Return the combined result
 	return &ArmorWithTemplate{
 		ID:              armor.ID,
 		RarityID:        armor.RarityID,
@@ -435,70 +457,74 @@ func (s *service) CreateCompleteArmor(ctx context.Context, req *CreateCompleteAr
 		Description:     armor.Description,
 		CreatedAt:       armor.CreatedAt,
 		UpdatedAt:       armor.UpdatedAt,
-		// Template fields
-		ItemTemplateID: template.ID,
-		ItemName:       template.ItemName,
-		IconURL:        template.IconURL,
-		RequiredLevel:  template.RequiredLevel,
-		BaseSellPrice:  template.BaseSellPrice,
-		BaseBuyPrice:   template.BaseBuyPrice,
+		ItemTemplateID:  template.ID,
+		ItemName:        template.ItemName,
+		IconURL:         template.IconURL,
+		RequiredLevel:   template.RequiredLevel,
+		BaseSellPrice:   template.BaseSellPrice,
+		BaseBuyPrice:    template.BaseBuyPrice,
 	}, nil
 }
 
 func (s *service) CreateCompleteConsumable(ctx context.Context, req *CreateCompleteConsumableRequest) (*ConsumableWithTemplate, error) {
-	// Step 1: Create the consumable with specific attributes
-	consumableReq := &CreateConsumableRequest{
-		RarityID:      req.RarityID,
-		HealingAmount: req.HealingAmount,
-		ManaAmount:    req.ManaAmount,
-		BuffDuration:  req.BuffDuration,
-		MaxStackSize:  req.MaxStackSize,
-		Description:   req.Description,
+	if _, err := s.repo.GetItemRarityByID(ctx, req.RarityID); err != nil {
+		return nil, fmt.Errorf("invalid rarity_id: %w", err)
 	}
 
-	consumable, err := s.CreateConsumable(ctx, consumableReq)
+	var consumable Consumable
+	var template ItemTemplate
+
+	requiredLevel, baseSellPrice, baseBuyPrice := resolveTemplateDefaults(req.RequiredLevel, req.BaseSellPrice, req.BaseBuyPrice)
+
+	err := commonutils.ExecTx(ctx, s.db, func(tx *sqlx.Tx) error {
+		c := &Consumable{
+			RarityID:      req.RarityID,
+			HealingAmount: req.HealingAmount,
+			ManaAmount:    req.ManaAmount,
+			BuffDuration:  req.BuffDuration,
+			MaxStackSize:  req.MaxStackSize,
+			Description:   req.Description,
+		}
+		if err := s.repo.CreateConsumableTx(ctx, tx, c); err != nil {
+			return err
+		}
+		consumable = *c
+
+		t := &ItemTemplate{
+			ItemName:      req.ItemName,
+			RarityID:      req.RarityID,
+			ItemType:      "consumable",
+			ItemID:        consumable.ID,
+			IconURL:       req.IconURL,
+			RequiredLevel: requiredLevel,
+			BaseSellPrice: baseSellPrice,
+			BaseBuyPrice:  baseBuyPrice,
+		}
+		if err := s.repo.CreateItemTemplateTx(ctx, tx, t); err != nil {
+			return err
+		}
+		template = *t
+
+		return nil
+	})
+
 	if err != nil {
-		slog.Error("Failed to create consumable", "error", err)
+		slog.Error("Failed to create complete consumable", "error", err)
 		return nil, err
 	}
 
-	// Step 2: Create the item template with common attributes
-	templateReq := &CreateItemTemplateRequest{
-		UserId:        req.UserId,
-		ItemName:      req.ItemName,
-		RarityID:      req.RarityID,
-		ItemType:      "consumable",
-		ItemID:        consumable.ID,
-		IconURL:       req.IconURL,
-		RequiredLevel: req.RequiredLevel,
-		BaseSellPrice: req.BaseSellPrice,
-		BaseBuyPrice:  req.BaseBuyPrice,
-	}
+	s.publishItemCreatedEvent(ctx, req.UserId, req.ItemName, "consumable")
 
-	template, err := s.CreateItemTemplate(ctx, templateReq)
-	if err != nil {
-		slog.Error("Failed to create item template for consumable", "consumable_id", consumable.ID, "error", err)
-		return nil, err
-	}
-
-	slog.Info("Complete consumable created successfully",
-		"consumable_id", consumable.ID,
-		"template_id", template.ID,
-		"item_name", template.ItemName,
-	)
-
-	// Step 3: Return the combined result
 	return &ConsumableWithTemplate{
-		ID:            consumable.ID,
-		RarityID:      consumable.RarityID,
-		HealingAmount: consumable.HealingAmount,
-		ManaAmount:    consumable.ManaAmount,
-		BuffDuration:  consumable.BuffDuration,
-		MaxStackSize:  consumable.MaxStackSize,
-		Description:   consumable.Description,
-		CreatedAt:     consumable.CreatedAt,
-		UpdatedAt:     consumable.UpdatedAt,
-		// Template fields
+		ID:             consumable.ID,
+		RarityID:       consumable.RarityID,
+		HealingAmount:  consumable.HealingAmount,
+		ManaAmount:     consumable.ManaAmount,
+		BuffDuration:   consumable.BuffDuration,
+		MaxStackSize:   consumable.MaxStackSize,
+		Description:    consumable.Description,
+		CreatedAt:      consumable.CreatedAt,
+		UpdatedAt:      consumable.UpdatedAt,
 		ItemTemplateID: template.ID,
 		ItemName:       template.ItemName,
 		IconURL:        template.IconURL,
@@ -508,4 +534,40 @@ func (s *service) CreateCompleteConsumable(ctx context.Context, req *CreateCompl
 	}, nil
 }
 
-//
+// resolveTemplateDefaults applies defaults for optional template fields
+func resolveTemplateDefaults(reqLevel, sellPrice, buyPrice *int) (int, int, int) {
+	requiredLevel := 1
+	if reqLevel != nil {
+		requiredLevel = *reqLevel
+	}
+	baseSellPrice := 0
+	if sellPrice != nil {
+		baseSellPrice = *sellPrice
+	}
+	baseBuyPrice := 0
+	if buyPrice != nil {
+		baseBuyPrice = *buyPrice
+	}
+	return requiredLevel, baseSellPrice, baseBuyPrice
+}
+
+// publishItemCreatedEvent sends an item creation event to RabbitMQ (fire-and-forget, outside tx)
+func (s *service) publishItemCreatedEvent(ctx context.Context, userId, itemName, itemType string) {
+	protoData, err := proto.Marshal(&pb.ItemCreatedEvent{
+		UserId:   userId,
+		Name:     itemName,
+		ItemType: itemType,
+	})
+	if err != nil {
+		slog.Error("Failed to marshal item created event", "error", err)
+		return
+	}
+
+	if err := s.publishCh.PublishWithContext(ctx, commonconstants.ItemEventsExchange, commonconstants.ItemCreated, commonbroker.Message{
+		ContentType:  "application/protobuf",
+		Body:         protoData,
+		DeliveryMode: commonbroker.Persistent,
+	}); err != nil {
+		slog.Error("Failed to publish item created event", "error", err)
+	}
+}

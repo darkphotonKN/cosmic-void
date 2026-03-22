@@ -61,7 +61,6 @@ type Service interface {
 	CreateItemTemplate(ctx context.Context, req *CreateItemTemplateRequest) (*ItemTemplate, error)
 	GetItemTemplate(ctx context.Context, id uuid.UUID) (*ItemTemplate, error)
 	GetItemTemplateByCode(ctx context.Context, code string) (*ItemTemplate, error)
-	ListItemTemplates(ctx context.Context) ([]*ItemTemplate, error)
 	ListItemTemplateAggregates(ctx context.Context) ([]*ItemTemplateAggregate, error)
 
 	// Weapon operations with item template (JOIN queries)
@@ -520,7 +519,7 @@ func (h *Handler) CreateItemTemplate(ctx context.Context, req *pb.CreateItemTemp
 	return &pb.ItemTemplate{
 		Id:            template.ID.String(),
 		ItemName:      template.ItemName,
-		Rarity:        template.Rarity,
+		Rarity:        template.RarityID.String(),
 		ItemType:      template.ItemType,
 		IconUrl:       iconURL,
 		RequiredLevel: int32(template.RequiredLevel),

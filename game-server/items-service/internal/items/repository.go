@@ -12,57 +12,11 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type Repository interface {
-	// ItemType operations
-	CreateItemType(ctx context.Context, itemType *ItemType) error
-	GetItemTypeByID(ctx context.Context, id uuid.UUID) (*ItemType, error)
-	GetItemTypeByCode(ctx context.Context, code string) (*ItemType, error)
-	ListItemTypes(ctx context.Context) ([]*ItemType, error)
-
-	// ItemRarity operations
-	CreateItemRarity(ctx context.Context, rarity *ItemRarity) error
-	GetItemRarityByID(ctx context.Context, id uuid.UUID) (*ItemRarity, error)
-	GetItemRarityByCode(ctx context.Context, code string) (*ItemRarity, error)
-	ListItemRarities(ctx context.Context) ([]*ItemRarity, error)
-
-	// Weapon operations
-	CreateWeapon(ctx context.Context, weapon *Weapon) error
-	GetWeaponByID(ctx context.Context, id uuid.UUID) (*Weapon, error)
-	ListWeapons(ctx context.Context) ([]*Weapon, error)
-
-	// Weapon operations with item template (JOIN queries)
-	GetWeaponWithTemplateByID(ctx context.Context, id uuid.UUID) (*WeaponWithTemplate, error)
-	ListWeaponsWithTemplate(ctx context.Context) ([]*WeaponWithTemplate, error)
-
-	// Armor operations with item template (JOIN queries)
-	ListArmorsWithTemplate(ctx context.Context) ([]*ArmorWithTemplate, error)
-
-	// Consumable operations with item template (JOIN queries)
-	ListConsumablesWithTemplate(ctx context.Context) ([]*ConsumableWithTemplate, error)
-
-	// Armor operations
-	CreateArmor(ctx context.Context, armor *Armor) error
-	GetArmorByID(ctx context.Context, id uuid.UUID) (*Armor, error)
-	ListArmors(ctx context.Context) ([]*Armor, error)
-
-	// Consumable operations
-	CreateConsumable(ctx context.Context, consumable *Consumable) error
-	GetConsumableByID(ctx context.Context, id uuid.UUID) (*Consumable, error)
-	ListConsumables(ctx context.Context) ([]*Consumable, error)
-
-	// ItemTemplate operations
-	CreateItemTemplate(ctx context.Context, template *ItemTemplate) error
-	GetItemTemplateByID(ctx context.Context, id uuid.UUID) (*ItemTemplate, error)
-	GetItemTemplateByCode(ctx context.Context, code string) (*ItemTemplate, error)
-	ListItemTemplates(ctx context.Context) ([]*ItemTemplate, error)
-	ListItemTemplateAggregates(ctx context.Context) ([]*ItemTemplateAggregate, error)
-}
-
 type repository struct {
 	DB *sqlx.DB
 }
 
-func NewRepository(db *sqlx.DB) Repository {
+func NewRepository(db *sqlx.DB) *repository {
 	return &repository{
 		DB: db,
 	}
@@ -381,6 +335,22 @@ func (r *repository) GetItemTemplateByID(ctx context.Context, id uuid.UUID) (*It
 	return &template, nil
 }
 
+func (r *repository) ListItemTemplates(ctx context.Context) ([]*ItemTemplate, error) {
+	var templates []*ItemTemplate
+
+	query := `SELECT id, item_name, rarity_id, item_type, item_id, icon_url,
+	           required_level, base_sell_price, base_buy_price,
+	           created_at, created_by, updated_at, updated_by
+	           FROM item_templates ORDER BY created_at DESC`
+
+	err := r.DB.SelectContext(ctx, &templates, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list item templates: %w", err)
+	}
+
+	return templates, nil
+}
+
 func (r *repository) GetItemTemplateByCode(ctx context.Context, code string) (*ItemTemplate, error) {
 	// This method is deprecated as item_code no longer exists
 	// Return nil for now, to be removed in future refactor
@@ -526,4 +496,88 @@ func (r *repository) ListWeaponsWithTemplate(ctx context.Context) ([]*WeaponWith
 	}
 
 	return weapons, nil
+}
+
+// ==========================================
+// Transaction-aware Create Methods
+// ==========================================
+
+func (r *repository) CreateWeaponTx(ctx context.Context, tx *sqlx.Tx, weapon *Weapon) error {
+	weapon.ID = uuid.New()
+
+	query := `
+		INSERT INTO weapons (
+			id, rarity_id, attack_power,
+			critical_rate, weapon_type, description
+		) VALUES (
+			:id, :rarity_id, :attack_power,
+			:critical_rate, :weapon_type, :description
+		)`
+
+	_, err := tx.NamedExecContext(ctx, query, weapon)
+	if err != nil {
+		return fmt.Errorf("failed to create weapon (tx): %w", err)
+	}
+
+	return nil
+}
+
+func (r *repository) CreateArmorTx(ctx context.Context, tx *sqlx.Tx, armor *Armor) error {
+	armor.ID = uuid.New()
+
+	query := `
+		INSERT INTO armors (
+			id, rarity_id, defense_rating,
+			magic_resistance, armor_slot, description
+		) VALUES (
+			:id, :rarity_id, :defense_rating,
+			:magic_resistance, :armor_slot, :description
+		)`
+
+	_, err := tx.NamedExecContext(ctx, query, armor)
+	if err != nil {
+		return fmt.Errorf("failed to create armor (tx): %w", err)
+	}
+
+	return nil
+}
+
+func (r *repository) CreateConsumableTx(ctx context.Context, tx *sqlx.Tx, consumable *Consumable) error {
+	consumable.ID = uuid.New()
+
+	query := `
+		INSERT INTO consumables (
+			id, rarity_id, healing_amount, mana_amount,
+			buff_duration, max_stack_size, description
+		) VALUES (
+			:id, :rarity_id, :healing_amount, :mana_amount,
+			:buff_duration, :max_stack_size, :description
+		)`
+
+	_, err := tx.NamedExecContext(ctx, query, consumable)
+	if err != nil {
+		return fmt.Errorf("failed to create consumable (tx): %w", err)
+	}
+
+	return nil
+}
+
+func (r *repository) CreateItemTemplateTx(ctx context.Context, tx *sqlx.Tx, template *ItemTemplate) error {
+	template.ID = uuid.New()
+
+	query := `
+		INSERT INTO item_templates (
+			id, item_name, rarity_id, item_type, item_id,
+			icon_url, required_level, base_sell_price, base_buy_price
+		) VALUES (
+			:id, :item_name, :rarity_id, :item_type, :item_id,
+			:icon_url, :required_level, :base_sell_price, :base_buy_price
+		)`
+
+	_, err := tx.NamedExecContext(ctx, query, template)
+	if err != nil {
+		return fmt.Errorf("failed to create item template (tx): %w", err)
+	}
+
+	return nil
 }
