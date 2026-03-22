@@ -322,116 +322,260 @@ func TestHandleInteractContainer(t *testing.T) {
 }
 
 func TestSession_InitializeItems_CreateItemEntities(t *testing.T) {
-	sender := createMockSender()
-	em := ecs.NewEntityManager()
-	mockEmitter := &mockEventEmitter{}
+	expectedWeaponCount := 2
 
-	mockClient := mockItemsClient{}
-
-	mockClient.On("ListItemTemplates", mock.Anything, mock.Anything).Return(&pb.ListItemTemplatesResponse{
-		Items: []*pb.ItemTemplate{
-			// Weapons
-			{
-				Id:            "aa000000-0000-0000-0000-000000000001",
-				ItemName:      "Vibro-blade",
-				Rarity:        "Common",
-				ItemType:      "weapon",
-				IconUrl:       "/icons/weapon/vibro_blade.png",
-				RequiredLevel: 1,
-				BaseSellPrice: 2,
-				BaseBuyPrice:  5,
-				AttackPower:   6,
-				CriticalRate:  0.08,
-				WeaponType:    "sword",
-				Description:   "Mono-molecular vibrating combat blade",
+	// table tests
+	tests := []struct {
+		name            string
+		mockReturn      *pb.ListItemTemplatesResponse
+		mockErr         error
+		wantErr         bool
+		wantItemCount   int
+		wantWeaponCount *int
+	}{
+		{
+			name: "creates item entities properly",
+			mockReturn: &pb.ListItemTemplatesResponse{
+				Items: []*pb.ItemTemplate{
+					// Weapons
+					{
+						Id:            "aa000000-0000-0000-0000-000000000001",
+						ItemName:      "Vibro-blade",
+						Rarity:        "Common",
+						ItemType:      "weapon",
+						IconUrl:       "/icons/weapon/vibro_blade.png",
+						RequiredLevel: 1,
+						BaseSellPrice: 2,
+						BaseBuyPrice:  5,
+						AttackPower:   6,
+						CriticalRate:  0.08,
+						WeaponType:    "sword",
+						Description:   "Mono-molecular vibrating combat blade",
+					},
+					{
+						Id:            "aa000000-0000-0000-0000-000000000002",
+						ItemName:      "Pulse Dagger",
+						Rarity:        "Common",
+						ItemType:      "weapon",
+						IconUrl:       "/icons/weapon/pulse_dagger.png",
+						RequiredLevel: 1,
+						BaseSellPrice: 1,
+						BaseBuyPrice:  3,
+						AttackPower:   3,
+						CriticalRate:  0.12,
+						WeaponType:    "knife",
+						Description:   "Compact energy-pulse combat knife",
+					},
+					// Armors
+					{
+						Id:              "aa000000-0000-0000-0000-000000000007",
+						ItemName:        "Titanium Helmet",
+						Rarity:          "Common",
+						ItemType:        "armor",
+						IconUrl:         "/icons/armor/titanium_helmet.png",
+						RequiredLevel:   1,
+						BaseSellPrice:   1,
+						BaseBuyPrice:    4,
+						DefenseRating:   3,
+						MagicResistance: 1,
+						ArmorSlot:       "head",
+						Description:     "Standard-issue titanium alloy combat helmet",
+					},
+					{
+						Id:              "aa000000-0000-0000-0000-000000000008",
+						ItemName:        "Titanium Chest Plate",
+						Rarity:          "Common",
+						ItemType:        "armor",
+						IconUrl:         "/icons/armor/titanium_chest_plate.png",
+						RequiredLevel:   1,
+						BaseSellPrice:   3,
+						BaseBuyPrice:    6,
+						DefenseRating:   6,
+						MagicResistance: 2,
+						ArmorSlot:       "chest",
+						Description:     "Titanium alloy chest plate with ballistic lining",
+					},
+					// Consumables
+					{
+						Id:            "aa000000-0000-0000-0000-000000000023",
+						ItemName:      "Minor Stim Pack",
+						Rarity:        "Common",
+						ItemType:      "consumable",
+						IconUrl:       "/icons/consumable/minor_stim_pack.png",
+						RequiredLevel: 1,
+						BaseSellPrice: 1,
+						BaseBuyPrice:  2,
+						HealingAmount: 10,
+						ManaAmount:    0,
+						BuffDuration:  0,
+						MaxStackSize:  20,
+						Description:   "Basic nano-med stim injection",
+					},
+					{
+						Id:            "aa000000-0000-0000-0000-000000000024",
+						ItemName:      "Greater Stim Pack",
+						Rarity:        "Common",
+						ItemType:      "consumable",
+						IconUrl:       "/icons/consumable/greater_stim_pack.png",
+						RequiredLevel: 1,
+						BaseSellPrice: 2,
+						BaseBuyPrice:  5,
+						HealingAmount: 25,
+						ManaAmount:    0,
+						BuffDuration:  0,
+						MaxStackSize:  10,
+						Description:   "Advanced regenerative stim pack",
+					},
+				},
 			},
-			{
-				Id:            "aa000000-0000-0000-0000-000000000002",
-				ItemName:      "Pulse Dagger",
-				Rarity:        "Common",
-				ItemType:      "weapon",
-				IconUrl:       "/icons/weapon/pulse_dagger.png",
-				RequiredLevel: 1,
-				BaseSellPrice: 1,
-				BaseBuyPrice:  3,
-				AttackPower:   3,
-				CriticalRate:  0.12,
-				WeaponType:    "knife",
-				Description:   "Compact energy-pulse combat knife",
-			},
-			// Armors
-			{
-				Id:              "aa000000-0000-0000-0000-000000000007",
-				ItemName:        "Titanium Helmet",
-				Rarity:          "Common",
-				ItemType:        "armor",
-				IconUrl:         "/icons/armor/titanium_helmet.png",
-				RequiredLevel:   1,
-				BaseSellPrice:   1,
-				BaseBuyPrice:    4,
-				DefenseRating:   3,
-				MagicResistance: 1,
-				ArmorSlot:       "head",
-				Description:     "Standard-issue titanium alloy combat helmet",
-			},
-			{
-				Id:              "aa000000-0000-0000-0000-000000000008",
-				ItemName:        "Titanium Chest Plate",
-				Rarity:          "Common",
-				ItemType:        "armor",
-				IconUrl:         "/icons/armor/titanium_chest_plate.png",
-				RequiredLevel:   1,
-				BaseSellPrice:   3,
-				BaseBuyPrice:    6,
-				DefenseRating:   6,
-				MagicResistance: 2,
-				ArmorSlot:       "chest",
-				Description:     "Titanium alloy chest plate with ballistic lining",
-			},
-			// Consumables
-			{
-				Id:            "aa000000-0000-0000-0000-000000000023",
-				ItemName:      "Minor Stim Pack",
-				Rarity:        "Common",
-				ItemType:      "consumable",
-				IconUrl:       "/icons/consumable/minor_stim_pack.png",
-				RequiredLevel: 1,
-				BaseSellPrice: 1,
-				BaseBuyPrice:  2,
-				HealingAmount: 10,
-				ManaAmount:    0,
-				BuffDuration:  0,
-				MaxStackSize:  20,
-				Description:   "Basic nano-med stim injection",
-			},
-			{
-				Id:            "aa000000-0000-0000-0000-000000000024",
-				ItemName:      "Greater Stim Pack",
-				Rarity:        "Common",
-				ItemType:      "consumable",
-				IconUrl:       "/icons/consumable/greater_stim_pack.png",
-				RequiredLevel: 1,
-				BaseSellPrice: 2,
-				BaseBuyPrice:  5,
-				HealingAmount: 25,
-				ManaAmount:    0,
-				BuffDuration:  0,
-				MaxStackSize:  10,
-				Description:   "Advanced regenerative stim pack",
-			},
+			wantErr:       false,
+			wantItemCount: 10,
 		},
-	},
-		nil, // [D] No error
-	)
+		{
+			name: "weapon counts match not affect by consumables and armor",
+			mockReturn: &pb.ListItemTemplatesResponse{
+				Items: []*pb.ItemTemplate{
+					// Weapons
+					{
+						Id:            "aa000000-0000-0000-0000-000000000001",
+						ItemName:      "Vibro-blade",
+						Rarity:        "Common",
+						ItemType:      "weapon",
+						IconUrl:       "/icons/weapon/vibro_blade.png",
+						RequiredLevel: 1,
+						BaseSellPrice: 2,
+						BaseBuyPrice:  5,
+						AttackPower:   6,
+						CriticalRate:  0.08,
+						WeaponType:    "sword",
+						Description:   "Mono-molecular vibrating combat blade",
+					},
+					{
+						Id:            "aa000000-0000-0000-0000-000000000002",
+						ItemName:      "Pulse Dagger",
+						Rarity:        "Common",
+						ItemType:      "weapon",
+						IconUrl:       "/icons/weapon/pulse_dagger.png",
+						RequiredLevel: 1,
+						BaseSellPrice: 1,
+						BaseBuyPrice:  3,
+						AttackPower:   3,
+						CriticalRate:  0.12,
+						WeaponType:    "knife",
+						Description:   "Compact energy-pulse combat knife",
+					},
+					// armor
+					{
+						Id:              "aa000000-0000-0000-0000-000000000008",
+						ItemName:        "Titanium Chest Plate",
+						Rarity:          "Common",
+						ItemType:        "armor",
+						IconUrl:         "/icons/armor/titanium_chest_plate.png",
+						RequiredLevel:   1,
+						BaseSellPrice:   3,
+						BaseBuyPrice:    6,
+						DefenseRating:   6,
+						MagicResistance: 2,
+						ArmorSlot:       "chest",
+						Description:     "Titanium alloy chest plate with ballistic lining",
+					},
+					// consumables
+					{
+						Id:            "aa000000-0000-0000-0000-000000000023",
+						ItemName:      "Minor Stim Pack",
+						Rarity:        "Common",
+						ItemType:      "consumable",
+						IconUrl:       "/icons/consumable/minor_stim_pack.png",
+						RequiredLevel: 1,
+						BaseSellPrice: 1,
+						BaseBuyPrice:  2,
+						HealingAmount: 10,
+						ManaAmount:    0,
+						BuffDuration:  0,
+						MaxStackSize:  20,
+						Description:   "Basic nano-med stim injection",
+					},
+				},
+			},
+			mockErr:         nil,
+			wantErr:         true,
+			wantItemCount:   0,
+			wantWeaponCount: &expectedWeaponCount,
+		},
+		{
+			name: "handles empty template list",
+			mockReturn: &pb.ListItemTemplatesResponse{
+				Items: []*pb.ItemTemplate{},
+			},
+			mockErr:       nil,
+			wantErr:       true,
+			wantItemCount: 0,
+		},
+	}
 
-	session := NewSession(sender, &mockStateSerializer{}, em, mockEmitter, &mockClient)
-	defer session.Shutdown()
+	// --- testing ---
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// -- setup --
+			sender := createMockSender()
+			em := ecs.NewEntityManager()
+			mockEmitter := &mockEventEmitter{}
+			mockClient := mockItemsClient{}
+			session := NewSession(sender, &mockStateSerializer{}, em, mockEmitter, &mockClient)
+			defer session.Shutdown()
 
-	err := session.InitializeItems(context.Background())
+			mockClient.On("ListItemTemplates", mock.Anything).Return(
+				tt.mockReturn,
+				tt.mockErr,
+			)
 
-	assert.NoError(t, err)
+			// -- test --
 
-	slog.Info("Testerson")
+			err := session.InitializeItems(context.Background())
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			// get all entites and check creations
+			allItemCounts := 0
+			allWeaponCounts := 0
+
+			entities := session.EntityManager.GetAllEntities()
+
+			for _, entity := range entities {
+				itemComp, isItemComp := entity.GetComponent(ecs.ComponentTypeItem)
+
+				if !isItemComp {
+					continue
+				}
+
+				allItemCounts++
+
+				item, ok := itemComp.(*components.ItemComponent)
+
+				if !ok {
+					continue
+				}
+
+				if item.ItemType == types.ItemTypeWeapon {
+					allWeaponCounts++
+				}
+			}
+
+			assert.Equal(t, tt.wantItemCount, allItemCounts)
+
+			// testing weapon item type specific counts check out
+			if tt.wantWeaponCount != nil {
+				assert.Equal(t, *tt.wantWeaponCount, allWeaponCounts)
+			}
+
+			mockClient.AssertExpectations(t)
+		},
+		)
+	}
 }
 
 type mockItemsClient struct {
@@ -452,99 +596,103 @@ func (c *mockItemsClient) ListWeaponsWithTemplate(ctx context.Context) (*pb.List
 }
 
 func (c *mockItemsClient) ListItemTemplates(ctx context.Context) (*pb.ListItemTemplatesResponse, error) {
-	return &pb.ListItemTemplatesResponse{
-		Items: []*pb.ItemTemplate{
-			// Weapons
-			{
-				Id:            "aa000000-0000-0000-0000-000000000001",
-				ItemName:      "Vibro-blade",
-				Rarity:        "Common",
-				ItemType:      "weapon",
-				IconUrl:       "/icons/weapon/vibro_blade.png",
-				RequiredLevel: 1,
-				BaseSellPrice: 2,
-				BaseBuyPrice:  5,
-				AttackPower:   6,
-				CriticalRate:  0.08,
-				WeaponType:    "sword",
-				Description:   "Mono-molecular vibrating combat blade",
-			},
-			{
-				Id:            "aa000000-0000-0000-0000-000000000002",
-				ItemName:      "Pulse Dagger",
-				Rarity:        "Common",
-				ItemType:      "weapon",
-				IconUrl:       "/icons/weapon/pulse_dagger.png",
-				RequiredLevel: 1,
-				BaseSellPrice: 1,
-				BaseBuyPrice:  3,
-				AttackPower:   3,
-				CriticalRate:  0.12,
-				WeaponType:    "knife",
-				Description:   "Compact energy-pulse combat knife",
-			},
-			// Armors
-			{
-				Id:              "aa000000-0000-0000-0000-000000000007",
-				ItemName:        "Titanium Helmet",
-				Rarity:          "Common",
-				ItemType:        "armor",
-				IconUrl:         "/icons/armor/titanium_helmet.png",
-				RequiredLevel:   1,
-				BaseSellPrice:   1,
-				BaseBuyPrice:    4,
-				DefenseRating:   3,
-				MagicResistance: 1,
-				ArmorSlot:       "head",
-				Description:     "Standard-issue titanium alloy combat helmet",
-			},
-			{
-				Id:              "aa000000-0000-0000-0000-000000000008",
-				ItemName:        "Titanium Chest Plate",
-				Rarity:          "Common",
-				ItemType:        "armor",
-				IconUrl:         "/icons/armor/titanium_chest_plate.png",
-				RequiredLevel:   1,
-				BaseSellPrice:   3,
-				BaseBuyPrice:    6,
-				DefenseRating:   6,
-				MagicResistance: 2,
-				ArmorSlot:       "chest",
-				Description:     "Titanium alloy chest plate with ballistic lining",
-			},
-			// Consumables
-			{
-				Id:            "aa000000-0000-0000-0000-000000000023",
-				ItemName:      "Minor Stim Pack",
-				Rarity:        "Common",
-				ItemType:      "consumable",
-				IconUrl:       "/icons/consumable/minor_stim_pack.png",
-				RequiredLevel: 1,
-				BaseSellPrice: 1,
-				BaseBuyPrice:  2,
-				HealingAmount: 10,
-				ManaAmount:    0,
-				BuffDuration:  0,
-				MaxStackSize:  20,
-				Description:   "Basic nano-med stim injection",
-			},
-			{
-				Id:            "aa000000-0000-0000-0000-000000000024",
-				ItemName:      "Greater Stim Pack",
-				Rarity:        "Common",
-				ItemType:      "consumable",
-				IconUrl:       "/icons/consumable/greater_stim_pack.png",
-				RequiredLevel: 1,
-				BaseSellPrice: 2,
-				BaseBuyPrice:  5,
-				HealingAmount: 25,
-				ManaAmount:    0,
-				BuffDuration:  0,
-				MaxStackSize:  10,
-				Description:   "Advanced regenerative stim pack",
-			},
-		},
-	}, nil
+	// return &pb.ListItemTemplatesResponse{
+	// 	Items: []*pb.ItemTemplate{
+	// 		// Weapons
+	// 		{
+	// 			Id:            "aa000000-0000-0000-0000-000000000001",
+	// 			ItemName:      "Vibro-blade",
+	// 			Rarity:        "Common",
+	// 			ItemType:      "weapon",
+	// 			IconUrl:       "/icons/weapon/vibro_blade.png",
+	// 			RequiredLevel: 1,
+	// 			BaseSellPrice: 2,
+	// 			BaseBuyPrice:  5,
+	// 			AttackPower:   6,
+	// 			CriticalRate:  0.08,
+	// 			WeaponType:    "sword",
+	// 			Description:   "Mono-molecular vibrating combat blade",
+	// 		},
+	// 		{
+	// 			Id:            "aa000000-0000-0000-0000-000000000002",
+	// 			ItemName:      "Pulse Dagger",
+	// 			Rarity:        "Common",
+	// 			ItemType:      "weapon",
+	// 			IconUrl:       "/icons/weapon/pulse_dagger.png",
+	// 			RequiredLevel: 1,
+	// 			BaseSellPrice: 1,
+	// 			BaseBuyPrice:  3,
+	// 			AttackPower:   3,
+	// 			CriticalRate:  0.12,
+	// 			WeaponType:    "knife",
+	// 			Description:   "Compact energy-pulse combat knife",
+	// 		},
+	// 		// Armors
+	// 		{
+	// 			Id:              "aa000000-0000-0000-0000-000000000007",
+	// 			ItemName:        "Titanium Helmet",
+	// 			Rarity:          "Common",
+	// 			ItemType:        "armor",
+	// 			IconUrl:         "/icons/armor/titanium_helmet.png",
+	// 			RequiredLevel:   1,
+	// 			BaseSellPrice:   1,
+	// 			BaseBuyPrice:    4,
+	// 			DefenseRating:   3,
+	// 			MagicResistance: 1,
+	// 			ArmorSlot:       "head",
+	// 			Description:     "Standard-issue titanium alloy combat helmet",
+	// 		},
+	// 		{
+	// 			Id:              "aa000000-0000-0000-0000-000000000008",
+	// 			ItemName:        "Titanium Chest Plate",
+	// 			Rarity:          "Common",
+	// 			ItemType:        "armor",
+	// 			IconUrl:         "/icons/armor/titanium_chest_plate.png",
+	// 			RequiredLevel:   1,
+	// 			BaseSellPrice:   3,
+	// 			BaseBuyPrice:    6,
+	// 			DefenseRating:   6,
+	// 			MagicResistance: 2,
+	// 			ArmorSlot:       "chest",
+	// 			Description:     "Titanium alloy chest plate with ballistic lining",
+	// 		},
+	// 		// Consumables
+	// 		{
+	// 			Id:            "aa000000-0000-0000-0000-000000000023",
+	// 			ItemName:      "Minor Stim Pack",
+	// 			Rarity:        "Common",
+	// 			ItemType:      "consumable",
+	// 			IconUrl:       "/icons/consumable/minor_stim_pack.png",
+	// 			RequiredLevel: 1,
+	// 			BaseSellPrice: 1,
+	// 			BaseBuyPrice:  2,
+	// 			HealingAmount: 10,
+	// 			ManaAmount:    0,
+	// 			BuffDuration:  0,
+	// 			MaxStackSize:  20,
+	// 			Description:   "Basic nano-med stim injection",
+	// 		},
+	// 		{
+	// 			Id:            "aa000000-0000-0000-0000-000000000024",
+	// 			ItemName:      "Greater Stim Pack",
+	// 			Rarity:        "Common",
+	// 			ItemType:      "consumable",
+	// 			IconUrl:       "/icons/consumable/greater_stim_pack.png",
+	// 			RequiredLevel: 1,
+	// 			BaseSellPrice: 2,
+	// 			BaseBuyPrice:  5,
+	// 			HealingAmount: 25,
+	// 			ManaAmount:    0,
+	// 			BuffDuration:  0,
+	// 			MaxStackSize:  10,
+	// 			Description:   "Advanced regenerative stim pack",
+	// 		},
+	// 	},
+	// }, nil
+
+	args := c.Called(ctx)
+
+	return args.Get(0).(*pb.ListItemTemplatesResponse), args.Error(1)
 }
 
 func (c *mockItemsClient) ListArmorsWithTemplate(ctx context.Context) (*pb.ListArmorsResponse, error) {
