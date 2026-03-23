@@ -84,6 +84,7 @@ type EventEmitter interface {
 }
 
 type StateSerializer interface {
+	PutBackendState(backendState *types.BackendGameState)
 	SerializeBackendState(ctx context.Context, sessionID uuid.UUID, entities []*ecs.Entity) (*types.BackendGameState, error)
 	FormatStateToClientState(backendState *types.BackendGameState, playerID uuid.UUID) *types.ClientGameState
 }
@@ -578,16 +579,17 @@ func (s *Session) broadcastFullState(entities []*ecs.Entity) error {
 		return err
 	}
 
-	// create and send personalized state for each player
+	clientStates := make(map[uuid.UUID]*types.ClientGameState)
 	for _, playerID := range s.playerEntityIDToPlayerID {
-		clientState := s.stateSerializer.FormatStateToClientState(backendState, playerID)
+		clientStates[playerID] = s.stateSerializer.FormatStateToClientState(backendState, playerID)
+	}
 
-		go func() {
-			err := s.sender.SendStateToPlayer(playerID, clientState)
-			if err != nil {
-				slog.Error("Failed to send state to player", "playerID", playerID, "error", err)
-			}
-		}()
+	s.stateSerializer.PutBackendState(backendState)
+
+	for playerID, clientState := range clientStates {
+		go func(pID uuid.UUID, cState *types.ClientGameState) {
+			s.sender.SendStateToPlayer(pID, cState)
+		}(playerID, clientState)
 	}
 
 	return nil

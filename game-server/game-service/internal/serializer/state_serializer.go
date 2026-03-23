@@ -3,6 +3,7 @@ package serializer
 import (
 	"context"
 	"log/slog"
+	"sync"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
@@ -15,23 +16,29 @@ import (
 * state in the form of entity and components into client consumable state.
 **/
 type StateSerializer struct {
-	em *ecs.EntityManager
+	em               *ecs.EntityManager
+	backendStatePool *sync.Pool
 }
 
 func NewStateSerializer(em *ecs.EntityManager) *StateSerializer {
-	return &StateSerializer{em: em}
+	return &StateSerializer{em: em, backendStatePool: &sync.Pool{
+		New: func() interface{} {
+			return &types.BackendGameState{
+				Players:    make(map[uuid.UUID]*types.PlayerState),
+				Items:      make([]uuid.UUID, 0),
+				Doors:      make([]*types.DoorState, 0),
+				Containers: make([]*types.ContainerState, 0),
+				EscapeDoor: make([]*types.EscapeDoorState, 0),
+				Switch:     make([]*types.SwitchState, 0),
+			}
+		},
+	}}
 }
 
 func (s *StateSerializer) SerializeBackendState(ctx context.Context, sessionID uuid.UUID, entities []*ecs.Entity) (*types.BackendGameState, error) {
-	backendState := &types.BackendGameState{
-		SessionID:  sessionID,
-		Players:    make(map[uuid.UUID]*types.PlayerState, 0),
-		Items:      make([]uuid.UUID, 0),
-		Doors:      make([]*types.DoorState, 0),
-		Containers: make([]*types.ContainerState, 0),
-		EscapeDoor: make([]*types.EscapeDoorState, 0),
-		Switch:     make([]*types.SwitchState, 0),
-	}
+	backendState := s.backendStatePool.Get().(*types.BackendGameState)
+	s.RestBackendStatePool(backendState)
+	backendState.SessionID = sessionID
 
 	for _, entity := range entities {
 		// --- Player ---
@@ -245,8 +252,20 @@ func (s *StateSerializer) FormatStateToClientState(backendState *types.BackendGa
 	return state
 }
 
-type Tester struct {
-	value string
+func (s *StateSerializer) RestBackendStatePool(state *types.BackendGameState) {
+	for k := range state.Players {
+		delete(state.Players, k)
+	}
+	state.Items = state.Items[:0]
+	state.Doors = state.Doors[:0]
+	state.Containers = state.Containers[:0]
+	state.EscapeDoor = state.EscapeDoor[:0]
+	state.Switch = state.Switch[:0]
+	state.SessionID = uuid.Nil
+}
+
+func (s *StateSerializer) PutBackendState(state *types.BackendGameState) {
+	s.backendStatePool.Put(state)
 }
 
 // populateItemDetails reads item details directly from the ItemComponent
