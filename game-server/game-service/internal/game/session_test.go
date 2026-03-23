@@ -698,10 +698,6 @@ func (s *mockStateSerializer) SerializeBackendState(ctx context.Context, session
 	return nil, nil
 }
 
-func (s *mockStateSerializer) Serialize(ctx context.Context, sessionID uuid.UUID, recipientPlayerID uuid.UUID, entities []*ecs.Entity) (*types.ClientGameState, error) {
-	return nil, nil
-}
-
 func (s *mockStateSerializer) FormatStateToClientState(backendState *types.BackendGameState, playerID uuid.UUID) *types.ClientGameState {
 	return nil
 }
