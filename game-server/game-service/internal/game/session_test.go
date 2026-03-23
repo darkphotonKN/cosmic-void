@@ -544,35 +544,19 @@ func TestSession_InitializeItems_CreateItemEntities(t *testing.T) {
 			}
 
 			// get all entites and check creations
-			allItemCounts := 0
 			allWeaponCounts := 0
 
-			entities := session.EntityManager.GetAllEntities()
-
-			for _, entity := range entities {
-				itemComp, isItemComp := entity.GetComponent(ecs.ComponentTypeItem)
-
-				if !isItemComp {
-					continue
-				}
-
-				allItemCounts++
-
-				item, ok := itemComp.(*components.ItemComponent)
-
-				if !ok {
-					continue
-				}
-
-				if item.ItemType == types.ItemTypeWeapon {
-					allWeaponCounts++
-				}
-			}
-
-			assert.Equal(t, tt.wantItemCount, allItemCounts)
+			assert.Equal(t, tt.wantItemCount, len(session.itemPool))
 
 			// testing weapon item type specific counts check out
 			if tt.wantWeaponCount != nil {
+
+				for _, item := range session.itemPool {
+					if item.ItemType == types.ItemTypeWeapon {
+						allWeaponCounts++
+					}
+				}
+
 				assert.Equal(t, *tt.wantWeaponCount, allWeaponCounts)
 			}
 

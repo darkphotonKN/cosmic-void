@@ -57,7 +57,7 @@ type Session struct {
 	TestMessageSpy chan types.Message
 
 	// item pool (session-level, items are removed once assigned to a container)
-	itemPool            []item // 1 , 2, 3, 4, 5
+	itemPool            []ItemConfig // 1 , 2, 3, 4, 5
 	itemPoolInitialized bool
 
 	// dependency injections
@@ -360,20 +360,9 @@ func (s *Session) manageGameLoop() {
 	defer ticker.Stop()
 
 	// --- debugging ---
-	itemsState := make([]*components.ItemComponent, 0)
-
-	for _, entity := range s.EntityManager.GetAllEntities() {
-		itemComp, hasItem := entity.GetComponent(ecs.ComponentTypeItem)
-
-		if hasItem {
-			itemState := itemComp.(*components.ItemComponent)
-
-			itemsState = append(itemsState, itemState)
-		}
-	}
 
 	slog.Debug("Showing all item entities that was created at the start of the game session.",
-		"itemsState", itemsState,
+		"itemsState", s.itemPool,
 	)
 
 	// --- end debugging ---
@@ -535,22 +524,26 @@ func (s *Session) AddEscape(x, y float64) uuid.UUID {
 
 func (s *Session) Shutdown() {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	if !s.isRunning {
+		s.mu.Unlock()
 		return
 	}
 
 	slog.Info("Shutting down game session", "sessionID", s.ID)
-
-	// wait for all dependencies of channels to clean up
-	s.wg.Wait()
 
 	// clean up channels
 	close(s.stopChan)
 	close(s.MessageCh)
 	close(s.eliminationCh)
 	close(s.endSessionCh)
+
+	s.mu.Unlock()
+
+	// NOTE: wait for all dependencies of channels to clean up before exiting
+	// most importantly for eliminationCh to finish as we need the eliminations to
+	// be complete before calculating raw match state after a game session ends
+	s.wg.Wait()
 }
 
 /**
@@ -1054,30 +1047,16 @@ func (s *Session) handleAttack(playerID uuid.UUID, enemyEntityID uuid.UUID) erro
 	return nil
 }
 
-// item is a unified representation of an item from items-service
-type item struct {
-	ID              uuid.UUID
-	ItemType        string
-	Name            string
-	AttackPower     int
-	CriticalRate    float64
-	WeaponType      string
-	DefenseRating   int
-	MagicResistance int
-	ArmorSlot       string
-	HealingAmount   int
-	ManaAmount      int
-	BuffDuration    int
-	BuyPrice        int
-	SellPrice       int
-	Description     string
-}
-
 /**
 * generateContainerItems picks 1-4 unique items from the session item pool,
 * removes them from the pool, creates item entities, and returns their IDs.
 **/
 func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
+	slog.Debug("generating items from itemPool when opening container",
+		"s.itemPool", s.itemPool)
+
+	// decide on random 3 things
+
 	return nil, nil
 }
 
@@ -1311,7 +1290,9 @@ func (s *Session) InitializeItems(ctx context.Context) error {
 			return fmt.Errorf("No valid item types match the ItemType that was read from the data")
 		}
 
-		s.AddItem(newItemConfig)
+		// add to sessions internal state
+		s.itemPool = append(s.itemPool, newItemConfig)
+
 	}
 
 	return nil
