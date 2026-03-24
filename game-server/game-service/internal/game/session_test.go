@@ -498,8 +498,8 @@ func TestSession_InitializeItems_CreateItemEntities(t *testing.T) {
 				},
 			},
 			mockErr:         nil,
-			wantErr:         true,
-			wantItemCount:   0,
+			wantErr:         false,
+			wantItemCount:   4,
 			wantWeaponCount: &expectedWeaponCount,
 		},
 		{
@@ -508,7 +508,7 @@ func TestSession_InitializeItems_CreateItemEntities(t *testing.T) {
 				Items: []*pb.ItemTemplate{},
 			},
 			mockErr:       nil,
-			wantErr:       true,
+			wantErr:       false,
 			wantItemCount: 0,
 		},
 	}
@@ -545,6 +545,11 @@ func TestSession_InitializeItems_CreateItemEntities(t *testing.T) {
 
 			// get all entites and check creations
 			allWeaponCounts := 0
+
+			// slog.Info("session.itemPool during test",
+			// 	"test name", tt.name,
+			// 	"session.itemPool", session.itemPool,
+			// )
 
 			assert.Equal(t, tt.wantItemCount, len(session.itemPool))
 
@@ -584,100 +589,6 @@ func (c *mockItemsClient) ListWeaponsWithTemplate(ctx context.Context) (*pb.List
 }
 
 func (c *mockItemsClient) ListItemTemplates(ctx context.Context) (*pb.ListItemTemplatesResponse, error) {
-	// return &pb.ListItemTemplatesResponse{
-	// 	Items: []*pb.ItemTemplate{
-	// 		// Weapons
-	// 		{
-	// 			Id:            "aa000000-0000-0000-0000-000000000001",
-	// 			ItemName:      "Vibro-blade",
-	// 			Rarity:        "Common",
-	// 			ItemType:      "weapon",
-	// 			IconUrl:       "/icons/weapon/vibro_blade.png",
-	// 			RequiredLevel: 1,
-	// 			BaseSellPrice: 2,
-	// 			BaseBuyPrice:  5,
-	// 			AttackPower:   6,
-	// 			CriticalRate:  0.08,
-	// 			WeaponType:    "sword",
-	// 			Description:   "Mono-molecular vibrating combat blade",
-	// 		},
-	// 		{
-	// 			Id:            "aa000000-0000-0000-0000-000000000002",
-	// 			ItemName:      "Pulse Dagger",
-	// 			Rarity:        "Common",
-	// 			ItemType:      "weapon",
-	// 			IconUrl:       "/icons/weapon/pulse_dagger.png",
-	// 			RequiredLevel: 1,
-	// 			BaseSellPrice: 1,
-	// 			BaseBuyPrice:  3,
-	// 			AttackPower:   3,
-	// 			CriticalRate:  0.12,
-	// 			WeaponType:    "knife",
-	// 			Description:   "Compact energy-pulse combat knife",
-	// 		},
-	// 		// Armors
-	// 		{
-	// 			Id:              "aa000000-0000-0000-0000-000000000007",
-	// 			ItemName:        "Titanium Helmet",
-	// 			Rarity:          "Common",
-	// 			ItemType:        "armor",
-	// 			IconUrl:         "/icons/armor/titanium_helmet.png",
-	// 			RequiredLevel:   1,
-	// 			BaseSellPrice:   1,
-	// 			BaseBuyPrice:    4,
-	// 			DefenseRating:   3,
-	// 			MagicResistance: 1,
-	// 			ArmorSlot:       "head",
-	// 			Description:     "Standard-issue titanium alloy combat helmet",
-	// 		},
-	// 		{
-	// 			Id:              "aa000000-0000-0000-0000-000000000008",
-	// 			ItemName:        "Titanium Chest Plate",
-	// 			Rarity:          "Common",
-	// 			ItemType:        "armor",
-	// 			IconUrl:         "/icons/armor/titanium_chest_plate.png",
-	// 			RequiredLevel:   1,
-	// 			BaseSellPrice:   3,
-	// 			BaseBuyPrice:    6,
-	// 			DefenseRating:   6,
-	// 			MagicResistance: 2,
-	// 			ArmorSlot:       "chest",
-	// 			Description:     "Titanium alloy chest plate with ballistic lining",
-	// 		},
-	// 		// Consumables
-	// 		{
-	// 			Id:            "aa000000-0000-0000-0000-000000000023",
-	// 			ItemName:      "Minor Stim Pack",
-	// 			Rarity:        "Common",
-	// 			ItemType:      "consumable",
-	// 			IconUrl:       "/icons/consumable/minor_stim_pack.png",
-	// 			RequiredLevel: 1,
-	// 			BaseSellPrice: 1,
-	// 			BaseBuyPrice:  2,
-	// 			HealingAmount: 10,
-	// 			ManaAmount:    0,
-	// 			BuffDuration:  0,
-	// 			MaxStackSize:  20,
-	// 			Description:   "Basic nano-med stim injection",
-	// 		},
-	// 		{
-	// 			Id:            "aa000000-0000-0000-0000-000000000024",
-	// 			ItemName:      "Greater Stim Pack",
-	// 			Rarity:        "Common",
-	// 			ItemType:      "consumable",
-	// 			IconUrl:       "/icons/consumable/greater_stim_pack.png",
-	// 			RequiredLevel: 1,
-	// 			BaseSellPrice: 2,
-	// 			BaseBuyPrice:  5,
-	// 			HealingAmount: 25,
-	// 			ManaAmount:    0,
-	// 			BuffDuration:  0,
-	// 			MaxStackSize:  10,
-	// 			Description:   "Advanced regenerative stim pack",
-	// 		},
-	// 	},
-	// }, nil
-
 	args := c.Called(ctx)
 
 	return args.Get(0).(*pb.ListItemTemplatesResponse), args.Error(1)
@@ -692,6 +603,9 @@ func (c *mockItemsClient) ListConsumablesWithTemplate(ctx context.Context) (*pb.
 }
 
 type mockStateSerializer struct {
+}
+
+func (s *mockStateSerializer) PutBackendState(state *types.BackendGameState) {
 }
 
 func (s *mockStateSerializer) SerializeBackendState(ctx context.Context, sessionID uuid.UUID, entities []*ecs.Entity) (*types.BackendGameState, error) {
