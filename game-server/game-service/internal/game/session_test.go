@@ -571,6 +571,36 @@ func TestSession_InitializeItems_CreateItemEntities(t *testing.T) {
 	}
 }
 
+func TestSession_GenerateContainerItems_CreateItemEntities(t *testing.T) {
+	// table test data
+	tests := []struct{ 
+		name string 
+		mockReturn string
+		mockErr error
+		wantErr bool
+		expectErr bool
+	}{
+		{name: "hi"},
+	}
+
+	for _, tt := range tests {
+		// setup
+		t.Run(tt.name, func(t *testing.T) {
+			// -- setup --
+			sender := createMockSender()
+			em := ecs.NewEntityManager()
+			mockEmitter := &mockEventEmitter{}
+			mockClient := mockItemsClient{}
+
+			session := NewSession(sender, &mockStateSerializer{}, em, mockEmitter, &mockClient)
+
+			session.TestMessageSpy = make(chan types.Message, 1)
+
+			defer session.Shutdown()
+		}
+	}
+}
+
 type mockItemsClient struct {
 	mock.Mock
 }

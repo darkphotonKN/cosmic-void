@@ -17,6 +17,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/systems"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/utils"
 	"github.com/google/uuid"
 )
 
@@ -1048,6 +1049,12 @@ func (s *Session) handleAttack(playerID uuid.UUID, enemyEntityID uuid.UUID) erro
 	return nil
 }
 
+const (
+	weaponDropRate     float64 = 0.2
+	armorDropRate      float64 = 0.3
+	consumableDropRate float64 = 0.5
+)
+
 /**
 * generateContainerItems picks 1-4 unique items from the session item pool,
 * removes them from the pool, creates item entities, and returns their IDs.
@@ -1056,7 +1063,63 @@ func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
 	slog.Debug("generating items from itemPool when opening container",
 		"s.itemPool", s.itemPool)
 
-	// decide on random 3 things
+	// decide on RNG values
+	numberOfItems := utils.GenRandomBetween(1, 3)
+
+	// distribution of items
+	var numberOfWeapons int
+	var numberOfArmor int
+	var numberOfConsumables int
+
+	var rollRangeStart float64 = 1
+	var rollRangeEnd float64 = 10
+
+	for i := 0; i < numberOfItems; i++ {
+		// roll to determine which type to get
+		roll := utils.GenRandomBetween(int(rollRangeStart), int(rollRangeEnd))
+		weaponWeight := math.RoundToEven(float64((rollRangeEnd - rollRangeStart + 1) * weaponDropRate))
+		armorWeight := math.RoundToEven(float64((rollRangeEnd - rollRangeStart + 1) * armorDropRate))
+
+		if roll < int(weaponWeight) {
+			numberOfWeapons++
+			continue
+		}
+		if roll < int(armorWeight) {
+			numberOfArmor++
+			continue
+		}
+
+		numberOfConsumables++
+	}
+
+	// pull from item pool based on the number of random items
+	if numberOfWeapons != 0 {
+		for i := 0; i < numberOfWeapons; i++ {
+			// find weapon
+			itemConfig := s.itemPool[0]
+
+			// create entity
+			s.AddItem(itemConfig)
+		}
+	}
+
+	if numberOfArmor != 0 {
+		for i := 0; i < numberOfArmor; i++ {
+			itemConfig := s.itemPool[0]
+
+			// create entity
+			s.AddItem(itemConfig)
+		}
+	}
+
+	if numberOfConsumables != 0 {
+		for i := 0; i < numberOfConsumables; i++ {
+			itemConfig := s.itemPool[0]
+
+			// create entity
+			s.AddItem(itemConfig)
+		}
+	}
 
 	return nil, nil
 }
