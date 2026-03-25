@@ -580,7 +580,7 @@ func TestSession_GenerateContainerItems_CreateItemEntities(t *testing.T) {
 		wantErr    bool
 	}{
 		{
-			name: "Creates correct number of item entities #1",
+			name: "Creates correct number of item entities",
 			mockReturn: &pb.ListItemTemplatesResponse{
 				Items: []*pb.ItemTemplate{
 					// Weapons
@@ -677,9 +677,9 @@ func TestSession_GenerateContainerItems_CreateItemEntities(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:       "returns error when items service fails",
+			name:       "returns error when itemPool empty",
 			mockReturn: &pb.ListItemTemplatesResponse{},
-			mockErr:    errors.New("items service unavailable"),
+			mockErr:    nil,
 			wantErr:    true,
 		},
 		{
@@ -787,6 +787,53 @@ func TestSession_GenerateContainerItems_CreateItemEntities(t *testing.T) {
 				tt.mockReturn,
 				tt.mockErr,
 			)
+
+			// initialize seed items
+			err := session.InitializeItems(context.Background())
+
+			if err != nil {
+				t.Fatal("Unexpected error when testing.")
+			}
+
+			// -- test --
+			ids, err := session.generateContainerItems()
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+
+			// check ids exist in entity pool
+			itemsHashMap := make(map[uuid.UUID]*components.ItemComponent)
+			entities := session.EntityManager.GetAllEntities()
+
+			for _, entity := range entities {
+				itemComp, isItem := entity.GetComponent(ecs.ComponentTypeItem)
+				if !isItem {
+					continue
+				}
+				item, ok := itemComp.(*components.ItemComponent)
+
+				if !ok {
+					t.Fatal("unexpected error when asserting for item component")
+				}
+
+				itemsHashMap[item.TemplateID] = item
+			}
+
+			// loop through generated items
+			generatedItems := 0
+			for _, id := range ids {
+				_, exists := itemsHashMap[id]
+				assert.True(t, exists)
+				if exists {
+					generatedItems++
+				}
+			}
+
+			assert.Equal(t, len(ids), generatedItems)
 		})
 	}
 }
