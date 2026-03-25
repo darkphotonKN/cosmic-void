@@ -1056,8 +1056,8 @@ const (
 )
 
 /**
-* generateContainerItems picks 1-4 unique items from the session item pool,
-* removes them from the pool, creates item entities, and returns their IDs.
+* generateContainerItems generates new random items from the session itemPool base,
+* creates item entities, and returns their IDs.
 **/
 func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
 	slog.Debug("generating items from itemPool when opening container",
@@ -1103,6 +1103,13 @@ func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
 		numberOfConsumables++
 	}
 
+	// validate item pool correctly generated items
+	if len(s.itemPool) <= 0 {
+		return nil, fmt.Errorf("Item pool was empty.")
+	}
+
+	newItemEntityIDs := make([]uuid.UUID, 0, numberOfArmor+numberOfWeapons+numberOfConsumables)
+
 	// pull from item pool based on the number of random items
 	if numberOfWeapons != 0 {
 		for i := 0; i < numberOfWeapons; i++ {
@@ -1110,29 +1117,32 @@ func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
 			itemConfig := s.itemPool[0]
 
 			// create entity
-			s.AddItem(itemConfig)
+			id := s.AddItem(itemConfig)
+			newItemEntityIDs[i] = id
 		}
 	}
 
 	if numberOfArmor != 0 {
-		for i := 0; i < numberOfArmor; i++ {
+		for i := numberOfWeapons; i < numberOfArmor; i++ {
 			itemConfig := s.itemPool[0]
 
 			// create entity
-			s.AddItem(itemConfig)
+			id := s.AddItem(itemConfig)
+			newItemEntityIDs[i] = id
 		}
 	}
 
 	if numberOfConsumables != 0 {
-		for i := 0; i < numberOfConsumables; i++ {
+		for i := numberOfWeapons + numberOfArmor; i < numberOfConsumables; i++ {
 			itemConfig := s.itemPool[0]
 
 			// create entity
-			s.AddItem(itemConfig)
+			id := s.AddItem(itemConfig)
+			newItemEntityIDs[i] = id
 		}
 	}
 
-	return nil, nil
+	return newItemEntityIDs, nil
 }
 
 /**

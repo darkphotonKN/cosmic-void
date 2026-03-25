@@ -677,10 +677,12 @@ func TestSession_GenerateContainerItems_CreateItemEntities(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:       "returns error when itemPool empty",
-			mockReturn: &pb.ListItemTemplatesResponse{},
-			mockErr:    nil,
-			wantErr:    true,
+			name: "returns error when itemPool empty",
+			mockReturn: &pb.ListItemTemplatesResponse{
+				Items: []*pb.ItemTemplate{},
+			},
+			mockErr: nil,
+			wantErr: true,
 		},
 		{
 			name: "handles mixed rarity consumable-heavy loadout",
@@ -820,7 +822,7 @@ func TestSession_GenerateContainerItems_CreateItemEntities(t *testing.T) {
 					t.Fatal("unexpected error when asserting for item component")
 				}
 
-				itemsHashMap[item.TemplateID] = item
+				itemsHashMap[entity.ID] = item
 			}
 
 			// loop through generated items
@@ -832,6 +834,8 @@ func TestSession_GenerateContainerItems_CreateItemEntities(t *testing.T) {
 					generatedItems++
 				}
 			}
+
+			t.Log("itemHashMap", itemsHashMap, "generatedItems", generatedItems, "ids", ids)
 
 			assert.Equal(t, len(ids), generatedItems)
 		})
