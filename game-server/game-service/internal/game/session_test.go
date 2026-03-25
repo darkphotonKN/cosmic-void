@@ -573,14 +573,199 @@ func TestSession_InitializeItems_CreateItemEntities(t *testing.T) {
 
 func TestSession_GenerateContainerItems_CreateItemEntities(t *testing.T) {
 	// table test data
-	tests := []struct{ 
-		name string 
-		mockReturn string
-		mockErr error
-		wantErr bool
-		expectErr bool
+	tests := []struct {
+		name       string
+		mockReturn *pb.ListItemTemplatesResponse
+		mockErr    error
+		wantErr    bool
 	}{
-		{name: "hi"},
+		{
+			name: "Creates correct number of item entities #1",
+			mockReturn: &pb.ListItemTemplatesResponse{
+				Items: []*pb.ItemTemplate{
+					// Weapons
+					{
+						Id:            "aa000000-0000-0000-0000-000000000001",
+						ItemName:      "Vibro-blade",
+						Rarity:        "Common",
+						ItemType:      "weapon",
+						IconUrl:       "/icons/weapon/vibro_blade.png",
+						RequiredLevel: 1,
+						BaseSellPrice: 2,
+						BaseBuyPrice:  5,
+						AttackPower:   6,
+						CriticalRate:  0.08,
+						WeaponType:    "sword",
+						Description:   "Mono-molecular vibrating combat blade",
+					},
+					{
+						Id:            "aa000000-0000-0000-0000-000000000002",
+						ItemName:      "Pulse Dagger",
+						Rarity:        "Common",
+						ItemType:      "weapon",
+						IconUrl:       "/icons/weapon/pulse_dagger.png",
+						RequiredLevel: 1,
+						BaseSellPrice: 1,
+						BaseBuyPrice:  3,
+						AttackPower:   3,
+						CriticalRate:  0.12,
+						WeaponType:    "knife",
+						Description:   "Compact energy-pulse combat knife",
+					},
+					// Armors
+					{
+						Id:              "aa000000-0000-0000-0000-000000000007",
+						ItemName:        "Titanium Helmet",
+						Rarity:          "Common",
+						ItemType:        "armor",
+						IconUrl:         "/icons/armor/titanium_helmet.png",
+						RequiredLevel:   1,
+						BaseSellPrice:   1,
+						BaseBuyPrice:    4,
+						DefenseRating:   3,
+						MagicResistance: 1,
+						ArmorSlot:       "head",
+						Description:     "Standard-issue titanium alloy combat helmet",
+					},
+					{
+						Id:              "aa000000-0000-0000-0000-000000000008",
+						ItemName:        "Titanium Chest Plate",
+						Rarity:          "Common",
+						ItemType:        "armor",
+						IconUrl:         "/icons/armor/titanium_chest_plate.png",
+						RequiredLevel:   1,
+						BaseSellPrice:   3,
+						BaseBuyPrice:    6,
+						DefenseRating:   6,
+						MagicResistance: 2,
+						ArmorSlot:       "chest",
+						Description:     "Titanium alloy chest plate with ballistic lining",
+					},
+					// Consumables
+					{
+						Id:            "aa000000-0000-0000-0000-000000000023",
+						ItemName:      "Minor Stim Pack",
+						Rarity:        "Common",
+						ItemType:      "consumable",
+						IconUrl:       "/icons/consumable/minor_stim_pack.png",
+						RequiredLevel: 1,
+						BaseSellPrice: 1,
+						BaseBuyPrice:  2,
+						HealingAmount: 10,
+						ManaAmount:    0,
+						BuffDuration:  0,
+						MaxStackSize:  20,
+						Description:   "Basic nano-med stim injection",
+					},
+					{
+						Id:            "aa000000-0000-0000-0000-000000000024",
+						ItemName:      "Greater Stim Pack",
+						Rarity:        "Common",
+						ItemType:      "consumable",
+						IconUrl:       "/icons/consumable/greater_stim_pack.png",
+						RequiredLevel: 1,
+						BaseSellPrice: 2,
+						BaseBuyPrice:  5,
+						HealingAmount: 25,
+						ManaAmount:    0,
+						BuffDuration:  0,
+						MaxStackSize:  10,
+						Description:   "Advanced regenerative stim pack",
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:       "returns error when items service fails",
+			mockReturn: &pb.ListItemTemplatesResponse{},
+			mockErr:    errors.New("items service unavailable"),
+			wantErr:    true,
+		},
+		{
+			name: "handles mixed rarity consumable-heavy loadout",
+			mockReturn: &pb.ListItemTemplatesResponse{
+				Items: []*pb.ItemTemplate{
+					// Weapon
+					{
+						Id:            "bb000000-0000-0000-0000-000000000001",
+						ItemName:      "Plasma Rifle",
+						Rarity:        "Rare",
+						ItemType:      "weapon",
+						IconUrl:       "/icons/weapon/plasma_rifle.png",
+						RequiredLevel: 5,
+						BaseSellPrice: 15,
+						BaseBuyPrice:  30,
+						AttackPower:   18,
+						CriticalRate:  0.05,
+						WeaponType:    "rifle",
+						Description:   "High-energy plasma discharge rifle",
+					},
+					// Armor
+					{
+						Id:              "bb000000-0000-0000-0000-000000000002",
+						ItemName:        "Nano-Weave Boots",
+						Rarity:          "Uncommon",
+						ItemType:        "armor",
+						IconUrl:         "/icons/armor/nano_weave_boots.png",
+						RequiredLevel:   3,
+						BaseSellPrice:   4,
+						BaseBuyPrice:    10,
+						DefenseRating:   4,
+						MagicResistance: 3,
+						ArmorSlot:       "feet",
+						Description:     "Lightweight boots with nano-fiber reinforcement",
+					},
+					// Consumables
+					{
+						Id:            "bb000000-0000-0000-0000-000000000003",
+						ItemName:      "Mana Siphon",
+						Rarity:        "Uncommon",
+						ItemType:      "consumable",
+						IconUrl:       "/icons/consumable/mana_siphon.png",
+						RequiredLevel: 2,
+						BaseSellPrice: 3,
+						BaseBuyPrice:  7,
+						HealingAmount: 0,
+						ManaAmount:    20,
+						BuffDuration:  0,
+						MaxStackSize:  15,
+						Description:   "Extracts ambient energy to restore mana",
+					},
+					{
+						Id:            "bb000000-0000-0000-0000-000000000004",
+						ItemName:      "Shield Booster",
+						Rarity:        "Rare",
+						ItemType:      "consumable",
+						IconUrl:       "/icons/consumable/shield_booster.png",
+						RequiredLevel: 4,
+						BaseSellPrice: 5,
+						BaseBuyPrice:  12,
+						HealingAmount: 0,
+						ManaAmount:    0,
+						BuffDuration:  30,
+						MaxStackSize:  5,
+						Description:   "Temporarily reinforces personal energy shield",
+					},
+					{
+						Id:            "bb000000-0000-0000-0000-000000000005",
+						ItemName:      "Adrenaline Shot",
+						Rarity:        "Common",
+						ItemType:      "consumable",
+						IconUrl:       "/icons/consumable/adrenaline_shot.png",
+						RequiredLevel: 1,
+						BaseSellPrice: 1,
+						BaseBuyPrice:  3,
+						HealingAmount: 5,
+						ManaAmount:    5,
+						BuffDuration:  10,
+						MaxStackSize:  20,
+						Description:   "Quick-inject combat stimulant",
+					},
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -597,7 +782,12 @@ func TestSession_GenerateContainerItems_CreateItemEntities(t *testing.T) {
 			session.TestMessageSpy = make(chan types.Message, 1)
 
 			defer session.Shutdown()
-		}
+
+			mockClient.On("ListItemTemplates", mock.Anything).Return(
+				tt.mockReturn,
+				tt.mockErr,
+			)
+		})
 	}
 }
 

@@ -1077,14 +1077,25 @@ func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
 	for i := 0; i < numberOfItems; i++ {
 		// roll to determine which type to get
 		roll := utils.GenRandomBetween(int(rollRangeStart), int(rollRangeEnd))
-		weaponWeight := math.RoundToEven(float64((rollRangeEnd - rollRangeStart + 1) * weaponDropRate))
-		armorWeight := math.RoundToEven(float64((rollRangeEnd - rollRangeStart + 1) * armorDropRate))
+		slog.Debug("Rolled based on range.",
+			"roll", roll,
+			"rollRangeStart", rollRangeStart,
+			"rollRangeEnd", rollRangeEnd)
 
-		if roll < int(weaponWeight) {
+		weaponWeight := math.RoundToEven(float64((rollRangeEnd - rollRangeStart + 1) * weaponDropRate))
+
+		slog.Debug("Calculated weaponWeight.",
+			"weaponWeight", weaponWeight)
+		armorWeight := math.RoundToEven(float64((rollRangeEnd - rollRangeStart + 1) * armorDropRate))
+		slog.Debug("Calculated armorWeight.",
+			"armorWeight", armorWeight)
+
+		if roll <= int(weaponWeight) {
 			numberOfWeapons++
 			continue
 		}
-		if roll < int(armorWeight) {
+
+		if roll > int(weaponWeight) && roll <= int(armorWeight+weaponWeight) {
 			numberOfArmor++
 			continue
 		}
