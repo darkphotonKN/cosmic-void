@@ -1118,7 +1118,7 @@ func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
 
 			// create entity
 			id := s.AddItem(itemConfig)
-			newItemEntityIDs[i] = id
+			newItemEntityIDs = append(newItemEntityIDs, id)
 		}
 	}
 
@@ -1128,7 +1128,7 @@ func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
 
 			// create entity
 			id := s.AddItem(itemConfig)
-			newItemEntityIDs[i] = id
+			newItemEntityIDs = append(newItemEntityIDs, id)
 		}
 	}
 
@@ -1138,7 +1138,7 @@ func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
 
 			// create entity
 			id := s.AddItem(itemConfig)
-			newItemEntityIDs[i] = id
+			newItemEntityIDs = append(newItemEntityIDs, id)
 		}
 	}
 
