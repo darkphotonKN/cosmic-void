@@ -551,12 +551,12 @@ func TestSession_InitializeItems_CreateItemEntities(t *testing.T) {
 			// 	"session.itemPool", session.itemPool,
 			// )
 
-			assert.Equal(t, tt.wantItemCount, len(session.itemPool))
+			assert.Equal(t, tt.wantItemCount, session.itemPool.Count)
 
 			// testing weapon item type specific counts check out
 			if tt.wantWeaponCount != nil {
 
-				for _, item := range session.itemPool {
+				for _, item := range session.itemPool.Weapons {
 					if item.ItemType == types.ItemTypeWeapon {
 						allWeaponCounts++
 					}
@@ -571,7 +571,7 @@ func TestSession_InitializeItems_CreateItemEntities(t *testing.T) {
 	}
 }
 
-func TestSession_GenerateContainerItems_CreateItemEntities(t *testing.T) {
+func TestSession_GenerateItems_CreateItemEntities(t *testing.T) {
 	// table test data
 	tests := []struct {
 		name       string
@@ -798,7 +798,7 @@ func TestSession_GenerateContainerItems_CreateItemEntities(t *testing.T) {
 			}
 
 			// -- test --
-			ids, err := session.generateContainerItems()
+			ids, err := session.generateItems()
 
 			if tt.wantErr {
 				assert.Error(t, err)

@@ -104,3 +104,28 @@ type SwitchState struct {
 	SwitchID    int       `json:"switch_id"`
 	IsActivated bool      `json:"is_activated"`
 }
+
+type ItemPool struct {
+	Count       int
+	Weapons     []*ItemConfig
+	Armor       []*ItemConfig
+	Consumables []*ItemConfig
+}
+
+type ItemConfig struct {
+	TemplateID      uuid.UUID
+	ItemType        ItemType
+	Name            string
+	AttackPower     int
+	CriticalRate    float64
+	WeaponType      string
+	DefenseRating   int
+	MagicResistance int
+	ArmorSlot       string
+	HealingAmount   int
+	ManaAmount      int
+	BuffDuration    int
+	BuyPrice        int
+	SellPrice       int
+	Description     string
+}

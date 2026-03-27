@@ -57,8 +57,8 @@ type Session struct {
 	// TEST: testing only
 	TestMessageSpy chan types.Message
 
-	// item pool (session-level, items are removed once assigned to a container)
-	itemPool            []ItemConfig // 1 , 2, 3, 4, 5
+	// item pool (session level, items are removed once assigned to a container)
+	itemPool            types.ItemPool
 	itemPoolInitialized bool
 
 	// dependency injections
@@ -790,7 +790,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		if containerOpenable.HasBeenOpened == false {
 			containerOpenable.HasBeenOpened = true
 
-			itemIDs, err := s.generateContainerItems()
+			itemIDs, err := s.generateItems()
 
 			if err != nil {
 				fmt.Printf("Error generating container items: %v\n", err)
@@ -1056,10 +1056,10 @@ const (
 )
 
 /**
-* generateContainerItems generates new random items from the session itemPool base,
+* generateItems generates new random items from the session itemPool base,
 * creates item entities, and returns their IDs.
 **/
-func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
+func (s *Session) generateItems() ([]uuid.UUID, error) {
 	slog.Debug("generating items from itemPool when opening container",
 		"s.itemPool", s.itemPool)
 
@@ -1104,7 +1104,7 @@ func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
 	}
 
 	// validate item pool correctly generated items
-	if len(s.itemPool) <= 0 {
+	if s.itemPool.Count <= 0 {
 		return nil, fmt.Errorf("Item pool was empty.")
 	}
 
@@ -1114,35 +1114,63 @@ func (s *Session) generateContainerItems() ([]uuid.UUID, error) {
 	if numberOfWeapons != 0 {
 		for i := 0; i < numberOfWeapons; i++ {
 			// find weapon
-			itemConfig := s.itemPool[0]
+			itemConfig, err := s.findSingleItemBase(types.ItemTypeWeapon)
+			if err != nil {
+				return nil, err
+			}
 
 			// create entity
-			id := s.AddItem(itemConfig)
+			id := s.AddItem(*itemConfig)
 			newItemEntityIDs = append(newItemEntityIDs, id)
 		}
 	}
 
 	if numberOfArmor != 0 {
 		for i := numberOfWeapons; i < numberOfArmor; i++ {
-			itemConfig := s.itemPool[0]
+			itemConfig, err := s.findSingleItemBase(types.ItemTypeArmor)
+			if err != nil {
+				return nil, err
+			}
 
 			// create entity
-			id := s.AddItem(itemConfig)
+			id := s.AddItem(*itemConfig)
 			newItemEntityIDs = append(newItemEntityIDs, id)
 		}
 	}
 
 	if numberOfConsumables != 0 {
 		for i := numberOfWeapons + numberOfArmor; i < numberOfConsumables; i++ {
-			itemConfig := s.itemPool[0]
+			itemConfig, err := s.findSingleItemBase(types.ItemTypeConsumable)
+			if err != nil {
+				return nil, err
+			}
 
 			// create entity
-			id := s.AddItem(itemConfig)
+			id := s.AddItem(*itemConfig)
 			newItemEntityIDs = append(newItemEntityIDs, id)
 		}
 	}
 
 	return newItemEntityIDs, nil
+}
+
+func (s *Session) findSingleItemBase(itemType types.ItemType) (*types.ItemConfig, error) {
+	switch itemType {
+	case types.ItemTypeWeapon:
+		randCount := utils.GenRandomBetween(0, len(s.itemPool.Weapons)-1)
+		item := *s.itemPool.Weapons[randCount]
+		return &item, nil
+	case types.ItemTypeArmor:
+		randCount := utils.GenRandomBetween(0, len(s.itemPool.Armor)-1)
+		item := *s.itemPool.Armor[randCount]
+		return &item, nil
+	case types.ItemTypeConsumable:
+		randCount := utils.GenRandomBetween(0, len(s.itemPool.Consumables)-1)
+		item := *s.itemPool.Consumables[randCount]
+		return &item, nil
+	default:
+		return nil, fmt.Errorf("No items matched.")
+	}
 }
 
 /**
@@ -1179,7 +1207,7 @@ func (s *Session) calcWithinDistance(x, y, xTarget, yTarget float64) bool {
 /**
 * addItem creates an item entity from config and returns its ID
 **/
-func (s *Session) AddItem(itemConfig ItemConfig) uuid.UUID {
+func (s *Session) AddItem(itemConfig types.ItemConfig) uuid.UUID {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	entity := CreateItemEntity(s.EntityManager, itemConfig)
@@ -1323,11 +1351,16 @@ func (s *Session) InitializeItems(ctx context.Context) error {
 
 		itemType := types.ItemType(item.ItemType)
 
-		var newItemConfig ItemConfig
+		var newItemConfig types.ItemConfig
+
+		slog.Info("Creating item",
+			"itemType", itemType,
+			"item", item,
+		)
 
 		switch itemType {
-		case types.ItemTypeArmor:
-			newItemConfig = ItemConfig{
+		case types.ItemTypeWeapon:
+			newItemConfig = types.ItemConfig{
 				TemplateID:  templateId,
 				ItemType:    itemType,
 				Name:        item.ItemName,
@@ -1340,8 +1373,11 @@ func (s *Session) InitializeItems(ctx context.Context) error {
 				ArmorSlot:       item.ArmorSlot,
 			}
 
-		case types.ItemTypeWeapon:
-			newItemConfig = ItemConfig{
+			s.itemPool.Weapons = append(s.itemPool.Weapons, &newItemConfig)
+			s.itemPool.Count++
+
+		case types.ItemTypeArmor:
+			newItemConfig = types.ItemConfig{
 				TemplateID:  templateId,
 				ItemType:    itemType,
 				Name:        item.ItemName,
@@ -1354,8 +1390,11 @@ func (s *Session) InitializeItems(ctx context.Context) error {
 				CriticalRate: float64(item.CriticalRate),
 			}
 
+			s.itemPool.Armor = append(s.itemPool.Armor, &newItemConfig)
+			s.itemPool.Count++
+
 		case types.ItemTypeConsumable:
-			newItemConfig = ItemConfig{
+			newItemConfig = types.ItemConfig{
 				TemplateID:  templateId,
 				ItemType:    itemType,
 				Name:        item.ItemName,
@@ -1368,6 +1407,10 @@ func (s *Session) InitializeItems(ctx context.Context) error {
 				BuffDuration:  int(item.BuffDuration),
 			}
 
+			// add to sessions internal state
+			s.itemPool.Consumables = append(s.itemPool.Consumables, &newItemConfig)
+			s.itemPool.Count++
+
 		default:
 			slog.Error("No valid item types match the ItemType that was read from the data",
 				"item.ItemType", item.ItemType,
@@ -1375,8 +1418,9 @@ func (s *Session) InitializeItems(ctx context.Context) error {
 			return fmt.Errorf("No valid item types match the ItemType that was read from the data")
 		}
 
-		// add to sessions internal state
-		s.itemPool = append(s.itemPool, newItemConfig)
+		slog.Info("Created item",
+			"current_itemPool", s.itemPool,
+		)
 
 	}
 

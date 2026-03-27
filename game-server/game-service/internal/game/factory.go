@@ -1,7 +1,7 @@
 package game
 
 import (
-	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
+	commonconstants "github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
@@ -14,7 +14,7 @@ type MatchConfig struct {
 
 func CreateMatchProgressEntity(em *ecs.EntityManager) *ecs.Entity {
 	entity := em.CreateEntity()
-	entity.AddComponent(components.NewMatchProgressComponent(constants.DefautMaxSessionPlayers))
+	entity.AddComponent(components.NewMatchProgressComponent(commonconstants.DefautMaxSessionPlayers))
 
 	return entity
 }
@@ -43,7 +43,7 @@ func CreatePlayerEntity(em *ecs.EntityManager, config PlayerConfig) *ecs.Entity 
 
 	entity.AddComponent(components.NewTransformComponent(config.X, config.Y))
 
-	entity.AddComponent(components.NewVelocityComponent(config.Vx, config.Vy, constants.DefaultSpeed))
+	entity.AddComponent(components.NewVelocityComponent(config.Vx, config.Vy, commonconstants.DefaultSpeed))
 
 	entity.AddComponent(components.NewHealthComponent(config.CurrentHealth, config.MaxHealth))
 	entity.AddComponent(components.NewSkillComponent(config.SkillName, config.SkillLevel))
@@ -83,25 +83,7 @@ func CreateContainerEntity(em *ecs.EntityManager, containerconfig ContainerConfi
 	return entity
 }
 
-type ItemConfig struct {
-	TemplateID      uuid.UUID
-	ItemType        types.ItemType
-	Name            string
-	AttackPower     int
-	CriticalRate    float64
-	WeaponType      string
-	DefenseRating   int
-	MagicResistance int
-	ArmorSlot       string
-	HealingAmount   int
-	ManaAmount      int
-	BuffDuration    int
-	BuyPrice        int
-	SellPrice       int
-	Description     string
-}
-
-func CreateItemEntity(em *ecs.EntityManager, itemconfig ItemConfig) *ecs.Entity {
+func CreateItemEntity(em *ecs.EntityManager, itemconfig types.ItemConfig) *ecs.Entity {
 	entity := em.CreateEntity()
 	itemComp := components.NewItemComponent(itemconfig.TemplateID, itemconfig.ItemType, itemconfig.Name)
 
@@ -133,7 +115,7 @@ func CreateEscapeDoorEntity(em *ecs.EntityManager, config EscapeConfig) *ecs.Ent
 	entity.AddComponent(components.NewLockableComponent(true))
 	entity.AddComponent(components.NewTransformComponent(config.X, config.Y))
 	entity.AddComponent(components.NewOpenableComponent(false))
-	entity.AddComponent(components.NewInteractableComponent(constants.DefaultInteractableRange))
+	entity.AddComponent(components.NewInteractableComponent(commonconstants.DefaultInteractableRange))
 	return entity
 }
 
@@ -146,7 +128,7 @@ func CreateSwitchEntity(em *ecs.EntityManager, config SwitchConfig) *ecs.Entity 
 	entity := em.CreateEntity()
 	entity.AddComponent(components.NewSwitchComponent(config.SwitchID))
 	entity.AddComponent(components.NewTransformComponent(config.X, config.Y))
-	entity.AddComponent(components.NewInteractableComponent(constants.DefaultInteractableRange))
+	entity.AddComponent(components.NewInteractableComponent(commonconstants.DefaultInteractableRange))
 	return entity
 
 }
