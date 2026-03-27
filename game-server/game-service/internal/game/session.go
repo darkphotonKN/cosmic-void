@@ -1186,6 +1186,11 @@ func (s *Session) generateItems() ([]uuid.UUID, error) {
 }
 
 func (s *Session) findSingleItemBase(itemType types.ItemType) (*types.ItemConfig, error) {
+	slog.Info("findSingleBaseItem check all itemPool contents before finding item",
+		"armor_count", len(s.itemPool.Armor),
+		"weapon_count", len(s.itemPool.Weapons),
+		"consumable_count", len(s.itemPool.Consumables),
+	)
 	switch itemType {
 	case types.ItemTypeWeapon:
 		randCount := utils.GenRandomBetween(0, len(s.itemPool.Weapons)-1)
@@ -1193,11 +1198,17 @@ func (s *Session) findSingleItemBase(itemType types.ItemType) (*types.ItemConfig
 		return &item, nil
 	case types.ItemTypeArmor:
 		randCount := utils.GenRandomBetween(0, len(s.itemPool.Armor)-1)
+		slog.Info("randomCount rolled for Armor",
+			"randCount", randCount,
+		)
 		item := *s.itemPool.Armor[randCount]
 		return &item, nil
 	case types.ItemTypeConsumable:
 		randCount := utils.GenRandomBetween(0, len(s.itemPool.Consumables)-1)
 		item := *s.itemPool.Consumables[randCount]
+		slog.Info("randomCount rolled for Consumable",
+			"randCount", randCount,
+		)
 		return &item, nil
 	default:
 		return nil, fmt.Errorf("No items matched.")
