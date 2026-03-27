@@ -27,6 +27,7 @@ func NewStateSerializer(em *ecs.EntityManager) *StateSerializer {
 				Players:    make(map[uuid.UUID]*types.PlayerState),
 				Items:      make([]uuid.UUID, 0),
 				Doors:      make([]*types.DoorState, 0),
+				Walls:      make([]*types.WallState, 0),
 				Containers: make([]*types.ContainerState, 0),
 				EscapeDoor: make([]*types.EscapeDoorState, 0),
 				Switch:     make([]*types.SwitchState, 0),
@@ -102,6 +103,33 @@ func (s *StateSerializer) SerializeBackendState(ctx context.Context, sessionID u
 		// --- Interactables ---
 
 		// -- Doors --
+		doorC, isDoor := entity.GetComponent(ecs.ComponentTypeDoor)
+		if isDoor {
+			tc, hasTransform := entity.GetComponent(ecs.ComponentTypeTransform)
+			if hasTransform {
+				transform := tc.(*components.TransformComponent)
+				door := doorC.(*components.DoorComponent)
+
+				isOpen := false
+				openableC, hasOpenable := entity.GetComponent(ecs.ComponentTypeOpenable)
+				if hasOpenable {
+					openable := openableC.(*components.OpenableComponent)
+					isOpen = openable.IsOpen
+				}
+
+				doorState := &types.DoorState{
+					EntityID: entity.ID,
+					Position: &types.Position{
+						X: transform.X,
+						Y: transform.Y,
+					},
+					Width:  door.Width,
+					Height: door.Height,
+					IsOpen: isOpen,
+				}
+				backendState.Doors = append(backendState.Doors, doorState)
+			}
+		}
 
 		// -- Escape Doors --
 		_, isEscapeDoor := entity.GetComponent(ecs.ComponentTypeEscapeDoor)
@@ -215,6 +243,26 @@ func (s *StateSerializer) SerializeBackendState(ctx context.Context, sessionID u
 			backendState.Containers = append(backendState.Containers, containerState)
 		}
 
+		// --- Walls ---
+		wallComp, isWall := entity.GetComponent(ecs.ComponentTypeWall)
+		if isWall {
+			wall := wallComp.(*components.WallComponent)
+			tc, hasTransform := entity.GetComponent(ecs.ComponentTypeTransform)
+			if hasTransform {
+				transform := tc.(*components.TransformComponent)
+				wallState := &types.WallState{
+					EntityID: entity.ID,
+					Position: &types.Position{
+						X: transform.X,
+						Y: transform.Y,
+					},
+					Width:  wall.Width,
+					Height: wall.Height,
+				}
+				backendState.Walls = append(backendState.Walls, wallState)
+			}
+		}
+
 		// --- Items ---
 		itemComp, hasItem := entity.GetComponent(ecs.ComponentTypeItem)
 
@@ -242,6 +290,7 @@ func (s *StateSerializer) FormatStateToClientState(backendState *types.BackendGa
 		SessionID:     backendState.SessionID,
 		Items:         backendState.Items,
 		Doors:         backendState.Doors,
+		Walls:         backendState.Walls,
 		Containers:    backendState.Containers,
 		CurrentPlayer: backendState.Players[playerID],
 		OtherPlayers:  otherPlayers,
@@ -258,6 +307,7 @@ func (s *StateSerializer) RestBackendStatePool(state *types.BackendGameState) {
 	}
 	state.Items = state.Items[:0]
 	state.Doors = state.Doors[:0]
+	state.Walls = state.Walls[:0]
 	state.Containers = state.Containers[:0]
 	state.EscapeDoor = state.EscapeDoor[:0]
 	state.Switch = state.Switch[:0]

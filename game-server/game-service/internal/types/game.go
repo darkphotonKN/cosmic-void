@@ -38,6 +38,8 @@ type PlayerDirection struct {
 type DoorState struct {
 	EntityID uuid.UUID `json:"entity_id"`
 	Position *Position `json:"position"`
+	Width    float64   `json:"width"`
+	Height   float64   `json:"height"`
 	IsOpen   bool      `json:"is_open"`
 }
 
@@ -89,6 +91,13 @@ type RankedPlayerState struct {
 	FinalPosition int32
 	Win           bool
 	Escape        bool
+}
+
+type WallState struct {
+	EntityID uuid.UUID `json:"entity_id"`
+	Position *Position `json:"position"`
+	Width    float64   `json:"width"`
+	Height   float64   `json:"height"`
 }
 
 type EscapeDoorState struct {

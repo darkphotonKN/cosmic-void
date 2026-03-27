@@ -487,10 +487,12 @@ func (s *Session) RemovePlayer(userID string) {
 	slog.Info("Removed player from session", "playerID", playerID, "sessionID", s.ID)
 }
 
-func (s *Session) AddDoor(x, y float64) uuid.UUID {
+func (s *Session) AddDoor(x, y, width, height float64) uuid.UUID {
 	doorConfig := DoorConfig{
-		X: x,
-		Y: y,
+		X:      x,
+		Y:      y,
+		Width:  width,
+		Height: height,
 	}
 
 	entity := CreateDoorEntity(s.EntityManager, doorConfig)
@@ -509,6 +511,35 @@ func (s *Session) AddContainer(x, y float64) uuid.UUID {
 
 	entity := CreateContainerEntity(s.EntityManager, ContainerConfig, itemIDList)
 	return entity.ID
+}
+
+func (s *Session) AddBuilding(bx, by, bw, bh, wallThickness, doorWidth float64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	doorOffset := (bw - doorWidth) / 2
+
+	walls := []WallConfig{
+		// 上牆
+		{X: bx, Y: by, Width: bw, Height: wallThickness},
+		// 左牆
+		{X: bx, Y: by, Width: wallThickness, Height: bh},
+		// 右牆
+		{X: bx + bw - wallThickness, Y: by, Width: wallThickness, Height: bh},
+		// 下左段
+		{X: bx, Y: by + bh - wallThickness, Width: doorOffset, Height: wallThickness},
+		// 下右段
+		{X: bx + doorOffset + doorWidth, Y: by + bh - wallThickness, Width: doorOffset, Height: wallThickness},
+	}
+
+	for _, wallConfig := range walls {
+		CreateWallEntity(s.EntityManager, wallConfig)
+	}
+
+	// 門（下牆缺口處，比牆壁薄）
+	doorX := bx + doorOffset
+	doorY := by + bh - wallThickness
+	s.AddDoor(doorX, doorY, doorWidth, wallThickness)
 }
 
 func (s *Session) AddEscape(x, y float64) uuid.UUID {
@@ -1268,6 +1299,9 @@ func (s *Session) InitialMapObjects() {
 	containerX := constants.ContainerWidthRadius + rand.Float64()*(constants.MapWidth-2*constants.ContainerWidthRadius)
 	containerY := constants.ContainerHeightRadius + rand.Float64()*(constants.MapHeight-2*constants.ContainerHeightRadius)
 	s.AddContainer(containerX, containerY)
+
+	// add building (300x240, wall thickness 20, door width 50, door on bottom)
+	s.AddBuilding(400, 300, 300, 240, 20, 50)
 
 	// add EscapeDoor
 	exitDoorX := constants.ContainerWidthRadius + rand.Float64()*(constants.MapWidth-2*constants.ContainerWidthRadius)

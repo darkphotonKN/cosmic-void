@@ -209,7 +209,7 @@ func TestHandleInteract(t *testing.T) {
 
 	for _, tableTest := range tableTests {
 		// door one, door thats out of range
-		doorOneEntityID := session.AddDoor(tableTest.doorX, tableTest.doorY)
+		doorOneEntityID := session.AddDoor(tableTest.doorX, tableTest.doorY, 50, 10)
 		doorEntity, _ := session.EntityManager.GetEntity(doorOneEntityID)
 		doorEntity.GetComponent(ecs.ComponentTypeOpenable)
 

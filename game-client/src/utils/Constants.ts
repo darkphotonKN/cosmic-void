@@ -18,7 +18,7 @@ export const SCENES = {
   MAIN_MENU: 'MainMenuScene',
   GAME: 'GameScene',
   GAME_OVER: 'GameOverScene',
-  TREASURE_HUNT: 'TreasureHuntScene',
+  COSMIC_VOID: 'CosmicVoidScene',
 } as const;
 
 export const ASSET_KEYS = {

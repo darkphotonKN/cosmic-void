@@ -31,6 +31,8 @@ export interface PlayerState {
 export interface DoorState {
   entity_id: UUID;
   position: Position;
+  width: number;
+  height: number;
   is_open: boolean;
 }
 
@@ -68,6 +70,14 @@ export interface SwitchState {
   is_activated: boolean;
 }
 
+// Wall state
+export interface WallState {
+  entity_id: UUID;
+  position: Position;
+  width: number;
+  height: number;
+}
+
 // Complete game state received from server
 export interface ClientGameState {
   session_id: UUID;
@@ -75,6 +85,7 @@ export interface ClientGameState {
   other_players: PlayerState[]; // Other players in session
   items: string[]; // TODO: Update when items are structured
   doors: DoorState[];
+  walls: WallState[];
   containers: ContainerState[];
   escape_doors: EscapeDoorState[]; // Escape doors with lock state
   switches: SwitchState[]; // Switches/buttons for puzzles

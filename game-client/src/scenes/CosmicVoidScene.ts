@@ -1,12 +1,12 @@
 /**
- * TreasureHuntScene - 簡化版遊戲場景
+ * CosmicVoidScene - 簡化版遊戲場景
  * 移動邏輯 + WebSocket + 建築（進入後看不到外面）
  */
 
 import Phaser from "phaser";
 import { ActionType } from "@/assets/types/client";
 import { socketManager } from "@/utils/class/SocketManager";
-import { ClientGameState, ContainerState, ItemState, EscapeDoorState, SwitchState } from "@/types/gameState";
+import { ClientGameState, ContainerState, ItemState, EscapeDoorState, SwitchState, WallState, DoorState } from "@/types/gameState";
 import { GameStateLogger } from "@/utils/gameStateLogger";
 
 interface Building {
@@ -26,7 +26,7 @@ interface Building {
   isOpen: boolean;
 }
 
-export class TreasureHuntScene extends Phaser.Scene {
+export class CosmicVoidScene extends Phaser.Scene {
   private player?: Phaser.Physics.Arcade.Sprite;
   private otherPlayers: Map<string, Phaser.Physics.Arcade.Sprite> = new Map();
   private otherPlayersEntityIds: Map<string, string> = new Map(); // player_id → entity_id
@@ -72,6 +72,13 @@ export class TreasureHuntScene extends Phaser.Scene {
   // 開關/按鈕 (從後端同步)
   private switches: Map<string, { sprite: Phaser.GameObjects.Sprite; entityId: string }> = new Map();
 
+  // 牆壁 (從後端同步)
+  private walls: Map<string, { graphics: Phaser.GameObjects.Graphics; entityId: string }> = new Map();
+
+  // 門 (從後端同步)
+  private serverDoors: Map<string, { rect: Phaser.GameObjects.Rectangle; entityId: string; isOpen: boolean }> = new Map();
+  private serverBuildingsCreated = false;
+
   // 寶箱跳窗
   private chestPopup?: Phaser.GameObjects.Container;
   private isPopupOpen = false;
@@ -97,7 +104,7 @@ export class TreasureHuntScene extends Phaser.Scene {
   private escapedPlayers: Set<string> = new Set();
 
   constructor() {
-    super({ key: "TreasureHuntScene" });
+    super({ key: "CosmicVoidScene" });
   }
 
   setStatusCallback(callback: (status: string, color: string) => void): void {
@@ -744,6 +751,197 @@ export class TreasureHuntScene extends Phaser.Scene {
     });
   }
 
+  private updateWalls(walls: WallState[]): void {
+    const activeEntityIds = new Set(walls.map(w => w.entity_id));
+
+    // 移除不存在的牆壁
+    this.walls.forEach((wall, entityId) => {
+      if (!activeEntityIds.has(entityId)) {
+        wall.graphics.destroy();
+        this.walls.delete(entityId);
+      }
+    });
+
+    // 新增或更新牆壁
+    walls.forEach((wallState) => {
+      let wall = this.walls.get(wallState.entity_id);
+
+      if (!wall) {
+        const graphics = this.add.graphics();
+        graphics.fillStyle(0x4a5568, 1);
+        graphics.fillRect(
+          wallState.position.x,
+          wallState.position.y,
+          wallState.width,
+          wallState.height
+        );
+        graphics.lineStyle(1, 0x6b7280, 0.6);
+        graphics.strokeRect(
+          wallState.position.x,
+          wallState.position.y,
+          wallState.width,
+          wallState.height
+        );
+        graphics.setDepth(50);
+        wall = { graphics, entityId: wallState.entity_id };
+        this.walls.set(wallState.entity_id, wall);
+      }
+    });
+
+    // 從牆壁反推建築範圍，建立屋頂 + 地板（只做一次）
+    if (!this.serverBuildingsCreated && walls.length > 0) {
+      this.serverBuildingsCreated = true;
+
+      // 算出所有牆壁的 bounding box
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      walls.forEach((w) => {
+        minX = Math.min(minX, w.position.x);
+        minY = Math.min(minY, w.position.y);
+        maxX = Math.max(maxX, w.position.x + w.width);
+        maxY = Math.max(maxY, w.position.y + w.height);
+      });
+
+      const bw = maxX - minX;
+      const bh = maxY - minY;
+
+      // 地板
+      const floor = this.add.graphics();
+      floor.fillStyle(0x2a3040, 1);
+      floor.fillRect(minX, minY, bw, bh);
+      floor.lineStyle(1, 0x3d4556, 0.4);
+      for (let tx = minX; tx < maxX; tx += 40) {
+        floor.lineBetween(tx, minY, tx, maxY);
+      }
+      for (let ty = minY; ty < maxY; ty += 40) {
+        floor.lineBetween(minX, ty, maxX, ty);
+      }
+      floor.setDepth(1);
+
+      // 屋頂
+      const roof = this.add.graphics();
+      roof.fillStyle(0x2d3748, 0.97);
+      roof.fillRect(minX - 5, minY - 5, bw + 10, bh + 10);
+      roof.lineStyle(2, 0x4a5568, 1);
+      roof.strokeRect(minX - 5, minY - 5, bw + 10, bh + 10);
+      roof.setDepth(200);
+
+      // 入口標示（門在下方）
+      const doorMarker = this.add.graphics();
+      doorMarker.setDepth(250);
+      const doorX = minX + bw / 2;
+      const doorY = maxY + 5;
+      const arrowSize = 10;
+      doorMarker.fillStyle(0xffaa44, 1);
+      doorMarker.fillTriangle(
+        doorX, doorY - arrowSize,
+        doorX - arrowSize, doorY + arrowSize,
+        doorX + arrowSize, doorY + arrowSize,
+      );
+      doorMarker.lineStyle(3, 0xffaa44, 0.8);
+      doorMarker.strokeCircle(doorX, doorY, 18);
+      this.tweens.add({
+        targets: doorMarker,
+        alpha: 0.4,
+        duration: 800,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
+
+      this.outsideObjects.push(roof);
+
+      // 用假的 wallGroup 和 door 建立 Building 物件，接入現有的進出建築邏輯
+      const wallGroup = this.physics.add.staticGroup();
+      const door = this.add.graphics();
+      door.setDepth(51);
+      const doorCollider = this.add.rectangle(0, 0, 0, 0);
+      doorCollider.setVisible(false);
+
+      const building: Building = {
+        id: "server_building_0",
+        x: minX,
+        y: minY,
+        width: bw,
+        height: bh,
+        doorSide: "bottom",
+        wallGroup,
+        roof,
+        floor,
+        doorMarker,
+        door,
+        doorCollider,
+        isOpen: true, // 門口是開放的
+      };
+      this.buildings.push(building);
+    }
+  }
+
+  private updateDoors(doors: DoorState[]): void {
+    const activeEntityIds = new Set(doors.map(d => d.entity_id));
+
+    // 移除不存在的門
+    this.serverDoors.forEach((door, entityId) => {
+      if (!activeEntityIds.has(entityId)) {
+        door.rect.destroy();
+        this.serverDoors.delete(entityId);
+      }
+    });
+
+    // 新增或更新門
+    doors.forEach((doorState) => {
+      let door = this.serverDoors.get(doorState.entity_id);
+
+      if (!door) {
+        const rect = this.add.rectangle(
+          doorState.position.x,
+          doorState.position.y + doorState.height / 2,
+          doorState.width,
+          doorState.height,
+          0x5a6577,
+        );
+        rect.setOrigin(0, 0.5);
+        rect.setStrokeStyle(2, 0x6b7280);
+        rect.setDepth(51);
+
+        door = { rect, entityId: doorState.entity_id, isOpen: false };
+        this.serverDoors.set(doorState.entity_id, door);
+
+        if (doorState.is_open) {
+          door.isOpen = true;
+          rect.setRotation(Math.PI / 2);
+        }
+      } else if (door.isOpen !== doorState.is_open) {
+        door.isOpen = doorState.is_open;
+        const targetRotation = doorState.is_open ? Math.PI / 2 : 0;
+
+        this.tweens.add({
+          targets: door.rect,
+          rotation: targetRotation,
+          duration: 300,
+          ease: "Power2",
+        });
+      }
+    });
+  }
+
+  private getNearbyDoor(): { entityId: string } | null {
+    if (!this.player) return null;
+    const interactDistance = 60;
+
+    for (const [entityId, door] of this.serverDoors) {
+      const distance = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        door.rect.x + door.rect.width / 2,
+        door.rect.y,
+      );
+      if (distance < interactDistance) {
+        return { entityId };
+      }
+    }
+    return null;
+  }
+
   private toggleChest(entityId: string): void {
     // 發送互動請求到後端
     socketManager.sendMessage(ActionType.Interact, {
@@ -1173,8 +1371,7 @@ export class TreasureHuntScene extends Phaser.Scene {
     // create map background with cosmic theme
     this.createMapBackground();
 
-    // create buildings
-    this.createBuildings();
+    // buildings are now created from server wall data in updateWalls()
 
     // 寶箱由後端同步，不在這裡創建
 
@@ -1201,10 +1398,12 @@ export class TreasureHuntScene extends Phaser.Scene {
 
     // E 鍵互動（門、寶箱、開關、逃脫門）
     this.input.keyboard?.on("keydown-E", () => {
-      // 檢查門
-      const nearbyBuilding = this.getNearbyBuilding();
-      if (nearbyBuilding) {
-        this.toggleDoor(nearbyBuilding);
+      // 檢查後端門
+      const nearbyDoor = this.getNearbyDoor();
+      if (nearbyDoor) {
+        socketManager.sendMessage(ActionType.Interact, {
+          entity_id: nearbyDoor.entityId,
+        });
         return;
       }
       // 檢查開關
@@ -1369,6 +1568,12 @@ export class TreasureHuntScene extends Phaser.Scene {
 
     // Update other players on screen
     this.updateOtherPlayers(state.other_players || []);
+
+    // Update walls from server
+    this.updateWalls(state.walls || []);
+
+    // Update doors from server
+    this.updateDoors(state.doors || []);
 
     // Update containers from server
     this.updateContainers(state.containers || []);
