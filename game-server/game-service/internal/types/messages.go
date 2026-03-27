@@ -34,6 +34,7 @@ type ClientGameState struct {
 	OtherPlayers  []*PlayerState     `json:"other_players"`  // All other players
 	Items         []uuid.UUID        `json:"items"`          // TODO: update with item entity converted into struct format
 	Doors         []*DoorState       `json:"doors"`
+	Walls         []*WallState       `json:"walls"`
 	Containers    []*ContainerState  `json:"containers"`
 	EscapeDoor    []*EscapeDoorState `json:"escape_doors"`
 	Switch        []*SwitchState     `json:"switches"`
@@ -44,6 +45,7 @@ type BackendGameState struct {
 	Players    map[uuid.UUID]*PlayerState
 	Items      []uuid.UUID
 	Doors      []*DoorState
+	Walls      []*WallState
 	Containers []*ContainerState
 	EscapeDoor []*EscapeDoorState
 	Switch     []*SwitchState

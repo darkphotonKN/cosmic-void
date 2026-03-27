@@ -56,14 +56,14 @@ func CreatePlayerEntity(em *ecs.EntityManager, config PlayerConfig) *ecs.Entity 
 }
 
 type DoorConfig struct {
-	X, Y float64
+	X, Y, Width, Height float64
 }
 
 func CreateDoorEntity(em *ecs.EntityManager, config DoorConfig) *ecs.Entity {
 	entity := em.CreateEntity()
-	entity.AddComponent(components.NewDoorComponent())
+	entity.AddComponent(components.NewDoorComponent(config.Width, config.Height))
 	entity.AddComponent(components.NewTransformComponent(config.X, config.Y))
-	entity.AddComponent(components.NewOpenableComponent(false)) // default false
+	entity.AddComponent(components.NewOpenableComponent(false)) // default closed
 
 	return entity
 }
@@ -81,6 +81,36 @@ func CreateContainerEntity(em *ecs.EntityManager, containerconfig ContainerConfi
 	entity.AddComponent(components.NewItemIDListComponent(itemIDList))
 
 	return entity
+}
+
+type WallConfig struct {
+	X, Y, Width, Height float64
+}
+
+func CreateWallEntity(em *ecs.EntityManager, wallConfig WallConfig) *ecs.Entity {
+	entity := em.CreateEntity()
+	wallID := uuid.New()
+	entity.AddComponent(components.NewWallComponent(wallID, wallConfig.Width, wallConfig.Height))
+	entity.AddComponent(components.NewTransformComponent(wallConfig.X, wallConfig.Y))
+	return entity
+}
+
+type ItemConfig struct {
+	TemplateID      uuid.UUID
+	ItemType        types.ItemType
+	Name            string
+	AttackPower     int
+	CriticalRate    float64
+	WeaponType      string
+	DefenseRating   int
+	MagicResistance int
+	ArmorSlot       string
+	HealingAmount   int
+	ManaAmount      int
+	BuffDuration    int
+	BuyPrice        int
+	SellPrice       int
+	Description     string
 }
 
 func CreateItemEntity(em *ecs.EntityManager, itemconfig types.ItemConfig) *ecs.Entity {

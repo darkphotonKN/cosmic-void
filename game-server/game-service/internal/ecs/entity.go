@@ -24,6 +24,7 @@ const (
 
 	ComponentTypeItem       ComponentType = "Item"
 	ComponentTypeDoor       ComponentType = "Door"
+	ComponentTypeWall       ComponentType = "Wall"
 	ComponentTypeContainer  ComponentType = "Container"
 	ComponentTypeItemIDList ComponentType = "ItemIDList"
 

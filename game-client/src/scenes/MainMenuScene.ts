@@ -154,12 +154,12 @@ export class MainMenuScene extends Phaser.Scene {
         // 1.5 秒後進入遊戲場景
         this.time.delayedCall(1500, () => {
           this.closeQueuePopup();
-          this.scene.start("TreasureHuntScene", { sessionID });
+          this.scene.start("CosmicVoidScene", { sessionID });
         });
       } else {
         // 沒有彈窗（重連情況），直接進入遊戲
         console.log("No popup active (reconnection), navigating immediately...");
-        this.scene.start("TreasureHuntScene", { sessionID });
+        this.scene.start("CosmicVoidScene", { sessionID });
       }
     });
 

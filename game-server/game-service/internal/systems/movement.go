@@ -20,24 +20,37 @@ func (s *MovementSystem) Update(deltaTime float64, entities []*ecs.Entity) {
 	// O(n) spatial hashing for collision + entity lookup
 	entitiesMap := make(map[int]*ecs.Entity, 0)
 	entityByID := make(map[uuid.UUID]*ecs.Entity, len(entities))
+
+	wallEntities := make(map[uuid.UUID]*ecs.Entity, 0)
+	doorEntities := make(map[uuid.UUID]*ecs.Entity, 0)
 	for _, entity := range entities {
 
 		entityByID[entity.ID] = entity
 		transformComp, hasTransform := entity.GetComponent(ecs.ComponentTypeTransform)
 		_, hasVelocity := entity.GetComponent(ecs.ComponentTypeVelocity)
 
-		if !hasTransform || !hasVelocity {
-			continue
+		_, hasWallComp := entity.GetComponent(ecs.ComponentTypeWall)
+		if hasWallComp {
+			wallEntities[entity.ID] = entity
 		}
-		// type assertion
-		transform := transformComp.(*components.TransformComponent)
 
-		entityCellX := int(transform.X / (2 * constants.PlayerRadius))
-		entityCellY := int(transform.Y / (2 * constants.PlayerRadius))
+		_, hasDoorComp := entity.GetComponent(ecs.ComponentTypeDoor)
+		if hasDoorComp {
+			doorEntities[entity.ID] = entity
+		}
 
-		key := entityCellX<<8 | entityCellY
+		if hasTransform && hasVelocity {
+			// type assertion
+			transform := transformComp.(*components.TransformComponent)
 
-		entitiesMap[key] = entity
+			entityCellX := int(transform.X / (2 * constants.PlayerRadius))
+			entityCellY := int(transform.Y / (2 * constants.PlayerRadius))
+
+			key := entityCellX<<8 | entityCellY
+
+			entitiesMap[key] = entity
+		}
+
 	}
 
 	for _, entity := range entitiesMap {
@@ -50,9 +63,86 @@ func (s *MovementSystem) Update(deltaTime float64, entities []*ecs.Entity) {
 		// calculate if there are other nearby entities in the 9-grid cells around this targetentity
 		cellX := int(transform.X / (2 * constants.PlayerRadius))
 		cellY := int(transform.Y / (2 * constants.PlayerRadius))
+		dx := velocity.VX * velocity.Speed * deltaTime
+		dy := velocity.VY * velocity.Speed * deltaTime
 
-		newX := transform.X + velocity.VX*velocity.Speed*deltaTime
-		newY := transform.Y + velocity.VY*velocity.Speed*deltaTime
+		// split-axis swept collision: X first
+		minTx := 1.0
+
+		// walls
+		for _, wallEntity := range wallEntities {
+			wallC, _ := wallEntity.GetComponent(ecs.ComponentTypeWall)
+			wallTransformComp, _ := wallEntity.GetComponent(ecs.ComponentTypeTransform)
+			wallTransform := wallTransformComp.(*components.TransformComponent)
+			wall := wallC.(*components.WallComponent)
+
+			tX := SweptX(transform.X, transform.Y, wallTransform.X, wallTransform.Y, wall.Width, wall.Height, dx)
+			if tX < minTx {
+				minTx = tX
+			}
+		}
+
+		// doors (skip if open)
+		for _, doorEntity := range doorEntities {
+			openableC, hasOpenable := doorEntity.GetComponent(ecs.ComponentTypeOpenable)
+			if hasOpenable {
+				openable := openableC.(*components.OpenableComponent)
+				if openable.IsOpen {
+					continue
+				}
+			}
+
+			doorC, _ := doorEntity.GetComponent(ecs.ComponentTypeDoor)
+			doorTransformComp, _ := doorEntity.GetComponent(ecs.ComponentTypeTransform)
+			doorTransform := doorTransformComp.(*components.TransformComponent)
+			door := doorC.(*components.DoorComponent)
+
+			tX := SweptX(transform.X, transform.Y, doorTransform.X, doorTransform.Y, door.Width, door.Height, dx)
+			if tX < minTx {
+				minTx = tX
+			}
+		}
+
+		newX := transform.X + dx*minTx
+
+		// split-axis swept collision: Y second (using updated newX)
+		minTy := 1.0
+
+		// walls
+		for _, wallEntity := range wallEntities {
+			wallC, _ := wallEntity.GetComponent(ecs.ComponentTypeWall)
+			wallTransformComp, _ := wallEntity.GetComponent(ecs.ComponentTypeTransform)
+			wallTransform := wallTransformComp.(*components.TransformComponent)
+			wall := wallC.(*components.WallComponent)
+
+			tY := SweptY(newX, transform.Y, wallTransform.X, wallTransform.Y, wall.Width, wall.Height, dy)
+			if tY < minTy {
+				minTy = tY
+			}
+		}
+
+		// doors (skip if open)
+		for _, doorEntity := range doorEntities {
+			openableC, hasOpenable := doorEntity.GetComponent(ecs.ComponentTypeOpenable)
+			if hasOpenable {
+				openable := openableC.(*components.OpenableComponent)
+				if openable.IsOpen {
+					continue
+				}
+			}
+
+			doorC, _ := doorEntity.GetComponent(ecs.ComponentTypeDoor)
+			doorTransformComp, _ := doorEntity.GetComponent(ecs.ComponentTypeTransform)
+			doorTransform := doorTransformComp.(*components.TransformComponent)
+			door := doorC.(*components.DoorComponent)
+
+			tY := SweptY(newX, transform.Y, doorTransform.X, doorTransform.Y, door.Width, door.Height, dy)
+			if tY < minTy {
+				minTy = tY
+			}
+		}
+
+		newY := transform.Y + dy*minTy
 
 		// check collision in 9-grid and resolve position by hashmap
 		for i := -1; i <= 1; i++ {
@@ -153,4 +243,84 @@ func resolveCollision(newX, newY float64, other *ecs.Entity) (float64, float64, 
 	}
 
 	return newX, newY, false
+}
+
+func SweptX(playerX, playerY, wallX, wallY, wallW, wallH, dx float64) float64 {
+	if dx == 0 {
+		return 1
+	}
+
+	wallLeft := wallX
+	wallRight := wallX + wallW
+	wallTop := wallY
+	wallBottom := wallY + wallH
+
+	playerLeft := playerX - constants.PlayerRadius
+	playerRight := playerX + constants.PlayerRadius
+	playerTop := playerY - constants.PlayerRadius
+	playerBottom := playerY + constants.PlayerRadius
+
+	var tEnter float64
+
+	if playerBottom <= wallTop {
+		return 1
+	}
+
+	if playerTop >= wallBottom {
+		return 1
+	}
+
+	// 往右走
+
+	if dx > 0 {
+		tEnter = (wallLeft - playerRight) / dx
+	}
+	// 往左走
+	if dx < 0 {
+		tEnter = (wallRight - playerLeft) / dx
+	}
+
+	if tEnter >= 1 || tEnter < 0 {
+		return 1
+	}
+	return tEnter
+}
+
+func SweptY(playerX, playerY, wallX, wallY, wallW, wallH, dy float64) float64 {
+
+	if dy == 0 {
+		return 1
+	}
+	wallLeft := wallX
+	wallRight := wallX + wallW
+	wallTop := wallY
+	wallBottom := wallY + wallH
+
+	playerLeft := playerX - constants.PlayerRadius
+	playerRight := playerX + constants.PlayerRadius
+	playerTop := playerY - constants.PlayerRadius
+	playerBottom := playerY + constants.PlayerRadius
+
+	var tEnter float64
+	if playerRight <= wallLeft {
+		return 1
+	}
+
+	if playerLeft >= wallRight {
+		return 1
+	}
+
+	// 往下走
+	if dy > 0 {
+		tEnter = (wallTop - playerBottom) / dy
+	}
+	// 往上走
+	if dy < 0 {
+		tEnter = (wallBottom - playerTop) / dy
+	}
+
+	if tEnter >= 1 || tEnter < 0 {
+		return 1
+	}
+	return tEnter
 }

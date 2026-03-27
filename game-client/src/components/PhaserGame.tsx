@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Phaser from "phaser";
 import { MainMenuScene } from "@/scenes/MainMenuScene";
-import { TreasureHuntScene } from "@/scenes/TreasureHuntScene";
+import { CosmicVoidScene } from "@/scenes/CosmicVoidScene";
 import { PreloadScene } from "@/scenes/PreloadScene";
 import { BootScene } from "@/scenes/BootScene";
 
@@ -28,7 +28,7 @@ export default function PhaserGame() {
           debug: false,
         },
       },
-      scene: [BootScene, PreloadScene, MainMenuScene, TreasureHuntScene],
+      scene: [BootScene, PreloadScene, MainMenuScene, CosmicVoidScene],
     };
 
     gameRef.current = new Phaser.Game(config);
@@ -38,12 +38,12 @@ export default function PhaserGame() {
       const game = gameRef.current;
       if (!game) return;
 
-      // 監聽 TreasureHuntScene 啟動
-      game.scene.getScene("TreasureHuntScene")?.events.on("create", () => {
+      // 監聽 CosmicVoidScene 啟動
+      game.scene.getScene("CosmicVoidScene")?.events.on("create", () => {
         setIsInGame(true);
         const scene = game.scene.getScene(
-          "TreasureHuntScene",
-        ) as TreasureHuntScene;
+          "CosmicVoidScene",
+        ) as CosmicVoidScene;
         scene.setStatusCallback((text, color) => {
           setStatus({ text, color });
         });
