@@ -674,13 +674,12 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 	}
 
 	// check container cache first before wasting resources on execution
-	s.mu.RLock()
+	s.mu.Lock()
 	_, exists := s.containerInteractedCache[targetEntityID]
 	if exists {
 		slog.Debug("Container entity still cached, not available for interaction", "targetEntityID", targetEntityID)
 		return fmt.Errorf("container targeted entityID %s was still cached and not available to be interacted", targetEntityID)
 	}
-	s.mu.RUnlock()
 
 	// get that entity's type and decide on the effect
 	_, isDoorEntity := targetEntity.GetComponent(ecs.ComponentTypeDoor)
@@ -762,7 +761,6 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		doorOpenable.IsOpen = !doorOpenable.IsOpen
 
 		// add door to interacted to cache
-		s.mu.Lock()
 		s.containerInteractedCache[targetEntityID] = true
 		s.mu.Unlock()
 
@@ -814,13 +812,14 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 
 		containerOpenable := containerOpenableComponent.(*components.OpenableComponent)
 
-		// Only open, never close (chest stays open once opened)
+		// only open, never close (chest stays open once opened)
 		containerOpenable.IsOpen = true
 
-		// create items on first open by fetching from items-service via gRPC
+		// create items on first open by using seeded itemPool
 		if containerOpenable.HasBeenOpened == false {
 			containerOpenable.HasBeenOpened = true
 
+			// creates RANDOM items
 			itemIDs, err := s.generateItems()
 
 			if err != nil {
@@ -1095,7 +1094,7 @@ func (s *Session) generateItems() ([]uuid.UUID, error) {
 		"s.itemPool", s.itemPool)
 
 	// decide on RNG values
-	numberOfItems := utils.GenRandomBetween(1, 3)
+	numberOfItems := utils.GenRandomBetween(2, 4)
 
 	// distribution of items
 	var numberOfWeapons int
