@@ -684,10 +684,11 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 	// get that entity's type and decide on the effect
 	_, isDoorEntity := targetEntity.GetComponent(ecs.ComponentTypeDoor)
 	_, isContainerEntity := targetEntity.GetComponent(ecs.ComponentTypeContainer)
+	itemComp, isItemEntity := targetEntity.GetComponent(ecs.ComponentTypeItem)
 	switchComp, isSwitch := targetEntity.GetComponent(ecs.ComponentTypeSwitch)
 	_, isEscapeDoor := targetEntity.GetComponent(ecs.ComponentTypeEscapeDoor)
 
-	if !isDoorEntity && !isContainerEntity && !isSwitch && !isEscapeDoor {
+	if !isDoorEntity && !isContainerEntity && !isSwitch && !isEscapeDoor && !isItemEntity {
 		slog.Debug("Entity type did not match any interactable entity", "targetEntityID", targetEntityID)
 		return fmt.Errorf("entity type did not match any interactable entity")
 	}
@@ -819,7 +820,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		if containerOpenable.HasBeenOpened == false {
 			containerOpenable.HasBeenOpened = true
 
-			// creates RANDOM items
+			// creates RANDOM items on the spot
 			itemIDs, err := s.generateItems()
 
 			if err != nil {
@@ -834,6 +835,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 			}
 
 			containerItemIDs := itemIDsComponent.(*components.ItemIDListComponent)
+			// relate the container with the newly generated items
 			containerItemIDs.ItemIDs = itemIDs
 		}
 
@@ -863,6 +865,77 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 			s.mu.Unlock()
 		}()
 	}
+
+	// --- item entity ---
+	if isItemEntity {
+		// lock to prevent races
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		targetItem, ok := itemComp.(*components.ItemComponent)
+
+		if !ok {
+			return fmt.Errorf("Error when asserting component to item.")
+		}
+
+		// add item to player. playerEntity already validated during transformComp extraction
+		playerItemIDListComp, exists := playerEntity.GetComponent(ecs.ComponentTypeItemIDList)
+
+		if !exists {
+			return fmt.Errorf("ItemIDList component doesnt exist in player's entity.")
+		}
+
+		playerItemIDList, ok := playerItemIDListComp.(*components.ItemIDListComponent)
+
+		if !ok {
+			return fmt.Errorf("ItemIDList component could not be asserted into its conerete type.")
+		}
+
+		// for edge cases
+		for _, itemID := range playerItemIDList.ItemIDs {
+			if itemID == targetItem.TemplateID {
+				return fmt.Errorf("Item duplicate, attempting to add item that already exists into player's inventory.")
+			}
+		}
+
+		playerItemIDList.ItemIDs = append(playerItemIDList.ItemIDs, targetEntityID)
+
+		// find the respecitive container and remove it from the container
+		for _, entity := range s.EntityManager.GetAllEntities() {
+			isContainer := entity.HasComponent(ecs.ComponentTypeContainer)
+			if !isContainer {
+				continue
+			}
+
+			containerItemIDListComp, exists := entity.GetComponent(ecs.ComponentTypeItemIDList)
+			if !exists {
+				slog.Warn("Couldnt find itemIDList component in container when attempting to remove item from container entity",
+					"container_id", entity.ID,
+				)
+				continue
+			}
+
+			containerItemIDList, ok := containerItemIDListComp.(*components.ItemIDListComponent)
+			if !ok {
+				return fmt.Errorf("Failed to assert container item id list type when attempting to removing item from container entity")
+			}
+
+			updatedList := make([]uuid.UUID, 0, len(containerItemIDList.ItemIDs)-1)
+
+			for _, itemID := range containerItemIDList.ItemIDs {
+				if itemID == targetEntityID {
+					continue
+				}
+				updatedList = append(updatedList, itemID)
+			}
+
+			containerItemIDList.ItemIDs = updatedList
+			break
+		}
+
+		// unlocks here too
+		return nil
+	}
+
 	// Check if the switch is on so we can open the emergency exit
 	// -- switch entity --
 	if isSwitch {
