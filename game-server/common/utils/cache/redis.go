@@ -3,8 +3,10 @@ package cache
 import (
 	context "context"
 	"fmt"
+	"log/slog"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -40,23 +42,69 @@ func (r *redisClient) Close() error {
 	return r.client.Close()
 }
 
-func (r *redisClient) Lock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
-	lockKey := fmt.Sprintf("lock:%s", key)
-	// SetNX: 只有當 key 不存在時才設置
-	result, err := r.client.SetNX(ctx, lockKey, "locked", ttl).Result()
-	if err != nil {
-		return false, fmt.Errorf("failed to acquire lock: %w", err)
-	}
-
-	return result, nil
-}
-
-func (r *redisClient) Unlock(ctx context.Context, key string) error {
-	lockKey := fmt.Sprintf("lock:%s", key)
-	return r.client.Del(ctx, lockKey).Err()
-}
-
 // increments and returns new version key
 func (r *redisClient) Incr(ctx context.Context, key string) (int64, error) {
 	return r.client.Incr(ctx, key).Result()
+}
+
+func (r *redisClient) AcquireLock(ctx context.Context, key string, ttl time.Duration) (string, bool, error) {
+	lockID := uuid.New().String()
+	lockKey := fmt.Sprintf("lock:%s", key)
+	success, err := r.client.SetNX(ctx, lockKey, lockID, ttl).Result()
+
+	if err != nil {
+		slog.Error("failed to acquire lock", "error", err)
+		return "", false, fmt.Errorf("failed to acquire lock: %w", err)
+	}
+
+	if success {
+		slog.Debug("Lock acquired successfully",
+			"key", key,
+			"lockID", lockID,
+			"ttl", ttl,
+		)
+		return lockID, true, nil
+	}
+
+	slog.Debug("Lock already held by another instance", "key", key)
+	return "", false, nil
+
+}
+
+// Lua 腳本：原子性地檢查並刪除鎖
+// 只有當鎖的值等於 lockID 時才刪除
+const releaseLockScript = `
+if redis.call("GET", KEYS[1]) == ARGV[1] then
+	return redis.call("DEL",KEYS[1])
+else 
+	return 0
+end
+`
+
+func (r *redisClient) ReleaseLock(ctx context.Context, key string, lockID string) error {
+	lockKey := fmt.Sprintf("lock:%s", key)
+	result, err := r.client.Eval(ctx, releaseLockScript, []string{lockKey}, lockID).Result()
+	if err != nil {
+		return fmt.Errorf("failed to release lock: %w", err)
+	}
+
+	del, ok := result.(int64)
+	if !ok {
+		return fmt.Errorf("unexpected result type from lua script: %T", ok)
+	}
+
+	if del == 0 {
+		// 鎖不存在或已被其他實例持有
+		slog.Warn("Attempted to release lock that is not held or already expired",
+			"key", key,
+			"lockID", lockID,
+		)
+		return fmt.Errorf("lock not held or already expired")
+	}
+
+	slog.Debug("Lock released successfully",
+		"key", key,
+		"lockID", lockID,
+	)
+	return nil
 }

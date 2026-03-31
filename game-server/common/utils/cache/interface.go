@@ -11,7 +11,24 @@ type Cache interface {
 	Del(ctx context.Context, keys ...string) error
 	Exists(ctx context.Context, key string) (bool, error)
 	Close() error
-	Lock(ctx context.Context, key string, ttl time.Duration) (bool, error)
-	Unlock(ctx context.Context, key string) error
 	Incr(ctx context.Context, key string) (int64, error)
+
+	// 分佈式鎖
+	// AcquireLock 獲取分佈式鎖
+	// 參數:
+	//   - key: 鎖的鍵名
+	//   - ttl: 鎖的過期時間
+	// 返回:
+	//   - lockID: 鎖的唯一標識符，用於釋放鎖
+	//   - acquired: 是否成功獲取鎖
+	//   - err: 錯誤信息
+	AcquireLock(ctx context.Context, key string, ttl time.Duration) (lockID string, acquired bool, err error)
+
+	// ReleaseLock 釋放分佈式鎖
+	// 參數:
+	//   - key: 鎖的鍵名
+	//   - lockID: 獲取鎖時返回的標識符
+	// 返回:
+	//   - err: 錯誤信息（如果鎖不存在或已被其他實例持有）
+	ReleaseLock(ctx context.Context, key string, lockID string) error
 }
