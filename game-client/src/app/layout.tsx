@@ -17,8 +17,8 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: 'Cosmic Void - Multiplayer Space Adventure',
-  description: 'A real-time multiplayer space exploration game',
+  title: 'COSMIC VOID // Extraction',
+  description: 'Drop into the void. Loot. Fight. Extract.',
 };
 
 export default function RootLayout({

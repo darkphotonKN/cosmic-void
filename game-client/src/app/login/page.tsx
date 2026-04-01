@@ -99,7 +99,7 @@ export default function LoginPage() {
         {/* 標題 */}
         <div className="login-header">
           <h1 className="login-title">COSMIC VOID</h1>
-          <p className="login-subtitle">Multiplayer Treasure Hunt</p>
+          <p className="login-subtitle">Operator Authentication</p>
         </div>
 
         {/* 表單 */}
@@ -144,10 +144,10 @@ export default function LoginPage() {
             {isLoading ? (
               <span className="login-loading">
                 <span className="login-spinner" />
-                Connecting...
+                Verifying...
               </span>
             ) : (
-              "Enter Game"
+              "Authenticate"
             )}
           </button>
         </form>
@@ -155,7 +155,7 @@ export default function LoginPage() {
         {/* 底部連結 */}
         <div className="login-footer">
           <p>
-            Don&apos;t have an account?{" "}
+            No credentials?{" "}
             <a href="/register" className="login-link">
               Register
             </a>
@@ -164,7 +164,7 @@ export default function LoginPage() {
       </div>
 
       {/* 版本資訊 */}
-      <div className="login-version">v0.1.0 Alpha</div>
+      <div className="login-version">v0.1 // SECTOR 7-G</div>
     </main>
   );
 }

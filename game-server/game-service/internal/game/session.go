@@ -696,14 +696,10 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 	// --- player entity ---
 
 	// establish player's position
-	s.mu.RLock()
 	playerEntityID := s.playerIDToEntitiesID[playerID]
-	s.mu.RUnlock()
 
-	s.mu.RLock()
 	// exit early if cached
 	_, exists = s.playerInteractedCache[playerEntityID]
-	s.mu.RUnlock()
 
 	if exists {
 		slog.Debug("Player interacted too soon", "playerEntityID", playerEntityID)

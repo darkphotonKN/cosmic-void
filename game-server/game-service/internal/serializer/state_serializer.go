@@ -279,7 +279,12 @@ func (s *StateSerializer) SerializeBackendState(ctx context.Context, sessionID u
 }
 
 func (s *StateSerializer) FormatStateToClientState(backendState *types.BackendGameState, playerID uuid.UUID) *types.ClientGameState {
-	otherPlayers := make([]*types.PlayerState, 0, len(backendState.Players)-1)
+	playerCap := len(backendState.Players) - 1
+	if playerCap < 0 {
+		playerCap = 0
+	}
+
+	otherPlayers := make([]*types.PlayerState, 0, playerCap)
 	for id, playerState := range backendState.Players {
 		if id != playerID {
 			otherPlayers = append(otherPlayers, playerState)

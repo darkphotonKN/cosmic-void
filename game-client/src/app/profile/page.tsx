@@ -112,7 +112,7 @@ export default function ProfilePage() {
   };
 
   const getStatusLabel = (status: number) => {
-    return status === 1 ? "Member" : status === 2 ? "Author" : "Unknown";
+    return status === 1 ? "Operator" : status === 2 ? "Commander" : "Unknown";
   };
 
   return (
@@ -126,9 +126,9 @@ export default function ProfilePage() {
           onClick={() => router.push("/game")}
           className="profile-back-btn"
         >
-          ← Back to Game
+          Back to Game
         </button>
-        <h1 className="profile-title">Player Profile</h1>
+        <h1 className="profile-title">OPERATOR PROFILE</h1>
       </div>
 
       {/* Profile Card */}
@@ -196,7 +196,7 @@ export default function ProfilePage() {
 
           <div className="profile-details">
             <div className="profile-detail-item">
-              <span className="profile-detail-label">Status:</span>
+              <span className="profile-detail-label">Rank:</span>
               <span className="profile-detail-value">
                 {getStatusLabel(memberInfo.status)}
               </span>
@@ -210,7 +210,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="profile-detail-item">
-              <span className="profile-detail-label">Member Since:</span>
+              <span className="profile-detail-label">Enlisted:</span>
               <span className="profile-detail-value">
                 {formatDate(memberInfo.created_at)}
               </span>

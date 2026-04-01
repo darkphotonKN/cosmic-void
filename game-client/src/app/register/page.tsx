@@ -83,7 +83,7 @@ export default function RegisterPage() {
     setError("");
 
     if (!name.trim()) {
-      setError("Please enter your name");
+      setError("Please enter your callsign");
       return;
     }
 
@@ -141,14 +141,14 @@ export default function RegisterPage() {
         {/* 標題 */}
         <div className="login-header">
           <h1 className="login-title">COSMIC VOID</h1>
-          <p className="login-subtitle">Create Your Account</p>
+          <p className="login-subtitle">Operator Registration</p>
         </div>
 
         {/* 表單 */}
         <form onSubmit={handleSubmit} className="login-form">
           <div className="login-input-group">
             <label htmlFor="name" className="login-label">
-              Name
+              Callsign
             </label>
             <input
               id="name"
@@ -156,7 +156,7 @@ export default function RegisterPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="login-input"
-              placeholder="Enter your name..."
+              placeholder="Enter callsign..."
               autoComplete="name"
             />
           </div>
@@ -201,15 +201,15 @@ export default function RegisterPage() {
             {isLoading ? (
               <span className="login-loading">
                 <span className="login-spinner" />
-                Sending...
+                Transmitting...
               </span>
             ) : isPolling ? (
               <span className="login-loading">
                 <span className="login-spinner" />
-                Creating Account...
+                Provisioning Access...
               </span>
             ) : (
-              "Register"
+              "Register Operator"
             )}
           </button>
         </form>
@@ -217,16 +217,16 @@ export default function RegisterPage() {
         {/* 底部連結 */}
         <div className="login-footer">
           <p>
-            Already have an account?{" "}
+            Already registered?{" "}
             <a href="/login" className="login-link">
-              Login
+              Sign In
             </a>
           </p>
         </div>
       </div>
 
       {/* 版本資訊 */}
-      <div className="login-version">v0.1.0 Alpha</div>
+      <div className="login-version">v0.1 // SECTOR 7-G</div>
     </main>
   );
 }

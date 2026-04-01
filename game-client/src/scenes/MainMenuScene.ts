@@ -4,13 +4,15 @@ import Phaser from "phaser";
 
 export class MainMenuScene extends Phaser.Scene {
   private unsubscribeConnectionStatus?: () => void;
-  private buttonBg?: Phaser.GameObjects.Rectangle;
+  private buttonBg?: Phaser.GameObjects.Graphics;
+  private buttonGlow?: Phaser.GameObjects.Graphics;
   private startButtonText?: Phaser.GameObjects.Text;
   private connectionStatusText?: Phaser.GameObjects.Text;
   private isConnected: boolean = false;
   private dotAnimation?: Phaser.Time.TimerEvent;
   private dotCount: number = 0;
-  // 隊列彈窗狀態
+  private scanlineGraphics?: Phaser.GameObjects.Graphics;
+  private glowTween?: Phaser.Tweens.Tween;
   private queuePopupActive: boolean = false;
   private queueTitle?: Phaser.GameObjects.Text;
   private queuePeopleText?: Phaser.GameObjects.Text;
@@ -25,35 +27,65 @@ export class MainMenuScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    // 背景
-    this.cameras.main.setBackgroundColor("#1a1a2e");
+    // Deep space background
+    this.cameras.main.setBackgroundColor("#0a0a12");
 
-    // 創建格子背景
-    const graphics = this.add.graphics();
-    graphics.lineStyle(1, 0x333355, 0.3);
-    for (let x = 0; x <= width; x += 50) {
-      graphics.lineBetween(x, 0, x, height);
+    // Star field
+    const stars = this.add.graphics();
+    for (let i = 0; i < 120; i++) {
+      const x = Phaser.Math.Between(0, width);
+      const y = Phaser.Math.Between(0, height);
+      const size = Math.random() < 0.1 ? 2 : 1;
+      const alpha = Phaser.Math.FloatBetween(0.15, 0.6);
+      const color = Math.random() < 0.3 ? 0x00f0ff : Math.random() < 0.5 ? 0xff00aa : 0xffffff;
+      stars.fillStyle(color, alpha);
+      stars.fillRect(x, y, size, size);
     }
-    for (let y = 0; y <= height; y += 50) {
-      graphics.lineBetween(0, y, width, y);
+
+    // Subtle grid overlay
+    const grid = this.add.graphics();
+    grid.lineStyle(1, 0x00f0ff, 0.04);
+    for (let x = 0; x <= width; x += 40) {
+      grid.lineBetween(x, 0, x, height);
     }
+    for (let y = 0; y <= height; y += 40) {
+      grid.lineBetween(0, y, width, y);
+    }
+
+    // Scanline effect
+    this.scanlineGraphics = this.add.graphics();
+    this.scanlineGraphics.fillStyle(0x000000, 0.03);
+    for (let y = 0; y < height; y += 4) {
+      this.scanlineGraphics.fillRect(0, y, width, 2);
+    }
+    this.scanlineGraphics.setDepth(100);
+
+    // Horizontal accent line under title area
+    const accentLine = this.add.graphics();
+    accentLine.lineStyle(1, 0x00f0ff, 0.3);
+    accentLine.lineBetween(width * 0.2, height / 4 + 85, width * 0.8, height / 4 + 85);
 
     // Title
-    const title = this.add.text(width / 2, height / 4, "🗺️ COSMIC VOID", {
-      fontSize: "42px",
-      color: "#4ecca3",
+    const title = this.add.text(width / 2, height / 4, "COSMIC VOID", {
+      fontSize: "48px",
+      color: "#00f0ff",
       fontStyle: "bold",
+      letterSpacing: 12,
     });
     title.setOrigin(0.5);
+
+    // Title glow effect via shadow
+    title.setShadow(0, 0, "#00f0ff", 8, true, true);
 
     // Subtitle
     const subtitle = this.add.text(
       width / 2,
-      height / 4 + 50,
-      "Multiplayer Treasure Hunt",
+      height / 4 + 55,
+      "EXTRACTION // SURVIVE THE VOID",
       {
-        fontSize: "20px",
-        color: "#888888",
+        fontSize: "14px",
+        color: "#ff00aa",
+        letterSpacing: 6,
       },
     );
     subtitle.setOrigin(0.5);
@@ -61,83 +93,93 @@ export class MainMenuScene extends Phaser.Scene {
     // Description
     const desc = this.add.text(
       width / 2,
-      height / 2 - 30,
-      "Fog of War System\nBuilding Collision + Indoor Visibility",
+      height / 2 - 40,
+      "Loot. Fight. Extract.\nNothing survives the void forever.",
       {
-        fontSize: "16px",
-        color: "#aaaaaa",
+        fontSize: "15px",
+        color: "#556677",
         align: "center",
+        lineSpacing: 6,
       },
     );
     desc.setOrigin(0.5);
 
-    // Start button - 初始為禁用狀態
-    this.buttonBg = this.add.rectangle(
-      width / 2,
-      height / 2 + 60,
-      200,
-      50,
-      0x666666, // 灰色表示禁用
-    );
+    // Button glow layer (behind button)
+    this.buttonGlow = this.add.graphics();
+    this.buttonGlow.setAlpha(0);
+
+    // Button background (rounded rect via graphics)
+    const btnX = width / 2;
+    const btnY = height / 2 + 50;
+    const btnW = 220;
+    const btnH = 50;
+
+    this.buttonBg = this.add.graphics();
+    this.drawButton(0x333344, 0x556677);
+
+    // Invisible hit area for interaction
+    const hitArea = this.add.rectangle(btnX, btnY, btnW, btnH, 0x000000, 0);
+    hitArea.setInteractive({ useHandCursor: true });
 
     this.startButtonText = this.add.text(
-      width / 2,
-      height / 2 + 60,
-      "Connecting...",
+      btnX,
+      btnY,
+      "CONNECTING...",
       {
-        fontSize: "24px",
-        color: "#1a1a2e",
+        fontSize: "18px",
+        color: "#0a0a12",
         fontStyle: "bold",
+        letterSpacing: 3,
       },
     );
     this.startButtonText.setOrigin(0.5);
 
-    // 連線狀態文字
+    // Connection status text
     this.connectionStatusText = this.add.text(
       width / 2,
-      height / 2 + 100,
-      "Connecting to server...",
+      height / 2 + 95,
+      "Establishing uplink...",
       {
-        fontSize: "14px",
-        color: "#ffcc00",
+        fontSize: "12px",
+        color: "#ff8800",
+        letterSpacing: 2,
       },
     );
     this.connectionStatusText.setOrigin(0.5);
 
-    // 點點動畫
+    // Connecting dot animation
     this.dotAnimation = this.time.addEvent({
       delay: 500,
       callback: () => {
         if (!this.isConnected && this.connectionStatusText) {
           this.dotCount = (this.dotCount + 1) % 4;
           const dots = ".".repeat(this.dotCount);
-          this.connectionStatusText.setText(`Connecting to server${dots}`);
+          this.connectionStatusText.setText(`Establishing uplink${dots}`);
         }
       },
       loop: true,
     });
 
-    // 監聽連線狀態
+    // Connection status listener
     this.unsubscribeConnectionStatus = socketManager.onConnectionStatusChange(
       (status: ConnectionStatus) => {
         this.handleConnectionStatusChange(status);
       },
     );
 
-    // 🔥 監聽重連訊息 - 在 create() 時就註冊
+    // Reconnection listener
     socketManager.on("reconnected", (payload: { session_id: string; username: string; message: string }) => {
-      console.log("🔄 Reconnected!", payload);
+      console.log("Reconnected!", payload);
       if (this.connectionStatusText) {
-        this.connectionStatusText.setText(`Welcome back, ${payload.username}!`);
-        this.connectionStatusText.setColor("#4ecca3");
+        this.connectionStatusText.setText(`Uplink restored // ${payload.username}`);
+        this.connectionStatusText.setColor("#00f0ff");
       }
     });
 
-    // 🔥 監聽 game_found - 在 create() 時就註冊，處理重連後自動進入遊戲
+    // Game found listener
     socketManager.on("game_found", (payload: { session_id?: string; sessionID?: string }) => {
-      console.log("🎮 Game found! Payload:", payload);
+      console.log("Game found! Payload:", payload);
 
-      // 兼容後端的 session_id 和前端的 sessionID
       const sessionID = payload.session_id || payload.sessionID;
 
       if (!sessionID) {
@@ -145,20 +187,15 @@ export class MainMenuScene extends Phaser.Scene {
         return;
       }
 
-      // 如果彈窗開啟，顯示 "Game Found!" 並延遲進入
       if (this.queuePopupActive && this.queueTitle && this.queuePeopleText) {
-        console.log("Queue popup is active, showing Game Found message...");
-        this.queueTitle.setText("Game Found!");
-        this.queuePeopleText.setText("Starting game...");
+        this.queueTitle.setText("MATCH FOUND");
+        this.queuePeopleText.setText("Deploying...");
 
-        // 1.5 秒後進入遊戲場景
         this.time.delayedCall(1500, () => {
           this.closeQueuePopup();
           this.scene.start("CosmicVoidScene", { sessionID });
         });
       } else {
-        // 沒有彈窗（重連情況），直接進入遊戲
-        console.log("No popup active (reconnection), navigating immediately...");
         this.scene.start("CosmicVoidScene", { sessionID });
       }
     });
@@ -166,14 +203,54 @@ export class MainMenuScene extends Phaser.Scene {
     // Controls info
     const controlsText = this.add.text(
       width / 2,
-      height - 80,
-      "🎮 WASD/Arrows to Move  |  ⚔️ Space to Attack  |  📦 E to Collect",
+      height - 60,
+      "WASD Move  //  SPACE Attack  //  E Interact  //  F Loot  //  I Inventory",
       {
-        fontSize: "14px",
-        color: "#666666",
+        fontSize: "11px",
+        color: "#334455",
+        letterSpacing: 2,
       },
     );
     controlsText.setOrigin(0.5);
+
+    // Version / flavor text
+    const versionText = this.add.text(
+      width / 2,
+      height - 35,
+      "v0.1 // SECTOR 7-G // UNAUTHORIZED ACCESS WILL BE TERMINATED",
+      {
+        fontSize: "9px",
+        color: "#222233",
+        letterSpacing: 1,
+      },
+    );
+    versionText.setOrigin(0.5);
+
+    // Store hit area ref for interaction setup
+    (this as Record<string, unknown>)._hitArea = hitArea;
+  }
+
+  private drawButton(fill: number, stroke: number, glowColor?: number): void {
+    const width = this.cameras.main.width;
+    const btnX = width / 2 - 110;
+    const btnY = this.cameras.main.height / 2 + 50 - 25;
+    const btnW = 220;
+    const btnH = 50;
+
+    if (this.buttonGlow && glowColor) {
+      this.buttonGlow.clear();
+      this.buttonGlow.fillStyle(glowColor, 0.15);
+      this.buttonGlow.fillRoundedRect(btnX - 4, btnY - 4, btnW + 8, btnH + 8, 10);
+      this.buttonGlow.setAlpha(1);
+    }
+
+    if (this.buttonBg) {
+      this.buttonBg.clear();
+      this.buttonBg.fillStyle(fill, 1);
+      this.buttonBg.fillRoundedRect(btnX, btnY, btnW, btnH, 6);
+      this.buttonBg.lineStyle(1, stroke, 0.8);
+      this.buttonBg.strokeRoundedRect(btnX, btnY, btnW, btnH, 6);
+    }
   }
 
   private handleConnectionStatusChange(status: ConnectionStatus): void {
@@ -181,29 +258,29 @@ export class MainMenuScene extends Phaser.Scene {
       return;
     }
 
+    const hitArea = (this as Record<string, unknown>)._hitArea as Phaser.GameObjects.Rectangle | undefined;
+
     switch (status) {
       case "connected":
         this.isConnected = true;
-        // 停止點點動畫
         if (this.dotAnimation) {
           this.dotAnimation.destroy();
         }
-        // 啟用按鈕
-        this.buttonBg.setFillStyle(0x4ecca3);
-        this.buttonBg.setInteractive({ useHandCursor: true });
-        this.startButtonText.setText("Start Game");
-        this.connectionStatusText.setText("Connected!");
-        this.connectionStatusText.setColor("#4ecca3");
-        // 設置按鈕交互
+        this.drawButton(0x00f0ff, 0x00f0ff, 0x00f0ff);
+        this.startButtonText.setText("FIND MATCH");
+        this.startButtonText.setColor("#0a0a12");
+        this.connectionStatusText.setText("Uplink active");
+        this.connectionStatusText.setColor("#00f0ff");
         this.setupButtonInteraction();
         break;
 
       case "connecting":
         this.isConnected = false;
-        this.buttonBg.setFillStyle(0x666666);
-        this.buttonBg.disableInteractive();
-        this.startButtonText.setText("Connecting...");
-        this.connectionStatusText.setColor("#ffcc00");
+        this.drawButton(0x333344, 0x556677);
+        if (hitArea) hitArea.disableInteractive();
+        this.startButtonText.setText("CONNECTING...");
+        this.startButtonText.setColor("#556677");
+        this.connectionStatusText.setColor("#ff8800");
         break;
 
       case "error":
@@ -211,11 +288,12 @@ export class MainMenuScene extends Phaser.Scene {
         if (this.dotAnimation) {
           this.dotAnimation.destroy();
         }
-        this.buttonBg.setFillStyle(0xff4444);
-        this.buttonBg.disableInteractive();
-        this.startButtonText.setText("Error");
-        this.connectionStatusText.setText("Connection failed. Please refresh.");
-        this.connectionStatusText.setColor("#ff4444");
+        this.drawButton(0x441111, 0xff2244, 0xff2244);
+        if (hitArea) hitArea.disableInteractive();
+        this.startButtonText.setText("OFFLINE");
+        this.startButtonText.setColor("#ff2244");
+        this.connectionStatusText.setText("Uplink failed // Refresh to retry");
+        this.connectionStatusText.setColor("#ff2244");
         break;
 
       case "disconnected":
@@ -223,31 +301,35 @@ export class MainMenuScene extends Phaser.Scene {
         if (this.dotAnimation) {
           this.dotAnimation.destroy();
         }
-        this.buttonBg.setFillStyle(0x666666);
-        this.buttonBg.disableInteractive();
-        this.startButtonText.setText("Disconnected");
-        this.connectionStatusText.setText("Connection lost. Please refresh.");
-        this.connectionStatusText.setColor("#ffcc00");
+        this.drawButton(0x222233, 0x556677);
+        if (hitArea) hitArea.disableInteractive();
+        this.startButtonText.setText("DISCONNECTED");
+        this.startButtonText.setColor("#556677");
+        this.connectionStatusText.setText("Uplink lost // Refresh to retry");
+        this.connectionStatusText.setColor("#ff8800");
         break;
     }
   }
 
   private setupButtonInteraction(): void {
-    if (!this.buttonBg) return;
+    const hitArea = (this as Record<string, unknown>)._hitArea as Phaser.GameObjects.Rectangle | undefined;
+    if (!hitArea) return;
 
-    this.buttonBg.on("pointerover", () => {
+    hitArea.setInteractive({ useHandCursor: true });
+
+    hitArea.on("pointerover", () => {
       if (this.isConnected) {
-        this.buttonBg?.setFillStyle(0x3dbb92);
+        this.drawButton(0x33ffdd, 0x00f0ff, 0x00f0ff);
       }
     });
 
-    this.buttonBg.on("pointerout", () => {
+    hitArea.on("pointerout", () => {
       if (this.isConnected) {
-        this.buttonBg?.setFillStyle(0x4ecca3);
+        this.drawButton(0x00f0ff, 0x00f0ff, 0x00f0ff);
       }
     });
 
-    this.buttonBg.on("pointerdown", () => {
+    hitArea.on("pointerdown", () => {
       if (this.isConnected) {
         socketManager.sendMessage(ActionType.Find_Game, { playerId: "1" });
         this.queuePopup();
@@ -256,89 +338,101 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   shutdown(): void {
-    // 場景銷毀時取消訂閱
     if (this.unsubscribeConnectionStatus) {
       this.unsubscribeConnectionStatus();
     }
     if (this.dotAnimation) {
       this.dotAnimation.destroy();
     }
+    if (this.glowTween) {
+      this.glowTween.destroy();
+    }
   }
 
   queuePopup() {
     const { width, height } = this.scale;
 
-    // 標記彈窗開啟
     this.queuePopupActive = true;
 
-    // 半透明背景遮罩
+    // Dark overlay
     this.queueOverlay = this.add.rectangle(
       width / 2,
       height / 2,
       width,
       height,
       0x000000,
-      0.7,
+      0.8,
     );
 
-    // 彈窗背景
     this.queuePopupContainer = this.add.container(width / 2, height / 2);
 
-    const bg = this.add
-      .rectangle(0, 0, 300, 200, 0xffffff, 1)
-      .setStrokeStyle(2, 0x000000);
+    // Popup background
+    const popupW = 320;
+    const popupH = 200;
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0a0a18, 1);
+    bg.fillRoundedRect(-popupW / 2, -popupH / 2, popupW, popupH, 8);
+    bg.lineStyle(1, 0x00f0ff, 0.4);
+    bg.strokeRoundedRect(-popupW / 2, -popupH / 2, popupW, popupH, 8);
 
     this.queueTitle = this.add
-      .text(0, -60, "Queueing...", {
-        fontSize: "28px",
-        color: "#000",
+      .text(0, -60, "SEARCHING FOR MATCH", {
+        fontSize: "18px",
+        color: "#00f0ff",
+        letterSpacing: 4,
       })
       .setOrigin(0.5);
-
-    const closeBtn = this.add
-      .text(0, 50, "Close", {
-        fontSize: "20px",
-        backgroundColor: "#4ecca3",
-        padding: { x: 20, y: 10 },
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
 
     this.queuePeopleText = this.add
-      .text(0, -10, "People in queue: 0 / 2", {
-        fontSize: "16px",
-        color: "#000",
+      .text(0, -15, "Operators in queue: 0 / 2", {
+        fontSize: "14px",
+        color: "#556677",
       })
       .setOrigin(0.5);
 
-    // 監聽排隊狀態更新
+    // Cancel button
+    const cancelBg = this.add.graphics();
+    cancelBg.fillStyle(0x221122, 1);
+    cancelBg.fillRoundedRect(-60, 35, 120, 36, 4);
+    cancelBg.lineStyle(1, 0xff00aa, 0.5);
+    cancelBg.strokeRoundedRect(-60, 35, 120, 36, 4);
+
+    const cancelText = this.add
+      .text(0, 53, "CANCEL", {
+        fontSize: "13px",
+        color: "#ff00aa",
+        letterSpacing: 3,
+      })
+      .setOrigin(0.5);
+
+    const cancelHit = this.add.rectangle(0, 53, 120, 36, 0x000000, 0);
+    cancelHit.setInteractive({ useHandCursor: true });
+
+    // Queue status listener
     socketManager.on(
       "queue_status",
       (payload: { current: number; total: number }) => {
         console.log("Queue status payload:", payload);
         if (!payload || !this.queuePeopleText) return;
         this.queuePeopleText.setText(
-          `People in queue: ${payload.current} / ${payload.total}`,
+          `Operators in queue: ${payload.current} / ${payload.total}`,
         );
       },
     );
 
-    // 關閉按鈕
-    closeBtn.on("pointerdown", () => {
+    cancelHit.on("pointerdown", () => {
       this.closeQueuePopup();
-      // TODO: 發送離開排隊的訊息給後端
+      // TODO: send leave queue message to backend
     });
 
-    this.queuePopupContainer.add([bg, this.queueTitle, closeBtn, this.queuePeopleText]);
+    this.queuePopupContainer.add([bg, this.queueTitle, this.queuePeopleText, cancelBg, cancelText, cancelHit]);
   }
 
   private closeQueuePopup() {
     this.queuePopupActive = false;
 
-    // 取消排隊狀態監聽
     socketManager.off("queue_status");
 
-    // 清理 UI
     if (this.queueOverlay) {
       this.queueOverlay.destroy();
       this.queueOverlay = undefined;
@@ -348,7 +442,6 @@ export class MainMenuScene extends Phaser.Scene {
       this.queuePopupContainer = undefined;
     }
 
-    // 清理引用
     this.queueTitle = undefined;
     this.queuePeopleText = undefined;
   }

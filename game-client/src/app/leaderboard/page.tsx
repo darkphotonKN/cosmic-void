@@ -53,28 +53,32 @@ export default function LeaderboardPage() {
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
+  const getRankIndicator = (index: number) => {
+    if (index === 0) return "I";
+    if (index === 1) return "II";
+    if (index === 2) return "III";
+    return null;
+  };
+
   return (
     <main className="leaderboard-container">
-      {/* Background */}
       <div className="leaderboard-bg" />
 
-      {/* Header */}
       <div className="leaderboard-header">
         <button
           onClick={() => router.push("/game")}
           className="leaderboard-back-btn"
         >
-          ← Back to Game
+          Back to Game
         </button>
-        <h1 className="leaderboard-title">Leaderboard</h1>
+        <h1 className="leaderboard-title">OPERATOR RANKINGS</h1>
       </div>
 
-      {/* Content */}
       <div className="leaderboard-content">
         {isLoading ? (
           <div className="leaderboard-loading">
             <div className="loading-spinner"></div>
-            <p>Loading leaderboard...</p>
+            <p>Loading rankings...</p>
           </div>
         ) : error ? (
           <div className="leaderboard-error">
@@ -85,14 +89,14 @@ export default function LeaderboardPage() {
           </div>
         ) : leaderboard.length === 0 ? (
           <div className="leaderboard-empty">
-            <p>No players on the leaderboard yet</p>
+            <p>No operators ranked yet</p>
           </div>
         ) : (
           <>
             <div className="leaderboard-table">
               <div className="leaderboard-header-row">
                 <div className="leaderboard-col rank-col">Rank</div>
-                <div className="leaderboard-col player-col">Player</div>
+                <div className="leaderboard-col player-col">Operator</div>
                 <div className="leaderboard-col wins-col">Wins</div>
                 <div className="leaderboard-col top3-col">Top 3</div>
               </div>
@@ -108,9 +112,11 @@ export default function LeaderboardPage() {
                     <span className={`rank-number rank-${index + 1}`}>
                       {currentPage * pageSize + index + 1}
                     </span>
-                    {index === 0 && <span className="medal gold">🥇</span>}
-                    {index === 1 && <span className="medal silver">🥈</span>}
-                    {index === 2 && <span className="medal bronze">🥉</span>}
+                    {getRankIndicator(index) && (
+                      <span className={`rank-badge rank-badge-${index + 1}`}>
+                        {getRankIndicator(index)}
+                      </span>
+                    )}
                   </div>
 
                   <div className="leaderboard-col player-col">
@@ -143,7 +149,6 @@ export default function LeaderboardPage() {
               ))}
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
               <div className="leaderboard-pagination">
                 <button
@@ -151,10 +156,10 @@ export default function LeaderboardPage() {
                   disabled={currentPage === 0}
                   className="pagination-btn"
                 >
-                  Previous
+                  Prev
                 </button>
                 <span className="page-info">
-                  Page {currentPage + 1} of {totalPages}
+                  {currentPage + 1} / {totalPages}
                 </span>
                 <button
                   onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
@@ -179,7 +184,7 @@ export default function LeaderboardPage() {
         .leaderboard-bg {
           position: fixed;
           inset: 0;
-          background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 100%);
+          background: #0a0a12;
           z-index: -1;
         }
 
@@ -187,8 +192,8 @@ export default function LeaderboardPage() {
           content: "";
           position: absolute;
           inset: 0;
-          background-image: radial-gradient(circle at 20% 50%, rgba(79, 70, 229, 0.1) 0%, transparent 50%),
-                            radial-gradient(circle at 80% 80%, rgba(236, 72, 153, 0.1) 0%, transparent 50%);
+          background-image: radial-gradient(circle at 20% 50%, rgba(0, 240, 255, 0.04) 0%, transparent 50%),
+                            radial-gradient(circle at 80% 80%, rgba(255, 0, 170, 0.03) 0%, transparent 50%);
         }
 
         .leaderboard-header {
@@ -200,37 +205,39 @@ export default function LeaderboardPage() {
         }
 
         .leaderboard-back-btn {
-          padding: 0.75rem 1.5rem;
-          background: rgba(255, 255, 255, 0.1);
-          color: white;
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          border-radius: 0.5rem;
-          font-size: 0.875rem;
+          padding: 0.5rem 1rem;
+          background: rgba(0, 240, 255, 0.05);
+          color: #556677;
+          border: 1px solid rgba(0, 240, 255, 0.15);
+          border-radius: 6px;
+          font-size: 0.85rem;
           cursor: pointer;
           transition: all 0.3s ease;
+          letter-spacing: 0.05em;
         }
 
         .leaderboard-back-btn:hover {
-          background: rgba(255, 255, 255, 0.2);
-          transform: translateX(-4px);
+          background: rgba(0, 240, 255, 0.1);
+          color: #00f0ff;
+          border-color: rgba(0, 240, 255, 0.3);
         }
 
         .leaderboard-title {
-          font-size: 2.5rem;
+          font-size: 2rem;
           font-weight: 700;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
+          color: #00f0ff;
+          letter-spacing: 0.15em;
+          text-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
         }
 
         .leaderboard-content {
           max-width: 1000px;
           margin: 0 auto;
-          background: rgba(255, 255, 255, 0.05);
+          background: rgba(10, 10, 20, 0.85);
           backdrop-filter: blur(10px);
-          border-radius: 1rem;
+          border-radius: 10px;
           padding: 2rem;
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(0, 240, 255, 0.1);
         }
 
         .leaderboard-loading,
@@ -241,15 +248,16 @@ export default function LeaderboardPage() {
           align-items: center;
           justify-content: center;
           min-height: 400px;
-          color: rgba(255, 255, 255, 0.7);
+          color: #556677;
           gap: 1rem;
+          letter-spacing: 0.05em;
         }
 
         .loading-spinner {
           width: 48px;
           height: 48px;
-          border: 4px solid rgba(255, 255, 255, 0.1);
-          border-left-color: #667eea;
+          border: 2px solid rgba(0, 240, 255, 0.1);
+          border-left-color: #00f0ff;
           border-radius: 50%;
           animation: spin 1s linear infinite;
         }
@@ -260,106 +268,127 @@ export default function LeaderboardPage() {
 
         .retry-btn {
           padding: 0.5rem 1.5rem;
-          background: #667eea;
-          color: white;
-          border: none;
-          border-radius: 0.5rem;
+          background: rgba(0, 240, 255, 0.1);
+          color: #00f0ff;
+          border: 1px solid rgba(0, 240, 255, 0.2);
+          border-radius: 6px;
           cursor: pointer;
           transition: all 0.3s ease;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          font-size: 0.8rem;
         }
 
         .retry-btn:hover {
-          background: #5a67d8;
-          transform: translateY(-2px);
+          background: rgba(0, 240, 255, 0.15);
+          border-color: rgba(0, 240, 255, 0.4);
         }
 
         .leaderboard-table {
           display: flex;
           flex-direction: column;
-          gap: 0.5rem;
+          gap: 0.4rem;
         }
 
         .leaderboard-header-row {
           display: grid;
           grid-template-columns: 100px 1fr 100px 100px;
           padding: 1rem;
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 0.5rem;
-          color: rgba(255, 255, 255, 0.5);
-          font-size: 0.875rem;
+          background: rgba(0, 240, 255, 0.03);
+          border-radius: 6px;
+          color: #445566;
+          font-size: 0.75rem;
           font-weight: 600;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
+          letter-spacing: 0.15em;
         }
 
         .leaderboard-row {
           display: grid;
           grid-template-columns: 100px 1fr 100px 100px;
           padding: 1rem;
-          background: rgba(255, 255, 255, 0.02);
-          border-radius: 0.5rem;
+          background: rgba(255, 255, 255, 0.01);
+          border-radius: 6px;
           transition: all 0.3s ease;
           border: 1px solid transparent;
         }
 
         .leaderboard-row:hover {
-          background: rgba(255, 255, 255, 0.05);
-          border-color: rgba(255, 255, 255, 0.1);
-          transform: translateX(4px);
+          background: rgba(0, 240, 255, 0.03);
+          border-color: rgba(0, 240, 255, 0.08);
         }
 
         .leaderboard-row.top-1 {
-          background: linear-gradient(90deg, rgba(255, 215, 0, 0.1) 0%, transparent 100%);
-          border-color: rgba(255, 215, 0, 0.3);
+          background: linear-gradient(90deg, rgba(0, 240, 255, 0.06) 0%, transparent 100%);
+          border-color: rgba(0, 240, 255, 0.15);
         }
 
         .leaderboard-row.top-2 {
-          background: linear-gradient(90deg, rgba(192, 192, 192, 0.1) 0%, transparent 100%);
-          border-color: rgba(192, 192, 192, 0.3);
+          background: linear-gradient(90deg, rgba(255, 0, 170, 0.04) 0%, transparent 100%);
+          border-color: rgba(255, 0, 170, 0.1);
         }
 
         .leaderboard-row.top-3 {
-          background: linear-gradient(90deg, rgba(205, 127, 50, 0.1) 0%, transparent 100%);
-          border-color: rgba(205, 127, 50, 0.3);
+          background: linear-gradient(90deg, rgba(0, 240, 255, 0.03) 0%, transparent 100%);
+          border-color: rgba(0, 240, 255, 0.08);
         }
 
         .leaderboard-col {
           display: flex;
           align-items: center;
-          color: white;
+          color: #889aaa;
         }
 
         .rank-col {
           font-weight: 600;
           position: relative;
+          gap: 0.75rem;
         }
 
         .rank-number {
-          font-size: 1.25rem;
+          font-size: 1.1rem;
+          font-family: var(--font-heading);
         }
 
         .rank-1 {
-          color: #ffd700;
+          color: #00f0ff;
+          text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
         }
 
         .rank-2 {
-          color: #c0c0c0;
+          color: #ff00aa;
+          text-shadow: 0 0 10px rgba(255, 0, 170, 0.3);
         }
 
         .rank-3 {
-          color: #cd7f32;
+          color: #00f0ff;
         }
 
-        .medal {
-          position: absolute;
-          left: 50px;
-          font-size: 1.5rem;
-          animation: bounce 2s infinite;
+        .rank-badge {
+          font-size: 0.7rem;
+          font-weight: 700;
+          letter-spacing: 0.1em;
+          padding: 0.15rem 0.4rem;
+          border-radius: 3px;
+          font-family: var(--font-heading);
         }
 
-        @keyframes bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-4px); }
+        .rank-badge-1 {
+          color: #00f0ff;
+          background: rgba(0, 240, 255, 0.1);
+          border: 1px solid rgba(0, 240, 255, 0.2);
+        }
+
+        .rank-badge-2 {
+          color: #ff00aa;
+          background: rgba(255, 0, 170, 0.1);
+          border: 1px solid rgba(255, 0, 170, 0.2);
+        }
+
+        .rank-badge-3 {
+          color: #556677;
+          background: rgba(85, 102, 119, 0.1);
+          border: 1px solid rgba(85, 102, 119, 0.2);
         }
 
         .player-info {
@@ -369,11 +398,11 @@ export default function LeaderboardPage() {
         }
 
         .player-avatar {
-          width: 40px;
-          height: 40px;
+          width: 36px;
+          height: 36px;
           border-radius: 50%;
           overflow: hidden;
-          border: 2px solid rgba(255, 255, 255, 0.2);
+          border: 1px solid rgba(0, 240, 255, 0.15);
         }
 
         .avatar-img {
@@ -385,22 +414,27 @@ export default function LeaderboardPage() {
         .avatar-placeholder {
           width: 100%;
           height: 100%;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: rgba(0, 240, 255, 0.06);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: white;
+          color: #556677;
           font-weight: 600;
-          font-size: 1.25rem;
+          font-size: 1rem;
+          font-family: var(--font-heading);
         }
 
         .player-name {
           font-weight: 500;
+          color: #ccdde8;
+          letter-spacing: 0.03em;
         }
 
         .stat-value {
           font-weight: 600;
-          font-size: 1.1rem;
+          font-size: 1rem;
+          font-family: var(--font-heading);
+          letter-spacing: 0.05em;
         }
 
         .leaderboard-pagination {
@@ -413,44 +447,52 @@ export default function LeaderboardPage() {
 
         .pagination-btn {
           padding: 0.5rem 1rem;
-          background: rgba(255, 255, 255, 0.1);
-          color: white;
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          border-radius: 0.5rem;
+          background: rgba(0, 240, 255, 0.05);
+          color: #556677;
+          border: 1px solid rgba(0, 240, 255, 0.1);
+          border-radius: 6px;
           cursor: pointer;
           transition: all 0.3s ease;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          font-size: 0.75rem;
         }
 
         .pagination-btn:hover:not(:disabled) {
-          background: rgba(255, 255, 255, 0.2);
+          background: rgba(0, 240, 255, 0.1);
+          color: #00f0ff;
+          border-color: rgba(0, 240, 255, 0.2);
         }
 
         .pagination-btn:disabled {
-          opacity: 0.5;
+          opacity: 0.3;
           cursor: not-allowed;
         }
 
         .page-info {
-          color: rgba(255, 255, 255, 0.7);
+          color: #445566;
+          font-size: 0.85rem;
+          letter-spacing: 0.1em;
+          font-family: var(--font-heading);
         }
 
         @media (max-width: 768px) {
           .leaderboard-header-row,
           .leaderboard-row {
             grid-template-columns: 60px 1fr 60px 60px;
-            font-size: 0.875rem;
+            font-size: 0.8rem;
           }
 
           .leaderboard-title {
-            font-size: 1.75rem;
+            font-size: 1.5rem;
           }
 
           .player-avatar {
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
           }
 
-          .medal {
+          .rank-badge {
             display: none;
           }
         }
