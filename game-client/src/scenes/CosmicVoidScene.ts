@@ -1040,7 +1040,7 @@ export class CosmicVoidScene extends Phaser.Scene {
     this.popupItemsText.setOrigin(0.5);
 
     // 底部快捷鍵
-    const hint = this.add.text(0, popupHeight / 2 - 25, "E - Close  |  F - Take", {
+    const hint = this.add.text(0, popupHeight / 2 - 25, "E - Close  |  F - Take Item", {
       fontSize: "12px",
       color: "#aaaaaa",
     });
@@ -1066,27 +1066,25 @@ export class CosmicVoidScene extends Phaser.Scene {
     if (!chestId) return;
 
     const now = Date.now();
-    const lootedAt = this.chestLootedAtMap.get(chestId);
-    const isPending = lootedAt && (now - lootedAt) < this.PENDING_DURATION;
 
-    // 如果剛 loot 過，等後端確認清空才更新
-    if (isPending) {
-      if (items.length === 0) {
-        // 後端已確認清空
-        this.chestLootedAtMap.delete(chestId);
-      } else {
-        // 後端還沒處理完，忽略這次更新
-        return;
+    // Filter out items that are still pending pickup (sent interact, awaiting server confirmation)
+    const displayItems = items.filter(item => {
+      const lootedAt = this.chestLootedAtMap.get(item.entity_id);
+      if (lootedAt && (now - lootedAt) < this.PENDING_DURATION) {
+        return false;
       }
-    }
+      if (lootedAt) {
+        this.chestLootedAtMap.delete(item.entity_id);
+      }
+      return true;
+    });
 
-    // 儲存當前寶箱物品（用於 F 鍵取得）
-    this.currentChestItems = items.map(item => ({ ...item }));
+    this.currentChestItems = displayItems.map(item => ({ ...item }));
 
-    if (items.length === 0) {
+    if (displayItems.length === 0) {
       this.popupItemsText.setText("(Empty)");
     } else {
-      const itemLines = items.map(item => `${item.name} x${item.quantity}`);
+      const itemLines = displayItems.map(item => `${item.name} x${item.quantity}`);
       this.popupItemsText.setText(itemLines.join("\n"));
     }
   }
@@ -1245,40 +1243,30 @@ export class CosmicVoidScene extends Phaser.Scene {
     }
   }
 
-  private pickupItemFromChest(): void {
-    // 只有在寶箱跳窗開啟時才能取得道具
+  private pickupSingleItemFromChest(): void {
     if (!this.isPopupOpen || this.currentChestItems.length === 0 || !this.openedChestEntityId) {
       return;
     }
 
-    // 收集所有 item entity IDs
-    const itemEntityIds = this.currentChestItems.map(item => item.entity_id);
+    const item = this.currentChestItems[0];
 
-    // 發送 loot action 到後端
-    socketManager.sendMessage(ActionType.Loot, {
-      container_entity_id: this.openedChestEntityId,
-      item_entity_ids: itemEntityIds,
+    socketManager.sendMessage(ActionType.Interact, {
+      entity_id: item.entity_id,
     });
 
-    // 記錄 loot 時間
+    // Optimistic update: remove from chest, add to inventory
+    this.currentChestItems = this.currentChestItems.filter(i => i.entity_id !== item.entity_id);
+
     const now = Date.now();
-    this.chestLootedAtMap.set(this.openedChestEntityId, now);
+    this.inventoryItems.push({
+      ...item,
+      lootedAt: now,
+    });
 
-    // 取得全部道具到本地道具欄
-    for (const item of this.currentChestItems) {
-      this.inventoryItems.push({
-        ...item,
-        lootedAt: now,
-      });
-    }
+    this.chestLootedAtMap.set(item.entity_id, now);
 
-    // 清空寶箱（本地）
-    this.currentChestItems = [];
-
-    // 更新寶箱跳窗顯示
     this.updatePopupItems(this.currentChestItems);
 
-    // 如果道具欄開啟，也更新顯示
     if (this.isInventoryOpen) {
       this.updateInventoryDisplay();
     }
@@ -1432,7 +1420,7 @@ export class CosmicVoidScene extends Phaser.Scene {
 
     // F 鍵從寶箱取得道具
     this.input.keyboard?.on("keydown-F", () => {
-      this.pickupItemFromChest();
+      this.pickupSingleItemFromChest();
     });
 
 
