@@ -674,12 +674,17 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 	}
 
 	// check container cache first before wasting resources on execution
-	s.mu.Lock()
+	s.mu.Lock() // hold lock to prevent check then act races here
 	_, exists := s.containerInteractedCache[targetEntityID]
 	if exists {
 		slog.Debug("Container entity still cached, not available for interaction", "targetEntityID", targetEntityID)
 		return fmt.Errorf("container targeted entityID %s was still cached and not available to be interacted", targetEntityID)
+	} else {
+		// act
+		s.containerInteractedCache[targetEntityID] = true
 	}
+	// release lock after act
+	s.mu.Unlock()
 
 	// get that entity's type and decide on the effect
 	_, isDoorEntity := targetEntity.GetComponent(ecs.ComponentTypeDoor)
@@ -757,10 +762,6 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		// update state
 		doorOpenable.IsOpen = !doorOpenable.IsOpen
 
-		// add door to interacted to cache
-		s.containerInteractedCache[targetEntityID] = true
-		s.mu.Unlock()
-
 		// release cache in 100 milliseconds
 		go func() {
 			time.Sleep(time.Millisecond * 100)
@@ -834,11 +835,6 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 			// relate the container with the newly generated items
 			containerItemIDs.ItemIDs = itemIDs
 		}
-
-		// add container to interacted to cache
-		s.mu.Lock()
-		s.containerInteractedCache[targetEntityID] = true
-		s.mu.Unlock()
 
 		// release cache in 100 milliseconds
 		go func() {
