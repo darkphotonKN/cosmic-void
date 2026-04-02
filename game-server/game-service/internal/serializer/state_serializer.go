@@ -67,42 +67,7 @@ func (s *StateSerializer) SerializeBackendState(ctx context.Context, sessionID u
 						"item", item,
 					)
 
-					itemState := &types.ItemState{}
-
-					switch item.ItemType {
-
-					case types.ItemTypeWeapon:
-						itemState = &types.ItemState{
-							ItemID:       itemID,
-							EntityID:     itemEntity.ID,
-							Name:         item.Name,
-							AttackPower:  int32(item.AttackPower),
-							CriticalRate: float32(item.CriticalRate),
-							Description:  item.Description,
-						}
-
-					case types.ItemTypeArmor:
-						itemState = &types.ItemState{
-							ItemID:        itemID,
-							EntityID:      itemEntity.ID,
-							Name:          item.Name,
-							Description:   item.Description,
-							DefenseRating: int32(item.DefenseRating),
-							ArmorSlot:     item.ArmorSlot,
-						}
-
-					case types.ItemTypeConsumable:
-						itemState = &types.ItemState{
-							ItemID:        itemID,
-							EntityID:      itemEntity.ID,
-							Name:          item.Name,
-							Description:   item.Description,
-							HealingAmount: int32(item.HealingAmount),
-							ManaAmount:    int32(item.ManaAmount),
-						}
-					}
-
-					populateItemDetails(ctx, item, itemState)
+					itemState := s.getItemState(itemID, entity.ID, item)
 
 					inventory = append(inventory, itemState)
 				}
@@ -242,14 +207,7 @@ func (s *StateSerializer) SerializeBackendState(ctx context.Context, sessionID u
 						if hasItem {
 							item := itemComp.(*components.ItemComponent)
 
-							itemState := &types.ItemState{
-								ItemID:   itemID,
-								EntityID: itemEntity.ID,
-								Name:     item.Name,
-								Quantity: 1,
-							}
-
-							populateItemDetails(ctx, item, itemState)
+							itemState := s.getItemState(itemID, entity.ID, item)
 
 							items = append(items, itemState)
 						}
@@ -352,15 +310,40 @@ func (s *StateSerializer) PutBackendState(state *types.BackendGameState) {
 	s.backendStatePool.Put(state)
 }
 
-// populateItemDetails reads item details directly from the ItemComponent
-// which are populated at item creation time, avoiding per-tick gRPC calls.
-func populateItemDetails(ctx context.Context, item *components.ItemComponent, itemState *types.ItemState) {
-	itemState.AttackPower = int32(item.AttackPower)
-	itemState.CriticalRate = float32(item.CriticalRate)
-	itemState.WeaponType = item.WeaponType
-	itemState.DefenseRating = int32(item.DefenseRating)
-	itemState.ArmorSlot = item.ArmorSlot
-	itemState.HealingAmount = int32(item.HealingAmount)
-	itemState.ManaAmount = int32(item.ManaAmount)
-	itemState.Description = item.Description
+// grab the item
+func (s *StateSerializer) getItemState(itemID uuid.UUID, entityID uuid.UUID, item *components.ItemComponent) *types.ItemState {
+
+	switch item.ItemType {
+	case types.ItemTypeWeapon:
+		return &types.ItemState{
+			ItemID:       itemID,
+			EntityID:     entityID,
+			Name:         item.Name,
+			AttackPower:  int32(item.AttackPower),
+			CriticalRate: float32(item.CriticalRate),
+			Description:  item.Description,
+		}
+
+	case types.ItemTypeArmor:
+		return &types.ItemState{
+			ItemID:        itemID,
+			EntityID:      entityID,
+			Name:          item.Name,
+			Description:   item.Description,
+			DefenseRating: int32(item.DefenseRating),
+			ArmorSlot:     item.ArmorSlot,
+		}
+
+	case types.ItemTypeConsumable:
+		return &types.ItemState{
+			ItemID:        itemID,
+			EntityID:      entityID,
+			Name:          item.Name,
+			Description:   item.Description,
+			HealingAmount: int32(item.HealingAmount),
+			ManaAmount:    int32(item.ManaAmount),
+		}
+	}
+
+	return nil
 }
