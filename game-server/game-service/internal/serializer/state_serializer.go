@@ -67,11 +67,39 @@ func (s *StateSerializer) SerializeBackendState(ctx context.Context, sessionID u
 						"item", item,
 					)
 
-					itemState := &types.ItemState{
-						ItemID:   itemID,
-						EntityID: itemEntity.ID,
-						Name:     item.Name,
-						Quantity: 1,
+					itemState := &types.ItemState{}
+
+					switch item.ItemType {
+
+					case types.ItemTypeWeapon:
+						itemState = &types.ItemState{
+							ItemID:       itemID,
+							EntityID:     itemEntity.ID,
+							Name:         item.Name,
+							AttackPower:  int32(item.AttackPower),
+							CriticalRate: float32(item.CriticalRate),
+							Description:  item.Description,
+						}
+
+					case types.ItemTypeArmor:
+						itemState = &types.ItemState{
+							ItemID:        itemID,
+							EntityID:      itemEntity.ID,
+							Name:          item.Name,
+							Description:   item.Description,
+							DefenseRating: int32(item.DefenseRating),
+							ArmorSlot:     item.ArmorSlot,
+						}
+
+					case types.ItemTypeConsumable:
+						itemState = &types.ItemState{
+							ItemID:        itemID,
+							EntityID:      itemEntity.ID,
+							Name:          item.Name,
+							Description:   item.Description,
+							HealingAmount: int32(item.HealingAmount),
+							ManaAmount:    int32(item.ManaAmount),
+						}
 					}
 
 					populateItemDetails(ctx, item, itemState)
@@ -79,6 +107,7 @@ func (s *StateSerializer) SerializeBackendState(ctx context.Context, sessionID u
 					inventory = append(inventory, itemState)
 				}
 			}
+
 			playerState := &types.PlayerState{
 				ID:       player.MemberID,
 				EntityID: entity.ID,

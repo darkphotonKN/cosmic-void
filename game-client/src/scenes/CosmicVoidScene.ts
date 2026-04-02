@@ -84,12 +84,19 @@ export class CosmicVoidScene extends Phaser.Scene {
   private isPopupOpen = false;
   private openedChestEntityId?: string;
   private popupItemsText?: Phaser.GameObjects.Text;
+  private popupItemRows: Phaser.GameObjects.Text[] = [];
 
   // 道具欄
   private inventoryPopup?: Phaser.GameObjects.Container;
   private isInventoryOpen = false;
   private inventoryItems: ItemState[] = [];
   private inventoryItemsText?: Phaser.GameObjects.Text;
+  private inventoryItemRows: Phaser.GameObjects.Text[] = [];
+
+  // 道具提示框
+  private itemTooltip?: Phaser.GameObjects.Container;
+  private popupItemHitZones: Phaser.GameObjects.Rectangle[] = [];
+  private inventoryItemHitZones: Phaser.GameObjects.Rectangle[] = [];
 
   // 當前寶箱的物品（用於 F 鍵取得）
   private currentChestItems: ItemState[] = [];
@@ -1001,52 +1008,48 @@ export class CosmicVoidScene extends Phaser.Scene {
 
     const centerX = this.cameras.main.width / 2;
     const centerY = this.cameras.main.height / 2;
-    const popupWidth = 300;
-    const popupHeight = 250;
+    const popupWidth = 320;
+    const popupHeight = 280;
 
-    // 半透明背景
     const bg = this.add.graphics();
-    bg.fillStyle(0x000000, 0.7);
+    bg.fillStyle(0x0a0a12, 0.9);
     bg.fillRoundedRect(
       -popupWidth / 2,
       -popupHeight / 2,
       popupWidth,
       popupHeight,
-      16,
+      8,
     );
-    bg.lineStyle(2, 0xffd700, 1);
+    bg.lineStyle(1, 0x00f0ff, 1);
     bg.strokeRoundedRect(
       -popupWidth / 2,
       -popupHeight / 2,
       popupWidth,
       popupHeight,
-      16,
+      8,
     );
 
-    // 標題
-    const title = this.add.text(0, -popupHeight / 2 + 20, "Chest Contents", {
-      fontSize: "20px",
-      color: "#ffd700",
+    const title = this.add.text(0, -popupHeight / 2 + 20, "CONTAINER", {
+      fontSize: "18px",
+      color: "#00f0ff",
+      letterSpacing: 6,
     });
     title.setOrigin(0.5);
 
-    // 物品區
+    // Placeholder for empty/loading state
     this.popupItemsText = this.add.text(0, 0, "Loading...", {
       fontSize: "14px",
-      color: "#ffffff",
+      color: "#556677",
       align: "center",
-      lineSpacing: 8,
     });
     this.popupItemsText.setOrigin(0.5);
 
-    // 底部快捷鍵
-    const hint = this.add.text(0, popupHeight / 2 - 25, "E - Close  |  F - Take Item", {
+    const hint = this.add.text(0, popupHeight / 2 - 25, "Q Close  //  F Take Item", {
       fontSize: "12px",
-      color: "#aaaaaa",
+      color: "#334455",
     });
     hint.setOrigin(0.5);
 
-    // Container
     this.chestPopup = this.add.container(centerX, centerY, [
       bg,
       title,
@@ -1060,7 +1063,7 @@ export class CosmicVoidScene extends Phaser.Scene {
   }
 
   private updatePopupItems(items: ItemState[], entityId?: string): void {
-    if (!this.popupItemsText) return;
+    if (!this.chestPopup) return;
 
     const chestId = entityId || this.openedChestEntityId;
     if (!chestId) return;
@@ -1081,15 +1084,30 @@ export class CosmicVoidScene extends Phaser.Scene {
 
     this.currentChestItems = displayItems.map(item => ({ ...item }));
 
+    // Clear old item rows
+    for (const row of this.popupItemRows) {
+      row.destroy();
+    }
+    this.popupItemRows = [];
+    this.hideItemTooltip();
+
     if (displayItems.length === 0) {
-      this.popupItemsText.setText("(Empty)");
+      if (this.popupItemsText) {
+        this.popupItemsText.setText("(Empty)");
+        this.popupItemsText.setVisible(true);
+      }
     } else {
-      const itemLines = displayItems.map(item => `${item.name} x${item.quantity}`);
-      this.popupItemsText.setText(itemLines.join("\n"));
+      if (this.popupItemsText) this.popupItemsText.setVisible(false);
+      this.createItemRows(displayItems, this.chestPopup, -50);
     }
   }
 
   private hideChestPopup(): void {
+    this.hideItemTooltip();
+    for (const row of this.popupItemRows) row.destroy();
+    for (const zone of this.popupItemHitZones) zone.destroy();
+    this.popupItemRows = [];
+    this.popupItemHitZones = [];
     if (this.chestPopup) {
       this.chestPopup.destroy();
       this.chestPopup = undefined;
@@ -1115,53 +1133,48 @@ export class CosmicVoidScene extends Phaser.Scene {
 
     const centerX = this.cameras.main.width / 2;
     const centerY = this.cameras.main.height / 2;
-    const popupWidth = 300;
-    const popupHeight = 300;
+    const popupWidth = 340;
+    const popupHeight = 340;
 
-    // 半透明背景
     const bg = this.add.graphics();
-    bg.fillStyle(0x000000, 0.8);
+    bg.fillStyle(0x0a0a12, 0.9);
     bg.fillRoundedRect(
       -popupWidth / 2,
       -popupHeight / 2,
       popupWidth,
       popupHeight,
-      16,
+      8,
     );
-    bg.lineStyle(2, 0x4ecca3, 1);
+    bg.lineStyle(1, 0x00f0ff, 1);
     bg.strokeRoundedRect(
       -popupWidth / 2,
       -popupHeight / 2,
       popupWidth,
       popupHeight,
-      16,
+      8,
     );
 
-    // 標題
-    const title = this.add.text(0, -popupHeight / 2 + 20, "Inventory", {
-      fontSize: "22px",
-      color: "#4ecca3",
+    const title = this.add.text(0, -popupHeight / 2 + 20, "INVENTORY", {
+      fontSize: "20px",
+      color: "#00f0ff",
+      letterSpacing: 6,
     });
     title.setOrigin(0.5);
 
-    // 物品列表
+    // Placeholder for empty state
     this.inventoryItemsText = this.add.text(0, 0, "", {
       fontSize: "14px",
-      color: "#ffffff",
+      color: "#556677",
       align: "center",
-      lineSpacing: 8,
     });
     this.inventoryItemsText.setOrigin(0.5);
-    this.updateInventoryDisplay();
 
-    // 底部快捷鍵
-    const hint = this.add.text(0, popupHeight / 2 - 25, "I - Close", {
+    const hint = this.add.text(0, popupHeight / 2 - 25, "I / Q Close", {
       fontSize: "12px",
-      color: "#aaaaaa",
+      color: "#334455",
     });
     hint.setOrigin(0.5);
 
-    // Container
     this.inventoryPopup = this.add.container(centerX, centerY, [
       bg,
       title,
@@ -1172,9 +1185,15 @@ export class CosmicVoidScene extends Phaser.Scene {
     this.inventoryPopup.setScrollFactor(0);
 
     this.isInventoryOpen = true;
+    this.updateInventoryDisplay();
   }
 
   private hideInventory(): void {
+    this.hideItemTooltip();
+    for (const row of this.inventoryItemRows) row.destroy();
+    for (const zone of this.inventoryItemHitZones) zone.destroy();
+    this.inventoryItemRows = [];
+    this.inventoryItemHitZones = [];
     if (this.inventoryPopup) {
       this.inventoryPopup.destroy();
       this.inventoryPopup = undefined;
@@ -1184,19 +1203,240 @@ export class CosmicVoidScene extends Phaser.Scene {
   }
 
   private updateInventoryDisplay(): void {
-    if (!this.inventoryItemsText) return;
+    if (!this.inventoryPopup) return;
 
-    // 合併同名物品顯示
-    const merged = new Map<string, number>();
-    for (const item of this.inventoryItems) {
-      merged.set(item.name, (merged.get(item.name) || 0) + item.quantity);
+    // Clear old rows
+    for (const row of this.inventoryItemRows) {
+      row.destroy();
+    }
+    this.inventoryItemRows = [];
+    this.hideItemTooltip();
+
+    if (this.inventoryItems.length === 0) {
+      if (this.inventoryItemsText) {
+        this.inventoryItemsText.setText("(Empty)");
+        this.inventoryItemsText.setVisible(true);
+      }
+    } else {
+      if (this.inventoryItemsText) this.inventoryItemsText.setVisible(false);
+      this.createItemRows(this.inventoryItems, this.inventoryPopup, -70);
+    }
+  }
+
+  private formatItemLine(item: ItemState): string {
+    const tag = this.getItemStatTag(item);
+    return tag ? `${item.name}  ${tag}` : `${item.name} x${item.quantity}`;
+  }
+
+  private getItemStatTag(item: ItemState): string {
+    if (item.attack_power) return `ATK ${item.attack_power}`;
+    if (item.defense_rating) return `DEF ${item.defense_rating}`;
+    if (item.healing_amount) return `+${item.healing_amount} HP`;
+    if (item.mana_amount) return `+${item.mana_amount} MP`;
+    return '';
+  }
+
+  private createItemRows(items: ItemState[], container: Phaser.GameObjects.Container, startY: number): void {
+    const rowHeight = 26;
+    const isInventory = container === this.inventoryPopup;
+    const popupWidth = isInventory ? 340 : 320;
+    // Full-width hit zone per row
+    const hitWidth = popupWidth - 20;
+    // Position rows at absolute screen coordinates (container is centered on screen)
+    const screenX = container.x;
+    const screenY = container.y;
+    const depth = container.depth + 1;
+
+    items.forEach((item, i) => {
+      const y = screenY + startY + i * rowHeight;
+      const label = this.formatItemLine(item);
+
+      // Text label (not interactive — the hit zone handles events)
+      const row = this.add.text(screenX, y, label, {
+        fontSize: "13px",
+        color: "#ccdde8",
+      });
+      row.setOrigin(0.5);
+      row.setDepth(depth + 1);
+      row.setScrollFactor(0);
+
+      // Invisible rectangle as the hit zone — spans full popup width
+      const hitZone = this.add.rectangle(screenX, y, hitWidth, rowHeight, 0x000000, 0);
+      hitZone.setDepth(depth);
+      hitZone.setScrollFactor(0);
+      hitZone.setInteractive({ useHandCursor: true });
+
+      hitZone.on("pointerover", (pointer: Phaser.Input.Pointer) => {
+        row.setColor("#00f0ff");
+        this.showItemTooltip(item, pointer.x, pointer.y);
+      });
+      hitZone.on("pointermove", (pointer: Phaser.Input.Pointer) => {
+        this.moveItemTooltip(pointer.x, pointer.y);
+      });
+      hitZone.on("pointerout", () => {
+        row.setColor("#ccdde8");
+        this.hideItemTooltip();
+      });
+
+      if (isInventory) {
+        this.inventoryItemRows.push(row);
+        this.inventoryItemHitZones.push(hitZone);
+      } else {
+        this.popupItemRows.push(row);
+        this.popupItemHitZones.push(hitZone);
+      }
+    });
+  }
+
+  private getItemType(item: ItemState): 'weapon' | 'armor' | 'consumable' | 'unknown' {
+    if (item.attack_power || item.weapon_type) return 'weapon';
+    if (item.defense_rating || item.armor_slot) return 'armor';
+    if (item.healing_amount || item.mana_amount) return 'consumable';
+    return 'unknown';
+  }
+
+  private buildTooltipContent(item: ItemState): { lines: { label: string; value: string; color: string }[]; typeLabel: string; typeColor: string } {
+    const type = this.getItemType(item);
+    const lines: { label: string; value: string; color: string }[] = [];
+
+    switch (type) {
+      case 'weapon': {
+        const typeColor = '#ff4466';
+        if (item.weapon_type) lines.push({ label: 'TYPE', value: item.weapon_type.toUpperCase(), color: '#99aabb' });
+        if (item.attack_power) lines.push({ label: 'ATK', value: `${item.attack_power}`, color: typeColor });
+        if (item.critical_rate) lines.push({ label: 'CRIT', value: `${Math.round(item.critical_rate)}%`, color: '#ffaa33' });
+        return { lines, typeLabel: 'WEAPON', typeColor };
+      }
+      case 'armor': {
+        const typeColor = '#44aaff';
+        if (item.armor_slot) lines.push({ label: 'SLOT', value: item.armor_slot.toUpperCase(), color: '#99aabb' });
+        if (item.defense_rating) lines.push({ label: 'DEF', value: `${item.defense_rating}`, color: typeColor });
+        return { lines, typeLabel: 'ARMOR', typeColor };
+      }
+      case 'consumable': {
+        const typeColor = '#44ff88';
+        if (item.healing_amount) lines.push({ label: 'HEAL', value: `+${item.healing_amount} HP`, color: typeColor });
+        if (item.mana_amount) lines.push({ label: 'MANA', value: `+${item.mana_amount} MP`, color: '#aa88ff' });
+        return { lines, typeLabel: 'CONSUMABLE', typeColor };
+      }
+      default:
+        return { lines, typeLabel: 'ITEM', typeColor: '#556677' };
+    }
+  }
+
+  private showItemTooltip(item: ItemState, screenX: number, screenY: number): void {
+    this.hideItemTooltip();
+
+    const { lines, typeLabel, typeColor } = this.buildTooltipContent(item);
+    const padding = 10;
+    const tooltipWidth = 190;
+
+    const children: Phaser.GameObjects.GameObject[] = [];
+    let curY = padding;
+
+    // Item name
+    const nameText = this.add.text(padding, curY, item.name, {
+      fontSize: "13px",
+      color: "#00f0ff",
+      fontStyle: "bold",
+    });
+    children.push(nameText);
+    curY += 18;
+
+    // Type badge
+    const typeText = this.add.text(padding, curY, typeLabel, {
+      fontSize: "9px",
+      color: typeColor,
+      letterSpacing: 3,
+    });
+    children.push(typeText);
+    curY += 16;
+
+    // Separator line
+    const sep = this.add.graphics();
+    sep.lineStyle(1, 0x00f0ff, 0.15);
+    sep.lineBetween(padding, curY, tooltipWidth - padding, curY);
+    children.push(sep);
+    curY += 8;
+
+    // Stat rows
+    for (const line of lines) {
+      const labelText = this.add.text(padding, curY, line.label, {
+        fontSize: "10px",
+        color: "#556677",
+        letterSpacing: 2,
+      });
+      const valueText = this.add.text(tooltipWidth - padding, curY, line.value, {
+        fontSize: "11px",
+        color: line.color,
+      });
+      valueText.setOrigin(1, 0);
+      children.push(labelText, valueText);
+      curY += 16;
     }
 
-    if (merged.size === 0) {
-      this.inventoryItemsText.setText("(Empty)");
-    } else {
-      const itemLines = Array.from(merged.entries()).map(([name, qty]) => `${name} x${qty}`);
-      this.inventoryItemsText.setText(itemLines.join("\n"));
+    // Description
+    if (item.description) {
+      curY += 4;
+      const descSep = this.add.graphics();
+      descSep.lineStyle(1, 0x00f0ff, 0.1);
+      descSep.lineBetween(padding, curY, tooltipWidth - padding, curY);
+      children.push(descSep);
+      curY += 6;
+      const desc = this.add.text(padding, curY, item.description, {
+        fontSize: "10px",
+        color: "#556677",
+        wordWrap: { width: tooltipWidth - padding * 2 },
+      });
+      children.push(desc);
+      curY += desc.height;
+    }
+
+    // Quantity (if >1)
+    if (item.quantity > 1) {
+      curY += 4;
+      const qtyText = this.add.text(tooltipWidth - padding, curY, `x${item.quantity}`, {
+        fontSize: "10px",
+        color: "#556677",
+      });
+      qtyText.setOrigin(1, 0);
+      children.push(qtyText);
+      curY += 14;
+    }
+
+    const tooltipHeight = curY + padding;
+
+    // Background (drawn first, inserted at index 0)
+    const bg = this.add.graphics();
+    bg.fillStyle(0x080810, 0.95);
+    bg.fillRoundedRect(0, 0, tooltipWidth, tooltipHeight, 6);
+    bg.lineStyle(1, typeColor === '#556677' ? 0x00f0ff : parseInt(typeColor.slice(1), 16), 0.4);
+    bg.strokeRoundedRect(0, 0, tooltipWidth, tooltipHeight, 6);
+    children.unshift(bg);
+
+    this.itemTooltip = this.add.container(screenX + 14, screenY - 10, children);
+    this.itemTooltip.setDepth(2000);
+    this.itemTooltip.setScrollFactor(0);
+
+    // Keep tooltip on screen
+    const cam = this.cameras.main;
+    if (screenX + 14 + tooltipWidth > cam.width) {
+      this.itemTooltip.setX(screenX - tooltipWidth - 8);
+    }
+    if (screenY - 10 + tooltipHeight > cam.height) {
+      this.itemTooltip.setY(screenY - tooltipHeight - 8);
+    }
+  }
+
+  private moveItemTooltip(screenX: number, screenY: number): void {
+    if (!this.itemTooltip) return;
+    this.itemTooltip.setPosition(screenX + 12, screenY - 10);
+  }
+
+  private hideItemTooltip(): void {
+    if (this.itemTooltip) {
+      this.itemTooltip.destroy();
+      this.itemTooltip = undefined;
     }
   }
 
@@ -1423,6 +1663,17 @@ export class CosmicVoidScene extends Phaser.Scene {
       this.pickupSingleItemFromChest();
     });
 
+    // Q 鍵關閉任何打開的彈窗
+    this.input.keyboard?.on("keydown-Q", () => {
+      if (this.isInventoryOpen) {
+        this.hideInventory();
+        return;
+      }
+      if (this.isPopupOpen) {
+        this.hideChestPopup();
+        this.openedChestEntityId = undefined;
+      }
+    });
 
     // 創建室內遮罩（用於遮住建築外面）
     this.indoorMask = this.add.graphics();

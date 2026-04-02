@@ -42,6 +42,14 @@ export interface ItemState {
   entity_id: UUID;
   name: string;
   quantity: number;
+  attack_power?: number;
+  critical_rate?: number;
+  weapon_type?: string;
+  defense_rating?: number;
+  armor_slot?: string;
+  healing_amount?: number;
+  mana_amount?: number;
+  description?: string;
   lootedAt?: number; // 本地取得時間戳，用於 pending 判斷
 }
 
