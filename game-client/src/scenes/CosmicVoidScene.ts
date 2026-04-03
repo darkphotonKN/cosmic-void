@@ -33,9 +33,13 @@ export class CosmicVoidScene extends Phaser.Scene {
   private otherPlayersTargets: Map<string, { x: number; y: number }> =
     new Map();
 
-  // eye graphics for directional looking
-  private playerEyes?: Phaser.GameObjects.Graphics;
-  private otherPlayersEyes: Map<string, Phaser.GameObjects.Graphics> = new Map();
+  // leg graphics for walking animation
+  private playerLegs?: Phaser.GameObjects.Graphics;
+  private otherPlayersLegs: Map<string, Phaser.GameObjects.Graphics> = new Map();
+  private playerFacing: 'up' | 'down' | 'left' | 'right' = 'down';
+  private walkPhase = 0;
+  private otherPlayersFacing: Map<string, 'up' | 'down' | 'left' | 'right'> = new Map();
+  private otherPlayersWalkPhase: Map<string, number> = new Map();
 
   // Controls
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -122,9 +126,9 @@ export class CosmicVoidScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // create styled circle textures
-    this.createPlayerTexture();
-    this.createOtherPlayerTexture();
+    // create soldier textures (4 directions each)
+    this.createSoldierTextures('player', 0x4ecca3, 0x6effc8, 0x7fffd4, 0x3ba882);
+    this.createSoldierTextures('otherPlayer', 0xff6b6b, 0xff9999, 0xff8888, 0xcc5555);
     this.createChestTextures();
     this.createEscapeDoorTextures();
     this.createSwitchTextures();
@@ -284,36 +288,75 @@ export class CosmicVoidScene extends Phaser.Scene {
     this.textures.addCanvas("metalFloor", canvas);
   }
 
-  private createPlayerTexture(): void {
-    const graphics = this.make.graphics({});
-    // outer glow effect
-    graphics.fillStyle(0x4ecca3, 0.3);
-    graphics.fillCircle(20, 20, 20);
-    // main body with gradient effect
-    graphics.fillStyle(0x4ecca3, 1);
-    graphics.fillCircle(20, 20, 18);
-    // inner lighter circle for depth
-    graphics.fillStyle(0x6effc8, 0.8);
-    graphics.fillCircle(20, 18, 12);
-    // no eyes here, they'll be drawn separately
-    graphics.generateTexture("player", 40, 40);
-    graphics.destroy();
+  private createSoldierTextures(prefix: string, bodyColor: number, visorColor: number, highlightColor: number, _darkColor: number): void {
+    const facings: Array<'down' | 'up' | 'left' | 'right'> = ['down', 'up', 'left', 'right'];
+    for (const facing of facings) {
+      const g = this.make.graphics({});
+      this.drawSoldierBody(g, 30, 30, facing, bodyColor, visorColor, highlightColor);
+      g.generateTexture(this.facingTextureKey(prefix, facing), 60, 60);
+      g.destroy();
+    }
   }
 
-  private createOtherPlayerTexture(): void {
-    const graphics = this.make.graphics({});
-    // outer glow effect
-    graphics.fillStyle(0xff6b6b, 0.3);
-    graphics.fillCircle(20, 20, 20);
-    // main body
-    graphics.fillStyle(0xff6b6b, 1);
-    graphics.fillCircle(20, 20, 18);
-    // inner lighter circle
-    graphics.fillStyle(0xff9999, 0.8);
-    graphics.fillCircle(20, 18, 12);
-    // no eyes here, they'll be drawn separately
-    graphics.generateTexture("otherPlayer", 40, 40);
-    graphics.destroy();
+  private drawSoldierBody(
+    g: Phaser.GameObjects.Graphics, cx: number, cy: number,
+    facing: 'up' | 'down' | 'left' | 'right',
+    bodyColor: number, visorColor: number, highlightColor: number,
+  ): void {
+    if (facing === 'down' || facing === 'up') {
+      // front/back view — wider silhouette
+      // shoulders
+      g.fillStyle(bodyColor, 1);
+      g.fillRoundedRect(cx - 15, cy - 6, 30, 21, 4);
+      // helmet
+      g.fillStyle(bodyColor, 1);
+      g.fillRoundedRect(cx - 9, cy - 21, 18, 18, 6);
+      // highlight on helmet
+      g.fillStyle(highlightColor, 0.4);
+      g.fillRoundedRect(cx - 6, cy - 18, 12, 9, 4);
+
+      if (facing === 'down') {
+        // visor — two glowing dots
+        g.fillStyle(visorColor, 1);
+        g.fillCircle(cx - 5, cy - 10, 2.2);
+        g.fillCircle(cx + 5, cy - 10, 2.2);
+        // visor glow
+        g.fillStyle(visorColor, 0.3);
+        g.fillCircle(cx - 5, cy - 10, 4.5);
+        g.fillCircle(cx + 5, cy - 10, 4.5);
+      } else {
+        // back-plate detail
+        g.fillStyle(highlightColor, 0.2);
+        g.fillRoundedRect(cx - 6, cy - 15, 12, 6, 3);
+      }
+      // torso
+      g.fillStyle(bodyColor, 0.9);
+      g.fillRoundedRect(cx - 12, cy + 3, 24, 15, 3);
+    } else {
+      // side view — narrower profile
+      const dir = facing === 'right' ? 1 : -1;
+      // body
+      g.fillStyle(bodyColor, 1);
+      g.fillRoundedRect(cx - 6, cy - 6, 12, 24, 4);
+      // helmet
+      g.fillStyle(bodyColor, 1);
+      g.fillRoundedRect(cx - 6, cy - 21, 15, 18, 6);
+      // highlight
+      g.fillStyle(highlightColor, 0.4);
+      g.fillRoundedRect(cx - 3, cy - 18, 9, 9, 4);
+      // shoulder bump
+      g.fillStyle(bodyColor, 1);
+      g.fillRoundedRect(cx - 7 + dir * 3, cy - 3, 15, 9, 3);
+      // single visor dot
+      g.fillStyle(visorColor, 1);
+      g.fillCircle(cx + dir * 5, cy - 12, 2.2);
+      g.fillStyle(visorColor, 0.3);
+      g.fillCircle(cx + dir * 5, cy - 12, 4.5);
+    }
+  }
+
+  private facingTextureKey(prefix: string, facing: string): string {
+    return `${prefix}${facing.charAt(0).toUpperCase()}${facing.slice(1)}`;
   }
 
   private playAttackEffect(enemySprite: Phaser.Physics.Arcade.Sprite): void {
@@ -349,34 +392,28 @@ export class CosmicVoidScene extends Phaser.Scene {
     });
   }
 
-  private drawEyes(graphics: Phaser.GameObjects.Graphics, x: number, y: number, vx: number, vy: number, isPlayer: boolean): void {
+  private drawLegs(
+    graphics: Phaser.GameObjects.Graphics, x: number, y: number,
+    facing: 'up' | 'down' | 'left' | 'right', walkPhase: number, isMoving: boolean,
+    darkColor: number,
+  ): void {
     graphics.clear();
 
-    // calculate eye offset based on movement direction (negative to look in direction of movement)
-    const maxOffset = 2;
-    let eyeOffsetX = -vx * maxOffset;
-    let eyeOffsetY = -vy * maxOffset;
+    const legWidth = 6;
+    const legHeight = 9;
+    const swing = isMoving ? Math.sin(walkPhase) * 4.5 : 0;
 
-    // base eye positions (relative to sprite center)
-    const leftEyeX = x - 6 + eyeOffsetX;
-    const leftEyeY = y - 4 + eyeOffsetY;
-    const rightEyeX = x + 6 + eyeOffsetX;
-    const rightEyeY = y - 4 + eyeOffsetY;
+    graphics.fillStyle(darkColor, 1);
 
-    // eye sockets (dark background)
-    graphics.fillStyle(isPlayer ? 0x001122 : 0x220011, 1);
-    graphics.fillCircle(x - 6, y - 4, 4);
-    graphics.fillCircle(x + 6, y - 4, 4);
-
-    // pupils (move with direction)
-    graphics.fillStyle(isPlayer ? 0x00ffff : 0xff6666, 1);
-    graphics.fillCircle(leftEyeX, leftEyeY, 2);
-    graphics.fillCircle(rightEyeX, rightEyeY, 2);
-
-    // eye shine
-    graphics.fillStyle(0xffffff, 0.7);
-    graphics.fillCircle(leftEyeX + 0.5, leftEyeY - 0.5, 0.8);
-    graphics.fillCircle(rightEyeX + 0.5, rightEyeY - 0.5, 0.8);
+    if (facing === 'down' || facing === 'up') {
+      // two legs side by side, offset vertically when walking
+      graphics.fillRect(x - 7, y + 18 + swing, legWidth, legHeight);
+      graphics.fillRect(x + 1, y + 18 - swing, legWidth, legHeight);
+    } else {
+      // side view — legs overlap, offset horizontally when walking
+      graphics.fillRect(x - 3 + swing, y + 18, legWidth, legHeight);
+      graphics.fillRect(x - 3 - swing, y + 18, legWidth, legHeight);
+    }
   }
 
   private createChestTextures(): void {
@@ -1664,17 +1701,19 @@ export class CosmicVoidScene extends Phaser.Scene {
   }
 
   private createPlayer(x: number, y: number): void {
-    this.player = this.physics.add.sprite(x, y, 'player');
+    this.player = this.physics.add.sprite(x, y, 'playerDown');
     this.player.setCollideWorldBounds(true);
     this.player.setDepth(100);
 
-    // set circular physics body to match backend collision (radius 20)
-    this.player.body.setCircle(20);
+    // set circular physics body to match backend collision (radius 20), offset for 60x60 texture
+    this.player.body.setCircle(20, 10, 10);
 
-    // create eyes overlay that will follow player
-    this.playerEyes = this.add.graphics();
-    this.playerEyes.setDepth(101);
-    this.drawEyes(this.playerEyes, 0, 0, 0, 0, true); // default looking forward
+    // create legs overlay that will follow player
+    this.playerLegs = this.add.graphics();
+    this.playerLegs.setDepth(101);
+    this.playerFacing = 'down';
+    this.walkPhase = 0;
+    this.drawLegs(this.playerLegs, x, y, 'down', 0, false, 0x3ba882);
 
     // 玩家與所有建築牆壁/門碰撞
     this.buildings.forEach((building) => {
@@ -1947,12 +1986,14 @@ export class CosmicVoidScene extends Phaser.Scene {
         this.otherPlayers.delete(playerId);
         this.otherPlayersTargets.delete(playerId);
 
-        // remove eyes too
-        const eyes = this.otherPlayersEyes.get(playerId);
-        if (eyes) {
-          eyes.destroy();
-          this.otherPlayersEyes.delete(playerId);
+        // remove legs too
+        const legs = this.otherPlayersLegs.get(playerId);
+        if (legs) {
+          legs.destroy();
+          this.otherPlayersLegs.delete(playerId);
         }
+        this.otherPlayersFacing.delete(playerId);
+        this.otherPlayersWalkPhase.delete(playerId);
       }
     });
 
@@ -1965,12 +2006,12 @@ export class CosmicVoidScene extends Phaser.Scene {
         sprite = this.physics.add.sprite(
           playerData.position.x,
           playerData.position.y,
-          'otherPlayer',
+          'otherPlayerDown',
         );
         sprite.setDepth(99);
 
-        // set circular physics body
-        sprite.body.setCircle(20);
+        // set circular physics body, offset for 60x60 texture
+        sprite.body.setCircle(20, 10, 10);
 
         // 點擊攻擊
         sprite.setInteractive();
@@ -1997,11 +2038,13 @@ export class CosmicVoidScene extends Phaser.Scene {
         this.otherPlayers.set(playerData.id, sprite);
         this.otherPlayersEntityIds.set(playerData.id, playerData.entity_id);
 
-        // create eyes for this other player
-        const eyes = this.add.graphics();
-        eyes.setDepth(100);
-        this.otherPlayersEyes.set(playerData.id, eyes);
-        this.drawEyes(eyes, playerData.position.x, playerData.position.y, 0, 0, false);
+        // create legs for this other player
+        const legs = this.add.graphics();
+        legs.setDepth(100);
+        this.otherPlayersLegs.set(playerData.id, legs);
+        this.otherPlayersFacing.set(playerData.id, 'down');
+        this.otherPlayersWalkPhase.set(playerData.id, 0);
+        this.drawLegs(legs, playerData.position.x, playerData.position.y, 'down', 0, false, 0xcc5555);
       }
 
       // 設定目標位置，在 update() 中平滑移動
@@ -2930,9 +2973,24 @@ export class CosmicVoidScene extends Phaser.Scene {
       vy = 1;
     }
 
-    // update player eyes direction
-    if (this.player && this.playerEyes) {
-      this.drawEyes(this.playerEyes, this.player.x, this.player.y, vx, vy, true);
+    // update player facing and legs
+    if (this.player && this.playerLegs) {
+      const isMoving = vx !== 0 || vy !== 0;
+      if (isMoving) {
+        // determine facing from dominant axis
+        let newFacing: 'up' | 'down' | 'left' | 'right';
+        if (Math.abs(vy) >= Math.abs(vx)) {
+          newFacing = vy < 0 ? 'up' : 'down';
+        } else {
+          newFacing = vx < 0 ? 'left' : 'right';
+        }
+        if (newFacing !== this.playerFacing) {
+          this.playerFacing = newFacing;
+          this.player.setTexture(this.facingTextureKey('player', newFacing));
+        }
+        this.walkPhase += 0.3;
+      }
+      this.drawLegs(this.playerLegs, this.player.x, this.player.y, this.playerFacing, this.walkPhase, isMoving, 0x3ba882);
     }
 
     // send websocket message for movement
@@ -2969,22 +3027,33 @@ export class CosmicVoidScene extends Phaser.Scene {
         sprite.x = Phaser.Math.Linear(sprite.x, target.x, lerpFactor);
         sprite.y = Phaser.Math.Linear(sprite.y, target.y, lerpFactor);
 
-        // update eyes to look in movement direction
-        const eyes = this.otherPlayersEyes.get(playerId);
-        if (eyes) {
+        // update facing and legs for other players
+        const legs = this.otherPlayersLegs.get(playerId);
+        if (legs) {
           const deltaX = target.x - prevX;
           const deltaY = target.y - prevY;
           const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+          const isMoving = length > 0.5;
 
-          if (length > 0.5) {
-            // normalize to get direction
-            const vx = deltaX / length;
-            const vy = deltaY / length;
-            this.drawEyes(eyes, sprite.x, sprite.y, vx, vy, false);
-          } else {
-            // not moving, look forward
-            this.drawEyes(eyes, sprite.x, sprite.y, 0, 0, false);
+          if (isMoving) {
+            let newFacing: 'up' | 'down' | 'left' | 'right';
+            if (Math.abs(deltaY) >= Math.abs(deltaX)) {
+              newFacing = deltaY < 0 ? 'up' : 'down';
+            } else {
+              newFacing = deltaX < 0 ? 'left' : 'right';
+            }
+            const prevFacing = this.otherPlayersFacing.get(playerId) || 'down';
+            if (newFacing !== prevFacing) {
+              this.otherPlayersFacing.set(playerId, newFacing);
+              sprite.setTexture(this.facingTextureKey('otherPlayer', newFacing));
+            }
+            const phase = (this.otherPlayersWalkPhase.get(playerId) || 0) + 0.3;
+            this.otherPlayersWalkPhase.set(playerId, phase);
           }
+
+          const facing = this.otherPlayersFacing.get(playerId) || 'down';
+          const phase = this.otherPlayersWalkPhase.get(playerId) || 0;
+          this.drawLegs(legs, sprite.x, sprite.y, facing, phase, isMoving, 0xcc5555);
         }
       }
     });
