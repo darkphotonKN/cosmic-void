@@ -138,8 +138,8 @@ func (s *service) CreateMember(ctx context.Context, req *pb.CreateMemberRequest)
 
 	err = s.publishCh.PublishWithContext(
 		ctx,
+		commonconstants.AuthEventsExchange,
 		commonconstants.MemberSignedUpEvent,
-		"",
 		commonbroker.Message{
 			ContentType: "application/json",
 			Body:        marshalledPayload,

@@ -112,6 +112,25 @@ class ApiClient {
     });
     return this.request(`/api/stats/leaderboard?${params.toString()}`);
   }
+
+  // Get notifications for current user
+  async getNotifications() {
+    return this.request("/api/notification/");
+  }
+
+  // Mark notification as read
+  async markNotificationAsRead(notificationId: string) {
+    return this.request(`/api/notification/${notificationId}/read`, {
+      method: "PATCH",
+    });
+  }
+
+  // Mark all notifications as read
+  async markAllNotificationsAsRead() {
+    return this.request("/api/notification/read-all", {
+      method: "PATCH",
+    });
+  }
 }
 
 export const apiClient = new ApiClient();

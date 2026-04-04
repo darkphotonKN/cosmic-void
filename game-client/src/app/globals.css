@@ -194,6 +194,13 @@ h1, h2, h3, h4, h5, h6 {
   background: rgba(0, 240, 255, 0.05);
 }
 
+/* Header Right Section */
+.header-right .flex {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 /* User Menu Styles */
 .user-menu {
   position: relative;

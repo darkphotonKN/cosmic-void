@@ -65,8 +65,8 @@ const (
 	StatsGameMatchEndedQueue        = "stats.game.match.ended"
 	StatsAuthProfileUpdatedQueue    = "stats.auth.profile.updated"
 	NotificationMemberSignedUpQueue = "notification.auth.member.signedup"
-	NotificationItemCreatedQueue    = "notification.item.item.created"
-	NotificationGameEndQueue        = "notification.game.end"
+	NotificationItemCreatedQueue    = "notification.item.created"
+	NotificationGameEndQueue        = "notification.game.match.ended"
 	NotificationDlqQueue            = "notification.dlq"
 	AuthSignupQueue                 = "auth.signup"
 )
