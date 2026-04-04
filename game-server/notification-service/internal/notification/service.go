@@ -14,19 +14,20 @@ type Repository interface {
 	Create(ctx context.Context, createNotification *CreateNotification) (*Notification, error)
 	GetByUserID(ctx context.Context, request *QueryNotifications) ([]Notification, error)
 	Update(ctx context.Context, request *UpdateNotification) error
+	MarkAllAsReadByUserID(ctx context.Context, userID uuid.UUID) (int64, error)
 }
 
-type Service struct {
+type service struct {
 	repo Repository
 }
 
-func NewService(repo Repository) *Service {
-	return &Service{
+func NewService(repo Repository) *service {
+	return &service{
 		repo: repo,
 	}
 }
 
-func (s *Service) ProcessMemberSignedUp(ctx context.Context, payload *commonconstants.MemberSignedUpEventPayload) error {
+func (s *service) ProcessMemberSignedUp(ctx context.Context, payload *commonconstants.MemberSignedUpEventPayload) error {
 	id, err := uuid.Parse(payload.UserID)
 	if err != nil {
 		slog.Warn("invalid member UUID format",
@@ -65,7 +66,7 @@ func (s *Service) ProcessMemberSignedUp(ctx context.Context, payload *commoncons
 	return err
 }
 
-func (s *Service) ProcessItemCreated(ctx context.Context, payload *pb.ItemCreatedEvent) error {
+func (s *service) ProcessItemCreated(ctx context.Context, payload *pb.ItemCreatedEvent) error {
 	templateData := map[string]any{
 		"UserId":   payload.UserId,
 		"ItemName": payload.Name,
@@ -96,7 +97,7 @@ func (s *Service) ProcessItemCreated(ctx context.Context, payload *pb.ItemCreate
 	return err
 }
 
-func (s *Service) ProcessGameEnded(ctx context.Context, payload *pb.MatchEndedEvent) error {
+func (s *service) ProcessGameEnded(ctx context.Context, payload *pb.MatchEndedEvent) error {
 	// Notify all players about the game result
 	for _, player := range payload.Players {
 		playerID, err := uuid.Parse(player.MemberId)
@@ -157,7 +158,7 @@ func (s *Service) ProcessGameEnded(ctx context.Context, payload *pb.MatchEndedEv
 	return nil
 }
 
-func (s *Service) GetNotification(ctx context.Context, payload QueryNotifications) (*NotificationListResponse, error) {
+func (s *service) GetNotification(ctx context.Context, payload QueryNotifications) (*NotificationListResponse, error) {
 	notificationList, err := s.repo.GetByUserID(ctx, &payload)
 	if err != nil {
 		slog.Error("Get notification list failed", "user_id", payload.UserID)
@@ -170,4 +171,37 @@ func (s *Service) GetNotification(ctx context.Context, payload QueryNotification
 	}
 
 	return sendNotification, nil
+}
+
+// sigle read
+func (s *service) MarkNotificationAsRead(ctx context.Context, payload *UpdateNotification) error {
+	err := s.repo.Update(ctx, payload)
+	if err != nil {
+		slog.Error("Failed to mark notification as read",
+			"notification_id", payload.ID,
+			"user_id", payload.UserID,
+			"error", err)
+		return err
+	}
+
+	slog.Info("Notification marked as read successfully",
+		"notification_id", payload.ID,
+		"user_id", payload.UserID)
+	return nil
+}
+
+func (s *service) MarkAllNotificationsAsRead(ctx context.Context, userID uuid.UUID) (int64, error) {
+	updatedCount, err := s.repo.MarkAllAsReadByUserID(ctx, userID)
+	if err != nil {
+		slog.Error("Failed to mark all notifications as read",
+			"user_id", userID,
+			"error", err)
+		return 0, err
+	}
+
+	slog.Info("All notifications marked as read",
+		"user_id", userID,
+		"updated_count", updatedCount)
+
+	return updatedCount, nil
 }
