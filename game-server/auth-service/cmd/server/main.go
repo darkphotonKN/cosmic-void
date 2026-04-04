@@ -152,7 +152,7 @@ func main() {
 	// --- message broker - rabbit mq ---
 	ch, close := broker.Connect(amqpUser, amqpPassword, amqpHost, amqpPort)
 
-	broker.DeclareExchange(ch, commonconstants.MemberSignedUpEvent, "fanout")
+	broker.DeclareExchange(ch, commonconstants.AuthEventsExchange, "topic")
 	defer func() {
 		close()
 		ch.Close()

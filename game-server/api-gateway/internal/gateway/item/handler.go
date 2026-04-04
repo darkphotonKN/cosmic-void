@@ -126,8 +126,6 @@ func (h *Handler) CreateItemTemplateHandler(c *gin.Context) {
 	grpcReq := &pb.CreateItemTemplateRequest{
 		UserId:   userIdStr.(string),
 		ItemName: httpReq.ItemName,
-		ItemCode: httpReq.ItemCode,
-		TypeId:   httpReq.TypeID,
 		RarityId: httpReq.RarityID,
 		ItemType: httpReq.ItemType,
 		ItemId:   httpReq.ItemID,
@@ -222,13 +220,12 @@ func (h *Handler) CreateCompleteWeaponHandler(c *gin.Context) {
 
 	// 3. Build gRPC request
 	grpcReq := &pb.CreateCompleteWeaponRequest{
-		UserId:       userIdStr.(string),
-		ItemName:     httpReq.ItemName,
-		ItemCode:     httpReq.ItemCode,
-		TypeId:       httpReq.TypeID,
-		RarityId:     httpReq.RarityID,
-		AttackPower:  httpReq.AttackPower,
-		Durability:   httpReq.Durability,
+		UserId:   userIdStr.(string),
+		ItemName: httpReq.ItemName,
+
+		RarityId:    httpReq.RarityID,
+		AttackPower: httpReq.AttackPower,
+
 		CriticalRate: httpReq.CriticalRate,
 		WeaponType:   httpReq.WeaponType,
 		Description:  httpReq.Description,
@@ -328,11 +325,8 @@ func (h *Handler) CreateCompleteArmorHandler(c *gin.Context) {
 	grpcReq := &pb.CreateCompleteArmorRequest{
 		UserId:          userIdStr.(string),
 		ItemName:        httpReq.ItemName,
-		ItemCode:        httpReq.ItemCode,
-		TypeId:          httpReq.TypeID,
 		RarityId:        httpReq.RarityID,
 		DefenseRating:   httpReq.DefenseRating,
-		Durability:      httpReq.Durability,
 		MagicResistance: httpReq.MagicResistance,
 		ArmorSlot:       httpReq.ArmorSlot,
 		Description:     httpReq.Description,
@@ -432,8 +426,6 @@ func (h *Handler) CreateCompleteConsumableHandler(c *gin.Context) {
 	grpcReq := &pb.CreateCompleteConsumableRequest{
 		UserId:        userIdStr.(string),
 		ItemName:      httpReq.ItemName,
-		ItemCode:      httpReq.ItemCode,
-		TypeId:        httpReq.TypeID,
 		RarityId:      httpReq.RarityID,
 		HealingAmount: httpReq.HealingAmount,
 		ManaAmount:    httpReq.ManaAmount,
@@ -546,4 +538,3 @@ func (h *Handler) ListItemRaritiesHandler(c *gin.Context) {
 		"result":     rarities.ItemRarities,
 	})
 }
-

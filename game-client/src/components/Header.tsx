@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import UserMenu from './UserMenu';
+import NotificationBell from './NotificationBell';
 
 export default function Header() {
   const pathname = usePathname();
@@ -53,7 +54,10 @@ export default function Header() {
 
         <div className="header-right">
           {isAuthenticated ? (
-            <UserMenu />
+            <div className="flex items-center gap-2">
+              <NotificationBell />
+              <UserMenu />
+            </div>
           ) : (
             <div className="auth-buttons flex gap-3">
               <Link href="/login" className="btn-secondary px-4 py-2">
