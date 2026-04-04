@@ -13,6 +13,7 @@ export class MainMenuScene extends Phaser.Scene {
   private dotCount: number = 0;
   private scanlineGraphics?: Phaser.GameObjects.Graphics;
   private glowTween?: Phaser.Tweens.Tween;
+  private loadoutBtnBg?: Phaser.GameObjects.Graphics;
   private queuePopupActive: boolean = false;
   private queueTitle?: Phaser.GameObjects.Text;
   private queuePeopleText?: Phaser.GameObjects.Text;
@@ -26,6 +27,15 @@ export class MainMenuScene extends Phaser.Scene {
   create(): void {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
+
+    // Menu music
+    if (!this.sound.get('menuTheme')) {
+      this.sound.play('menuTheme', { loop: true, volume: 0.35 });
+    } else if (!this.sound.get('menuTheme')?.isPlaying) {
+      this.sound.play('menuTheme', { loop: true, volume: 0.35 });
+    }
+    // Stop game ambient if returning from game
+    this.sound.stopByKey('gameAmbient');
 
     // Deep space background
     this.cameras.main.setBackgroundColor("#0a0a12");
@@ -134,10 +144,10 @@ export class MainMenuScene extends Phaser.Scene {
     );
     this.startButtonText.setOrigin(0.5);
 
-    // Connection status text
+    // Connection status text — near bottom of screen
     this.connectionStatusText = this.add.text(
       width / 2,
-      height / 2 + 95,
+      height - 40,
       "Establishing uplink...",
       {
         fontSize: "12px",
@@ -198,6 +208,50 @@ export class MainMenuScene extends Phaser.Scene {
       } else {
         this.scene.start("CosmicVoidScene", { sessionID });
       }
+    });
+
+    // Manage Loadout button
+    const loadoutBtnX = width / 2;
+    const loadoutBtnY = height / 2 + 115;
+    const loadoutBtnW = 180;
+    const loadoutBtnH = 36;
+
+    this.loadoutBtnBg = this.add.graphics();
+    this.loadoutBtnBg.fillStyle(0x112233, 0.8);
+    this.loadoutBtnBg.fillRoundedRect(loadoutBtnX - loadoutBtnW / 2, loadoutBtnY - loadoutBtnH / 2, loadoutBtnW, loadoutBtnH, 4);
+    this.loadoutBtnBg.lineStyle(1, 0x00f0ff, 0.3);
+    this.loadoutBtnBg.strokeRoundedRect(loadoutBtnX - loadoutBtnW / 2, loadoutBtnY - loadoutBtnH / 2, loadoutBtnW, loadoutBtnH, 4);
+
+    const loadoutText = this.add.text(loadoutBtnX, loadoutBtnY, 'MANAGE LOADOUT', {
+      fontSize: '12px',
+      color: '#00f0ff',
+      letterSpacing: 3,
+    });
+    loadoutText.setOrigin(0.5);
+
+    const loadoutHit = this.add.rectangle(loadoutBtnX, loadoutBtnY, loadoutBtnW, loadoutBtnH, 0x000000, 0);
+    loadoutHit.setInteractive({ useHandCursor: true });
+
+    loadoutHit.on('pointerover', () => {
+      if (!this.loadoutBtnBg) return;
+      this.loadoutBtnBg.clear();
+      this.loadoutBtnBg.fillStyle(0x1a2a3a, 0.9);
+      this.loadoutBtnBg.fillRoundedRect(loadoutBtnX - loadoutBtnW / 2, loadoutBtnY - loadoutBtnH / 2, loadoutBtnW, loadoutBtnH, 4);
+      this.loadoutBtnBg.lineStyle(1, 0x00f0ff, 0.6);
+      this.loadoutBtnBg.strokeRoundedRect(loadoutBtnX - loadoutBtnW / 2, loadoutBtnY - loadoutBtnH / 2, loadoutBtnW, loadoutBtnH, 4);
+    });
+
+    loadoutHit.on('pointerout', () => {
+      if (!this.loadoutBtnBg) return;
+      this.loadoutBtnBg.clear();
+      this.loadoutBtnBg.fillStyle(0x112233, 0.8);
+      this.loadoutBtnBg.fillRoundedRect(loadoutBtnX - loadoutBtnW / 2, loadoutBtnY - loadoutBtnH / 2, loadoutBtnW, loadoutBtnH, 4);
+      this.loadoutBtnBg.lineStyle(1, 0x00f0ff, 0.3);
+      this.loadoutBtnBg.strokeRoundedRect(loadoutBtnX - loadoutBtnW / 2, loadoutBtnY - loadoutBtnH / 2, loadoutBtnW, loadoutBtnH, 4);
+    });
+
+    loadoutHit.on('pointerdown', () => {
+      this.scene.start('LoadoutScene');
     });
 
     // Controls info

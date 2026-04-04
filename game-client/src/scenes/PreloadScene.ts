@@ -38,9 +38,9 @@ export class PreloadScene extends Phaser.Scene {
       loadingText.destroy();
     });
 
-    // Load game assets here
-    // this.load.image('player', 'assets/images/player.png');
-    // this.load.audio('bgm', 'assets/audio/bgm.mp3');
+    // Load audio
+    this.load.audio('menuTheme', '/audio/menu-theme.ogg');
+    this.load.audio('gameAmbient', '/audio/game-ambient.ogg');
   }
 
   create(): void {

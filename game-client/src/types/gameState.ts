@@ -50,6 +50,7 @@ export interface ItemState {
   healing_amount?: number;
   mana_amount?: number;
   description?: string;
+  durability?: number;
   lootedAt?: number; // 本地取得時間戳，用於 pending 判斷
 }
 
@@ -106,6 +107,73 @@ export function isGameState(data: any): data is ClientGameState {
     typeof data.session_id === "string" &&
     (data.current_player !== undefined || data.other_players !== undefined)
   );
+}
+
+// Equipment types
+export type EquipmentSlot = 'weapon' | 'head' | 'body' | 'hands' | 'feet' | 'ring_1' | 'ring_2' | 'consumable_1' | 'consumable_2' | 'consumable_3';
+
+export type ArmorSlot = 'head' | 'chest' | 'hands' | 'legs' | 'feet' | 'ring';
+
+export interface EquippedItems {
+  weapon: ItemState | null;
+  head: ItemState | null;
+  body: ItemState | null;
+  hands: ItemState | null;
+  feet: ItemState | null;
+  ring_1: ItemState | null;
+  ring_2: ItemState | null;
+  consumable_1: ItemState | null;
+  consumable_2: ItemState | null;
+  consumable_3: ItemState | null;
+}
+
+export type ItemType = 'weapon' | 'armor' | 'consumable' | 'unknown';
+
+export function getItemType(item: ItemState): ItemType {
+  if (item.attack_power || item.weapon_type) return 'weapon';
+  if (item.defense_rating !== undefined || item.armor_slot) return 'armor';
+  if (item.healing_amount || item.mana_amount) return 'consumable';
+  return 'unknown';
+}
+
+export function getValidSlotsForItem(item: ItemState): EquipmentSlot[] {
+  const type = getItemType(item);
+  switch (type) {
+    case 'weapon':
+      return ['weapon'];
+    case 'armor': {
+      const slot = item.armor_slot as ArmorSlot | undefined;
+      switch (slot) {
+        case 'head': return ['head'];
+        case 'chest': return ['body'];
+        case 'hands': return ['hands'];
+        case 'legs':
+        case 'feet': return ['feet'];
+        case 'ring': return ['ring_1', 'ring_2'];
+        default: return [];
+      }
+    }
+    case 'consumable':
+      return ['consumable_1', 'consumable_2', 'consumable_3'];
+    default:
+      return [];
+  }
+}
+
+export function getSlotDisplayName(slot: EquipmentSlot): string {
+  const names: Record<EquipmentSlot, string> = {
+    weapon: 'Weapon',
+    head: 'Head',
+    body: 'Body',
+    hands: 'Hands',
+    feet: 'Feet',
+    ring_1: 'Ring 1',
+    ring_2: 'Ring 2',
+    consumable_1: 'Consumable 1',
+    consumable_2: 'Consumable 2',
+    consumable_3: 'Consumable 3',
+  };
+  return names[slot];
 }
 
 // Helper to format position for display
