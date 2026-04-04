@@ -44,8 +44,8 @@ type DoorState struct {
 }
 
 type ItemState struct {
-	ItemID        uuid.UUID `json:"item_id"`
-	EntityID      uuid.UUID `json:"entity_id"`
+	ItemID        uuid.UUID `json:"item_id"`   // base item id
+	EntityID      uuid.UUID `json:"entity_id"` // unique items entity id
 	Name          string    `json:"name"`
 	Quantity      int       `json:"quantity"`
 	AttackPower   int32     `json:"attack_power,omitempty"`   // weapon

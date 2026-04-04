@@ -21,6 +21,11 @@ import (
 	"github.com/google/uuid"
 )
 
+type CoordHolder struct {
+	x float64
+	y float64
+}
+
 // the session represents one game room with its own ECS world
 type Session struct {
 	ID                       uuid.UUID
@@ -181,7 +186,11 @@ func (s *Session) manageClientMessages() {
 				return
 			}
 
-			slog.Debug("Incoming message to game session", "sessionID", s.ID, "message", msg)
+			slog.Debug("Incoming message to game session",
+				"sessionID", s.ID,
+				"message", msg,
+				"action", msg.Message.Action,
+			)
 
 			switch constants.Action(msg.Message.Action) {
 			case constants.ActionMove:
@@ -250,59 +259,12 @@ func (s *Session) manageClientMessages() {
 				err = s.handleInteract(playerID, entityIDUUID)
 
 				if err != nil {
-					s.sender.SendMessageToPlayer(playerID, types.Message{})
-				}
-			case constants.ActionLoot:
-
-				slog.Debug("Action from client was loot")
-				parsedPayload, err := msg.Message.ParsePayload()
-
-				if err != nil {
-					slog.Error("Failed to parse loot payload", "error", err)
-					if playerIDStr, ok := msg.Message.Payload["player_id"].(string); ok {
-						if playerID, parseErr := uuid.Parse(playerIDStr); parseErr == nil {
-							s.sendErrorToPlayer(playerID, msg.Message.Action, "failed to parse loot request")
-						}
-					}
-					continue
-				}
-
-				lootPayload := parsedPayload.(types.PlayerSessionLootPayload)
-				slog.Debug("Parsed loot payload", "payload", lootPayload)
-
-				playerID, err := uuid.Parse(lootPayload.PlayerID)
-
-				if err != nil {
-					slog.Error("Invalid PlayerID from session payload", "playerID", lootPayload.PlayerID, "error", err)
-					continue
-				}
-
-				containerEntityID, err := uuid.Parse(lootPayload.ContainerEntityID)
-
-				if err != nil {
-					slog.Error("Invalid ContainerEntityID from session payload",
-						"containerEntityID", lootPayload.ContainerEntityID,
-						"playerID", playerID,
+					slog.Error("handleInteract failed to process on entity.",
+						"player_id", playerID,
+						"entity_id", entityIDUUID,
 						"error", err)
-					s.sendErrorToPlayer(playerID, msg.Message.Action, "invalid container target")
-					continue
-				}
-
-				itemEntityIDUUIDs := []uuid.UUID{}
-				for _, itemEntityId := range lootPayload.ItemEntityIDs {
-					entityId, err := uuid.Parse(itemEntityId)
-					if err != nil {
-						slog.Error("Invalid itemEntityId", "entityId", entityId, "error", err)
-					}
-					itemEntityIDUUIDs = append(itemEntityIDUUIDs, entityId)
-				}
-
-				err = s.handleLoot(playerID, containerEntityID, itemEntityIDUUIDs)
-
-				if err != nil {
 					s.sender.SendMessageToPlayer(playerID, types.Message{})
 				}
-
 			case constants.ActionAttack:
 				slog.Debug("Action from client was attack")
 				parsedPayload, err := msg.Message.ParsePayload()
@@ -668,13 +630,18 @@ func (s *Session) handleMove(playerID uuid.UUID, vx, vy float64) error {
 func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) error {
 	targetEntity, hasEntity := s.EntityManager.GetEntity(targetEntityID)
 
+	slog.Debug("Entity being interacted on in handleInteract.",
+		"player_id", playerID,
+		"target_entity_id", targetEntityID)
+
 	if !hasEntity {
 		slog.Error("Failed to retrieve target entity", "targetEntityID", targetEntityID)
 		return fmt.Errorf("Error when attempting to retrieve target entity with entityID %s", targetEntityID)
 	}
 
-	// check container cache first before wasting resources on execution
+	// rate limiting cache
 	s.mu.Lock() // hold lock to prevent check then act races here
+	// check
 	_, exists := s.containerInteractedCache[targetEntityID]
 	if exists {
 		slog.Debug("Container entity still cached, not available for interaction", "targetEntityID", targetEntityID)
@@ -785,6 +752,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 	}
 
 	if isContainerEntity {
+
 		// get location
 		containerTransformComponent, hasTransform := targetEntity.GetComponent(ecs.ComponentTypeTransform)
 
@@ -792,7 +760,20 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 			slog.Error("Failed to retrieve container entity transform component", "targetEntityID", targetEntityID)
 			return fmt.Errorf("Error when attempting to retrieve container entity transform component with entityID %s", targetEntityID)
 		}
+
 		containerTransform := containerTransformComponent.(*components.TransformComponent)
+
+		slog.Debug("target entity isContainerEntity",
+			"entity_id", targetEntityID,
+			"entity_transform",
+			struct {
+				x float64
+				y float64
+			}{
+				x: containerTransform.X,
+				y: containerTransform.Y},
+		)
+
 		// validate is within distance from player
 		isWithinDistance := s.calcWithinDistance(playerTransform.X, playerTransform.Y, containerTransform.X, containerTransform.Y)
 		if !isWithinDistance {
@@ -859,7 +840,11 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 	}
 
 	// --- item entity ---
+	// when directly acting to an item
 	if isItemEntity {
+		slog.Debug("target entity is item entity",
+			"entity_id", targetEntityID,
+		)
 		// lock to prevent races
 		s.mu.Lock()
 		defer s.mu.Unlock()
@@ -868,6 +853,8 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		if !ok {
 			return fmt.Errorf("Error when asserting component to item.")
 		}
+
+		slog.Debug("Entity interacting with is an item entity.")
 
 		// add item to player. playerEntity already validated during transformComp extraction
 		playerItemIDListComp, exists := playerEntity.GetComponent(ecs.ComponentTypeItemIDList)
@@ -889,7 +876,15 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 			}
 		}
 
+		// add to player item list
 		playerItemIDList.ItemIDs = append(playerItemIDList.ItemIDs, targetEntityID)
+
+		// TEST: for debugging
+		slog.Debug("Retrieved player inventory list. Adding item.",
+			"player_item_list", playerItemIDList,
+			"target_item_name", targetItem.Name,
+		)
+		// TEST: end debugging
 
 		// find the respecitive container and remove it from the container
 		for _, entity := range s.EntityManager.GetAllEntities() {
@@ -1027,56 +1022,6 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		slog.Info("Player is escaping through the door!", "playerID", playerID)
 		s.handlePlayerEscape(playerID)
 	}
-
-	return nil
-}
-
-func (s *Session) handleLoot(playerID uuid.UUID, containerEntityID uuid.UUID, lootEntityIDs []uuid.UUID) error {
-	// get player entity ID
-	playerEntityID, ok := s.playerIDToEntitiesID[playerID]
-	if !ok {
-		return fmt.Errorf("Player %s not found", playerID)
-	}
-
-	playerEntity, ok := s.EntityManager.GetEntity(playerEntityID)
-	if !ok {
-		return fmt.Errorf("Player %s is not exists", playerID)
-	}
-	containerEntity, ok := s.EntityManager.GetEntity(containerEntityID)
-	if !ok {
-		slog.Error("Container entity does not exist", "containerEntityID", containerEntityID)
-		return fmt.Errorf("entity %s is not exists", containerEntityID)
-	}
-
-	for _, entityID := range lootEntityIDs {
-		_, ok := s.EntityManager.GetEntity(entityID)
-		if !ok {
-			slog.Error("Item entity does not exist", "entityID", entityID)
-			_ = fmt.Errorf("Item entity %s is not exists", entityID)
-		}
-	}
-
-	itemIDsComponent, _ := containerEntity.GetComponent(ecs.ComponentTypeItemIDList)
-	containerItemIDs := itemIDsComponent.(*components.ItemIDListComponent)
-
-	// store to player's inventory
-	playerItemIDsComponent, _ := playerEntity.GetComponent(ecs.ComponentTypeItemIDList)
-	playerItemIDs, _ := playerItemIDsComponent.(*components.ItemIDListComponent)
-	playerItemIDs.ItemIDs = append(playerItemIDs.ItemIDs, lootEntityIDs...)
-
-	// remove looted items from container
-	removeItemEntityIDsMap := make(map[uuid.UUID]struct{})
-	for _, removeEntityID := range lootEntityIDs {
-		removeItemEntityIDsMap[removeEntityID] = struct{}{}
-	}
-	newItemIDs := []uuid.UUID{}
-	// only keep items not in the removal list
-	for _, itemID := range containerItemIDs.ItemIDs {
-		if _, exists := removeItemEntityIDsMap[itemID]; !exists {
-			newItemIDs = append(newItemIDs, itemID)
-		}
-	}
-	containerItemIDs.ItemIDs = newItemIDs
 
 	return nil
 }

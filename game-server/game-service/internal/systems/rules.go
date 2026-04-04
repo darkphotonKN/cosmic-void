@@ -1,8 +1,6 @@
 package systems
 
 import (
-	"log/slog"
-
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/google/uuid"
@@ -28,9 +26,6 @@ func (s *RulesSystem) Update(deltaTime float64, entities []*ecs.Entity, endSessi
 		if !matchProgressFound {
 			// find the match progress in the same loop
 			matchProgressC, hasMatchProgress := entity.GetComponent(ecs.ComponentTypeMatchProgress)
-
-			slog.Debug("Found matchProgress component",
-				"matchProgressC", matchProgressC)
 
 			if hasMatchProgress {
 				matchProgressComp = matchProgressC

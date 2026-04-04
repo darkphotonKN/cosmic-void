@@ -110,6 +110,7 @@ export class CosmicVoidScene extends Phaser.Scene {
   private chestLootedAtMap = new Map<string, number>(); // entityId → loot 時間戳
   private canAttack = true;
   private readonly PENDING_DURATION = 1000; // 1 秒內不比對剛拿的物品
+  private lastGameState?: ClientGameState;
 
   // 狀態追蹤：避免重複通知（每秒 33 幀會重複收到相同狀態）
   private previousEscapeDoorLocked: boolean | null = null;
@@ -126,9 +127,13 @@ export class CosmicVoidScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // create soldier textures (4 directions each)
-    this.createSoldierTextures('player', 0x4ecca3, 0x6effc8, 0x7fffd4, 0x3ba882);
-    this.createSoldierTextures('otherPlayer', 0xff6b6b, 0xff9999, 0xff8888, 0xcc5555);
+    // create soldier textures (4 directions each) — same spacesuit colors for all
+    const suitBody = 0x8899aa;
+    const suitVisor = 0x00f0ff;
+    const suitHighlight = 0xbccdd8;
+    const suitDark = 0x667788;
+    this.createSoldierTextures('player', suitBody, suitVisor, suitHighlight, suitDark);
+    this.createSoldierTextures('otherPlayer', suitBody, suitVisor, suitHighlight, suitDark);
     this.createChestTextures();
     this.createEscapeDoorTextures();
     this.createSwitchTextures();
@@ -1003,6 +1008,15 @@ export class CosmicVoidScene extends Phaser.Scene {
       // 開啟跳窗
       this.openedChestEntityId = entityId;
       this.showChestPopup();
+
+      // If container already has items from server state, populate immediately
+      const gameState = this.lastGameState;
+      if (gameState) {
+        const container = gameState.containers?.find(c => c.entity_id === entityId);
+        if (container && container.is_open && container.items?.length > 0) {
+          this.updatePopupItems(container.items, entityId);
+        }
+      }
     }
   }
 
@@ -1713,7 +1727,7 @@ export class CosmicVoidScene extends Phaser.Scene {
     this.playerLegs.setDepth(101);
     this.playerFacing = 'down';
     this.walkPhase = 0;
-    this.drawLegs(this.playerLegs, x, y, 'down', 0, false, 0x3ba882);
+    this.drawLegs(this.playerLegs, x, y, 'down', 0, false, 0x667788);
 
     // 玩家與所有建築牆壁/門碰撞
     this.buildings.forEach((building) => {
@@ -1725,7 +1739,49 @@ export class CosmicVoidScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
   }
 
+  private setupCustomCursor(): void {
+    const size = 32;
+    const mid = size / 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+
+    // outer ring glow
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(mid, mid, 10, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // crosshair lines
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.8)';
+    ctx.lineWidth = 1.5;
+    const gap = 4;
+    const len = 6;
+    // top
+    ctx.beginPath(); ctx.moveTo(mid, mid - gap - len); ctx.lineTo(mid, mid - gap); ctx.stroke();
+    // bottom
+    ctx.beginPath(); ctx.moveTo(mid, mid + gap); ctx.lineTo(mid, mid + gap + len); ctx.stroke();
+    // left
+    ctx.beginPath(); ctx.moveTo(mid - gap - len, mid); ctx.lineTo(mid - gap, mid); ctx.stroke();
+    // right
+    ctx.beginPath(); ctx.moveTo(mid + gap, mid); ctx.lineTo(mid + gap + len, mid); ctx.stroke();
+
+    // center dot
+    ctx.fillStyle = '#00f0ff';
+    ctx.beginPath();
+    ctx.arc(mid, mid, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    const url = canvas.toDataURL();
+    this.input.setDefaultCursor(`url(${url}) ${mid} ${mid}, crosshair`);
+  }
+
   create(): void {
+    // custom crosshair cursor
+    this.setupCustomCursor();
+
     // Connect via SocketManager
     this.connectToServer();
 
@@ -1920,6 +1976,8 @@ export class CosmicVoidScene extends Phaser.Scene {
   }
 
   private handleGameStateUpdate(state: ClientGameState): void {
+    this.lastGameState = state;
+
     // Update current player position from server
     if (state.current_player) {
       const pos = state.current_player.position;
@@ -2044,7 +2102,7 @@ export class CosmicVoidScene extends Phaser.Scene {
         this.otherPlayersLegs.set(playerData.id, legs);
         this.otherPlayersFacing.set(playerData.id, 'down');
         this.otherPlayersWalkPhase.set(playerData.id, 0);
-        this.drawLegs(legs, playerData.position.x, playerData.position.y, 'down', 0, false, 0xcc5555);
+        this.drawLegs(legs, playerData.position.x, playerData.position.y, 'down', 0, false, 0x667788);
       }
 
       // 設定目標位置，在 update() 中平滑移動
@@ -2990,7 +3048,7 @@ export class CosmicVoidScene extends Phaser.Scene {
         }
         this.walkPhase += 0.3;
       }
-      this.drawLegs(this.playerLegs, this.player.x, this.player.y, this.playerFacing, this.walkPhase, isMoving, 0x3ba882);
+      this.drawLegs(this.playerLegs, this.player.x, this.player.y, this.playerFacing, this.walkPhase, isMoving, 0x667788);
     }
 
     // send websocket message for movement
@@ -3053,7 +3111,7 @@ export class CosmicVoidScene extends Phaser.Scene {
 
           const facing = this.otherPlayersFacing.get(playerId) || 'down';
           const phase = this.otherPlayersWalkPhase.get(playerId) || 0;
-          this.drawLegs(legs, sprite.x, sprite.y, facing, phase, isMoving, 0xcc5555);
+          this.drawLegs(legs, sprite.x, sprite.y, facing, phase, isMoving, 0x667788);
         }
       }
     });

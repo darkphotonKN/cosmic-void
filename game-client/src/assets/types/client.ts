@@ -32,11 +32,6 @@ export interface InteractPayload {
   entity_id: string;
 }
 
-export interface LootPayload {
-  container_entity_id: string;
-  item_entity_ids: string[];
-}
-
 // ====== 動作類型對應 Payload ======
 
 export interface ActionMap {
@@ -47,7 +42,6 @@ export interface ActionMap {
   chat: ChatPayload;
   find_game: FindGamePayload;
   interact: InteractPayload;
-  loot: LootPayload;
 }
 
 export const ActionType = {
@@ -58,7 +52,6 @@ export const ActionType = {
   Chat: "chat",
   Find_Game: "find_game",
   Interact: "interact",
-  Loot: "loot",
 } as const;
 
 export type ActionType = (typeof ActionType)[keyof typeof ActionType];

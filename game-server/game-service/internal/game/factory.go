@@ -72,11 +72,11 @@ type ContainerConfig struct {
 	X, Y float64
 }
 
-func CreateContainerEntity(em *ecs.EntityManager, containerconfig ContainerConfig, itemIDList []uuid.UUID) *ecs.Entity {
+func CreateContainerEntity(em *ecs.EntityManager, config ContainerConfig, itemIDList []uuid.UUID) *ecs.Entity {
 	entity := em.CreateEntity()
 	containerID := uuid.New()
 	entity.AddComponent(components.NewContainerComponent(containerID))
-	entity.AddComponent(components.NewTransformComponent(containerconfig.X, containerconfig.Y))
+	entity.AddComponent(components.NewTransformComponent(config.X, config.Y))
 	entity.AddComponent(components.NewOpenableComponent(false)) // default false
 	entity.AddComponent(components.NewItemIDListComponent(itemIDList))
 

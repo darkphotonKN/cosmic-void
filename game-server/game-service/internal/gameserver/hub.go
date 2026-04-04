@@ -62,7 +62,6 @@ func (h *messageHub) Run() {
 				constants.ActionMove:     true,
 				constants.ActionAttack:   true,
 				constants.ActionInteract: true,
-				constants.ActionLoot:     true,
 			}
 
 			messageAction := constants.Action(clientPackage.Message.Action)

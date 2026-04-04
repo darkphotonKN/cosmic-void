@@ -2,7 +2,6 @@ package serializer
 
 import (
 	"context"
-	"log/slog"
 	"sync"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
@@ -63,11 +62,7 @@ func (s *StateSerializer) SerializeBackendState(ctx context.Context, sessionID u
 					itemC, _ := itemEntity.GetComponent(ecs.ComponentTypeItem)
 					item := itemC.(*components.ItemComponent)
 
-					slog.Debug("Item found before serialization.",
-						"item", item,
-					)
-
-					itemState := s.getItemState(itemID, entity.ID, item)
+					itemState := s.getItemState(item.TemplateID, itemID, item)
 
 					inventory = append(inventory, itemState)
 				}
@@ -207,15 +202,13 @@ func (s *StateSerializer) SerializeBackendState(ctx context.Context, sessionID u
 						if hasItem {
 							item := itemComp.(*components.ItemComponent)
 
-							itemState := s.getItemState(itemID, entity.ID, item)
+							itemState := s.getItemState(item.TemplateID, itemID, item)
 
 							items = append(items, itemState)
 						}
 					}
 				}
 			}
-
-			slog.Debug("items after extracting and formatting from entity", "items", items)
 
 			containerState := &types.ContainerState{
 				ContainerID: container.ContainerID,
@@ -251,15 +244,12 @@ func (s *StateSerializer) SerializeBackendState(ctx context.Context, sessionID u
 		}
 
 		// --- Items ---
-		itemComp, hasItem := entity.GetComponent(ecs.ComponentTypeItem)
-
-		if hasItem {
-			item := itemComp.(*components.ItemComponent)
-
-			slog.Debug("item component found in game",
-				"item", item,
-			)
-		}
+		// itemComp, hasItem := entity.GetComponent(ecs.ComponentTypeItem)
+		//
+		// if hasItem {
+		// 	item := itemComp.(*components.ItemComponent)
+		//
+		// }
 	}
 
 	return backendState, nil
