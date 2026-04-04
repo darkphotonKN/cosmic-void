@@ -40,7 +40,7 @@ export class PreloadScene extends Phaser.Scene {
 
     // Load audio
     this.load.audio('menuTheme', '/audio/menu-theme.ogg');
-    this.load.audio('gameAmbient', '/audio/game-ambient.ogg');
+    this.load.audio('gameAmbient', '/audio/observing-the-star.ogg');
   }
 
   create(): void {
