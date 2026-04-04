@@ -21,11 +21,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type CoordHolder struct {
-	x float64
-	y float64
-}
-
 // the session represents one game room with its own ECS world
 type Session struct {
 	ID                       uuid.UUID
@@ -35,10 +30,6 @@ type Session struct {
 	playerEntityIDToPlayerID map[uuid.UUID]uuid.UUID
 	mu                       sync.RWMutex
 	wg                       sync.WaitGroup
-
-	movementSystem *systems.MovementSystem
-	combatSystem   *systems.CombatSystem
-	skillSystem    *systems.SkillSystem
 
 	stopChan  chan struct{}
 	isRunning bool
@@ -67,15 +58,24 @@ type Session struct {
 	itemPoolInitialized bool
 
 	// dependency injections
+	sessionCloser   SessionCloser
 	sender          SessionSender
 	stateSerializer StateSerializer
 	eventEmitter    EventEmitter
 	itemsClient     grpcitems.ItemsClient
 
+	movementSystem *systems.MovementSystem
+	combatSystem   *systems.CombatSystem
+	skillSystem    *systems.SkillSystem
+
 	// escape
 	switchEntityIDs  []uuid.UUID
 	exitDoorEntityID uuid.UUID
 	escapeSuccess    bool
+}
+
+type SessionCloser interface {
+	CloseSession(sessionID uuid.UUID) error
 }
 
 type SessionSender interface {
@@ -95,7 +95,7 @@ type StateSerializer interface {
 	FormatStateToClientState(backendState *types.BackendGameState, playerID uuid.UUID) *types.ClientGameState
 }
 
-func NewSession(sender *messaging.MessageSender, serializer StateSerializer, em *ecs.EntityManager, eventEmitter EventEmitter, itemsClient grpcitems.ItemsClient) *Session {
+func NewSession(sessionCloser SessionCloser, sender *messaging.MessageSender, serializer StateSerializer, em *ecs.EntityManager, eventEmitter EventEmitter, itemsClient grpcitems.ItemsClient) *Session {
 	sessionId := uuid.New()
 
 	s := &Session{
@@ -120,6 +120,7 @@ func NewSession(sender *messaging.MessageSender, serializer StateSerializer, em 
 
 		endSessionCh: make(chan bool),
 
+		sessionCloser:   sessionCloser,
 		sender:          sender,
 		stateSerializer: serializer,
 		eventEmitter:    eventEmitter,
@@ -525,6 +526,9 @@ func (s *Session) Shutdown() {
 	}
 
 	slog.Info("Shutting down game session", "sessionID", s.ID)
+
+	// remove session from server
+	s.sessionCloser.CloseSession(s.ID)
 
 	// clean up channels
 	close(s.stopChan)

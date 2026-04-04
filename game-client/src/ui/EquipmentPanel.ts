@@ -32,14 +32,14 @@ interface ContextMenuOption {
 
 // Panel dimensions
 const EQUIP_W = 380;
-const EQUIP_H = 380;
+const EQUIP_H = 340;
 const INV_W = 320;
-const INV_H = 380;
+const INV_H = 340;
 const GAP = 20;
-const SLOT_BOX_W = 90;
-const SLOT_BOX_H = 26;
+const SLOT_BOX_W = 110;
+const SLOT_BOX_H = 34;
 const INV_ROW_H = 30;
-const MAX_VISIBLE_INV = 10;
+const MAX_VISIBLE_INV = 8;
 const PADDING = 16;
 
 // Colors
@@ -65,19 +65,19 @@ function getSlotColor(slot: EquipmentSlot): number {
 //   [CON 1]   [CON 2]   [CON 3]
 const SLOT_LAYOUT: SlotLayout[] = [
   // Row 1: weapon left, head center
-  { slot: 'weapon', label: 'WEAPON', x: -100, y: 0 },
+  { slot: 'weapon', label: 'WEAPON', x: -110, y: 0 },
   { slot: 'head', label: 'HEAD', x: 0, y: 0 },
   // Row 2: hands left (arms), body center, ring right
-  { slot: 'hands', label: 'HANDS', x: -100, y: 38 },
-  { slot: 'body', label: 'BODY', x: 0, y: 38 },
-  { slot: 'ring_1', label: 'RING 1', x: 100, y: 38 },
+  { slot: 'hands', label: 'HANDS', x: -110, y: 50 },
+  { slot: 'body', label: 'BODY', x: 0, y: 50 },
+  { slot: 'ring_1', label: 'RING 1', x: 110, y: 50 },
   // Row 3: feet center, ring right
-  { slot: 'feet', label: 'FEET', x: 0, y: 76 },
-  { slot: 'ring_2', label: 'RING 2', x: 100, y: 76 },
+  { slot: 'feet', label: 'FEET', x: 0, y: 100 },
+  { slot: 'ring_2', label: 'RING 2', x: 110, y: 100 },
   // Row 4: consumables across bottom
-  { slot: 'consumable_1', label: 'CONS 1', x: -100, y: 126 },
-  { slot: 'consumable_2', label: 'CONS 2', x: 0, y: 126 },
-  { slot: 'consumable_3', label: 'CONS 3', x: 100, y: 126 },
+  { slot: 'consumable_1', label: 'CONS 1', x: -110, y: 160 },
+  { slot: 'consumable_2', label: 'CONS 2', x: 0, y: 160 },
+  { slot: 'consumable_3', label: 'CONS 3', x: 110, y: 160 },
 ];
 
 export class EquipmentPanel {
@@ -187,17 +187,18 @@ export class EquipmentPanel {
       const slotX = layout.x;
       const slotY = slotsTop + layout.y;
 
-      const label = this.scene.add.text(slotX - SLOT_BOX_W / 2, slotY - 1, layout.label, {
+      const label = this.scene.add.text(slotX, slotY + 2, layout.label, {
         fontSize: '9px', color: '#445566', letterSpacing: 2,
       });
+      label.setOrigin(0.5, 0);
       eqChildren.push(label);
 
       const slotGfx = this.scene.add.graphics();
       eqChildren.push(slotGfx);
       this.slotGraphics.set(layout.slot, slotGfx);
 
-      const slotText = this.scene.add.text(slotX, slotY + SLOT_BOX_H / 2 + 10, '—', {
-        fontSize: '12px', color: '#334455',
+      const slotText = this.scene.add.text(slotX, slotY + SLOT_BOX_H - 4, '—', {
+        fontSize: '11px', color: '#334455',
       });
       slotText.setOrigin(0.5);
       eqChildren.push(slotText);

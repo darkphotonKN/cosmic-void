@@ -40,9 +40,6 @@ exporters:
     endpoint: 0.0.0.0:8889
     namespace: otel
 
-  debug:
-    verbosity: detailed
-
 extensions:
   health_check:
     endpoint: 0.0.0.0:13133
@@ -54,9 +51,9 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp/tempo, debug]
+      exporters: [otlp/tempo]
 
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [prometheus, debug]
+      exporters: [prometheus]

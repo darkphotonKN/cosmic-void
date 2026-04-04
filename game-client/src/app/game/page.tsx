@@ -7,8 +7,9 @@ import Link from 'next/link';
 const PhaserGame = dynamic(() => import('@/components/PhaserGame'), {
   ssr: false,
   loading: () => (
-    <div className="flex items-center justify-center min-h-screen">
-      <p className="text-[#ff00ff] text-xl">載入遊戲中...</p>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a0a12] gap-4">
+      <p className="text-[#00f0ff] text-3xl font-orbitron font-bold tracking-[0.15em] uppercase" style={{ textShadow: '0 0 30px rgba(0,240,255,0.2)' }}>Initializing Uplink</p>
+      <p className="text-[#556677] text-sm tracking-[0.2em] uppercase">Preparing deployment zone...</p>
     </div>
   ),
 });

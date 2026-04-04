@@ -1725,43 +1725,77 @@ export class CosmicVoidScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
   }
 
+  private defaultCursorCSS = '';
+  private crosshairCursorCSS = '';
+
   private setupCustomCursor(): void {
-    const size = 32;
-    const mid = size / 2;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
+    // --- Default cursor: tech/Deus Ex style pointer ---
+    const dSize = 32;
+    const dc = document.createElement('canvas');
+    dc.width = dSize;
+    dc.height = dSize;
+    const dCtx = dc.getContext('2d')!;
+
+    // angled pointer — top-left origin
+    dCtx.strokeStyle = 'rgba(0, 240, 255, 0.9)';
+    dCtx.lineWidth = 1.5;
+    dCtx.fillStyle = 'rgba(0, 240, 255, 0.12)';
+
+    // pointer triangle
+    dCtx.beginPath();
+    dCtx.moveTo(6, 4);
+    dCtx.lineTo(6, 22);
+    dCtx.lineTo(12, 17);
+    dCtx.lineTo(17, 24);
+    dCtx.lineTo(20, 22);
+    dCtx.lineTo(15, 15);
+    dCtx.lineTo(21, 13);
+    dCtx.closePath();
+    dCtx.fill();
+    dCtx.stroke();
+
+    // small corner brackets — top-left
+    dCtx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+    dCtx.lineWidth = 1;
+    dCtx.beginPath();
+    dCtx.moveTo(2, 10); dCtx.lineTo(2, 2); dCtx.lineTo(10, 2);
+    dCtx.stroke();
+
+    this.defaultCursorCSS = `url(${dc.toDataURL()}) 6 4, default`;
+    this.input.setDefaultCursor(this.defaultCursorCSS);
+
+    // --- Crosshair cursor: pink, for targeting other players ---
+    const cSize = 32;
+    const cMid = cSize / 2;
+    const cc = document.createElement('canvas');
+    cc.width = cSize;
+    cc.height = cSize;
+    const cCtx = cc.getContext('2d')!;
 
     // outer ring glow
-    ctx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(mid, mid, 10, 0, Math.PI * 2);
-    ctx.stroke();
+    cCtx.strokeStyle = 'rgba(255, 0, 170, 0.3)';
+    cCtx.lineWidth = 2;
+    cCtx.beginPath();
+    cCtx.arc(cMid, cMid, 10, 0, Math.PI * 2);
+    cCtx.stroke();
 
     // crosshair lines
-    ctx.strokeStyle = 'rgba(0, 240, 255, 0.8)';
-    ctx.lineWidth = 1.5;
+    cCtx.strokeStyle = 'rgba(255, 0, 170, 0.85)';
+    cCtx.lineWidth = 1.5;
     const gap = 4;
     const len = 6;
-    // top
-    ctx.beginPath(); ctx.moveTo(mid, mid - gap - len); ctx.lineTo(mid, mid - gap); ctx.stroke();
-    // bottom
-    ctx.beginPath(); ctx.moveTo(mid, mid + gap); ctx.lineTo(mid, mid + gap + len); ctx.stroke();
-    // left
-    ctx.beginPath(); ctx.moveTo(mid - gap - len, mid); ctx.lineTo(mid - gap, mid); ctx.stroke();
-    // right
-    ctx.beginPath(); ctx.moveTo(mid + gap, mid); ctx.lineTo(mid + gap + len, mid); ctx.stroke();
+    cCtx.beginPath(); cCtx.moveTo(cMid, cMid - gap - len); cCtx.lineTo(cMid, cMid - gap); cCtx.stroke();
+    cCtx.beginPath(); cCtx.moveTo(cMid, cMid + gap); cCtx.lineTo(cMid, cMid + gap + len); cCtx.stroke();
+    cCtx.beginPath(); cCtx.moveTo(cMid - gap - len, cMid); cCtx.lineTo(cMid - gap, cMid); cCtx.stroke();
+    cCtx.beginPath(); cCtx.moveTo(cMid + gap, cMid); cCtx.lineTo(cMid + gap + len, cMid); cCtx.stroke();
 
     // center dot
-    ctx.fillStyle = '#00f0ff';
-    ctx.beginPath();
-    ctx.arc(mid, mid, 1.5, 0, Math.PI * 2);
-    ctx.fill();
+    cCtx.fillStyle = '#ff00aa';
+    cCtx.beginPath();
+    cCtx.arc(cMid, cMid, 1.5, 0, Math.PI * 2);
+    cCtx.fill();
 
-    const url = canvas.toDataURL();
-    this.input.setDefaultCursor(`url(${url}) ${mid} ${mid}, crosshair`);
+    this.crosshairCursorCSS = `url(${cc.toDataURL()}) ${cMid} ${cMid}, crosshair`;
   }
 
   create(): void {
@@ -2146,15 +2180,17 @@ export class CosmicVoidScene extends Phaser.Scene {
         nameText.setVisible(false);
         this.otherPlayersNameTexts.set(playerData.id, nameText);
 
-        // hover to show name — use stable ID tracking to survive rerenders
+        // hover to show name + crosshair cursor
         const pid = playerData.id;
         sprite.on('pointerover', () => {
           this.hoveredPlayerId = pid;
+          this.input.setDefaultCursor(this.crosshairCursorCSS);
         });
         sprite.on('pointerout', () => {
           if (this.hoveredPlayerId === pid) {
             this.hoveredPlayerId = undefined;
           }
+          this.input.setDefaultCursor(this.defaultCursorCSS);
         });
       }
 

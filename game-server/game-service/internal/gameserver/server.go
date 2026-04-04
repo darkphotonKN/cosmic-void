@@ -2,6 +2,7 @@ package gameserver
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sync"
 
@@ -150,7 +151,7 @@ func (s *Server) CreateGameSession(players []*types.Player) *game.Session {
 	stateSerializer := serializer.NewStateSerializer(entityManager)
 
 	// create session with message sender
-	newGameSession := game.NewSession(messaging.NewMessageSender(s), stateSerializer, entityManager, s.eventEmitter, s.itemsClient)
+	newGameSession := game.NewSession(s, messaging.NewMessageSender(s), stateSerializer, entityManager, s.eventEmitter, s.itemsClient)
 
 	newGameSession.InitialMapObjects()
 	newGameSession.InitialSystems()
@@ -175,9 +176,29 @@ func (s *Server) CreateGameSession(players []*types.Player) *game.Session {
 	}
 
 	s.sessions[newGameSession.ID] = newGameSession
-	fmt.Printf("New game session initiated, id: %s, players: %d\n", newGameSession.ID, len(players))
+
+	// NOTE: keep this info level, important to save meta data DO NOT REMOVE
+	slog.Info("New game session initiated, id: %s, players: %d\n", newGameSession.ID, len(players))
 
 	return newGameSession
+}
+
+func (s *Server) CloseSession(sessionID uuid.UUID) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	_, exists := s.sessions[sessionID]
+
+	if !exists {
+		slog.Error("Attempted to remove a session that didnt exist",
+			"session_id", sessionID,
+		)
+		return fmt.Errorf("Attempted to remove a session that didnt exist")
+	}
+
+	// delete session
+	delete(s.sessions, sessionID)
+	return nil
 }
 
 /**
