@@ -143,6 +143,9 @@ dist/
 # Gatsby files
 .cache/
 public/
+!game-client/public/
+game-client/public/*
+!game-client/public/audio/
 
 # Storybook build outputs
 .out
