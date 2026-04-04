@@ -131,6 +131,10 @@ export class MainMenuScene extends Phaser.Scene {
     const hitArea = this.add.rectangle(btnX, btnY, btnW, btnH, 0x000000, 0);
     hitArea.setInteractive({ useHandCursor: true });
 
+    // Store ref immediately — setupButtonInteraction needs it when
+    // onConnectionStatusChange fires synchronously with "connected"
+    (this as Record<string, unknown>)._hitArea = hitArea;
+
     this.startButtonText = this.add.text(
       btnX,
       btnY,
@@ -279,9 +283,6 @@ export class MainMenuScene extends Phaser.Scene {
       },
     );
     versionText.setOrigin(0.5);
-
-    // Store hit area ref for interaction setup
-    (this as Record<string, unknown>)._hitArea = hitArea;
   }
 
   private drawButton(fill: number, stroke: number, glowColor?: number): void {

@@ -31,13 +31,13 @@ interface ContextMenuOption {
 }
 
 // Panel dimensions
-const EQUIP_W = 300;
-const EQUIP_H = 340;
+const EQUIP_W = 380;
+const EQUIP_H = 380;
 const INV_W = 320;
 const INV_H = 380;
 const GAP = 20;
-const SLOT_BOX_W = 120;
-const SLOT_BOX_H = 24;
+const SLOT_BOX_W = 90;
+const SLOT_BOX_H = 26;
 const INV_ROW_H = 30;
 const MAX_VISIBLE_INV = 10;
 const PADDING = 16;
@@ -58,17 +58,26 @@ function getSlotColor(slot: EquipmentSlot): number {
   return C_ARMOR;
 }
 
+// Body silhouette layout:
+//   [WEAPON]   [HEAD]
+//   [HANDS]    [BODY]    [RING 1]
+//              [FEET]    [RING 2]
+//   [CON 1]   [CON 2]   [CON 3]
 const SLOT_LAYOUT: SlotLayout[] = [
-  { slot: 'weapon', label: 'WEAPON', x: -65, y: 0 },
-  { slot: 'consumable_1', label: 'CONS 1', x: -65, y: 32 },
-  { slot: 'consumable_2', label: 'CONS 2', x: -65, y: 64 },
-  { slot: 'consumable_3', label: 'CONS 3', x: -65, y: 96 },
-  { slot: 'head', label: 'HEAD', x: 65, y: 0 },
-  { slot: 'body', label: 'BODY', x: 65, y: 32 },
-  { slot: 'hands', label: 'HANDS', x: 65, y: 64 },
-  { slot: 'feet', label: 'FEET', x: 65, y: 96 },
-  { slot: 'ring_1', label: 'RING 1', x: -65, y: 140 },
-  { slot: 'ring_2', label: 'RING 2', x: 65, y: 140 },
+  // Row 1: weapon left, head center
+  { slot: 'weapon', label: 'WEAPON', x: -100, y: 0 },
+  { slot: 'head', label: 'HEAD', x: 0, y: 0 },
+  // Row 2: hands left (arms), body center, ring right
+  { slot: 'hands', label: 'HANDS', x: -100, y: 38 },
+  { slot: 'body', label: 'BODY', x: 0, y: 38 },
+  { slot: 'ring_1', label: 'RING 1', x: 100, y: 38 },
+  // Row 3: feet center, ring right
+  { slot: 'feet', label: 'FEET', x: 0, y: 76 },
+  { slot: 'ring_2', label: 'RING 2', x: 100, y: 76 },
+  // Row 4: consumables across bottom
+  { slot: 'consumable_1', label: 'CONS 1', x: -100, y: 126 },
+  { slot: 'consumable_2', label: 'CONS 2', x: 0, y: 126 },
+  { slot: 'consumable_3', label: 'CONS 3', x: 100, y: 126 },
 ];
 
 export class EquipmentPanel {
