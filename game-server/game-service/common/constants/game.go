@@ -41,13 +41,13 @@ const DefaultInteractableRange float64 = 60
 const DefautMaxSessionPlayers = 2
 
 // map setting
-const MapWidth float64 = 1200
-const MapHeight float64 = 800
+const MapWidth float64 = 1440
+const MapHeight float64 = 960
 const PlayerRadius float64 = 20
 const ContainerWidthRadius float64 = 20
 const ContainerHeightRadius float64 = 16
-const InitialPlayerX float64 = 600
-const InitialPlayerY float64 = 400
+const InitialPlayerX float64 = 720
+const InitialPlayerY float64 = 480
 
 // game loop
 const GameFrameRate int = 30

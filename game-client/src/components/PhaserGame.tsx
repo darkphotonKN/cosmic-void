@@ -17,8 +17,8 @@ export default function PhaserGame() {
 
     const config: Phaser.Types.Core.GameConfig = {
       type: Phaser.AUTO,
-      width: 900,
-      height: 600,
+      width: 1080,
+      height: 720,
       parent: "game-container",
       backgroundColor: "#1a1a2e",
       physics: {

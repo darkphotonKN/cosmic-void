@@ -58,8 +58,8 @@ export class CosmicVoidScene extends Phaser.Scene {
   private targetPosition: { x: number; y: number } | null = null;
 
   // 地圖大小
-  private mapWidth = 1200;
-  private mapHeight = 800;
+  private mapWidth = 1440;
+  private mapHeight = 960;
 
   // 建築
   private buildings: Building[] = [];
@@ -2116,6 +2116,43 @@ export class CosmicVoidScene extends Phaser.Scene {
   private createMapBackground(): void {
     const graphics = this.add.graphics();
     const outerMargin = 200;
+
+    // === deep space star-field (behind everything) ===
+    const totalW = this.mapWidth + outerMargin * 2;
+    const totalH = this.mapHeight + outerMargin * 2;
+
+    // dark space backdrop
+    graphics.fillStyle(0x050510, 1);
+    graphics.fillRect(-outerMargin, -outerMargin, totalW, totalH);
+    graphics.setDepth(-3);
+
+    // scatter stars across full camera area
+    for (let i = 0; i < 120; i++) {
+      const star = this.add.graphics();
+      const size = Phaser.Math.FloatBetween(0.4, 1.8);
+      const color = i < 80 ? 0xffffff : (i < 100 ? 0xaaddff : 0xffccaa);
+      star.fillStyle(color, Phaser.Math.FloatBetween(0.4, 1));
+      star.fillCircle(0, 0, size);
+      star.setPosition(
+        Phaser.Math.Between(-outerMargin, this.mapWidth + outerMargin),
+        Phaser.Math.Between(-outerMargin, this.mapHeight + outerMargin),
+      );
+      star.setScrollFactor(Phaser.Math.FloatBetween(0.3, 0.5));
+      star.setDepth(-2);
+
+      // twinkle some stars
+      if (i % 5 === 0) {
+        this.tweens.add({
+          targets: star,
+          alpha: 0.15,
+          duration: Phaser.Math.Between(1000, 3000),
+          ease: 'Sine.easeInOut',
+          yoyo: true,
+          repeat: -1,
+          delay: Phaser.Math.Between(0, 2000),
+        });
+      }
+    }
 
     // === outer hull structure (fills entire outer area) ===
     const hw2 = this.mapWidth;
