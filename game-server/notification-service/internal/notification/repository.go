@@ -157,13 +157,41 @@ func (r *repository) GetByUserID(ctx context.Context, request *QueryNotification
 func (r *repository) Update(ctx context.Context, request *UpdateNotification) error {
 	query := `
 	UPDATE notifications
-	SET read = :read
+	SET read = :read, updated_at = NOW()
 	WHERE id = :id
 	AND user_id = :user_id
 	`
-	_, err := r.db.NamedExec(query, request)
+	result, err := r.db.NamedExecContext(ctx, query, request)
 	if err != nil {
 		return commonutils.AnalyzeDBErr(err)
 	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("notification %s does not belong to user %s", request.ID, request.UserID)
+	}
 	return nil
+}
+
+func (r *repository) MarkAllAsReadByUserID(ctx context.Context, userID uuid.UUID) (int64, error) {
+	query := `
+      UPDATE notifications
+      SET read = true, updated_at = NOW()
+      WHERE user_id = $1
+      AND read = false
+      `
+	result, err := r.db.ExecContext(ctx, query, userID)
+	if err != nil {
+		return 0, commonutils.AnalyzeDBErr(err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	return rows, nil
 }

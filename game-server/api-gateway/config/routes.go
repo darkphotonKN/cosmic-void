@@ -107,7 +107,8 @@ func SetupRouter(registry discovery.Registry, ch *amqp.Channel) *gin.Engine {
 	notificationRoutes := api.Group("/notification")
 	notificationRoutes.Use(auth.AuthMiddleware())
 	notificationRoutes.GET("/", notificationHandler.GetNotificationsByUserIDHandler)
-
+	notificationRoutes.PATCH("/:id/read", notificationHandler.MarkNotificationAsReadHandler)
+	notificationRoutes.PATCH("/read-all", notificationHandler.MarkAllNotificationsAsReadHandler)
 	// --- PAYMENT MICROSERVICE ---
 
 	paymentClient := payment.NewClient(registry)

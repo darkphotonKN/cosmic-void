@@ -8,4 +8,6 @@ import (
 
 type NotificationClient interface {
 	GetNotification(ctx context.Context, req *pb.NotificationRequest) (*pb.NotificationResponse, error)
+	MarkNotificationAsRead(ctx context.Context, req *pb.MarkNotificationAsReadRequest) (*pb.MarkNotificationAsReadResponse, error)
+	MarkAllNotificationsAsRead(ctx context.Context, req *pb.MarkAllNotificationsAsReadRequest) (*pb.MarkAllNotificationsAsReadResponse, error)
 }
