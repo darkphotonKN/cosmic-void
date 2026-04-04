@@ -1877,10 +1877,22 @@ export class CosmicVoidScene extends Phaser.Scene {
     // Initialize equipment panel
     this.equipmentPanel = new EquipmentPanel(this);
     this.equipmentPanel.onEquip = (item, slot) => {
+      // Send to backend
+      socketManager.sendMessage(ActionType.Equip, {
+        item_entity_id: item.entity_id,
+        slot: slot,
+      });
+      // Optimistic update
       this.equippedItems[slot] = item;
       this.inventoryItems = this.inventoryItems.filter(i => i.entity_id !== item.entity_id);
     };
     this.equipmentPanel.onUnequip = (item, slot) => {
+      // Send to backend
+      socketManager.sendMessage(ActionType.Unequip, {
+        item_entity_id: item.entity_id,
+        slot: slot,
+      });
+      // Optimistic update
       this.equippedItems[slot] = null;
       this.inventoryItems.push(item);
     };

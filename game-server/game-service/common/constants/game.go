@@ -17,6 +17,8 @@ const (
 	ActionPickup   Action = "pickup"
 	ActionUseItem  Action = "use_item"
 	ActionDropItem Action = "drop_item"
+	ActionEquip    Action = "equip"
+	ActionUnequip  Action = "unequip"
 	ActionChat     Action = "chat"
 
 	// system actions
