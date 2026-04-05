@@ -3,5 +3,8 @@ package game
 import "errors"
 
 var (
-	ErrOutOfRange = errors.New("Error when attempting to interact with door entity as it was out of range.\n")
+	ErrOutOfRange                  = errors.New("target out of range")
+	ErrEntityNotFound              = errors.New("entity not found")
+	ErrComponentNotFound           = errors.New("component not found")
+	ErrComponentCouldNotBeAsserted = errors.New("component assertion failed")
 )

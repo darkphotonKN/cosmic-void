@@ -525,11 +525,6 @@ func (s *Session) Shutdown() {
 		return
 	}
 
-	slog.Info("Shutting down game session", "sessionID", s.ID)
-
-	// remove session from server
-	s.sessionCloser.CloseSession(s.ID)
-
 	// clean up channels
 	close(s.stopChan)
 	close(s.MessageCh)
@@ -640,7 +635,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 
 	if !hasEntity {
 		slog.Error("Failed to retrieve target entity", "targetEntityID", targetEntityID)
-		return fmt.Errorf("Error when attempting to retrieve target entity with entityID %s", targetEntityID)
+		return ErrEntityNotFound
 	}
 
 	// rate limiting cache
@@ -1030,6 +1025,71 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 	return nil
 }
 
+func (s *Session) handleEquip(action constants.Action, playerEntityID uuid.UUID, itemEntityID uuid.UUID) error {
+	itemEntity, itemExists := s.EntityManager.GetEntity(itemEntityID)
+
+	if !itemExists {
+		slog.Error("Target item entity not found",
+			"player_entity_id", playerEntityID,
+			"item_entity_id", itemEntityID,
+		)
+		return ErrEntityNotFound
+	}
+
+	playerEntity, playerExists := s.EntityManager.GetEntity(playerEntityID)
+
+	if !playerExists {
+		slog.Error("Target player entity not found",
+			"player_entity_id", playerEntityID,
+			"item_entity_id", itemEntityID,
+		)
+		return ErrEntityNotFound
+	}
+
+	if action == constants.ActionEquip {
+		slog.Debug("Equipping item",
+			"player_entity_id", playerEntityID,
+			"item_entity_id", itemEntityID,
+		)
+
+		equipmentComp, exists := playerEntity.GetComponent(ecs.ComponentTypeEquipment)
+
+		if !exists {
+			slog.Error("Component not found in entity not found",
+				"component_type", ecs.ComponentTypeEquipment,
+				"player_entity_id", playerEntityID,
+				"item_entity_id", itemEntityID,
+			)
+			return ErrComponentNotFound
+		}
+
+		equipment, ok := equipmentComp.(*components.EquipmentComponent)
+
+		if !ok {
+			slog.Error("Equipment component could not be asserted to expect typed.",
+				"component_type", ecs.ComponentTypeEquipment,
+				"player_entity_id", playerEntityID,
+				"item_entity_id", itemEntityID,
+			)
+			return ErrComponentCouldNotBeAsserted
+		}
+
+		// --- update equipment ---
+		// TODO: WIP equipment updates
+		slog.Warn("equipment implementation not done",
+			"equipment", equipment)
+		return nil
+	}
+
+	if action == constants.ActionUnequip {
+		slog.Debug("Unequipping item",
+			"player_entity_id", playerEntityID,
+			"item_entity_id", itemEntityID,
+		)
+	}
+	return nil
+}
+
 func (s *Session) handlePlayerEscape(playerID uuid.UUID) {
 	s.mu.Lock()
 	s.escapeSuccess = true
@@ -1293,6 +1353,11 @@ func (s *Session) manageEliminations() {
 * Handles all processes at the end of a match session.
 **/
 func (s *Session) endSession() {
+	slog.Info("Shutting down game session", "sessionID", s.ID)
+
+	// remove session from server
+	s.sessionCloser.CloseSession(s.ID)
+
 	// clean up
 	s.Shutdown()
 

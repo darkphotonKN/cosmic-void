@@ -34,6 +34,7 @@ type PlayerConfig struct {
 	AttackActive  bool
 	HasHit        bool
 	Escape        bool
+	PlayerLoadout *components.EquipmentConfig
 }
 
 func CreatePlayerEntity(em *ecs.EntityManager, config PlayerConfig) *ecs.Entity {
@@ -51,6 +52,9 @@ func CreatePlayerEntity(em *ecs.EntityManager, config PlayerConfig) *ecs.Entity 
 	entity.AddComponent(components.NewItemIDListComponent(config.ItemIDList))
 
 	entity.AddComponent(components.NewStatsComponent())
+
+	// initialize equipment with loadout
+	entity.AddComponent(components.NewEquipmentComponent(config.PlayerLoadout))
 
 	return entity
 }
