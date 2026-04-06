@@ -138,3 +138,20 @@ type ItemConfig struct {
 	SellPrice       int
 	Description     string
 }
+
+type ItemType string
+
+const (
+	ItemTypeWeapon     ItemType = "weapon"
+	ItemTypeArmor      ItemType = "armor"
+	ItemTypeConsumable ItemType = "consumable"
+)
+
+type ArmorSlot string
+
+const (
+	ArmorSlotHead   ArmorSlot = "head"
+	ArmorSlotChest  ArmorSlot = "chest"
+	ArmorSlotLegs   ArmorSlot = "legs"
+	ArmorSlotGloves ArmorSlot = "gloves"
+)

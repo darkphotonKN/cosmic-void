@@ -1026,16 +1026,10 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 }
 
 func (s *Session) handleEquip(action constants.Action, playerEntityID uuid.UUID, itemEntityID uuid.UUID) error {
-	itemEntity, itemExists := s.EntityManager.GetEntity(itemEntityID)
 
-	if !itemExists {
-		slog.Error("Target item entity not found",
-			"player_entity_id", playerEntityID,
-			"item_entity_id", itemEntityID,
-		)
-		return ErrEntityNotFound
-	}
+	// --- state retrieval and validation ---
 
+	// -- player & equipment
 	playerEntity, playerExists := s.EntityManager.GetEntity(playerEntityID)
 
 	if !playerExists {
@@ -1074,10 +1068,60 @@ func (s *Session) handleEquip(action constants.Action, playerEntityID uuid.UUID,
 			return ErrComponentCouldNotBeAsserted
 		}
 
-		// --- update equipment ---
-		// TODO: WIP equipment updates
-		slog.Warn("equipment implementation not done",
-			"equipment", equipment)
+		// -- item --
+		itemEntity, itemExists := s.EntityManager.GetEntity(itemEntityID)
+
+		if !itemExists {
+			slog.Error("Target item entity not found",
+				"player_entity_id", playerEntityID,
+				"item_entity_id", itemEntityID,
+			)
+			return ErrEntityNotFound
+		}
+
+		itemComp, exists := itemEntity.GetComponent(ecs.ComponentTypeItem)
+
+		if !exists {
+			slog.Error("Component not found in entity not found",
+				"component_type", ecs.ComponentTypeItem,
+				"player_entity_id", playerEntityID,
+				"item_entity_id", itemEntityID,
+			)
+			return ErrComponentNotFound
+		}
+
+		item, ok := itemComp.(*components.ItemComponent)
+
+		if !ok {
+			slog.Error("Item component could not be asserted to expect typed.",
+				"component_type", ecs.ComponentTypeItem,
+				"player_entity_id", playerEntityID,
+				"item_entity_id", itemEntityID,
+			)
+			return ErrComponentCouldNotBeAsserted
+		}
+
+		// --- update equipment flow ---
+
+		switch types.ItemType(item.ItemType) {
+
+		// -- weapon --
+		case types.ItemTypeWeapon:
+			// weapon just direct update
+			return nil
+
+		// -- armor --
+		case types.ItemTypeArmor:
+			// check for specific armor slots
+			switch types.ArmorSlot(item.ArmorSlot) {
+
+			case types.ArmorSlotHead:
+			}
+
+		case types.ItemTypeConsumable:
+
+		}
+
 		return nil
 	}
 
