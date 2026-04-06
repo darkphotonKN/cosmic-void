@@ -266,6 +266,7 @@ func (s *Session) manageClientMessages() {
 						"error", err)
 					s.sender.SendMessageToPlayer(playerID, types.Message{})
 				}
+
 			case constants.ActionAttack:
 				slog.Debug("Action from client was attack")
 				parsedPayload, err := msg.Message.ParsePayload()
@@ -306,6 +307,45 @@ func (s *Session) manageClientMessages() {
 				if err != nil {
 					s.sender.SendMessageToPlayer(playerID, types.Message{})
 				}
+
+			case constants.ActionEquip, constants.ActionUnequip:
+				parsedPayload, err := msg.Message.ParsePayload()
+
+				if err != nil {
+					slog.Error("Failed to parse payload - types don't match", "payload", parsedPayload, "error", err)
+					// Get playerID from payload if possible, otherwise skip sending error to specific player
+					if playerIDStr, ok := msg.Message.Payload["player_id"].(string); ok {
+						if playerID, parseErr := uuid.Parse(playerIDStr); parseErr == nil {
+							s.sendErrorToPlayer(playerID, msg.Message.Action, "failed to parse move request")
+						}
+					}
+					continue
+				}
+
+				playerEquipPayload := parsedPayload.(*types.PlayerEquipPayload)
+
+				playerID, err := uuid.Parse(playerEquipPayload.PlayerID)
+				if err != nil {
+					slog.Error("Invalid PlayerID from session payload", "player_id", playerEquipPayload.PlayerID, "error", err)
+					continue
+				}
+
+				itemEntityID, err := uuid.Parse(playerEquipPayload.ItemEntityID)
+				if err != nil {
+					slog.Error("Invalid itemEntityID from session payload", "item_entity_id", playerEquipPayload.ItemEntityID, "error", err)
+					continue
+				}
+
+				err = s.handleEquip(constants.Action(msg.Message.Action), playerID, itemEntityID)
+				if err != nil {
+					slog.Error("Couldnt complete updating player equipment with handleEquip or handleUnquip actions.",
+						"action", msg.Message.Action,
+						"player_id", playerEquipPayload.PlayerID,
+						"item_entity_id", playerEquipPayload.ItemEntityID,
+						"error", err,
+					)
+				}
+
 			}
 
 		case <-s.stopChan:
@@ -1040,97 +1080,118 @@ func (s *Session) handleEquip(action constants.Action, playerEntityID uuid.UUID,
 		return ErrEntityNotFound
 	}
 
-	if action == constants.ActionEquip {
-		slog.Debug("Equipping item",
+	slog.Debug("Equipping item",
+		"player_entity_id", playerEntityID,
+		"item_entity_id", itemEntityID,
+	)
+
+	equipmentComp, exists := playerEntity.GetComponent(ecs.ComponentTypeEquipment)
+
+	if !exists {
+		slog.Error("Component not found in entity not found",
+			"component_type", ecs.ComponentTypeEquipment,
 			"player_entity_id", playerEntityID,
 			"item_entity_id", itemEntityID,
 		)
-
-		equipmentComp, exists := playerEntity.GetComponent(ecs.ComponentTypeEquipment)
-
-		if !exists {
-			slog.Error("Component not found in entity not found",
-				"component_type", ecs.ComponentTypeEquipment,
-				"player_entity_id", playerEntityID,
-				"item_entity_id", itemEntityID,
-			)
-			return ErrComponentNotFound
-		}
-
-		equipment, ok := equipmentComp.(*components.EquipmentComponent)
-
-		if !ok {
-			slog.Error("Equipment component could not be asserted to expect typed.",
-				"component_type", ecs.ComponentTypeEquipment,
-				"player_entity_id", playerEntityID,
-				"item_entity_id", itemEntityID,
-			)
-			return ErrComponentCouldNotBeAsserted
-		}
-
-		// -- item --
-		itemEntity, itemExists := s.EntityManager.GetEntity(itemEntityID)
-
-		if !itemExists {
-			slog.Error("Target item entity not found",
-				"player_entity_id", playerEntityID,
-				"item_entity_id", itemEntityID,
-			)
-			return ErrEntityNotFound
-		}
-
-		itemComp, exists := itemEntity.GetComponent(ecs.ComponentTypeItem)
-
-		if !exists {
-			slog.Error("Component not found in entity not found",
-				"component_type", ecs.ComponentTypeItem,
-				"player_entity_id", playerEntityID,
-				"item_entity_id", itemEntityID,
-			)
-			return ErrComponentNotFound
-		}
-
-		item, ok := itemComp.(*components.ItemComponent)
-
-		if !ok {
-			slog.Error("Item component could not be asserted to expect typed.",
-				"component_type", ecs.ComponentTypeItem,
-				"player_entity_id", playerEntityID,
-				"item_entity_id", itemEntityID,
-			)
-			return ErrComponentCouldNotBeAsserted
-		}
-
-		// --- update equipment flow ---
-
-		switch types.ItemType(item.ItemType) {
-
-		// -- weapon --
-		case types.ItemTypeWeapon:
-			// weapon just direct update
-			return nil
-
-		// -- armor --
-		case types.ItemTypeArmor:
-			// check for specific armor slots
-			switch types.ArmorSlot(item.ArmorSlot) {
-
-			case types.ArmorSlotHead:
-			}
-
-		case types.ItemTypeConsumable:
-
-		}
-
-		return nil
+		return ErrComponentNotFound
 	}
+
+	equipment, ok := equipmentComp.(*components.EquipmentComponent)
+
+	if !ok {
+		slog.Error("Equipment component could not be asserted to expect typed.",
+			"component_type", ecs.ComponentTypeEquipment,
+			"player_entity_id", playerEntityID,
+			"item_entity_id", itemEntityID,
+		)
+		return ErrComponentCouldNotBeAsserted
+	}
+
+	// -- item --
+	itemEntity, itemExists := s.EntityManager.GetEntity(itemEntityID)
+
+	if !itemExists {
+		slog.Error("Target item entity not found",
+			"player_entity_id", playerEntityID,
+			"item_entity_id", itemEntityID,
+		)
+		return ErrEntityNotFound
+	}
+
+	itemComp, exists := itemEntity.GetComponent(ecs.ComponentTypeItem)
+
+	if !exists {
+		slog.Error("Component not found in entity not found",
+			"component_type", ecs.ComponentTypeItem,
+			"player_entity_id", playerEntityID,
+			"item_entity_id", itemEntityID,
+		)
+		return ErrComponentNotFound
+	}
+
+	item, ok := itemComp.(*components.ItemComponent)
+
+	if !ok {
+		slog.Error("Item component could not be asserted to expect typed.",
+			"component_type", ecs.ComponentTypeItem,
+			"player_entity_id", playerEntityID,
+			"item_entity_id", itemEntityID,
+		)
+		return ErrComponentCouldNotBeAsserted
+	}
+
+	// decide equip / unequip
+	itemToUpdateID := &itemEntityID
 
 	if action == constants.ActionUnequip {
-		slog.Debug("Unequipping item",
-			"player_entity_id", playerEntityID,
-			"item_entity_id", itemEntityID,
-		)
+		itemToUpdateID = nil
 	}
+
+	// --- update equipment flow ---
+
+	switch types.ItemType(item.ItemType) {
+
+	// -- weapon --
+	case types.ItemTypeWeapon:
+		// weapon just direct update
+		equipment.WeaponSlot = itemToUpdateID
+		return nil
+
+	// -- armor --
+	case types.ItemTypeArmor:
+		// check for specific armor slots
+		switch types.ArmorSlot(item.ArmorSlot) {
+
+		case types.ArmorSlotHead:
+			equipment.HeadSlot = itemToUpdateID
+			return nil
+
+		case types.ArmorSlotChest:
+			equipment.ChestSlot = itemToUpdateID
+			return nil
+
+		case types.ArmorSlotGloves:
+			equipment.GlovesSlot = itemToUpdateID
+			return nil
+
+		case types.ArmorSlotLegs:
+			equipment.LegsSlot = itemToUpdateID
+			return nil
+		}
+
+	case types.ItemTypeConsumable:
+		// find available slot
+		if equipment.Consumable1 == nil {
+			equipment.Consumable1 = itemToUpdateID
+		} else if equipment.Consumable2 == nil {
+			equipment.Consumable2 = itemToUpdateID
+		} else if equipment.Consumable3 == nil {
+			equipment.Consumable3 = itemToUpdateID
+		} else {
+			return fmt.Errorf("All consumable slots full")
+		}
+	}
+
 	return nil
 }
 
@@ -1537,7 +1598,7 @@ func (s *Session) InitializeItems(ctx context.Context) error {
 
 				DefenseRating:   int(item.DefenseRating),
 				MagicResistance: int(item.MagicResistance),
-				ArmorSlot:       item.ArmorSlot,
+				ArmorSlot:       types.ArmorSlot(item.ArmorSlot),
 			}
 
 			s.itemPool.Weapons = append(s.itemPool.Weapons, &newItemConfig)

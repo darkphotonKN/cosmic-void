@@ -108,7 +108,7 @@ type ItemConfig struct {
 	WeaponType      string
 	DefenseRating   int
 	MagicResistance int
-	ArmorSlot       string
+	ArmorSlot       types.ArmorSlot
 	HealingAmount   int
 	ManaAmount      int
 	BuffDuration    int

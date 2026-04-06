@@ -9,6 +9,7 @@ import (
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/items"
 
+	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/ecs"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/messaging"
@@ -885,4 +886,14 @@ func (s *mockStateSerializer) SerializeBackendState(ctx context.Context, session
 
 func (s *mockStateSerializer) FormatStateToClientState(backendState *types.BackendGameState, playerID uuid.UUID) *types.ClientGameState {
 	return nil
+}
+
+func TestSession_HandleEquip(t *testing.T) {
+	tt := []struct {
+		action         constants.Action
+		playerEntityID uuid.UUID
+		itemEntityID   uuid.UUID
+		wantErr        bool
+	}{}
+
 }

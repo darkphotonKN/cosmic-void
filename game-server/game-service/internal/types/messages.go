@@ -142,3 +142,8 @@ type PlayerSectionAttackPayload struct {
 	PlayerSessionPayload
 	EnemyEntityID string `json:"enemy_entity_id"`
 }
+
+type PlayerEquipPayload struct {
+	PlayerSessionPayload
+	ItemEntityID string `json:"item_entity_id"`
+}

@@ -10,10 +10,10 @@ type EquipmentComponent struct {
 	WeaponSlot *uuid.UUID
 
 	// Armor
-	HeadSlot  *uuid.UUID
-	BodySlot  *uuid.UUID
-	HandsSlot *uuid.UUID
-	FeetSlot  *uuid.UUID
+	HeadSlot   *uuid.UUID
+	ChestSlot  *uuid.UUID
+	GlovesSlot *uuid.UUID
+	LegsSlot   *uuid.UUID
 
 	// Accessories
 	Ring1Slot *uuid.UUID
@@ -30,10 +30,10 @@ type EquipmentConfig struct {
 	WeaponSlot *uuid.UUID
 
 	// Armor
-	HeadSlot  *uuid.UUID
-	BodySlot  *uuid.UUID
-	HandsSlot *uuid.UUID
-	FeetSlot  *uuid.UUID
+	HeadSlot   *uuid.UUID
+	ChestSlot  *uuid.UUID
+	GlovesSlot *uuid.UUID
+	LegsSlot   *uuid.UUID
 
 	// Accessories
 	Ring1Slot *uuid.UUID
@@ -57,9 +57,9 @@ func NewEquipmentComponent(config *EquipmentConfig) *EquipmentComponent {
 	return &EquipmentComponent{
 		WeaponSlot:  config.WeaponSlot,
 		HeadSlot:    config.HeadSlot,
-		BodySlot:    config.BodySlot,
-		HandsSlot:   config.HandsSlot,
-		FeetSlot:    config.FeetSlot,
+		ChestSlot:   config.ChestSlot,
+		GlovesSlot:  config.GlovesSlot,
+		LegsSlot:    config.LegsSlot,
 		Ring1Slot:   config.Ring1Slot,
 		Ring2Slot:   config.Ring2Slot,
 		Consumable1: config.Consumable1,

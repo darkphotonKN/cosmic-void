@@ -52,7 +52,7 @@ type ItemState struct {
 	CriticalRate  float32   `json:"critical_rate,omitempty"`  // weapon
 	WeaponType    string    `json:"weapon_type,omitempty"`    // weapon
 	DefenseRating int32     `json:"defense_rating,omitempty"` // armor
-	ArmorSlot     string    `json:"armor_slot,omitempty"`     // armor
+	ArmorSlot     ArmorSlot `json:"armor_slot,omitempty"`     // armor
 	HealingAmount int32     `json:"healing_amount,omitempty"` // consumable
 	ManaAmount    int32     `json:"mana_amount,omitempty"`    // consumable
 	Description   string    `json:"description,omitempty"`    // all types
@@ -130,7 +130,7 @@ type ItemConfig struct {
 	WeaponType      string
 	DefenseRating   int
 	MagicResistance int
-	ArmorSlot       string
+	ArmorSlot       ArmorSlot
 	HealingAmount   int
 	ManaAmount      int
 	BuffDuration    int

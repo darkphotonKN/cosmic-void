@@ -19,7 +19,7 @@ type ItemComponent struct {
 	// Armor stats
 	DefenseRating   int
 	MagicResistance int
-	ArmorSlot       string
+	ArmorSlot       types.ArmorSlot
 
 	// Consumable stats
 	HealingAmount int

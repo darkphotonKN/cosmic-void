@@ -475,11 +475,49 @@ export class EquipmentPanel {
     const validSlots = getValidSlotsForItem(item);
     if (validSlots.length === 0) return;
 
+    // Consumables auto-equip into the first empty consumable slot — no menu
+    if (getItemType(item) === 'consumable') {
+      const emptySlot = validSlots.find(slot => this.equipped[slot] === null);
+      if (!emptySlot) {
+        this.showFlashMessage('All consumable slots are full', screenX, screenY);
+        return;
+      }
+      this.equipItem(item, emptySlot);
+      return;
+    }
+
     const options: ContextMenuOption[] = validSlots.map(slot => ({
       label: `Equip to ${getSlotDisplayName(slot)}`,
       action: () => { this.equipItem(item, slot); this.dismissContextMenu(); },
     }));
     this.buildContextMenu(options, screenX, screenY);
+  }
+
+  private showFlashMessage(message: string, screenX: number, screenY: number): void {
+    const padding = 12;
+    const text = this.scene.add.text(0, 0, message, {
+      fontSize: '12px', color: '#ff6688', letterSpacing: 1,
+    });
+    const bg = this.scene.add.graphics();
+    const w = text.width + padding * 2;
+    const h = text.height + padding;
+    bg.fillStyle(0x080810, 0.95);
+    bg.fillRoundedRect(0, 0, w, h, 6);
+    bg.lineStyle(1, 0xff6688, 0.5);
+    bg.strokeRoundedRect(0, 0, w, h, 6);
+    text.setPosition(padding, padding / 2);
+
+    let x = screenX + 14;
+    let y = screenY - 10;
+    const cam = this.scene.cameras.main;
+    if (x + w > cam.width) x = cam.width - w - 4;
+    if (y + h > cam.height) y = cam.height - h - 4;
+
+    const flash = this.scene.add.container(x, y, [bg, text]);
+    flash.setDepth(2300);
+    flash.setScrollFactor(0);
+
+    this.scene.time.delayedCall(1500, () => flash.destroy());
   }
 
   private showUnequipMenu(item: ItemState, slot: EquipmentSlot, screenX: number, screenY: number): void {
