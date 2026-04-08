@@ -94,6 +94,7 @@ type RankedPlayerState struct {
 }
 
 type WallState struct {
+	HouseID  uuid.UUID `json:"house_id"`
 	EntityID uuid.UUID `json:"entity_id"`
 	Position *Position `json:"position"`
 	Width    float64   `json:"width"`

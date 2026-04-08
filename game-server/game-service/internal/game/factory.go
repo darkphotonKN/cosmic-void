@@ -91,10 +91,10 @@ type WallConfig struct {
 	X, Y, Width, Height float64
 }
 
-func CreateWallEntity(em *ecs.EntityManager, wallConfig WallConfig) *ecs.Entity {
+func CreateWallEntity(em *ecs.EntityManager, wallConfig WallConfig, houseID uuid.UUID) *ecs.Entity {
 	entity := em.CreateEntity()
 	wallID := uuid.New()
-	entity.AddComponent(components.NewWallComponent(wallID, wallConfig.Width, wallConfig.Height))
+	entity.AddComponent(components.NewWallComponent(houseID, wallID, wallConfig.Width, wallConfig.Height))
 	entity.AddComponent(components.NewTransformComponent(wallConfig.X, wallConfig.Y))
 	return entity
 }

@@ -72,6 +72,9 @@ type Session struct {
 	switchEntityIDs  []uuid.UUID
 	exitDoorEntityID uuid.UUID
 	escapeSuccess    bool
+
+	// objects occpied areas, check if placing objects at the same position
+	objectOccupiedPlaceAreas []PlaceArea
 }
 
 type SessionCloser interface {
@@ -519,7 +522,7 @@ func (s *Session) AddContainer(x, y float64) uuid.UUID {
 func (s *Session) AddBuilding(bx, by, bw, bh, wallThickness, doorWidth float64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
+	houseID := uuid.New()
 	doorOffset := (bw - doorWidth) / 2
 
 	walls := []WallConfig{
@@ -536,7 +539,7 @@ func (s *Session) AddBuilding(bx, by, bw, bh, wallThickness, doorWidth float64) 
 	}
 
 	for _, wallConfig := range walls {
-		CreateWallEntity(s.EntityManager, wallConfig)
+		CreateWallEntity(s.EntityManager, wallConfig, houseID)
 	}
 
 	// 門（下牆缺口處，比牆壁薄）
@@ -1516,15 +1519,34 @@ func (s *Session) InitialSystems() {
 	CreateMatchProgressEntity(s.EntityManager)
 }
 
+type PlaceArea struct {
+	X, Y, W, H float64
+}
+
+type BuildingType string
+
+const (
+	BuildingTypeSmall  BuildingType = "small"
+	BuildingTypeMedium BuildingType = "medium"
+	BuildingTypeLarge  BuildingType = "large"
+)
+
+type Building struct {
+	W, H float64
+}
+
 func (s *Session) InitialMapObjects() {
-	// add container (ensure it's not cut off at edges)
-	containerX := constants.ContainerWidthRadius + rand.Float64()*(constants.MapWidth-2*constants.ContainerWidthRadius)
-	containerY := constants.ContainerHeightRadius + rand.Float64()*(constants.MapHeight-2*constants.ContainerHeightRadius)
-	s.AddContainer(containerX, containerY)
+	s.CreateContainer()
 
-	// add building (300x240, wall thickness 20, door width 50, door on bottom)
-	s.AddBuilding(400, 300, 300, 240, 20, 50)
+	buildingConfigs := map[BuildingType]Building{
+		BuildingTypeSmall:  {W: 300, H: 200},
+		BuildingTypeMedium: {W: 400, H: 300},
+		BuildingTypeLarge:  {W: 500, H: 400},
+	}
 
+	for _, buildConfig := range buildingConfigs {
+		s.CreateBuilding(buildConfig)
+	}
 	// add EscapeDoor
 	exitDoorX := constants.ContainerWidthRadius + rand.Float64()*(constants.MapWidth-2*constants.ContainerWidthRadius)
 	exitDoorY := constants.ContainerHeightRadius + rand.Float64()*(constants.MapHeight-2*constants.ContainerHeightRadius)
@@ -1653,4 +1675,57 @@ func (s *Session) InitializeItems(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (s *Session) IsAreaOccupied(placeArea PlaceArea) bool {
+	for _, occupiedArea := range s.objectOccupiedPlaceAreas {
+		if placeArea.X < occupiedArea.X+occupiedArea.W &&
+			placeArea.X+placeArea.W > occupiedArea.X &&
+			placeArea.Y < occupiedArea.Y+occupiedArea.H &&
+			placeArea.Y+placeArea.H > occupiedArea.Y {
+			return true
+		}
+	}
+	return false
+}
+func (s *Session) CreateContainer() {
+	containerW := constants.ContainerWidthRadius*2 + 20
+	containerH := constants.ContainerHeightRadius*2 + 20
+	for i := 0; i < 100; i++ {
+		placeArea := PlaceArea{
+			X: rand.Float64() * (constants.MapWidth - containerW),
+			Y: rand.Float64() * (constants.MapHeight - containerH),
+			W: containerW,
+			H: containerH,
+		}
+		if !s.IsAreaOccupied(placeArea) {
+			// placeArea is top-left with padding=10, convert to center for AddContainer
+			containerX := placeArea.X + 10 + constants.ContainerWidthRadius
+			containerY := placeArea.Y + 10 + constants.ContainerHeightRadius
+
+			s.AddContainer(containerX, containerY)
+			s.objectOccupiedPlaceAreas = append(s.objectOccupiedPlaceAreas, placeArea)
+			break
+		}
+	}
+
+}
+
+func (s *Session) CreateBuilding(buildConfig Building) {
+	buildingPadding := 60.0
+	buildingW := buildConfig.W + buildingPadding*2
+	buildingH := buildConfig.H + buildingPadding*2
+	for i := 0; i < 100; i++ {
+		placeArea := PlaceArea{
+			X: rand.Float64() * (constants.MapWidth - buildingW),
+			Y: rand.Float64() * (constants.MapHeight - buildingH),
+			W: buildingW,
+			H: buildingH,
+		}
+		if !s.IsAreaOccupied(placeArea) {
+			s.AddBuilding(placeArea.X+buildingPadding, placeArea.Y+buildingPadding, buildConfig.W, buildConfig.H, 20, 50)
+			s.objectOccupiedPlaceAreas = append(s.objectOccupiedPlaceAreas, placeArea)
+			break
+		}
+	}
 }
