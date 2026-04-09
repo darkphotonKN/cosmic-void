@@ -42,7 +42,7 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 
 	data, err := authClient.GetMember(c.Request.Context(), grpcPayload)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "user is not exist"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user does not exist"})
 		return
 	}
 

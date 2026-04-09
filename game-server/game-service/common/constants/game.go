@@ -24,6 +24,7 @@ const (
 	// system actions
 	ActionError   Action = "error"
 	ActionSuccess Action = "success"
+	ActionEndGame Action = "end_game"
 )
 
 const (

@@ -1395,7 +1395,7 @@ func (s *Session) findSingleItemBase(itemType types.ItemType) (*types.ItemConfig
 
 /**
 * sendErrorToPlayer sends a structured error message to a specific player.
-* It provides user-friendly messages to the client.
+* It provides user friendly messages to the client.
 **/
 func (s *Session) sendErrorToPlayer(playerID uuid.UUID, action string, userMessage string) {
 	s.sender.SendMessageToPlayer(playerID, types.Message{
@@ -1455,10 +1455,53 @@ func (s *Session) manageEliminations() {
 }
 
 /**
+* notifyPlayersOfGameEnd sends each player an end_game action with their
+* final position. Position 1 = winner; higher numbers = earlier elimination.
+**/
+func (s *Session) notifyPlayersOfGameEnd() {
+	// no concurrent processes here but gather info
+	// during lock to get a consistent copy
+	s.mu.RLock()
+	totalPlayers := len(s.playerIDToEntitiesID)
+	playerIDs := make([]uuid.UUID, 0, totalPlayers)
+	for pid := range s.playerIDToEntitiesID {
+		playerIDs = append(playerIDs, pid)
+	}
+	eliminations := make(map[uuid.UUID]int, len(s.eliminations))
+	for k, v := range s.eliminations {
+		eliminations[k] = v
+	}
+	s.mu.RUnlock()
+
+	// act on it outside without holding lock
+
+	for _, pid := range playerIDs {
+		position := 1
+		if idx, eliminated := eliminations[pid]; eliminated {
+			position = totalPlayers - idx
+		}
+
+		if err := s.sender.SendMessageToPlayer(pid, types.Message{
+			Action: string(constants.ActionEndGame),
+			Payload: map[string]interface{}{
+				"player_id": pid.String(),
+				"position":  position,
+			},
+		}); err != nil {
+			slog.Error("failed to send end_game to player",
+				"sessionID", s.ID, "playerID", pid, "err", err)
+		}
+	}
+}
+
+/**
 * Handles all processes at the end of a match session.
 **/
 func (s *Session) endSession() {
 	slog.Info("Shutting down game session", "sessionID", s.ID)
+
+	// notify each player of their final position before tearing channels down
+	s.notifyPlayersOfGameEnd()
 
 	// remove session from server
 	s.sessionCloser.CloseSession(s.ID)
