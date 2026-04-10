@@ -59,6 +59,9 @@ export class CosmicVoidScene extends Phaser.Scene {
   // In-game controls panel
   private controlsPanel?: Phaser.GameObjects.Container;
 
+  // End-of-game overlay (shown when server sends end_game action)
+  private gameEndOverlay?: Phaser.GameObjects.Container;
+
   // Game state
   private gameStateUnsubscribe?: () => void;
   private targetPosition: { x: number; y: number } | null = null;
@@ -190,6 +193,67 @@ export class CosmicVoidScene extends Phaser.Scene {
     this.controlsPanel = this.add.container(x, y, children);
     this.controlsPanel.setDepth(1200);
     this.controlsPanel.setScrollFactor(0);
+  }
+
+  private showGameEndOverlay(position: number): void {
+    if (this.gameEndOverlay) return; // already shown
+
+    const cam = this.cameras.main;
+    const isVictory = position === 1;
+
+    // full-screen backdrop — eats pointer input from anything beneath
+    const backdrop = this.add.rectangle(
+      cam.width / 2,
+      cam.height / 2,
+      cam.width,
+      cam.height,
+      0x0a0a12,
+      0.85,
+    );
+    backdrop.setInteractive();
+
+    // centered card
+    const cardW = 460;
+    const cardH = 220;
+    const card = this.add.graphics();
+    card.fillStyle(0x0a0a12, 0.95);
+    card.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 10);
+    card.lineStyle(1, 0x00f0ff, 0.5);
+    card.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 10);
+
+    const titleStr = isVictory ? "VICTORY!" : `YOU PLACED #${position}`;
+    const title = this.add.text(0, -28, titleStr, {
+      fontSize: "44px",
+      color: "#00f0ff",
+      fontStyle: "bold",
+      letterSpacing: 6,
+    });
+    title.setOrigin(0.5);
+
+    const subtitleStr = isVictory
+      ? "OPERATOR EXTRACTED"
+      : "BETTER LUCK ON YOUR NEXT DEPLOY";
+    const subtitle = this.add.text(0, 32, subtitleStr, {
+      fontSize: "13px",
+      color: "#556677",
+      letterSpacing: 3,
+    });
+    subtitle.setOrigin(0.5);
+
+    const cardContainer = this.add.container(cam.width / 2, cam.height / 2, [
+      card,
+      title,
+      subtitle,
+    ]);
+
+    this.gameEndOverlay = this.add.container(0, 0, [backdrop, cardContainer]);
+    this.gameEndOverlay.setDepth(2000);
+    this.gameEndOverlay.setScrollFactor(0);
+
+    // disable game input — keyboard movement, hover, clicks
+    if (this.input.keyboard) {
+      this.input.keyboard.enabled = false;
+    }
   }
 
   preload(): void {
@@ -1846,6 +1910,10 @@ export class CosmicVoidScene extends Phaser.Scene {
 
     // E 鍵互動（門、寶箱、開關、逃脫門）
     this.input.keyboard?.on("keydown-E", () => {
+      // When the equipment panel is open, E is owned by the panel
+      // (equip hovered inventory item / unequip hovered slot).
+      if (this.equipmentPanel?.isVisible()) return;
+
       // 檢查後端門
       const nearbyDoor = this.getNearbyDoor();
       if (nearbyDoor) {
@@ -1914,7 +1982,6 @@ export class CosmicVoidScene extends Phaser.Scene {
       // Send to backend
       socketManager.sendMessage(ActionType.Equip, {
         item_entity_id: item.entity_id,
-        slot: slot,
       });
       // Optimistic update
       this.equippedItems[slot] = item;
@@ -1924,7 +1991,6 @@ export class CosmicVoidScene extends Phaser.Scene {
       // Send to backend
       socketManager.sendMessage(ActionType.Unequip, {
         item_entity_id: item.entity_id,
-        slot: slot,
       });
       // Optimistic update
       this.equippedItems[slot] = null;
@@ -2024,6 +2090,12 @@ export class CosmicVoidScene extends Phaser.Scene {
         const color = payload.success ? "#4ecca3" : "#ff4444";
         this.showNotification(payload.message, color);
       }
+    });
+
+    // Listen for end_game — show final position overlay and lock interaction
+    socketManager.on("end_game", (payload: { player_id: string; position: number }) => {
+      console.log("Game ended, final position:", payload);
+      this.showGameEndOverlay(payload.position);
     });
 
     // Reset the logger for new session

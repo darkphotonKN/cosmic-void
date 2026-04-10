@@ -17,6 +17,7 @@ import (
 * traditional handler.
 **/
 func AuthMiddleware() gin.HandlerFunc {
+
 	return func(c *gin.Context) {
 
 		// gets token from header

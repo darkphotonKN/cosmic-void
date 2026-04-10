@@ -22,3 +22,24 @@ message PlayerMatchResult {
     int32 deaths = 6;
     bool escape = 7;
 }
+
+
+message ItemsExtractedEvent {
+  string session_id = 1;
+  repeated PlayerItems playerItems = 4;
+}
+
+message PlayerItems {
+  Equipment equipment = 1;
+ repeated Item inventory = 2;
+}
+
+// equipment
+message Equipment {
+  Item weapon = 1;
+}
+
+// single item
+message Item {
+}
+

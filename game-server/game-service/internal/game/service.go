@@ -44,7 +44,7 @@ func (s *service) PublishMatchComplete(ctx context.Context, data *types.RawMatch
 		commonconstants.GameMatchEnded,
 		commonbroker.Message{
 			ContentType:  "application/protobuf",
-			Body:         protoData,
+			Body:         protoData.MatchEndedEvent,
 			DeliveryMode: amqp.Persistent,
 		})
 
@@ -59,7 +59,7 @@ func (s *service) PublishMatchComplete(ctx context.Context, data *types.RawMatch
 /**
 * Formats from raw game state to match end state.
 **/
-func (s *service) formatMatchData(sessionID uuid.UUID, startedAt time.Time, endedAt time.Time, players []types.RankedPlayerState) ([]byte, error) {
+func (s *service) formatMatchData(sessionID uuid.UUID, startedAt time.Time, endedAt time.Time, players []types.RankedPlayerState) (*types.FormattedMatchData, error) {
 
 	// format data for marshalling as protobuf
 	playerMatchRes := make([]*pb.PlayerMatchResult, len(players))
@@ -77,23 +77,38 @@ func (s *service) formatMatchData(sessionID uuid.UUID, startedAt time.Time, ende
 	}
 
 	// marshal to protobuf
-	protoData, err := proto.Marshal(&pb.MatchEndedEvent{
+	protoData, matchEndedErr := proto.Marshal(&pb.MatchEndedEvent{
 		SessionId:      string(sessionID.String()),
 		MatchStartedAt: timestamppb.New(startedAt),
 		MatchEndedAt:   timestamppb.New(endedAt),
 		Players:        playerMatchRes,
 	})
 
-	if err != nil {
+	if matchEndedErr != nil {
 		slog.Error("could not marshal end match data to MatchEndedEvent proto",
 			"session_id", sessionID,
-			"error", err,
+			"error", matchEndedErr,
 		)
-
-		return nil, err
 	}
 
-	return protoData, nil
+	itemsExtractedProtoData, itemsExtractErr := proto.Marshal(&pb.ItemsExtractedEvent{})
+	if itemsExtractErr != nil {
+		slog.Error("could not marshal items extracted event to ItemExtractedEvent proto",
+			"session_id", sessionID,
+			"error", itemsExtractErr,
+		)
+	}
+
+	if matchEndedErr != nil && itemsExtractErr != nil {
+		return nil, matchEndedErr
+	}
+
+	data := &types.FormattedMatchData{
+		MatchEndedEvent:     protoData,
+		ItemsExtractedEvent: itemsExtractedProtoData,
+	}
+
+	return data, nil
 }
 
 /**

@@ -91,6 +91,58 @@ type RankedPlayerState struct {
 	FinalPosition int32
 	Win           bool
 	Escape        bool
+	Equipment     ExtractedEquipment
+}
+
+type ExtractedItem struct {
+	TemplateID uuid.UUID
+	ItemType   string
+	Name       string
+
+	// Weapon stats
+	AttackPower  int
+	CriticalRate float64
+	WeaponType   string
+
+	// Armor stats
+	DefenseRating   int
+	MagicResistance int
+	ArmorSlot       string
+
+	// Consumable stats
+	HealingAmount int
+	ManaAmount    int
+	BuffDuration  int
+
+	// Shared
+	BuyPrice    int
+	SellPrice   int
+	Description string
+}
+
+type ExtractedEquipment struct {
+	// Weapons
+	WeaponSlot *uuid.UUID
+
+	// Armor
+	HeadSlot   *uuid.UUID
+	ChestSlot  *uuid.UUID
+	GlovesSlot *uuid.UUID
+	LegsSlot   *uuid.UUID
+
+	// Accessories
+	Ring1Slot *uuid.UUID
+	Ring2Slot *uuid.UUID
+
+	// Consumablesected events
+	Consumable1 *uuid.UUID
+	Consumable2 *uuid.UUID
+	Consumable3 *uuid.UUID
+}
+
+type FormattedMatchData struct {
+	MatchEndedEvent     []byte
+	ItemsExtractedEvent []byte
 }
 
 type WallState struct {

@@ -34,12 +34,10 @@ export interface InteractPayload {
 
 export interface EquipPayload {
   item_entity_id: string;
-  slot: string;
 }
 
 export interface UnequipPayload {
   item_entity_id: string;
-  slot: string;
 }
 
 // ====== 動作類型對應 Payload ======

@@ -1140,8 +1140,12 @@ func (s *Session) handleEquip(action constants.Action, playerEntityID uuid.UUID,
 		return ErrComponentCouldNotBeAsserted
 	}
 
-	// decide equip / unequip
 	itemToUpdateID := &itemEntityID
+
+	// decide equip / unequip
+
+	// TODO: add adding back or removal of item from / into inventory
+	// due to equip / unequip
 
 	if action == constants.ActionUnequip {
 		itemToUpdateID = nil
@@ -1523,6 +1527,24 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 
 	entities := s.EntityManager.GetAllEntities()
 
+	// -- item data --
+
+	itemsMap := make(map[uuid.UUID]*components.ItemComponent)
+	for _, entity := range entities {
+
+		itemComp, isItem := entity.GetComponent(ecs.ComponentTypeItem)
+		if !isItem {
+			continue
+		}
+
+		item, ok := itemComp.(*components.ItemComponent)
+		if !ok {
+			continue
+		}
+
+		itemsMap[entity.ID] = item
+	}
+
 	// --- player data ---
 	for _, entity := range entities {
 		playerComponent, isPlayer := entity.GetComponent(ecs.ComponentTypePlayer)
@@ -1531,8 +1553,27 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 		if isPlayer {
 			// assert back to component's original type
 			playerState := playerComponent.(*components.PlayerComponent)
-			statsComp, _ := entity.GetComponent(ecs.ComponentTypeStats)
+			statsComp, hasStats := entity.GetComponent(ecs.ComponentTypeStats)
+			equipmentComp, hasEquipment := entity.GetComponent(ecs.ComponentTypeEquipment)
+
+			// malformed player, just skip
+			if !hasEquipment || !hasStats {
+				slog.Warn("Malformed player state object when rtying to extract raw state at match end.",
+					"player_id", playerState.MemberID)
+				continue
+			}
+
 			stats := statsComp.(*components.StatsComponent)
+			equipment := equipmentComp.(*components.EquipmentComponent)
+
+			extractedEquipment := types.ExtractedEquipment{}
+
+			if equipment.WeaponSlot != nil {
+				_, ok := itemsMap[*equipment.WeaponSlot]
+				if ok {
+					extractedEquipment.WeaponSlot = equipment.WeaponSlot
+				}
+			}
 
 			rawPlayers = append(rawPlayers, types.RawPlayerState{
 				MemberID: playerState.MemberID.String(),

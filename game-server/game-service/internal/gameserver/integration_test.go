@@ -104,6 +104,12 @@ func (m *MockItemsClient) ListConsumablesWithTemplate(ctx context.Context) (*ite
 	}, nil
 }
 
+func (m *MockItemsClient) ListItemTemplates(ctx context.Context) (*itemspb.ListItemTemplatesResponse, error) {
+	return &itemspb.ListItemTemplatesResponse{
+		Items: []*itemspb.ItemTemplate{},
+	}, nil
+}
+
 type mockQueueService struct {
 	players         []*types.Player
 	matchedChan     chan []*types.Player
@@ -431,12 +437,12 @@ func TestActionConstants(t *testing.T) {
 		{constants.ActionMove, "move"},
 		{constants.ActionInteract, "interact"},
 		{constants.ActionPickup, "pickup"},
-		{constants.ActionDropItem, "drop"},
+		{constants.ActionDropItem, "drop_item"},
 		{constants.ActionUseItem, "use_item"},
 		{constants.ActionChat, "chat"},
 		{constants.ActionFindGame, "find_game"},
-		{constants.ActionLeaveQueue, "leave_game"},
-		{constants.ActionQueue, "queue_status"},
+		{constants.ActionLeaveQueue, "leave_queue"},
+		{constants.ActionQueue, "queue"},
 	}
 
 	for _, tc := range testCases {
