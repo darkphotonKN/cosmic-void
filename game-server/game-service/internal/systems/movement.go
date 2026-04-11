@@ -66,7 +66,7 @@ func (s *MovementSystem) Update(deltaTime float64, entities []*ecs.Entity) {
 		dx := velocity.VX * velocity.Speed * deltaTime
 		dy := velocity.VY * velocity.Speed * deltaTime
 
-		// split-axis swept collision: X first
+		// split-axis swept collision, X first
 		minTx := 1.0
 
 		// walls
@@ -105,7 +105,7 @@ func (s *MovementSystem) Update(deltaTime float64, entities []*ecs.Entity) {
 
 		newX := transform.X + dx*minTx
 
-		// split-axis swept collision: Y second (using updated newX)
+		// split-axis swept collision, Y second
 		minTy := 1.0
 
 		// walls
@@ -121,7 +121,7 @@ func (s *MovementSystem) Update(deltaTime float64, entities []*ecs.Entity) {
 			}
 		}
 
-		// doors (skip if open)
+		// doors, skip if open
 		for _, doorEntity := range doorEntities {
 			openableC, hasOpenable := doorEntity.GetComponent(ecs.ComponentTypeOpenable)
 			if hasOpenable {
@@ -159,6 +159,31 @@ func (s *MovementSystem) Update(deltaTime float64, entities []*ecs.Entity) {
 					}
 				}
 			}
+		}
+
+		// depenetration: push player out of walls after entity collision resolve
+		for _, wallEntity := range wallEntities {
+			wallC, _ := wallEntity.GetComponent(ecs.ComponentTypeWall)
+			wallTransformComp, _ := wallEntity.GetComponent(ecs.ComponentTypeTransform)
+			wallTransform := wallTransformComp.(*components.TransformComponent)
+			wall := wallC.(*components.WallComponent)
+
+			newX, newY = depenetrate(newX, newY, wallTransform.X, wallTransform.Y, wall.Width, wall.Height)
+		}
+		for _, doorEntity := range doorEntities {
+			openableC, hasOpenable := doorEntity.GetComponent(ecs.ComponentTypeOpenable)
+			if hasOpenable {
+				openable := openableC.(*components.OpenableComponent)
+				if openable.IsOpen {
+					continue
+				}
+			}
+			doorC, _ := doorEntity.GetComponent(ecs.ComponentTypeDoor)
+			doorTransformComp, _ := doorEntity.GetComponent(ecs.ComponentTypeTransform)
+			doorTransform := doorTransformComp.(*components.TransformComponent)
+			door := doorC.(*components.DoorComponent)
+
+			newX, newY = depenetrate(newX, newY, doorTransform.X, doorTransform.Y, door.Width, door.Height)
 		}
 
 		playerC, _ := targetEntity.GetComponent(ecs.ComponentTypePlayer)
@@ -323,4 +348,48 @@ func SweptY(playerX, playerY, wallX, wallY, wallW, wallH, dy float64) float64 {
 		return 1
 	}
 	return tEnter
+}
+
+func depenetrate(playerX, playerY, wallX, wallY, wallW, wallH float64) (float64, float64) {
+	playerLeft := playerX - constants.PlayerRadius
+	playerRight := playerX + constants.PlayerRadius
+	playerTop := playerY - constants.PlayerRadius
+	playerBottom := playerY + constants.PlayerRadius
+
+	wallRight := wallX + wallW
+	wallBottom := wallY + wallH
+
+	// no overlap
+	if playerRight <= wallX || playerLeft >= wallRight ||
+		playerBottom <= wallY || playerTop >= wallBottom {
+		return playerX, playerY
+	}
+
+	// overlap in each direction
+	overlapLeft := playerRight - wallX
+	overlapRight := wallRight - playerLeft
+	overlapTop := playerBottom - wallY
+	overlapBottom := wallBottom - playerTop
+
+	// push out in the direction of smallest overlap
+	minOverlap := overlapLeft
+	pushX := -overlapLeft
+	pushY := 0.0
+
+	if overlapRight < minOverlap {
+		minOverlap = overlapRight
+		pushX = overlapRight
+		pushY = 0
+	}
+	if overlapTop < minOverlap {
+		minOverlap = overlapTop
+		pushX = 0
+		pushY = -overlapTop
+	}
+	if overlapBottom < minOverlap {
+		pushX = 0
+		pushY = overlapBottom
+	}
+
+	return playerX + pushX, playerY + pushY
 }

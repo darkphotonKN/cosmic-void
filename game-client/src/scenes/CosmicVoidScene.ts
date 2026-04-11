@@ -970,91 +970,103 @@ export class CosmicVoidScene extends Phaser.Scene {
       }
     });
 
-    // 從牆壁反推建築範圍，建立屋頂 + 地板（只做一次）
+    // 從牆壁反推建築範圍，按 house_id 分組建立屋頂 + 地板（只做一次）
     if (!this.serverBuildingsCreated && walls.length > 0) {
       this.serverBuildingsCreated = true;
 
-      // 算出所有牆壁的 bounding box
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      // 按 house_id 分組
+      const houseGroups = new Map<string, WallState[]>();
       walls.forEach((w) => {
-        minX = Math.min(minX, w.position.x);
-        minY = Math.min(minY, w.position.y);
-        maxX = Math.max(maxX, w.position.x + w.width);
-        maxY = Math.max(maxY, w.position.y + w.height);
+        if (!w.house_id) return;
+        const group = houseGroups.get(w.house_id) || [];
+        group.push(w);
+        houseGroups.set(w.house_id, group);
       });
 
-      const bw = maxX - minX;
-      const bh = maxY - minY;
+      let buildingIndex = 0;
+      houseGroups.forEach((houseWalls, houseId) => {
+        // 算出這棟房子的 bounding box
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        houseWalls.forEach((w) => {
+          minX = Math.min(minX, w.position.x);
+          minY = Math.min(minY, w.position.y);
+          maxX = Math.max(maxX, w.position.x + w.width);
+          maxY = Math.max(maxY, w.position.y + w.height);
+        });
 
-      // 地板
-      const floor = this.add.graphics();
-      floor.fillStyle(0x2a3040, 1);
-      floor.fillRect(minX, minY, bw, bh);
-      floor.lineStyle(1, 0x3d4556, 0.4);
-      for (let tx = minX; tx < maxX; tx += 40) {
-        floor.lineBetween(tx, minY, tx, maxY);
-      }
-      for (let ty = minY; ty < maxY; ty += 40) {
-        floor.lineBetween(minX, ty, maxX, ty);
-      }
-      floor.setDepth(1);
+        const bw = maxX - minX;
+        const bh = maxY - minY;
 
-      // 屋頂
-      const roof = this.add.graphics();
-      roof.fillStyle(0x2d3748, 0.97);
-      roof.fillRect(minX - 5, minY - 5, bw + 10, bh + 10);
-      roof.lineStyle(2, 0x4a5568, 1);
-      roof.strokeRect(minX - 5, minY - 5, bw + 10, bh + 10);
-      roof.setDepth(200);
+        // 地板
+        const floor = this.add.graphics();
+        floor.fillStyle(0x2a3040, 1);
+        floor.fillRect(minX, minY, bw, bh);
+        floor.lineStyle(1, 0x3d4556, 0.4);
+        for (let tx = minX; tx < maxX; tx += 40) {
+          floor.lineBetween(tx, minY, tx, maxY);
+        }
+        for (let ty = minY; ty < maxY; ty += 40) {
+          floor.lineBetween(minX, ty, maxX, ty);
+        }
+        floor.setDepth(1);
 
-      // 入口標示（門在下方）
-      const doorMarker = this.add.graphics();
-      doorMarker.setDepth(250);
-      const doorX = minX + bw / 2;
-      const doorY = maxY + 5;
-      const arrowSize = 10;
-      doorMarker.fillStyle(0xffaa44, 1);
-      doorMarker.fillTriangle(
-        doorX, doorY - arrowSize,
-        doorX - arrowSize, doorY + arrowSize,
-        doorX + arrowSize, doorY + arrowSize,
-      );
-      doorMarker.lineStyle(3, 0xffaa44, 0.8);
-      doorMarker.strokeCircle(doorX, doorY, 18);
-      this.tweens.add({
-        targets: doorMarker,
-        alpha: 0.4,
-        duration: 800,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
+        // 屋頂
+        const roof = this.add.graphics();
+        roof.fillStyle(0x2d3748, 0.97);
+        roof.fillRect(minX - 5, minY - 5, bw + 10, bh + 10);
+        roof.lineStyle(2, 0x4a5568, 1);
+        roof.strokeRect(minX - 5, minY - 5, bw + 10, bh + 10);
+        roof.setDepth(200);
+
+        // 入口標示（門在下方）
+        const doorMarker = this.add.graphics();
+        doorMarker.setDepth(250);
+        const doorX = minX + bw / 2;
+        const doorY = maxY + 5;
+        const arrowSize = 10;
+        doorMarker.fillStyle(0xffaa44, 1);
+        doorMarker.fillTriangle(
+          doorX, doorY - arrowSize,
+          doorX - arrowSize, doorY + arrowSize,
+          doorX + arrowSize, doorY + arrowSize,
+        );
+        doorMarker.lineStyle(3, 0xffaa44, 0.8);
+        doorMarker.strokeCircle(doorX, doorY, 18);
+        this.tweens.add({
+          targets: doorMarker,
+          alpha: 0.4,
+          duration: 800,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut",
+        });
+
+        this.outsideObjects.push(roof);
+
+        const wallGroup = this.physics.add.staticGroup();
+        const door = this.add.graphics();
+        door.setDepth(51);
+        const doorCollider = this.add.rectangle(0, 0, 0, 0);
+        doorCollider.setVisible(false);
+
+        const building: Building = {
+          id: `server_building_${buildingIndex}`,
+          x: minX,
+          y: minY,
+          width: bw,
+          height: bh,
+          doorSide: "bottom",
+          wallGroup,
+          roof,
+          floor,
+          doorMarker,
+          door,
+          doorCollider,
+          isOpen: true,
+        };
+        this.buildings.push(building);
+        buildingIndex++;
       });
-
-      this.outsideObjects.push(roof);
-
-      // 用假的 wallGroup 和 door 建立 Building 物件，接入現有的進出建築邏輯
-      const wallGroup = this.physics.add.staticGroup();
-      const door = this.add.graphics();
-      door.setDepth(51);
-      const doorCollider = this.add.rectangle(0, 0, 0, 0);
-      doorCollider.setVisible(false);
-
-      const building: Building = {
-        id: "server_building_0",
-        x: minX,
-        y: minY,
-        width: bw,
-        height: bh,
-        doorSide: "bottom",
-        wallGroup,
-        roof,
-        floor,
-        doorMarker,
-        door,
-        doorCollider,
-        isOpen: true, // 門口是開放的
-      };
-      this.buildings.push(building);
     }
   }
 

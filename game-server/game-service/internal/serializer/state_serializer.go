@@ -231,6 +231,7 @@ func (s *StateSerializer) SerializeBackendState(ctx context.Context, sessionID u
 			if hasTransform {
 				transform := tc.(*components.TransformComponent)
 				wallState := &types.WallState{
+					HouseID:  wall.HouseID,
 					EntityID: entity.ID,
 					Position: &types.Position{
 						X: transform.X,

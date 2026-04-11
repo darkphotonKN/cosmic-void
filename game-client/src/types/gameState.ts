@@ -81,6 +81,7 @@ export interface SwitchState {
 
 // Wall state
 export interface WallState {
+  house_id?: UUID;
   entity_id: UUID;
   position: Position;
   width: number;
