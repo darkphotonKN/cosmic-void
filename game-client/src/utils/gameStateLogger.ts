@@ -1,11 +1,34 @@
 import { ClientGameState, formatPosition, formatVelocity } from '@/types/gameState';
 
+/**
+ * Log levels — same concept as slog on the backend.
+ *
+ *   0 = silent   (nothing)
+ *   1 = error     (errors only)
+ *   2 = info      (connections, equip actions, one-off events)
+ *   3 = debug     (game state ticks — the 30/s firehose)
+ *
+ * Toggle at runtime in the browser console:
+ *   GameStateLogger.setLevel(2)   // see actions, hide ticks
+ *   GameStateLogger.setLevel(3)   // full firehose
+ *   GameStateLogger.setLevel(0)   // silence everything
+ */
 export class GameStateLogger {
   private static updateCount = 0;
   private static lastUpdateTime = Date.now();
   private static updateInterval = 0;
+  private static level = 2; // default: info (no tick spam)
+
+  static setLevel(lvl: number): void {
+    this.level = lvl;
+    console.log(`%c[Logger] level set to ${lvl}`, 'color: #4ecca3; font-weight: bold');
+  }
+
+  static getLevel(): number { return this.level; }
 
   static logGameState(state: ClientGameState): void {
+    if (this.level < 3) return; // skip unless debug level
+
     const timestamp = new Date().toLocaleTimeString();
     const now = Date.now();
 
@@ -109,4 +132,12 @@ export class GameStateLogger {
     this.lastUpdateTime = Date.now();
     console.log('%c🔄 Game state logger reset', 'color: #4ecca3; font-style: italic');
   }
+}
+
+// Expose to browser console for runtime toggling:
+//   GameStateLogger.setLevel(3)  → full firehose
+//   GameStateLogger.setLevel(2)  → actions only (default)
+//   GameStateLogger.setLevel(0)  → silent
+if (typeof window !== 'undefined') {
+  (window as any).GameStateLogger = GameStateLogger;
 }

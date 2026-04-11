@@ -1910,9 +1910,11 @@ export class CosmicVoidScene extends Phaser.Scene {
 
     // E 鍵互動（門、寶箱、開關、逃脫門）
     this.input.keyboard?.on("keydown-E", () => {
-      // When the equipment panel is open, E is owned by the panel
-      // (equip hovered inventory item / unequip hovered slot).
-      if (this.equipmentPanel?.isVisible()) return;
+      // When the equipment panel is open, E equips/unequips the hovered item.
+      if (this.equipmentPanel?.isVisible()) {
+        this.equipmentPanel.handleEquipKey();
+        return;
+      }
 
       // 檢查後端門
       const nearbyDoor = this.getNearbyDoor();

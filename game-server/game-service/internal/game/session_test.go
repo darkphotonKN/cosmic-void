@@ -727,6 +727,87 @@ func (s *mockStateSerializer) FormatStateToClientState(backendState *types.Backe
 	return nil
 }
 
+func TestSession_GenerateItems_CreateAndSerialize(t *testing.T) {
+	// Same mock data as TestSession_GenerateItems_CreateItemEntities — one weapon, one armor, one consumable.
+	mockReturn := &pb.ListItemTemplatesResponse{
+		Items: []*pb.ItemTemplate{
+			{
+				Id:            "aa000000-0000-0000-0000-000000000001",
+				ItemName:      "Vibro-blade",
+				ItemType:      "weapon",
+				AttackPower:   6,
+				CriticalRate:  0.08,
+				WeaponType:    "sword",
+				Description:   "Mono-molecular vibrating combat blade",
+				BaseSellPrice: 2,
+				BaseBuyPrice:  5,
+			},
+			{
+				Id:              "aa000000-0000-0000-0000-000000000007",
+				ItemName:        "Titanium Helmet",
+				ItemType:        "armor",
+				DefenseRating:   3,
+				MagicResistance: 1,
+				ArmorSlot:       "head",
+				Description:     "Standard-issue titanium alloy combat helmet",
+				BaseSellPrice:   1,
+				BaseBuyPrice:    4,
+			},
+			{
+				Id:            "aa000000-0000-0000-0000-000000000023",
+				ItemName:      "Minor Stim Pack",
+				ItemType:      "consumable",
+				HealingAmount: 10,
+				Description:   "Basic nano-med stim injection",
+				BaseSellPrice: 1,
+				BaseBuyPrice:  2,
+			},
+		},
+	}
+
+	// -- setup: real serializer, mock everything else --
+	sender := createMockSender()
+	em := ecs.NewEntityManager()
+	stateSerializer := serializer.NewStateSerializer(em) // real serializer — this is what we're testing
+	mockEmitter := &mockEventEmitter{}
+	mockClient := mockItemsClient{}
+
+	session := NewSession(&mockSessionCloser{}, sender, stateSerializer, em, mockEmitter, &mockClient)
+	session.TestMessageSpy = make(chan types.Message, 1)
+	defer session.Shutdown()
+
+	mockClient.On("ListItemTemplates", mock.Anything).Return(mockReturn, nil)
+
+	err := session.InitializeItems(context.Background())
+	require.NoError(t, err)
+
+	ids, err := session.generateItems()
+	require.NoError(t, err)
+	require.NotEmpty(t, ids)
+
+	// -- grab generated entities and serialize each through getItemState --
+	for _, id := range ids {
+		entity, exists := em.GetEntity(id)
+		require.True(t, exists, "generated entity should exist")
+
+		itemComp, hasItem := entity.GetComponent(ecs.ComponentTypeItem)
+		require.True(t, hasItem, "entity should have ItemComponent")
+
+		item := itemComp.(*components.ItemComponent)
+
+		// TODO: call the serializer to get the ItemState for this entity
+		// hint: you'll need to expose or call getItemState, or use
+		//       SerializeBackendState → FormatStateToClientState if you
+		//       prefer testing the full pipeline.
+
+		_ = item // remove once you start asserting
+
+		// TODO: assert weapon stats land on weapon items, not armor stats
+		// TODO: assert armor stats land on armor items, not weapon stats
+		// TODO: assert consumable stats land on consumable items
+	}
+}
+
 func TestSession_HandleEquip(t *testing.T) {
 	t.Skip("TODO: equip handler test table not yet populated")
 }

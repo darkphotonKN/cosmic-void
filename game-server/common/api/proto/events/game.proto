@@ -30,16 +30,51 @@ message ItemsExtractedEvent {
 }
 
 message PlayerItems {
-  Equipment equipment = 1;
- repeated Item inventory = 2;
+  string member_id = 1;
+  Equipment equipment = 2;
+  repeated Item inventory = 3;
 }
 
-// equipment
+// All equipment slots — mirrors EquipmentComponent in game-service.
+// Each slot holds the full item data (nil when empty).
 message Equipment {
   Item weapon = 1;
+  Item head = 2;
+  Item chest = 3;
+  Item gloves = 4;
+  Item legs = 5;
+  Item ring_1 = 6;
+  Item ring_2 = 7;
+  Item consumable_1 = 8;
+  Item consumable_2 = 9;
+  Item consumable_3 = 10;
 }
 
-// single item
+// Single item — carries everything needed to create an item_instances row.
+// Maps 1:1 with ItemComponent (game-service) and item_instances table (items-service).
 message Item {
+  string template_id = 1;
+  string item_type = 2;         // "weapon", "armor", "consumable"
+  string name = 3;
+
+  // Weapon stats
+  int32 attack_power = 4;
+  double critical_rate = 5;
+  string weapon_type = 6;
+
+  // Armor stats
+  int32 defense_rating = 7;
+  int32 magic_resistance = 8;
+  string armor_slot = 9;        // "head", "chest", "gloves", "legs"
+
+  // Consumable stats
+  int32 healing_amount = 10;
+  int32 mana_amount = 11;
+  int32 buff_duration = 12;
+
+  // Shared
+  int32 buy_price = 13;
+  int32 sell_price = 14;
+  string description = 15;
 }
 

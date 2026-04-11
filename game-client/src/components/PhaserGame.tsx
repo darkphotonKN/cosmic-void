@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import Phaser from "phaser";
 import { MainMenuScene } from "@/scenes/MainMenuScene";
 import { CosmicVoidScene } from "@/scenes/CosmicVoidScene";
@@ -10,15 +10,16 @@ import { LoadoutScene } from "@/scenes/LoadoutScene";
 
 export default function PhaserGame() {
   const gameRef = useRef<Phaser.Game | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    if (gameRef.current) return;
+  const initGame = useCallback(() => {
+    if (gameRef.current || !containerRef.current) return;
 
     const config: Phaser.Types.Core.GameConfig = {
       type: Phaser.AUTO,
       width: 1080,
       height: 720,
-      parent: "game-container",
+      parent: containerRef.current,
       backgroundColor: "#1a1a2e",
       physics: {
         default: "arcade",
@@ -31,18 +32,24 @@ export default function PhaserGame() {
     };
 
     gameRef.current = new Phaser.Game(config);
+  }, []);
+
+  useEffect(() => {
+    // Defer one frame so the browser has painted the container element
+    const raf = requestAnimationFrame(() => initGame());
 
     return () => {
+      cancelAnimationFrame(raf);
       if (gameRef.current) {
         gameRef.current.destroy(true);
         gameRef.current = null;
       }
     };
-  }, []);
+  }, [initGame]);
 
   return (
     <div className="treasure-hunt-wrapper">
-      <div id="game-container" className="treasure-hunt-game-container" />
+      <div ref={containerRef} className="treasure-hunt-game-container" />
     </div>
   );
 }

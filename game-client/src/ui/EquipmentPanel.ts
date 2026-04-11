@@ -104,7 +104,6 @@ export class EquipmentPanel {
   onUnequip?: (item: ItemState, slot: EquipmentSlot) => void;
 
   private pointerMoveHandler?: (p: Phaser.Input.Pointer) => void;
-  private keydownEHandler?: () => void;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -273,14 +272,11 @@ export class EquipmentPanel {
 
     // Input
     this.pointerMoveHandler = (p: Phaser.Input.Pointer) => this.handlePointerMove(p);
-    this.keydownEHandler = () => this.handleEquipKey();
     this.scene.input.on('pointermove', this.pointerMoveHandler);
-    this.scene.input.keyboard?.on('keydown-E', this.keydownEHandler);
   }
 
   private cleanup(): void {
     if (this.pointerMoveHandler) { this.scene.input.off('pointermove', this.pointerMoveHandler); this.pointerMoveHandler = undefined; }
-    if (this.keydownEHandler) { this.scene.input.keyboard?.off('keydown-E', this.keydownEHandler); this.keydownEHandler = undefined; }
     this.slotGraphics.clear();
     this.slotTexts.clear();
     this.invRowGraphics = [];
@@ -473,12 +469,19 @@ export class EquipmentPanel {
    * whatever the cursor is currently hovering. Equipped slot under the cursor
    * takes priority over an inventory row underneath it.
    */
-  private handleEquipKey(): void {
+  handleEquipKey(): void {
+    console.log('[EquipPanel] handleEquipKey called', {
+      visible: this.visible,
+      hoveredSlot: this.hoveredSlot,
+      hoveredInvIndex: this.hoveredInvIndex,
+      hitAreasLength: this.inventoryHitAreas.length,
+    });
     if (!this.visible) return;
 
     // Unequip path: hovering an equipped slot.
     if (this.hoveredSlot) {
       const item = this.equipped[this.hoveredSlot];
+      console.log('[EquipPanel] unequip path', { slot: this.hoveredSlot, hasItem: !!item });
       if (item) {
         this.unequipItem(item, this.hoveredSlot);
         return;
@@ -488,12 +491,14 @@ export class EquipmentPanel {
     // Equip path: hovering an inventory row.
     if (this.hoveredInvIndex >= 0 && this.hoveredInvIndex < this.inventoryHitAreas.length) {
       const item = this.inventoryHitAreas[this.hoveredInvIndex].item;
+      console.log('[EquipPanel] equip path', { index: this.hoveredInvIndex, item });
       this.equipHoveredItem(item);
     }
   }
 
   private equipHoveredItem(item: ItemState): void {
     const validSlots = getValidSlotsForItem(item);
+    console.log('[EquipPanel] equipHoveredItem', { item: item.name, type: getItemType(item), validSlots });
     if (validSlots.length === 0) return;
 
     // Consumables: auto-pick first empty consumable slot, or flash if all full.

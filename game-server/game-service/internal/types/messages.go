@@ -92,6 +92,19 @@ func (m *Message) ParsePayload() (interface{}, error) {
 		fmt.Printf("\n\npayload of action attack was: %+v\n", parsedPayload)
 
 		return parsedPayload, nil
+
+	case constants.ActionEquip, constants.ActionUnequip:
+		parsedPayload := PlayerEquipPayload{
+			PlayerSessionPayload: PlayerSessionPayload{
+				SessionID: m.Payload["session_id"].(string),
+				PlayerID:  m.Payload["player_id"].(string),
+			},
+			ItemEntityID: m.Payload["item_entity_id"].(string),
+		}
+
+		fmt.Printf("\n\npayload of action attack was: %+v\n", parsedPayload)
+
+		return parsedPayload, nil
 	default:
 		return nil, fmt.Errorf("No matching actions.")
 	}

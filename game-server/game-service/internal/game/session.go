@@ -324,6 +324,13 @@ func (s *Session) manageClientMessages() {
 
 				playerEquipPayload := parsedPayload.(*types.PlayerEquipPayload)
 
+				slog.Debug("ParsedPayload of item to equip / unequip",
+					"action", msg.Message.Action,
+					"player_id", playerEquipPayload.PlayerID,
+					"session_id", playerEquipPayload.SessionID,
+					"item_entity_id", playerEquipPayload.ItemEntityID,
+				)
+
 				playerID, err := uuid.Parse(playerEquipPayload.PlayerID)
 				if err != nil {
 					slog.Error("Invalid PlayerID from session payload", "player_id", playerEquipPayload.PlayerID, "error", err)
@@ -1637,7 +1644,7 @@ func (s *Session) InitialMapObjects() {
 }
 
 func (s *Session) InitializeItems(ctx context.Context) error {
-	data, err := s.itemsClient.ListItemTemplates(ctx)
+	data, err := s.itemsClient.ListItemTemplates(ctx) // data from items service
 
 	if err != nil {
 		slog.Error("Error when attempting to get list of base armors for game creation.",

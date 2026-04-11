@@ -1,25 +1,21 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useAuthStore } from '@/stores/authStore';
 
 interface AuthGuardProps {
   children: React.ReactNode;
 }
 
 export default function AuthGuard({ children }: AuthGuardProps) {
-  const [isReady, setIsReady] = useState(false);
+  const [hasHydrated, setHasHydrated] = useState(useAuthStore.persist.hasHydrated());
 
   useEffect(() => {
-    // Just a brief delay to ensure client-side hydration
-    const timer = setTimeout(() => {
-      setIsReady(true);
-    }, 10);
-
-    return () => clearTimeout(timer);
+    const unsub = useAuthStore.persist.onFinishHydration(() => setHasHydrated(true));
+    return () => unsub();
   }, []);
 
-  // Brief loading state just for hydration
-  if (!isReady) {
+  if (!hasHydrated) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black">
         <div className="text-cyan-400">Loading...</div>
