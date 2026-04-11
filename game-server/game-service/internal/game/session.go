@@ -1342,6 +1342,11 @@ func (s *Session) generateItems() ([]uuid.UUID, error) {
 				return nil, err
 			}
 
+			slog.Info("item config beore addItem during itemGeneration call",
+				"item_type", types.ItemTypeWeapon,
+				"item_config", itemConfig,
+			)
+
 			// create entity
 			id := s.AddItem(*itemConfig)
 			newItemEntityIDs = append(newItemEntityIDs, id)
@@ -1355,6 +1360,11 @@ func (s *Session) generateItems() ([]uuid.UUID, error) {
 				return nil, err
 			}
 
+			slog.Info("item config beore addItem during itemGeneration call",
+				"item_type", types.ItemTypeArmor,
+				"item_config", itemConfig,
+			)
+
 			// create entity
 			id := s.AddItem(*itemConfig)
 			newItemEntityIDs = append(newItemEntityIDs, id)
@@ -1367,6 +1377,11 @@ func (s *Session) generateItems() ([]uuid.UUID, error) {
 			if err != nil {
 				return nil, err
 			}
+
+			slog.Info("item config beore addItem during itemGeneration call",
+				"item_type", types.ItemTypeConsumable,
+				"item_config", itemConfig,
+			)
 
 			// create entity
 			id := s.AddItem(*itemConfig)
@@ -1700,7 +1715,7 @@ func (s *Session) InitializeItems(ctx context.Context) error {
 		)
 
 		switch itemType {
-		case types.ItemTypeWeapon:
+		case types.ItemTypeArmor:
 			newItemConfig = types.ItemConfig{
 				TemplateID:  templateId,
 				ItemType:    itemType,
@@ -1717,7 +1732,7 @@ func (s *Session) InitializeItems(ctx context.Context) error {
 			s.itemPool.Weapons = append(s.itemPool.Weapons, &newItemConfig)
 			s.itemPool.Count++
 
-		case types.ItemTypeArmor:
+		case types.ItemTypeWeapon:
 			newItemConfig = types.ItemConfig{
 				TemplateID:  templateId,
 				ItemType:    itemType,

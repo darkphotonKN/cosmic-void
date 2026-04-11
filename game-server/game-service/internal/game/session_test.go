@@ -799,8 +799,7 @@ func TestSession_GenerateItems_CreateAndSerialize(t *testing.T) {
 		//       SerializeBackendState → FormatStateToClientState if you
 		//       prefer testing the full pipeline.
 
-		_ = item // remove once you start asserting
-		t.Logf("item pulled out in test after generation\nitem_id:%v\nitem_type:%s\nitem_attack_power:%d\nitem_defense_rating%d\n", id, item.ItemType, item.AttackPower, item.DefenseRating)
+		t.Logf("item pulled out in test after generation\nitem_id:%v\nitem_type:%s\nitem_attack_power:%d\nitem_defense_rating:%d\n", id, item.ItemType, item.AttackPower, item.DefenseRating)
 
 		switch item.ItemType {
 
