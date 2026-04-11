@@ -728,7 +728,6 @@ func (s *mockStateSerializer) FormatStateToClientState(backendState *types.Backe
 }
 
 func TestSession_GenerateItems_CreateAndSerialize(t *testing.T) {
-	// Same mock data as TestSession_GenerateItems_CreateItemEntities — one weapon, one armor, one consumable.
 	mockReturn := &pb.ListItemTemplatesResponse{
 		Items: []*pb.ItemTemplate{
 			{
@@ -768,7 +767,7 @@ func TestSession_GenerateItems_CreateAndSerialize(t *testing.T) {
 	// -- setup: real serializer, mock everything else --
 	sender := createMockSender()
 	em := ecs.NewEntityManager()
-	stateSerializer := serializer.NewStateSerializer(em) // real serializer — this is what we're testing
+	stateSerializer := serializer.NewStateSerializer(em) // real serializer to test serialization
 	mockEmitter := &mockEventEmitter{}
 	mockClient := mockItemsClient{}
 
@@ -801,10 +800,36 @@ func TestSession_GenerateItems_CreateAndSerialize(t *testing.T) {
 		//       prefer testing the full pipeline.
 
 		_ = item // remove once you start asserting
+		t.Logf("item pulled out in test after generation\nitem_id:%v\nitem_type:%s\nitem_attack_power:%d\nitem_defense_rating%d\n", id, item.ItemType, item.AttackPower, item.DefenseRating)
 
-		// TODO: assert weapon stats land on weapon items, not armor stats
-		// TODO: assert armor stats land on armor items, not weapon stats
-		// TODO: assert consumable stats land on consumable items
+		switch item.ItemType {
+
+		case types.ItemTypeWeapon:
+			// check weapon type item has weapon only stats
+			assert.NotZero(t, item.AttackPower)
+			assert.NotZero(t, item.CriticalRate)
+			assert.NotEqual(t, "", item.WeaponType)
+
+			// and no armor stats
+			assert.Zero(t, item.DefenseRating)
+			assert.Zero(t, item.MagicResistance)
+			assert.Equal(t, types.ArmorSlot(""), item.ArmorSlot)
+
+		case types.ItemTypeArmor:
+			// check armor type item has armor only stats
+			assert.NotZero(t, item.DefenseRating)
+			assert.NotZero(t, item.MagicResistance)
+			assert.NotEqual(t, types.ArmorSlot(""), item.ArmorSlot)
+
+			// and no weapon stats
+			assert.Zero(t, item.AttackPower)
+			assert.Zero(t, item.CriticalRate)
+			assert.Equal(t, "", item.WeaponType)
+
+		case types.ItemTypeConsumable:
+			// check for only consumable related stats
+			assert.True(t, item.HealingAmount != 0 || item.ManaAmount != 0 || item.BuffDuration != 0)
+		}
 	}
 }
 
