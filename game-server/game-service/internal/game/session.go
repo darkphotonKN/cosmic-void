@@ -330,7 +330,12 @@ func (s *Session) manageClientMessages() {
 					continue
 				}
 
-				playerEquipPayload := parsedPayload.(*types.PlayerEquipPayload)
+				playerEquipPayload, ok := parsedPayload.(types.PlayerEquipPayload)
+
+				if !ok {
+					slog.Error("Failed to assert payload to expected type.", "payload", parsedPayload, "expected_type", "types.PlayerEqupPayload")
+					continue
+				}
 
 				slog.Debug("ParsedPayload of item to equip / unequip",
 					"action", msg.Message.Action,
@@ -351,7 +356,15 @@ func (s *Session) manageClientMessages() {
 					continue
 				}
 
-				err = s.handleEquip(constants.Action(msg.Message.Action), playerID, itemEntityID)
+				playerEnittyID, ok := s.playerIDToEntitiesID[playerID]
+
+				if !ok {
+					slog.Error("respective playerEntityID couldnt be found for playerID", "player_entity_id", playerEnittyID)
+					continue
+				}
+
+				err = s.handleEquip(constants.Action(msg.Message.Action), playerEnittyID, itemEntityID)
+
 				if err != nil {
 					slog.Error("Couldnt complete updating player equipment with handleEquip or handleUnquip actions.",
 						"action", msg.Message.Action,
