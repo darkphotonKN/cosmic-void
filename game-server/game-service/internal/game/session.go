@@ -312,6 +312,11 @@ func (s *Session) manageClientMessages() {
 				}
 
 			case constants.ActionEquip, constants.ActionUnequip:
+				slog.Debug("Before parsing action equip / unequip message payload",
+					"message_action", msg.Message.Action,
+					"message_payload_raw", msg.Message.Payload,
+				)
+
 				parsedPayload, err := msg.Message.ParsePayload()
 
 				if err != nil {
@@ -1117,6 +1122,28 @@ func (s *Session) handleEquip(action constants.Action, playerEntityID uuid.UUID,
 		return ErrComponentCouldNotBeAsserted
 	}
 
+	itemIDListComp, exists := playerEntity.GetComponent(ecs.ComponentTypeItemIDList)
+
+	if !exists {
+		slog.Error("Component not found in entity not found",
+			"component_type", ecs.ComponentTypeItemIDList,
+			"player_entity_id", playerEntityID,
+			"item_entity_id", itemEntityID,
+		)
+		return ErrComponentNotFound
+	}
+
+	itemIDList, ok := itemIDListComp.(*components.ItemIDListComponent)
+
+	if !ok {
+		slog.Error("itemIDList component could not be asserted to expect typed.",
+			"component_type", ecs.ComponentTypeEquipment,
+			"player_entity_id", playerEntityID,
+			"item_entity_id", itemEntityID,
+		)
+		return ErrComponentCouldNotBeAsserted
+	}
+
 	// -- item --
 	itemEntity, itemExists := s.EntityManager.GetEntity(itemEntityID)
 
@@ -1150,25 +1177,26 @@ func (s *Session) handleEquip(action constants.Action, playerEntityID uuid.UUID,
 		return ErrComponentCouldNotBeAsserted
 	}
 
-	itemToUpdateID := &itemEntityID
-
-	// decide equip / unequip
-
-	// TODO: add adding back or removal of item from / into inventory
-	// due to equip / unequip
-
-	if action == constants.ActionUnequip {
-		itemToUpdateID = nil
-	}
-
 	// --- update equipment flow ---
 
 	switch types.ItemType(item.ItemType) {
 
 	// -- weapon --
 	case types.ItemTypeWeapon:
-		// weapon just direct update
-		equipment.WeaponSlot = itemToUpdateID
+		// decide equip / unequip
+		if action == constants.ActionUnequip {
+			// add it back to list of items in inventory
+			itemIDList.ItemIDs = append(itemIDList.ItemIDs, itemEntityID)
+			equipment.WeaponSlot = nil
+		} else {
+			// for weapon just direct update
+			equipment.WeaponSlot = &itemEntityID
+
+			newItemIDlist := s.removeItem(itemIDList.ItemIDs, itemEntityID)
+
+			itemIDList.ItemIDs = newItemIDlist
+		}
+
 		return nil
 
 	// -- armor --
@@ -1177,36 +1205,86 @@ func (s *Session) handleEquip(action constants.Action, playerEntityID uuid.UUID,
 		switch types.ArmorSlot(item.ArmorSlot) {
 
 		case types.ArmorSlotHead:
-			equipment.HeadSlot = itemToUpdateID
+			if action == constants.ActionUnequip {
+				itemIDList.ItemIDs = append(itemIDList.ItemIDs, itemEntityID)
+				equipment.HeadSlot = nil
+			} else {
+				equipment.HeadSlot = &itemEntityID
+				itemIDList.ItemIDs = s.removeItem(itemIDList.ItemIDs, itemEntityID)
+			}
 			return nil
 
 		case types.ArmorSlotChest:
-			equipment.ChestSlot = itemToUpdateID
+			if action == constants.ActionUnequip {
+				itemIDList.ItemIDs = append(itemIDList.ItemIDs, itemEntityID)
+				equipment.ChestSlot = nil
+			} else {
+				equipment.ChestSlot = &itemEntityID
+				itemIDList.ItemIDs = s.removeItem(itemIDList.ItemIDs, itemEntityID)
+			}
 			return nil
 
 		case types.ArmorSlotGloves:
-			equipment.GlovesSlot = itemToUpdateID
+			if action == constants.ActionUnequip {
+				itemIDList.ItemIDs = append(itemIDList.ItemIDs, itemEntityID)
+				equipment.GlovesSlot = nil
+			} else {
+				equipment.GlovesSlot = &itemEntityID
+				itemIDList.ItemIDs = s.removeItem(itemIDList.ItemIDs, itemEntityID)
+			}
 			return nil
 
 		case types.ArmorSlotLegs:
-			equipment.LegsSlot = itemToUpdateID
+			if action == constants.ActionUnequip {
+				itemIDList.ItemIDs = append(itemIDList.ItemIDs, itemEntityID)
+				equipment.LegsSlot = nil
+			} else {
+				equipment.LegsSlot = &itemEntityID
+				itemIDList.ItemIDs = s.removeItem(itemIDList.ItemIDs, itemEntityID)
+			}
 			return nil
 		}
 
 	case types.ItemTypeConsumable:
-		// find available slot
-		if equipment.Consumable1 == nil {
-			equipment.Consumable1 = itemToUpdateID
-		} else if equipment.Consumable2 == nil {
-			equipment.Consumable2 = itemToUpdateID
-		} else if equipment.Consumable3 == nil {
-			equipment.Consumable3 = itemToUpdateID
+		if action == constants.ActionUnequip {
+			// find which consumable slot holds this item and clear it
+			if equipment.Consumable1 != nil && *equipment.Consumable1 == itemEntityID {
+				equipment.Consumable1 = nil
+			} else if equipment.Consumable2 != nil && *equipment.Consumable2 == itemEntityID {
+				equipment.Consumable2 = nil
+			} else if equipment.Consumable3 != nil && *equipment.Consumable3 == itemEntityID {
+				equipment.Consumable3 = nil
+			}
+			itemIDList.ItemIDs = append(itemIDList.ItemIDs, itemEntityID)
 		} else {
-			return fmt.Errorf("All consumable slots full")
+			// find first empty slot
+			if equipment.Consumable1 == nil {
+				equipment.Consumable1 = &itemEntityID
+			} else if equipment.Consumable2 == nil {
+				equipment.Consumable2 = &itemEntityID
+			} else if equipment.Consumable3 == nil {
+				equipment.Consumable3 = &itemEntityID
+			} else {
+				return fmt.Errorf("All consumable slots full")
+			}
+			itemIDList.ItemIDs = s.removeItem(itemIDList.ItemIDs, itemEntityID)
 		}
 	}
 
 	return nil
+}
+
+func (s *Session) removeItem(items []uuid.UUID, targetItemID uuid.UUID) []uuid.UUID {
+	result := make([]uuid.UUID, 0, len(items)-1)
+
+	for _, itemID := range items {
+		if itemID == targetItemID {
+			continue
+		}
+		result = append(result, itemID)
+	}
+
+	return result
 }
 
 func (s *Session) handlePlayerEscape(playerID uuid.UUID) {
