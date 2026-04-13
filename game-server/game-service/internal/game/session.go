@@ -1662,6 +1662,7 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 	}
 
 	// --- player data ---
+
 	for _, entity := range entities {
 		playerComponent, isPlayer := entity.GetComponent(ecs.ComponentTypePlayer)
 		// escapeDoorComp, _ := entity.GetComponent(ecs.ComponentTypeEscapeDoor)
@@ -1685,9 +1686,16 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 			extractedEquipment := types.ExtractedEquipment{}
 
 			if equipment.WeaponSlot != nil {
-				_, ok := itemsMap[*equipment.WeaponSlot]
+				item, ok := itemsMap[*equipment.WeaponSlot]
 				if ok {
-					extractedEquipment.WeaponSlot = equipment.WeaponSlot
+					extractedEquipment.WeaponSlot = &types.ExtractedItem{
+						TemplateID:   item.TemplateID,
+						ItemType:     string(item.ItemType),
+						Name:         item.Name,
+						AttackPower:  item.AttackPower,
+						CriticalRate: item.CriticalRate,
+						WeaponType:   item.WeaponType,
+					}
 				}
 			}
 

@@ -92,6 +92,7 @@ type RankedPlayerState struct {
 	Win           bool
 	Escape        bool
 	Equipment     ExtractedEquipment
+	Inventory     []ExtractedItem
 }
 
 type ExtractedItem struct {
@@ -122,22 +123,22 @@ type ExtractedItem struct {
 
 type ExtractedEquipment struct {
 	// Weapons
-	WeaponSlot *uuid.UUID
+	WeaponSlot *ExtractedItem
 
 	// Armor
-	HeadSlot   *uuid.UUID
-	ChestSlot  *uuid.UUID
-	GlovesSlot *uuid.UUID
-	LegsSlot   *uuid.UUID
+	HeadSlot   *ExtractedItem
+	ChestSlot  *ExtractedItem
+	GlovesSlot *ExtractedItem
+	LegsSlot   *ExtractedItem
 
 	// Accessories
-	Ring1Slot *uuid.UUID
-	Ring2Slot *uuid.UUID
+	Ring1Slot *ExtractedItem
+	Ring2Slot *ExtractedItem
 
 	// Consumablesected events
-	Consumable1 *uuid.UUID
-	Consumable2 *uuid.UUID
-	Consumable3 *uuid.UUID
+	Consumable1 *ExtractedItem
+	Consumable2 *ExtractedItem
+	Consumable3 *ExtractedItem
 }
 
 type FormattedMatchData struct {

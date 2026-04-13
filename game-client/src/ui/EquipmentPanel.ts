@@ -25,14 +25,14 @@ interface InventoryRowHitArea {
 }
 
 // Panel dimensions
-const EQUIP_W = 380;
-const EQUIP_H = 340;
+const EQUIP_W = 420;
+const EQUIP_H = 400;
 const INV_W = 320;
-const INV_H = 340;
+const INV_H = 400;
 const GAP = 20;
-const SLOT_BOX_W = 110;
-const SLOT_BOX_H = 34;
-const INV_ROW_H = 30;
+const SLOT_BOX_W = 120;
+const SLOT_BOX_H = 44;
+const INV_ROW_H = 32;
 const MAX_VISIBLE_INV = 8;
 const PADDING = 16;
 
@@ -59,19 +59,19 @@ function getSlotColor(slot: EquipmentSlot): number {
 //   [CON 1]   [CON 2]   [CON 3]
 const SLOT_LAYOUT: SlotLayout[] = [
   // Row 1: weapon left, head center
-  { slot: 'weapon', label: 'WEAPON', x: -110, y: 0 },
+  { slot: 'weapon', label: 'WEAPON', x: -125, y: 0 },
   { slot: 'head', label: 'HEAD', x: 0, y: 0 },
   // Row 2: hands left (arms), body center, ring right
-  { slot: 'hands', label: 'HANDS', x: -110, y: 50 },
-  { slot: 'body', label: 'BODY', x: 0, y: 50 },
-  { slot: 'ring_1', label: 'RING 1', x: 110, y: 50 },
+  { slot: 'hands', label: 'HANDS', x: -125, y: 58 },
+  { slot: 'body', label: 'BODY', x: 0, y: 58 },
+  { slot: 'ring_1', label: 'RING 1', x: 125, y: 58 },
   // Row 3: feet center, ring right
-  { slot: 'feet', label: 'FEET', x: 0, y: 100 },
-  { slot: 'ring_2', label: 'RING 2', x: 110, y: 100 },
+  { slot: 'feet', label: 'FEET', x: 0, y: 116 },
+  { slot: 'ring_2', label: 'RING 2', x: 125, y: 116 },
   // Row 4: consumables across bottom
-  { slot: 'consumable_1', label: 'CONS 1', x: -110, y: 160 },
-  { slot: 'consumable_2', label: 'CONS 2', x: 0, y: 160 },
-  { slot: 'consumable_3', label: 'CONS 3', x: 110, y: 160 },
+  { slot: 'consumable_1', label: 'CONS 1', x: -125, y: 186 },
+  { slot: 'consumable_2', label: 'CONS 2', x: 0, y: 186 },
+  { slot: 'consumable_3', label: 'CONS 3', x: 125, y: 186 },
 ];
 
 export class EquipmentPanel {
@@ -211,7 +211,7 @@ export class EquipmentPanel {
       const slotY = slotsTop + layout.y;
 
       const label = this.scene.add.text(slotX, slotY + 2, layout.label, {
-        fontSize: '9px', color: '#445566', letterSpacing: 2,
+        fontSize: '9px', color: '#00f0ff', letterSpacing: 2,
       });
       label.setOrigin(0.5, 0);
       eqChildren.push(label);
@@ -221,7 +221,7 @@ export class EquipmentPanel {
       this.slotGraphics.set(layout.slot, slotGfx);
 
       const slotText = this.scene.add.text(slotX, slotY + SLOT_BOX_H - 4, '—', {
-        fontSize: '11px', color: '#334455',
+        fontSize: '11px', color: '#00f0ff',
       });
       slotText.setOrigin(0.5);
       eqChildren.push(slotText);
@@ -231,7 +231,7 @@ export class EquipmentPanel {
     }
 
     const eqHint = this.scene.add.text(0, EQUIP_H / 2 - 16, 'HOVER + E TO UNEQUIP', {
-      fontSize: '9px', color: '#334455', letterSpacing: 2,
+      fontSize: '9px', color: '#00f0ff', letterSpacing: 2,
     });
     eqHint.setOrigin(0.5);
     eqChildren.push(eqHint);
@@ -256,7 +256,7 @@ export class EquipmentPanel {
     invChildren.push(invTitle);
 
     const invHint = this.scene.add.text(0, INV_H / 2 - 16, 'HOVER + E TO EQUIP  //  I CLOSE', {
-      fontSize: '9px', color: '#334455', letterSpacing: 2,
+      fontSize: '9px', color: '#00f0ff', letterSpacing: 2,
     });
     invHint.setOrigin(0.5);
     invChildren.push(invHint);
@@ -360,7 +360,7 @@ export class EquipmentPanel {
     const rowWidth = INV_W - PADDING * 2;
 
     if (this.inventory.length === 0) {
-      this.invEmptyText = this.scene.add.text(0, 0, '(Empty)', { fontSize: '13px', color: '#334455' });
+      this.invEmptyText = this.scene.add.text(0, 0, '(Empty)', { fontSize: '13px', color: '#00f0ff' });
       this.invEmptyText.setOrigin(0.5);
       this.invContainer.add(this.invEmptyText);
       return;
@@ -399,7 +399,7 @@ export class EquipmentPanel {
     if (this.inventory.length > MAX_VISIBLE_INV) {
       const moreY = rowsTop + MAX_VISIBLE_INV * INV_ROW_H + 4;
       const moreText = this.scene.add.text(0, moreY, `+${this.inventory.length - MAX_VISIBLE_INV} more...`, {
-        fontSize: '11px', color: '#445566',
+        fontSize: '11px', color: '#00f0ff',
       });
       moreText.setOrigin(0.5);
       this.invContainer.add(moreText);
@@ -677,7 +677,7 @@ export class EquipmentPanel {
 
   private addStat(children: Phaser.GameObjects.GameObject[], padding: number, y: number, width: number, label: string, value: string, color: string): void {
     children.push(
-      this.scene.add.text(padding, y, label, { fontSize: '11px', color: '#556677', letterSpacing: 2 }),
+      this.scene.add.text(padding, y, label, { fontSize: '11px', color: '#00f0ff', letterSpacing: 2 }),
       this.scene.add.text(width - padding, y, value, { fontSize: '12px', color }).setOrigin(1, 0),
     );
   }

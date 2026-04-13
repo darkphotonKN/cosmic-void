@@ -91,7 +91,24 @@ func (s *service) formatMatchData(sessionID uuid.UUID, startedAt time.Time, ende
 		)
 	}
 
-	itemsExtractedProtoData, itemsExtractErr := proto.Marshal(&pb.ItemsExtractedEvent{})
+	playerItems := make([]*pb.PlayerItems, len(players))
+
+	for idx, player := range players {
+		playerItems[idx].Equipment = &pb.Equipment{
+			// auto complete this
+		}
+
+		// TODO: add inventory, pass it over and complete extraction
+		items := make([]*pb.Item, 5)
+
+		playerItems[idx].Inventory = items
+	}
+
+	itemsExtractedProtoData, itemsExtractErr := proto.Marshal(&pb.ItemsExtractedEvent{
+		SessionId:   string(sessionID.String()),
+		PlayerItems: nil,
+	})
+
 	if itemsExtractErr != nil {
 		slog.Error("could not marshal items extracted event to ItemExtractedEvent proto",
 			"session_id", sessionID,
