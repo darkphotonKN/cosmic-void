@@ -16,6 +16,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
 	commontelemetry "github.com/darkphotonKN/cosmic-void-server/common/telemetry"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
+	"github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/config"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components/metrics"
 	_ "github.com/joho/godotenv/autoload"
@@ -83,6 +84,21 @@ func main() {
 
 	db := config.InitDB()
 	defer db.Close()
+
+	// --- redis setup ---
+	err = config.InitRedis(config.RedisConfig{
+		Mode:         commonhelpers.GetEnvString("REDIS_MODE", "standalone"),
+		Addrs:        []string{commonhelpers.GetEnvString("REDIS_ADDR", "localhost:6379")},
+		Password:     commonhelpers.GetEnvString("REDIS_PASSWORD", ""),
+		DB:           0,
+		PoolSize:     10,
+		MinIdleConns: 5,
+	})
+	if err != nil {
+		log.Fatalf("Failed to initialize Redis: %v", err)
+	}
+	defer config.CloseRedis()
+	cacheService := cache.NewRedisCache(config.GetClient())
 
 	// --- service discovery setup ---
 
@@ -152,7 +168,7 @@ func main() {
 	log.Printf("grpc Game Server started on PORT: %s\n", grpcAddr)
 
 	// routes setup
-	routes := config.SetupRouter(db, registry, ch)
+	routes := config.SetupRouter(db, registry, ch , cacheService)
 
 	fmt.Printf("Server listening on port %s.\n", gamePort)
 

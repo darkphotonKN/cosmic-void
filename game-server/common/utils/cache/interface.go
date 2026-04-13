@@ -12,6 +12,13 @@ type Cache interface {
 	Exists(ctx context.Context, key string) (bool, error)
 	Close() error
 	Incr(ctx context.Context, key string) (int64, error)
+	// Redis List 操作
+	LPush(ctx context.Context, key string, values ...interface{}) error
+	RPush(ctx context.Context, key string, values ...interface{}) error
+	LPop(ctx context.Context, key string) (string, error)
+	LLen(ctx context.Context, key string) (int64, error)
+	LRange(ctx context.Context, key string, start, stop int64) ([]string, error)
+	LRem(ctx context.Context, key string, count int64, value interface{}) error
 
 	// 分佈式鎖
 	// AcquireLock 獲取分佈式鎖
