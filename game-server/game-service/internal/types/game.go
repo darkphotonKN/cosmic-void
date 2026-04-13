@@ -76,11 +76,13 @@ type RawMatchState struct {
 }
 
 type RawPlayerState struct {
-	MemberID string
-	Username string
-	Kills    int32
-	Deaths   int32
-	Escape   bool
+	MemberID  string
+	Username  string
+	Kills     int32
+	Deaths    int32
+	Escape    bool
+	Equipment ExtractedEquipment
+	Inventory []*ExtractedItem
 }
 
 type RankedPlayerState struct {
@@ -92,7 +94,7 @@ type RankedPlayerState struct {
 	Win           bool
 	Escape        bool
 	Equipment     ExtractedEquipment
-	Inventory     []ExtractedItem
+	Inventory     []*ExtractedItem
 }
 
 type ExtractedItem struct {

@@ -1672,39 +1672,286 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 			playerState := playerComponent.(*components.PlayerComponent)
 			statsComp, hasStats := entity.GetComponent(ecs.ComponentTypeStats)
 			equipmentComp, hasEquipment := entity.GetComponent(ecs.ComponentTypeEquipment)
+			itemIDListComp, hasItemIDList := entity.GetComponent(ecs.ComponentTypeItemIDList)
 
 			// malformed player, just skip
-			if !hasEquipment || !hasStats {
+			if !hasEquipment || !hasStats || !hasItemIDList {
 				slog.Warn("Malformed player state object when rtying to extract raw state at match end.",
 					"player_id", playerState.MemberID)
 				continue
 			}
 
-			stats := statsComp.(*components.StatsComponent)
-			equipment := equipmentComp.(*components.EquipmentComponent)
+			// -- stats --
+			stats, statsOk := statsComp.(*components.StatsComponent)
+			if !statsOk {
+				stats = &components.StatsComponent{}
+			}
 
+			// -- equipment --
+			equipment, equipmentOk := equipmentComp.(*components.EquipmentComponent)
 			extractedEquipment := types.ExtractedEquipment{}
 
-			if equipment.WeaponSlot != nil {
-				item, ok := itemsMap[*equipment.WeaponSlot]
-				if ok {
-					extractedEquipment.WeaponSlot = &types.ExtractedItem{
-						TemplateID:   item.TemplateID,
-						ItemType:     string(item.ItemType),
-						Name:         item.Name,
-						AttackPower:  item.AttackPower,
-						CriticalRate: item.CriticalRate,
-						WeaponType:   item.WeaponType,
+			if equipmentOk {
+				if equipment.WeaponSlot != nil {
+					if item, ok := itemsMap[*equipment.WeaponSlot]; ok {
+						extractedEquipment.WeaponSlot = &types.ExtractedItem{
+							TemplateID:      item.TemplateID,
+							ItemType:        string(item.ItemType),
+							Name:            item.Name,
+							AttackPower:     item.AttackPower,
+							CriticalRate:    item.CriticalRate,
+							WeaponType:      item.WeaponType,
+							DefenseRating:   item.DefenseRating,
+							MagicResistance: item.MagicResistance,
+							ArmorSlot:       string(item.ArmorSlot),
+							HealingAmount:   item.HealingAmount,
+							ManaAmount:      item.ManaAmount,
+							BuffDuration:    item.BuffDuration,
+							BuyPrice:        item.BuyPrice,
+							SellPrice:       item.SellPrice,
+							Description:     item.Description,
+						}
+					}
+				}
+
+				if equipment.HeadSlot != nil {
+					if item, ok := itemsMap[*equipment.HeadSlot]; ok {
+						extractedEquipment.HeadSlot = &types.ExtractedItem{
+							TemplateID:      item.TemplateID,
+							ItemType:        string(item.ItemType),
+							Name:            item.Name,
+							AttackPower:     item.AttackPower,
+							CriticalRate:    item.CriticalRate,
+							WeaponType:      item.WeaponType,
+							DefenseRating:   item.DefenseRating,
+							MagicResistance: item.MagicResistance,
+							ArmorSlot:       string(item.ArmorSlot),
+							HealingAmount:   item.HealingAmount,
+							ManaAmount:      item.ManaAmount,
+							BuffDuration:    item.BuffDuration,
+							BuyPrice:        item.BuyPrice,
+							SellPrice:       item.SellPrice,
+							Description:     item.Description,
+						}
+					}
+				}
+
+				if equipment.ChestSlot != nil {
+					if item, ok := itemsMap[*equipment.ChestSlot]; ok {
+						extractedEquipment.ChestSlot = &types.ExtractedItem{
+							TemplateID:      item.TemplateID,
+							ItemType:        string(item.ItemType),
+							Name:            item.Name,
+							AttackPower:     item.AttackPower,
+							CriticalRate:    item.CriticalRate,
+							WeaponType:      item.WeaponType,
+							DefenseRating:   item.DefenseRating,
+							MagicResistance: item.MagicResistance,
+							ArmorSlot:       string(item.ArmorSlot),
+							HealingAmount:   item.HealingAmount,
+							ManaAmount:      item.ManaAmount,
+							BuffDuration:    item.BuffDuration,
+							BuyPrice:        item.BuyPrice,
+							SellPrice:       item.SellPrice,
+							Description:     item.Description,
+						}
+					}
+				}
+
+				if equipment.GlovesSlot != nil {
+					if item, ok := itemsMap[*equipment.GlovesSlot]; ok {
+						extractedEquipment.GlovesSlot = &types.ExtractedItem{
+							TemplateID:      item.TemplateID,
+							ItemType:        string(item.ItemType),
+							Name:            item.Name,
+							AttackPower:     item.AttackPower,
+							CriticalRate:    item.CriticalRate,
+							WeaponType:      item.WeaponType,
+							DefenseRating:   item.DefenseRating,
+							MagicResistance: item.MagicResistance,
+							ArmorSlot:       string(item.ArmorSlot),
+							HealingAmount:   item.HealingAmount,
+							ManaAmount:      item.ManaAmount,
+							BuffDuration:    item.BuffDuration,
+							BuyPrice:        item.BuyPrice,
+							SellPrice:       item.SellPrice,
+							Description:     item.Description,
+						}
+					}
+				}
+
+				if equipment.LegsSlot != nil {
+					if item, ok := itemsMap[*equipment.LegsSlot]; ok {
+						extractedEquipment.LegsSlot = &types.ExtractedItem{
+							TemplateID:      item.TemplateID,
+							ItemType:        string(item.ItemType),
+							Name:            item.Name,
+							AttackPower:     item.AttackPower,
+							CriticalRate:    item.CriticalRate,
+							WeaponType:      item.WeaponType,
+							DefenseRating:   item.DefenseRating,
+							MagicResistance: item.MagicResistance,
+							ArmorSlot:       string(item.ArmorSlot),
+							HealingAmount:   item.HealingAmount,
+							ManaAmount:      item.ManaAmount,
+							BuffDuration:    item.BuffDuration,
+							BuyPrice:        item.BuyPrice,
+							SellPrice:       item.SellPrice,
+							Description:     item.Description,
+						}
+					}
+				}
+
+				if equipment.Ring1Slot != nil {
+					if item, ok := itemsMap[*equipment.Ring1Slot]; ok {
+						extractedEquipment.Ring1Slot = &types.ExtractedItem{
+							TemplateID:      item.TemplateID,
+							ItemType:        string(item.ItemType),
+							Name:            item.Name,
+							AttackPower:     item.AttackPower,
+							CriticalRate:    item.CriticalRate,
+							WeaponType:      item.WeaponType,
+							DefenseRating:   item.DefenseRating,
+							MagicResistance: item.MagicResistance,
+							ArmorSlot:       string(item.ArmorSlot),
+							HealingAmount:   item.HealingAmount,
+							ManaAmount:      item.ManaAmount,
+							BuffDuration:    item.BuffDuration,
+							BuyPrice:        item.BuyPrice,
+							SellPrice:       item.SellPrice,
+							Description:     item.Description,
+						}
+					}
+				}
+
+				if equipment.Ring2Slot != nil {
+					if item, ok := itemsMap[*equipment.Ring2Slot]; ok {
+						extractedEquipment.Ring2Slot = &types.ExtractedItem{
+							TemplateID:      item.TemplateID,
+							ItemType:        string(item.ItemType),
+							Name:            item.Name,
+							AttackPower:     item.AttackPower,
+							CriticalRate:    item.CriticalRate,
+							WeaponType:      item.WeaponType,
+							DefenseRating:   item.DefenseRating,
+							MagicResistance: item.MagicResistance,
+							ArmorSlot:       string(item.ArmorSlot),
+							HealingAmount:   item.HealingAmount,
+							ManaAmount:      item.ManaAmount,
+							BuffDuration:    item.BuffDuration,
+							BuyPrice:        item.BuyPrice,
+							SellPrice:       item.SellPrice,
+							Description:     item.Description,
+						}
+					}
+				}
+
+				if equipment.Consumable1 != nil {
+					if item, ok := itemsMap[*equipment.Consumable1]; ok {
+						extractedEquipment.Consumable1 = &types.ExtractedItem{
+							TemplateID:      item.TemplateID,
+							ItemType:        string(item.ItemType),
+							Name:            item.Name,
+							AttackPower:     item.AttackPower,
+							CriticalRate:    item.CriticalRate,
+							WeaponType:      item.WeaponType,
+							DefenseRating:   item.DefenseRating,
+							MagicResistance: item.MagicResistance,
+							ArmorSlot:       string(item.ArmorSlot),
+							HealingAmount:   item.HealingAmount,
+							ManaAmount:      item.ManaAmount,
+							BuffDuration:    item.BuffDuration,
+							BuyPrice:        item.BuyPrice,
+							SellPrice:       item.SellPrice,
+							Description:     item.Description,
+						}
+					}
+				}
+
+				if equipment.Consumable2 != nil {
+					if item, ok := itemsMap[*equipment.Consumable2]; ok {
+						extractedEquipment.Consumable2 = &types.ExtractedItem{
+							TemplateID:      item.TemplateID,
+							ItemType:        string(item.ItemType),
+							Name:            item.Name,
+							AttackPower:     item.AttackPower,
+							CriticalRate:    item.CriticalRate,
+							WeaponType:      item.WeaponType,
+							DefenseRating:   item.DefenseRating,
+							MagicResistance: item.MagicResistance,
+							ArmorSlot:       string(item.ArmorSlot),
+							HealingAmount:   item.HealingAmount,
+							ManaAmount:      item.ManaAmount,
+							BuffDuration:    item.BuffDuration,
+							BuyPrice:        item.BuyPrice,
+							SellPrice:       item.SellPrice,
+							Description:     item.Description,
+						}
+					}
+				}
+
+				if equipment.Consumable3 != nil {
+					if item, ok := itemsMap[*equipment.Consumable3]; ok {
+						extractedEquipment.Consumable3 = &types.ExtractedItem{
+							TemplateID:      item.TemplateID,
+							ItemType:        string(item.ItemType),
+							Name:            item.Name,
+							AttackPower:     item.AttackPower,
+							CriticalRate:    item.CriticalRate,
+							WeaponType:      item.WeaponType,
+							DefenseRating:   item.DefenseRating,
+							MagicResistance: item.MagicResistance,
+							ArmorSlot:       string(item.ArmorSlot),
+							HealingAmount:   item.HealingAmount,
+							ManaAmount:      item.ManaAmount,
+							BuffDuration:    item.BuffDuration,
+							BuyPrice:        item.BuyPrice,
+							SellPrice:       item.SellPrice,
+							Description:     item.Description,
+						}
 					}
 				}
 			}
 
+			// -- inventory items --
+			inventory := []*types.ExtractedItem{}
+			if itemIDList, itemIDListOk := itemIDListComp.(*components.ItemIDListComponent); itemIDListOk {
+
+				for _, itemID := range itemIDList.ItemIDs {
+					item, ok := itemsMap[itemID]
+					if !ok {
+						continue
+					}
+
+					inventory = append(inventory, &types.ExtractedItem{
+						TemplateID:      item.TemplateID,
+						ItemType:        string(item.ItemType),
+						Name:            item.Name,
+						AttackPower:     item.AttackPower,
+						CriticalRate:    item.CriticalRate,
+						WeaponType:      item.WeaponType,
+						DefenseRating:   item.DefenseRating,
+						MagicResistance: item.MagicResistance,
+						ArmorSlot:       string(item.ArmorSlot),
+						HealingAmount:   item.HealingAmount,
+						ManaAmount:      item.ManaAmount,
+						BuffDuration:    item.BuffDuration,
+						BuyPrice:        item.BuyPrice,
+						SellPrice:       item.SellPrice,
+						Description:     item.Description,
+					})
+				}
+
+			}
+
 			rawPlayers = append(rawPlayers, types.RawPlayerState{
-				MemberID: playerState.MemberID.String(),
-				Username: playerState.Username,
-				Kills:    int32(stats.Kills),
-				Deaths:   int32(stats.Deaths),
-				Escape:   playerState.Escape,
+				MemberID:  playerState.MemberID.String(),
+				Username:  playerState.Username,
+				Kills:     int32(stats.Kills),
+				Deaths:    int32(stats.Deaths),
+				Escape:    playerState.Escape,
+				Equipment: extractedEquipment,
+				Inventory: inventory,
 			})
 		}
 	}

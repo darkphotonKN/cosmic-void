@@ -94,14 +94,22 @@ func (s *service) formatMatchData(sessionID uuid.UUID, startedAt time.Time, ende
 	playerItems := make([]*pb.PlayerItems, len(players))
 
 	for idx, player := range players {
-		playerItems[idx].Equipment = &pb.Equipment{
-			// auto complete this
+		playerItems[idx] = &pb.PlayerItems{
+			MemberId: player.MemberID,
+			Equipment: &pb.Equipment{
+				Weapon:       extractedItemToPb(player.Equipment.WeaponSlot),
+				Head:         extractedItemToPb(player.Equipment.HeadSlot),
+				Chest:        extractedItemToPb(player.Equipment.ChestSlot),
+				Gloves:       extractedItemToPb(player.Equipment.GlovesSlot),
+				Legs:         extractedItemToPb(player.Equipment.LegsSlot),
+				Ring_1:       extractedItemToPb(player.Equipment.Ring1Slot),
+				Ring_2:       extractedItemToPb(player.Equipment.Ring2Slot),
+				Consumable_1: extractedItemToPb(player.Equipment.Consumable1),
+				Consumable_2: extractedItemToPb(player.Equipment.Consumable2),
+				Consumable_3: extractedItemToPb(player.Equipment.Consumable3),
+			},
+			Inventory: extractedInventoryToPb(player.Inventory),
 		}
-
-		// TODO: add inventory, pass it over and complete extraction
-		items := make([]*pb.Item, 5)
-
-		playerItems[idx].Inventory = items
 	}
 
 	itemsExtractedProtoData, itemsExtractErr := proto.Marshal(&pb.ItemsExtractedEvent{
@@ -169,4 +177,37 @@ func (s *service) rankPlayers(players []types.RawPlayerState, eliminationOrder m
 	}
 
 	return rankedPlayers
+}
+
+func extractedItemToPb(item *types.ExtractedItem) *pb.Item {
+	if item == nil {
+		return nil
+	}
+	return &pb.Item{
+		TemplateId:      item.TemplateID.String(),
+		ItemType:        item.ItemType,
+		Name:            item.Name,
+		AttackPower:     int32(item.AttackPower),
+		CriticalRate:    item.CriticalRate,
+		WeaponType:      item.WeaponType,
+		DefenseRating:   int32(item.DefenseRating),
+		MagicResistance: int32(item.MagicResistance),
+		ArmorSlot:       item.ArmorSlot,
+		HealingAmount:   int32(item.HealingAmount),
+		ManaAmount:      int32(item.ManaAmount),
+		BuffDuration:    int32(item.BuffDuration),
+		BuyPrice:        int32(item.BuyPrice),
+		SellPrice:       int32(item.SellPrice),
+		Description:     item.Description,
+	}
+}
+
+func extractedInventoryToPb(inventory []*types.ExtractedItem) []*pb.Item {
+	items := make([]*pb.Item, 0, len(inventory))
+	for _, item := range inventory {
+		if pbItem := extractedItemToPb(item); pbItem != nil {
+			items = append(items, pbItem)
+		}
+	}
+	return items
 }
