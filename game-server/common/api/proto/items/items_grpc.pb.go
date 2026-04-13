@@ -32,6 +32,7 @@ const (
 	ItemsService_CreateCompleteWeapon_FullMethodName        = "/items.ItemsService/CreateCompleteWeapon"
 	ItemsService_CreateCompleteArmor_FullMethodName         = "/items.ItemsService/CreateCompleteArmor"
 	ItemsService_CreateCompleteConsumable_FullMethodName    = "/items.ItemsService/CreateCompleteConsumable"
+	ItemsService_GetLoadout_FullMethodName                  = "/items.ItemsService/GetLoadout"
 )
 
 // ItemsServiceClient is the client API for ItemsService service.
@@ -60,6 +61,7 @@ type ItemsServiceClient interface {
 	CreateCompleteWeapon(ctx context.Context, in *CreateCompleteWeaponRequest, opts ...grpc.CallOption) (*WeaponDetail, error)
 	CreateCompleteArmor(ctx context.Context, in *CreateCompleteArmorRequest, opts ...grpc.CallOption) (*ArmorDetail, error)
 	CreateCompleteConsumable(ctx context.Context, in *CreateCompleteConsumableRequest, opts ...grpc.CallOption) (*ConsumableDetail, error)
+	GetLoadout(ctx context.Context, in *GetLoadoutRequest, opts ...grpc.CallOption) (*GetLoadoutResponse, error)
 }
 
 type itemsServiceClient struct {
@@ -190,6 +192,16 @@ func (c *itemsServiceClient) CreateCompleteConsumable(ctx context.Context, in *C
 	return out, nil
 }
 
+func (c *itemsServiceClient) GetLoadout(ctx context.Context, in *GetLoadoutRequest, opts ...grpc.CallOption) (*GetLoadoutResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetLoadoutResponse)
+	err := c.cc.Invoke(ctx, ItemsService_GetLoadout_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ItemsServiceServer is the server API for ItemsService service.
 // All implementations must embed UnimplementedItemsServiceServer
 // for forward compatibility.
@@ -216,6 +228,7 @@ type ItemsServiceServer interface {
 	CreateCompleteWeapon(context.Context, *CreateCompleteWeaponRequest) (*WeaponDetail, error)
 	CreateCompleteArmor(context.Context, *CreateCompleteArmorRequest) (*ArmorDetail, error)
 	CreateCompleteConsumable(context.Context, *CreateCompleteConsumableRequest) (*ConsumableDetail, error)
+	GetLoadout(context.Context, *GetLoadoutRequest) (*GetLoadoutResponse, error)
 	mustEmbedUnimplementedItemsServiceServer()
 }
 
@@ -261,6 +274,9 @@ func (UnimplementedItemsServiceServer) CreateCompleteArmor(context.Context, *Cre
 }
 func (UnimplementedItemsServiceServer) CreateCompleteConsumable(context.Context, *CreateCompleteConsumableRequest) (*ConsumableDetail, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateCompleteConsumable not implemented")
+}
+func (UnimplementedItemsServiceServer) GetLoadout(context.Context, *GetLoadoutRequest) (*GetLoadoutResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLoadout not implemented")
 }
 func (UnimplementedItemsServiceServer) mustEmbedUnimplementedItemsServiceServer() {}
 func (UnimplementedItemsServiceServer) testEmbeddedByValue()                      {}
@@ -499,6 +515,24 @@ func _ItemsService_CreateCompleteConsumable_Handler(srv interface{}, ctx context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ItemsService_GetLoadout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLoadoutRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServiceServer).GetLoadout(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ItemsService_GetLoadout_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServiceServer).GetLoadout(ctx, req.(*GetLoadoutRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ItemsService_ServiceDesc is the grpc.ServiceDesc for ItemsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -553,6 +587,10 @@ var ItemsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateCompleteConsumable",
 			Handler:    _ItemsService_CreateCompleteConsumable_Handler,
+		},
+		{
+			MethodName: "GetLoadout",
+			Handler:    _ItemsService_GetLoadout_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

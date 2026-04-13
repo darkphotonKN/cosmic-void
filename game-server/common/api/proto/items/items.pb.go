@@ -1850,6 +1850,198 @@ func (x *CreateCompleteConsumableRequest) GetDescription() string {
 	return ""
 }
 
+type GetLoadoutRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MemberId      string                 `protobuf:"bytes,1,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetLoadoutRequest) Reset() {
+	*x = GetLoadoutRequest{}
+	mi := &file_api_proto_items_items_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetLoadoutRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetLoadoutRequest) ProtoMessage() {}
+
+func (x *GetLoadoutRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_items_items_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetLoadoutRequest.ProtoReflect.Descriptor instead.
+func (*GetLoadoutRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_items_items_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *GetLoadoutRequest) GetMemberId() string {
+	if x != nil {
+		return x.MemberId
+	}
+	return ""
+}
+
+type GetLoadoutResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	MemberId      string                 `protobuf:"bytes,2,opt,name=memberId,proto3" json:"memberId,omitempty"`
+	WeaponId      string                 `protobuf:"bytes,3,opt,name=weaponId,proto3" json:"weaponId,omitempty"`
+	HeadId        string                 `protobuf:"bytes,4,opt,name=headId,proto3" json:"headId,omitempty"`
+	ChestId       string                 `protobuf:"bytes,5,opt,name=chestId,proto3" json:"chestId,omitempty"`
+	GlovesId      string                 `protobuf:"bytes,6,opt,name=glovesId,proto3" json:"glovesId,omitempty"`
+	LegsId        string                 `protobuf:"bytes,7,opt,name=legsId,proto3" json:"legsId,omitempty"`
+	Ring1Id       string                 `protobuf:"bytes,8,opt,name=ring1Id,proto3" json:"ring1Id,omitempty"`
+	Ring2Id       string                 `protobuf:"bytes,9,opt,name=ring2Id,proto3" json:"ring2Id,omitempty"`
+	Consumable1Id string                 `protobuf:"bytes,10,opt,name=consumable1Id,proto3" json:"consumable1Id,omitempty"`
+	Consumable2Id string                 `protobuf:"bytes,11,opt,name=consumable2Id,proto3" json:"consumable2Id,omitempty"`
+	Consumable3Id string                 `protobuf:"bytes,12,opt,name=consumable3Id,proto3" json:"consumable3Id,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetLoadoutResponse) Reset() {
+	*x = GetLoadoutResponse{}
+	mi := &file_api_proto_items_items_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetLoadoutResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetLoadoutResponse) ProtoMessage() {}
+
+func (x *GetLoadoutResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_items_items_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetLoadoutResponse.ProtoReflect.Descriptor instead.
+func (*GetLoadoutResponse) Descriptor() ([]byte, []int) {
+	return file_api_proto_items_items_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *GetLoadoutResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *GetLoadoutResponse) GetMemberId() string {
+	if x != nil {
+		return x.MemberId
+	}
+	return ""
+}
+
+func (x *GetLoadoutResponse) GetWeaponId() string {
+	if x != nil {
+		return x.WeaponId
+	}
+	return ""
+}
+
+func (x *GetLoadoutResponse) GetHeadId() string {
+	if x != nil {
+		return x.HeadId
+	}
+	return ""
+}
+
+func (x *GetLoadoutResponse) GetChestId() string {
+	if x != nil {
+		return x.ChestId
+	}
+	return ""
+}
+
+func (x *GetLoadoutResponse) GetGlovesId() string {
+	if x != nil {
+		return x.GlovesId
+	}
+	return ""
+}
+
+func (x *GetLoadoutResponse) GetLegsId() string {
+	if x != nil {
+		return x.LegsId
+	}
+	return ""
+}
+
+func (x *GetLoadoutResponse) GetRing1Id() string {
+	if x != nil {
+		return x.Ring1Id
+	}
+	return ""
+}
+
+func (x *GetLoadoutResponse) GetRing2Id() string {
+	if x != nil {
+		return x.Ring2Id
+	}
+	return ""
+}
+
+func (x *GetLoadoutResponse) GetConsumable1Id() string {
+	if x != nil {
+		return x.Consumable1Id
+	}
+	return ""
+}
+
+func (x *GetLoadoutResponse) GetConsumable2Id() string {
+	if x != nil {
+		return x.Consumable2Id
+	}
+	return ""
+}
+
+func (x *GetLoadoutResponse) GetConsumable3Id() string {
+	if x != nil {
+		return x.Consumable3Id
+	}
+	return ""
+}
+
+func (x *GetLoadoutResponse) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *GetLoadoutResponse) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 var File_api_proto_items_items_proto protoreflect.FileDescriptor
 
 const file_api_proto_items_items_proto_rawDesc = "" +
@@ -2068,7 +2260,27 @@ const file_api_proto_items_items_proto_rawDesc = "" +
 	"\t_icon_urlB\x11\n" +
 	"\x0f_required_levelB\x12\n" +
 	"\x10_base_sell_priceB\x11\n" +
-	"\x0f_base_buy_price2\xb3\a\n" +
+	"\x0f_base_buy_price\"0\n" +
+	"\x11GetLoadoutRequest\x12\x1b\n" +
+	"\tmember_id\x18\x01 \x01(\tR\bmemberId\"\xde\x03\n" +
+	"\x12GetLoadoutResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
+	"\bmemberId\x18\x02 \x01(\tR\bmemberId\x12\x1a\n" +
+	"\bweaponId\x18\x03 \x01(\tR\bweaponId\x12\x16\n" +
+	"\x06headId\x18\x04 \x01(\tR\x06headId\x12\x18\n" +
+	"\achestId\x18\x05 \x01(\tR\achestId\x12\x1a\n" +
+	"\bglovesId\x18\x06 \x01(\tR\bglovesId\x12\x16\n" +
+	"\x06legsId\x18\a \x01(\tR\x06legsId\x12\x18\n" +
+	"\aring1Id\x18\b \x01(\tR\aring1Id\x12\x18\n" +
+	"\aring2Id\x18\t \x01(\tR\aring2Id\x12$\n" +
+	"\rconsumable1Id\x18\n" +
+	" \x01(\tR\rconsumable1Id\x12$\n" +
+	"\rconsumable2Id\x18\v \x01(\tR\rconsumable2Id\x12$\n" +
+	"\rconsumable3Id\x18\f \x01(\tR\rconsumable3Id\x129\n" +
+	"\n" +
+	"created_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt2\xf6\a\n" +
 	"\fItemsService\x12M\n" +
 	"\x11ListItemTemplates\x12\x16.google.protobuf.Empty\x1a .items.ListItemTemplatesResponse\x12E\n" +
 	"\rListItemTypes\x12\x16.google.protobuf.Empty\x1a\x1c.items.ListItemTypesResponse\x12K\n" +
@@ -2081,7 +2293,9 @@ const file_api_proto_items_items_proto_rawDesc = "" +
 	"\x12CreateItemTemplate\x12 .items.CreateItemTemplateRequest\x1a\x13.items.ItemTemplate\x12O\n" +
 	"\x14CreateCompleteWeapon\x12\".items.CreateCompleteWeaponRequest\x1a\x13.items.WeaponDetail\x12L\n" +
 	"\x13CreateCompleteArmor\x12!.items.CreateCompleteArmorRequest\x1a\x12.items.ArmorDetail\x12[\n" +
-	"\x18CreateCompleteConsumable\x12&.items.CreateCompleteConsumableRequest\x1a\x17.items.ConsumableDetailBCZAgithub.com/darkphotonKN/cosmic-void-server/common/api/proto/itemsb\x06proto3"
+	"\x18CreateCompleteConsumable\x12&.items.CreateCompleteConsumableRequest\x1a\x17.items.ConsumableDetail\x12A\n" +
+	"\n" +
+	"GetLoadout\x12\x18.items.GetLoadoutRequest\x1a\x19.items.GetLoadoutResponseBCZAgithub.com/darkphotonKN/cosmic-void-server/common/api/proto/itemsb\x06proto3"
 
 var (
 	file_api_proto_items_items_proto_rawDescOnce sync.Once
@@ -2095,7 +2309,7 @@ func file_api_proto_items_items_proto_rawDescGZIP() []byte {
 	return file_api_proto_items_items_proto_rawDescData
 }
 
-var file_api_proto_items_items_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_api_proto_items_items_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_api_proto_items_items_proto_goTypes = []any{
 	(*Weapon)(nil),                          // 0: items.Weapon
 	(*WeaponDetail)(nil),                    // 1: items.WeaponDetail
@@ -2116,59 +2330,65 @@ var file_api_proto_items_items_proto_goTypes = []any{
 	(*CreateCompleteWeaponRequest)(nil),     // 16: items.CreateCompleteWeaponRequest
 	(*CreateCompleteArmorRequest)(nil),      // 17: items.CreateCompleteArmorRequest
 	(*CreateCompleteConsumableRequest)(nil), // 18: items.CreateCompleteConsumableRequest
-	(*timestamppb.Timestamp)(nil),           // 19: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                   // 20: google.protobuf.Empty
+	(*GetLoadoutRequest)(nil),               // 19: items.GetLoadoutRequest
+	(*GetLoadoutResponse)(nil),              // 20: items.GetLoadoutResponse
+	(*timestamppb.Timestamp)(nil),           // 21: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                   // 22: google.protobuf.Empty
 }
 var file_api_proto_items_items_proto_depIdxs = []int32{
-	19, // 0: items.Weapon.created_at:type_name -> google.protobuf.Timestamp
-	19, // 1: items.Weapon.updated_at:type_name -> google.protobuf.Timestamp
-	19, // 2: items.WeaponDetail.created_at:type_name -> google.protobuf.Timestamp
-	19, // 3: items.WeaponDetail.updated_at:type_name -> google.protobuf.Timestamp
-	19, // 4: items.ItemType.created_at:type_name -> google.protobuf.Timestamp
-	19, // 5: items.ItemType.updated_at:type_name -> google.protobuf.Timestamp
+	21, // 0: items.Weapon.created_at:type_name -> google.protobuf.Timestamp
+	21, // 1: items.Weapon.updated_at:type_name -> google.protobuf.Timestamp
+	21, // 2: items.WeaponDetail.created_at:type_name -> google.protobuf.Timestamp
+	21, // 3: items.WeaponDetail.updated_at:type_name -> google.protobuf.Timestamp
+	21, // 4: items.ItemType.created_at:type_name -> google.protobuf.Timestamp
+	21, // 5: items.ItemType.updated_at:type_name -> google.protobuf.Timestamp
 	2,  // 6: items.ListItemTypesResponse.item_types:type_name -> items.ItemType
-	19, // 7: items.ItemRarity.created_at:type_name -> google.protobuf.Timestamp
-	19, // 8: items.ItemRarity.updated_at:type_name -> google.protobuf.Timestamp
+	21, // 7: items.ItemRarity.created_at:type_name -> google.protobuf.Timestamp
+	21, // 8: items.ItemRarity.updated_at:type_name -> google.protobuf.Timestamp
 	4,  // 9: items.ListItemRaritiesResponse.item_rarities:type_name -> items.ItemRarity
 	1,  // 10: items.ListWeaponsResponse.weapons:type_name -> items.WeaponDetail
-	19, // 11: items.ArmorDetail.created_at:type_name -> google.protobuf.Timestamp
-	19, // 12: items.ArmorDetail.updated_at:type_name -> google.protobuf.Timestamp
+	21, // 11: items.ArmorDetail.created_at:type_name -> google.protobuf.Timestamp
+	21, // 12: items.ArmorDetail.updated_at:type_name -> google.protobuf.Timestamp
 	14, // 13: items.ListItemTemplatesResponse.items:type_name -> items.ItemTemplate
 	9,  // 14: items.ListArmorsResponse.armors:type_name -> items.ArmorDetail
-	19, // 15: items.ConsumableDetail.created_at:type_name -> google.protobuf.Timestamp
-	19, // 16: items.ConsumableDetail.updated_at:type_name -> google.protobuf.Timestamp
+	21, // 15: items.ConsumableDetail.created_at:type_name -> google.protobuf.Timestamp
+	21, // 16: items.ConsumableDetail.updated_at:type_name -> google.protobuf.Timestamp
 	12, // 17: items.ListConsumablesResponse.consumables:type_name -> items.ConsumableDetail
-	19, // 18: items.ItemTemplate.created_at:type_name -> google.protobuf.Timestamp
-	19, // 19: items.ItemTemplate.updated_at:type_name -> google.protobuf.Timestamp
-	20, // 20: items.ItemsService.ListItemTemplates:input_type -> google.protobuf.Empty
-	20, // 21: items.ItemsService.ListItemTypes:input_type -> google.protobuf.Empty
-	20, // 22: items.ItemsService.ListItemRarities:input_type -> google.protobuf.Empty
-	6,  // 23: items.ItemsService.CreateWeapon:input_type -> items.CreateWeaponRequest
-	7,  // 24: items.ItemsService.GetWeaponWithTemplateByID:input_type -> items.GetWeaponRequest
-	20, // 25: items.ItemsService.ListWeaponsWithTemplate:input_type -> google.protobuf.Empty
-	20, // 26: items.ItemsService.ListArmorsWithTemplate:input_type -> google.protobuf.Empty
-	20, // 27: items.ItemsService.ListConsumablesWithTemplate:input_type -> google.protobuf.Empty
-	15, // 28: items.ItemsService.CreateItemTemplate:input_type -> items.CreateItemTemplateRequest
-	16, // 29: items.ItemsService.CreateCompleteWeapon:input_type -> items.CreateCompleteWeaponRequest
-	17, // 30: items.ItemsService.CreateCompleteArmor:input_type -> items.CreateCompleteArmorRequest
-	18, // 31: items.ItemsService.CreateCompleteConsumable:input_type -> items.CreateCompleteConsumableRequest
-	10, // 32: items.ItemsService.ListItemTemplates:output_type -> items.ListItemTemplatesResponse
-	3,  // 33: items.ItemsService.ListItemTypes:output_type -> items.ListItemTypesResponse
-	5,  // 34: items.ItemsService.ListItemRarities:output_type -> items.ListItemRaritiesResponse
-	0,  // 35: items.ItemsService.CreateWeapon:output_type -> items.Weapon
-	1,  // 36: items.ItemsService.GetWeaponWithTemplateByID:output_type -> items.WeaponDetail
-	8,  // 37: items.ItemsService.ListWeaponsWithTemplate:output_type -> items.ListWeaponsResponse
-	11, // 38: items.ItemsService.ListArmorsWithTemplate:output_type -> items.ListArmorsResponse
-	13, // 39: items.ItemsService.ListConsumablesWithTemplate:output_type -> items.ListConsumablesResponse
-	14, // 40: items.ItemsService.CreateItemTemplate:output_type -> items.ItemTemplate
-	1,  // 41: items.ItemsService.CreateCompleteWeapon:output_type -> items.WeaponDetail
-	9,  // 42: items.ItemsService.CreateCompleteArmor:output_type -> items.ArmorDetail
-	12, // 43: items.ItemsService.CreateCompleteConsumable:output_type -> items.ConsumableDetail
-	32, // [32:44] is the sub-list for method output_type
-	20, // [20:32] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	21, // 18: items.ItemTemplate.created_at:type_name -> google.protobuf.Timestamp
+	21, // 19: items.ItemTemplate.updated_at:type_name -> google.protobuf.Timestamp
+	21, // 20: items.GetLoadoutResponse.created_at:type_name -> google.protobuf.Timestamp
+	21, // 21: items.GetLoadoutResponse.updated_at:type_name -> google.protobuf.Timestamp
+	22, // 22: items.ItemsService.ListItemTemplates:input_type -> google.protobuf.Empty
+	22, // 23: items.ItemsService.ListItemTypes:input_type -> google.protobuf.Empty
+	22, // 24: items.ItemsService.ListItemRarities:input_type -> google.protobuf.Empty
+	6,  // 25: items.ItemsService.CreateWeapon:input_type -> items.CreateWeaponRequest
+	7,  // 26: items.ItemsService.GetWeaponWithTemplateByID:input_type -> items.GetWeaponRequest
+	22, // 27: items.ItemsService.ListWeaponsWithTemplate:input_type -> google.protobuf.Empty
+	22, // 28: items.ItemsService.ListArmorsWithTemplate:input_type -> google.protobuf.Empty
+	22, // 29: items.ItemsService.ListConsumablesWithTemplate:input_type -> google.protobuf.Empty
+	15, // 30: items.ItemsService.CreateItemTemplate:input_type -> items.CreateItemTemplateRequest
+	16, // 31: items.ItemsService.CreateCompleteWeapon:input_type -> items.CreateCompleteWeaponRequest
+	17, // 32: items.ItemsService.CreateCompleteArmor:input_type -> items.CreateCompleteArmorRequest
+	18, // 33: items.ItemsService.CreateCompleteConsumable:input_type -> items.CreateCompleteConsumableRequest
+	19, // 34: items.ItemsService.GetLoadout:input_type -> items.GetLoadoutRequest
+	10, // 35: items.ItemsService.ListItemTemplates:output_type -> items.ListItemTemplatesResponse
+	3,  // 36: items.ItemsService.ListItemTypes:output_type -> items.ListItemTypesResponse
+	5,  // 37: items.ItemsService.ListItemRarities:output_type -> items.ListItemRaritiesResponse
+	0,  // 38: items.ItemsService.CreateWeapon:output_type -> items.Weapon
+	1,  // 39: items.ItemsService.GetWeaponWithTemplateByID:output_type -> items.WeaponDetail
+	8,  // 40: items.ItemsService.ListWeaponsWithTemplate:output_type -> items.ListWeaponsResponse
+	11, // 41: items.ItemsService.ListArmorsWithTemplate:output_type -> items.ListArmorsResponse
+	13, // 42: items.ItemsService.ListConsumablesWithTemplate:output_type -> items.ListConsumablesResponse
+	14, // 43: items.ItemsService.CreateItemTemplate:output_type -> items.ItemTemplate
+	1,  // 44: items.ItemsService.CreateCompleteWeapon:output_type -> items.WeaponDetail
+	9,  // 45: items.ItemsService.CreateCompleteArmor:output_type -> items.ArmorDetail
+	12, // 46: items.ItemsService.CreateCompleteConsumable:output_type -> items.ConsumableDetail
+	20, // 47: items.ItemsService.GetLoadout:output_type -> items.GetLoadoutResponse
+	35, // [35:48] is the sub-list for method output_type
+	22, // [22:35] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_api_proto_items_items_proto_init() }
@@ -2186,7 +2406,7 @@ func file_api_proto_items_items_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_proto_items_items_proto_rawDesc), len(file_api_proto_items_items_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

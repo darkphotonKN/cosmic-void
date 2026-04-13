@@ -581,3 +581,22 @@ func (r *repository) CreateItemTemplateTx(ctx context.Context, tx *sqlx.Tx, temp
 
 	return nil
 }
+
+func (r *repository) GetLoadout(ctx context.Context, req *GetLoadoutRequest) (*Loadout, error) {
+	memberId := req.MemberId
+
+	loadout := &Loadout{}
+
+	query := `
+	 SELECT * 
+	 FROM player_loadouts
+	 WHERE member_id = $1
+	`
+
+	err := r.DB.GetContext(ctx, &loadout, query, memberId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get loadout: %w", err)
+	}
+
+	return loadout, nil
+}

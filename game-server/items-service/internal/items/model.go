@@ -199,12 +199,12 @@ type CreateCompleteWeaponRequest struct {
 	UserId string `json:"user_id" binding:"required"`
 
 	// Template fields (common attributes)
-	ItemName      string  `json:"item_name" binding:"required"`
-	IconURL       *string `json:"icon_url"`
+	ItemName string  `json:"item_name" binding:"required"`
+	IconURL  *string `json:"icon_url"`
 
-	RequiredLevel *int    `json:"required_level"`
-	BaseSellPrice *int    `json:"base_sell_price"`
-	BaseBuyPrice  *int    `json:"base_buy_price"`
+	RequiredLevel *int `json:"required_level"`
+	BaseSellPrice *int `json:"base_sell_price"`
+	BaseBuyPrice  *int `json:"base_buy_price"`
 
 	// Weapon-specific fields
 	RarityID     uuid.UUID `json:"rarity_id" binding:"required"`
@@ -220,12 +220,12 @@ type CreateCompleteArmorRequest struct {
 	UserId string `json:"user_id" binding:"required"`
 
 	// Template fields (common attributes)
-	ItemName      string  `json:"item_name" binding:"required"`
-	IconURL       *string `json:"icon_url"`
+	ItemName string  `json:"item_name" binding:"required"`
+	IconURL  *string `json:"icon_url"`
 
-	RequiredLevel *int    `json:"required_level"`
-	BaseSellPrice *int    `json:"base_sell_price"`
-	BaseBuyPrice  *int    `json:"base_buy_price"`
+	RequiredLevel *int `json:"required_level"`
+	BaseSellPrice *int `json:"base_sell_price"`
+	BaseBuyPrice  *int `json:"base_buy_price"`
 
 	// Armor-specific fields
 	RarityID        uuid.UUID `json:"rarity_id" binding:"required"`
@@ -241,12 +241,12 @@ type CreateCompleteConsumableRequest struct {
 	UserId string `json:"user_id" binding:"required"`
 
 	// Template fields (common attributes)
-	ItemName      string  `json:"item_name" binding:"required"`
-	IconURL       *string `json:"icon_url"`
+	ItemName string  `json:"item_name" binding:"required"`
+	IconURL  *string `json:"icon_url"`
 
-	RequiredLevel *int    `json:"required_level"`
-	BaseSellPrice *int    `json:"base_sell_price"`
-	BaseBuyPrice  *int    `json:"base_buy_price"`
+	RequiredLevel *int `json:"required_level"`
+	BaseSellPrice *int `json:"base_sell_price"`
+	BaseBuyPrice  *int `json:"base_buy_price"`
 
 	// Consumable-specific fields
 	RarityID      uuid.UUID `json:"rarity_id" binding:"required"`
@@ -321,4 +321,25 @@ type WeaponWithTemplate struct {
 	RequiredLevel  int       `db:"required_level"`
 	BaseSellPrice  int       `db:"base_sell_price"`
 	BaseBuyPrice   int       `db:"base_buy_price"`
+}
+
+type GetLoadoutRequest struct {
+	MemberId uuid.UUID `json:"member_id" binding:"required"`
+}
+
+type Loadout struct {
+	Id            *uuid.UUID `db:"id"`
+	MemberId      *uuid.UUID `db:"member_id"`
+	WeaponId      *uuid.UUID `db:"weapon_instance_id"`
+	HeadId        *uuid.UUID `db:"head_instance_id"`
+	ChestId       *uuid.UUID `db:"chest_instance_id"`
+	GlovesId      *uuid.UUID `db:"gloves_instance_id"`
+	LegsId        *uuid.UUID `db:"legs_instance_id"`
+	Ring1Id       *uuid.UUID `db:"ring_1_instance_id"`
+	Ring2Id       *uuid.UUID `db:"ring_2_instance_id"`
+	Consumable1Id *uuid.UUID `db:"consumable_1_id"`
+	Consumable2Id *uuid.UUID `db:"consumable_2_id"`
+	Consumable3Id *uuid.UUID `db:"consumable_3_id"`
+	CreatedAt     time.Time  `db:"created_at"`
+	UpdatedAt     time.Time  `db:"updated_at"`
 }

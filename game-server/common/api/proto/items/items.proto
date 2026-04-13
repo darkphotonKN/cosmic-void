@@ -33,6 +33,8 @@ service ItemsService {
   rpc CreateCompleteWeapon(CreateCompleteWeaponRequest) returns (WeaponDetail);
   rpc CreateCompleteArmor(CreateCompleteArmorRequest) returns (ArmorDetail);
   rpc CreateCompleteConsumable(CreateCompleteConsumableRequest) returns (ConsumableDetail);
+
+  rpc GetLoadout(GetLoadoutRequest) returns (GetLoadoutResponse);
 }
 
 // ============ Layered Message Definitions ============
@@ -284,4 +286,25 @@ message CreateCompleteConsumableRequest {
   int32 buff_duration = 10;
   int32 max_stack_size = 11;
   string description = 12;
+}
+
+message GetLoadoutRequest {
+  string member_id= 1;
+}
+
+message GetLoadoutResponse {
+  string id = 1;
+  string memberId = 2;
+  string weaponId = 3;
+  string headId = 4;
+  string chestId = 5;
+  string glovesId = 6;
+  string legsId = 7;
+  string ring1Id = 8;
+  string ring2Id = 9;
+  string consumable1Id = 10;
+  string consumable2Id = 11;
+  string consumable3Id = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
 }

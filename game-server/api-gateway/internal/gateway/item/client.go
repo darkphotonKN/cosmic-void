@@ -118,4 +118,14 @@ func (c *Client) CreateCompleteConsumable(ctx context.Context, req *pb.CreateCom
 	return consumable, err
 }
 
+func (c *Client) GetLoadout(ctx context.Context, req *pb.GetLoadoutRequest) (*pb.GetLoadoutResponse, error) {
+	conn, err := discovery.ServiceConnection(ctx, serviceName, c.registry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to items service: %w", err)
+	}
+	defer conn.Close()
 
+	client := pb.NewItemsServiceClient(conn)
+	loadout, err := client.GetLoadout(ctx, req)
+	return loadout, err
+}
