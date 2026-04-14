@@ -42,7 +42,8 @@ const (
 	MemberProfileUpdated = "profile.updated"
 
 	// Game Events
-	GameMatchEnded = "match.ended" // match ended
+	GameMatchEnded = "match.ended"     // match ended
+	ItemsExtracted = "items.extracted" // items extracted after match end
 
 	// Item Events
 	ItemCreated = "item.created"

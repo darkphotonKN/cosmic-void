@@ -1915,6 +1915,7 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 
 			// -- inventory items --
 			inventory := []*types.ExtractedItem{}
+
 			if itemIDList, itemIDListOk := itemIDListComp.(*components.ItemIDListComponent); itemIDListOk {
 
 				for _, itemID := range itemIDList.ItemIDs {
@@ -2140,6 +2141,7 @@ func (s *Session) IsAreaOccupied(placeArea PlaceArea) bool {
 	}
 	return false
 }
+
 func (s *Session) CreateContainer() {
 	containerW := constants.ContainerWidthRadius*2 + 20
 	containerH := constants.ContainerHeightRadius*2 + 20

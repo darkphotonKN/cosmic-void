@@ -25,8 +25,7 @@ func NewService(publishCh commonbroker.Publisher) *service {
 	}
 }
 
-func (s *service) PublishMatchComplete(ctx context.Context, data *types.RawMatchState) error {
-
+func (s *service) PublishMatchComplete(ctx context.Context, data *types.RawMatchState) {
 	// calculate winner and determine final positions
 	rankedPlayers := s.rankPlayers(data.Players, data.EliminationOrder)
 
@@ -35,25 +34,41 @@ func (s *service) PublishMatchComplete(ctx context.Context, data *types.RawMatch
 
 	if err != nil {
 		slog.Error("Error publishing game match end event", "error", err)
-		return err
+		return
 	}
 
-	err = s.publishCh.PublishWithContext(
-		ctx,
-		commonconstants.GameEventsExchange,
-		commonconstants.GameMatchEnded,
-		commonbroker.Message{
-			ContentType:  "application/protobuf",
-			Body:         protoData.MatchEndedEvent,
-			DeliveryMode: amqp.Persistent,
-		})
+	go func() {
+		err := s.publishCh.PublishWithContext(
+			ctx,
+			commonconstants.GameEventsExchange,
+			commonconstants.GameMatchEnded,
+			commonbroker.Message{
+				ContentType:  "application/protobuf",
+				Body:         protoData.MatchEndedEvent,
+				DeliveryMode: amqp.Persistent,
+			})
+		if err != nil {
+			slog.Error("Error publishing game match end event", "error", err)
+			return
+		}
+	}()
 
-	if err != nil {
-		slog.Error("Error publishing game match end event", "error", err)
-		return err
-	}
+	go func() {
+		err := s.publishCh.PublishWithContext(
+			ctx,
+			commonconstants.GameEventsExchange,
+			commonconstants.ItemsExtracted,
+			commonbroker.Message{
+				ContentType:  "application/protobuf",
+				Body:         protoData.ItemsExtractedEvent,
+				DeliveryMode: amqp.Persistent,
+			})
 
-	return nil
+		if err != nil {
+			slog.Error("Error publishing items extracted event", "error", err)
+			return
+		}
+	}()
 }
 
 /**
@@ -114,7 +129,7 @@ func (s *service) formatMatchData(sessionID uuid.UUID, startedAt time.Time, ende
 
 	itemsExtractedProtoData, itemsExtractErr := proto.Marshal(&pb.ItemsExtractedEvent{
 		SessionId:   string(sessionID.String()),
-		PlayerItems: nil,
+		PlayerItems: playerItems,
 	})
 
 	if itemsExtractErr != nil {
