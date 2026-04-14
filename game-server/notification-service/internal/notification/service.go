@@ -121,13 +121,17 @@ func (s *service) ProcessGameEnded(ctx context.Context, payload *pb.MatchEndedEv
 
 		// Build notification message
 		var title, message string
-		if player.Win {
-			title = "遊戲勝利！"
-			message = fmt.Sprintf("恭喜 %s！你贏得了本場比賽！排名第 %d，擊殺: %d，死亡: %d",
+		if player.Escape {
+			title = "Escaped!"
+			message = fmt.Sprintf("Congratulations %s! You escaped successfully! Position: #%d, Kills: %d, Deaths: %d",
+				player.Username, player.FinalPosition, player.Kills, player.Deaths)
+		} else if player.Win {
+			title = "Victory!"
+			message = fmt.Sprintf("Congratulations %s! Last one standing! Position: #%d, Kills: %d, Deaths: %d",
 				player.Username, player.FinalPosition, player.Kills, player.Deaths)
 		} else {
-			title = "遊戲結束"
-			message = fmt.Sprintf("%s，本場比賽結束。排名第 %d，擊殺: %d，死亡: %d",
+			title = "Game Over"
+			message = fmt.Sprintf("%s, match ended. Position: #%d, Kills: %d, Deaths: %d",
 				player.Username, player.FinalPosition, player.Kills, player.Deaths)
 		}
 

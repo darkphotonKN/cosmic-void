@@ -1631,11 +1631,11 @@ func (s *Session) notifyPlayersOfGameEnd() {
 			position = totalPlayers - idx
 		}
 
-		result := "survived" // 預設：存活（最後一人）
+		result := "survived" // default survived
 		if _, eliminated := eliminations[pid]; eliminated {
 			result = "eliminated"
 		}
-		// 檢查是否逃脫
+		// check escape
 		if playerEntityID, ok := s.playerIDToEntitiesID[pid]; ok {
 			if playerEntity, exists := s.EntityManager.GetEntity(playerEntityID); exists {
 				if pc, hasPlayer := playerEntity.GetComponent(ecs.ComponentTypePlayer); hasPlayer {
