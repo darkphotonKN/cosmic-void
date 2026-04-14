@@ -1631,11 +1631,28 @@ func (s *Session) notifyPlayersOfGameEnd() {
 			position = totalPlayers - idx
 		}
 
+		result := "survived" // 預設：存活（最後一人）
+		if _, eliminated := eliminations[pid]; eliminated {
+			result = "eliminated"
+		}
+		// 檢查是否逃脫
+		if playerEntityID, ok := s.playerIDToEntitiesID[pid]; ok {
+			if playerEntity, exists := s.EntityManager.GetEntity(playerEntityID); exists {
+				if pc, hasPlayer := playerEntity.GetComponent(ecs.ComponentTypePlayer); hasPlayer {
+					player := pc.(*components.PlayerComponent)
+					if player.Escape {
+						result = "escaped"
+					}
+				}
+			}
+		}
+
 		if err := s.sender.SendMessageToPlayer(pid, types.Message{
 			Action: string(constants.ActionEndGame),
 			Payload: map[string]interface{}{
 				"player_id": pid.String(),
 				"position":  position,
+				"result":    result,
 			},
 		}); err != nil {
 			slog.Error("failed to send end_game to player",

@@ -6,7 +6,16 @@
 import Phaser from "phaser";
 import { ActionType } from "@/assets/types/client";
 import { socketManager } from "@/utils/class/SocketManager";
-import { ClientGameState, ContainerState, ItemState, EscapeDoorState, SwitchState, WallState, DoorState, EquippedItems } from "@/types/gameState";
+import {
+  ClientGameState,
+  ContainerState,
+  ItemState,
+  EscapeDoorState,
+  SwitchState,
+  WallState,
+  DoorState,
+  EquippedItems,
+} from "@/types/gameState";
 import { EquipmentPanel } from "@/ui/EquipmentPanel";
 import { GameStateLogger } from "@/utils/gameStateLogger";
 
@@ -36,15 +45,18 @@ export class CosmicVoidScene extends Phaser.Scene {
 
   // leg graphics for walking animation
   private playerLegs?: Phaser.GameObjects.Graphics;
-  private otherPlayersLegs: Map<string, Phaser.GameObjects.Graphics> = new Map();
-  private playerFacing: 'up' | 'down' | 'left' | 'right' = 'down';
+  private otherPlayersLegs: Map<string, Phaser.GameObjects.Graphics> =
+    new Map();
+  private playerFacing: "up" | "down" | "left" | "right" = "down";
   private walkPhase = 0;
-  private otherPlayersFacing: Map<string, 'up' | 'down' | 'left' | 'right'> = new Map();
+  private otherPlayersFacing: Map<string, "up" | "down" | "left" | "right"> =
+    new Map();
   private otherPlayersWalkPhase: Map<string, number> = new Map();
 
   // username labels
   private playerNameText?: Phaser.GameObjects.Text;
-  private otherPlayersNameTexts: Map<string, Phaser.GameObjects.Text> = new Map();
+  private otherPlayersNameTexts: Map<string, Phaser.GameObjects.Text> =
+    new Map();
   private hoveredPlayerId?: string; // survives game state rerenders
 
   // Controls
@@ -77,19 +89,34 @@ export class CosmicVoidScene extends Phaser.Scene {
   private indoorMask!: Phaser.GameObjects.Graphics;
 
   // 寶箱 (從後端同步)
-  private chests: Map<string, { sprite: Phaser.GameObjects.Sprite; entityId: string }> = new Map();
+  private chests: Map<
+    string,
+    { sprite: Phaser.GameObjects.Sprite; entityId: string }
+  > = new Map();
 
   // 逃脫門 (從後端同步)
-  private escapeDoors: Map<string, { sprite: Phaser.GameObjects.Sprite; entityId: string }> = new Map();
+  private escapeDoors: Map<
+    string,
+    { sprite: Phaser.GameObjects.Sprite; entityId: string }
+  > = new Map();
 
   // 開關/按鈕 (從後端同步)
-  private switches: Map<string, { sprite: Phaser.GameObjects.Sprite; entityId: string }> = new Map();
+  private switches: Map<
+    string,
+    { sprite: Phaser.GameObjects.Sprite; entityId: string }
+  > = new Map();
 
   // 牆壁 (從後端同步)
-  private walls: Map<string, { graphics: Phaser.GameObjects.Graphics; entityId: string }> = new Map();
+  private walls: Map<
+    string,
+    { graphics: Phaser.GameObjects.Graphics; entityId: string }
+  > = new Map();
 
   // 門 (從後端同步)
-  private serverDoors: Map<string, { rect: Phaser.GameObjects.Rectangle; entityId: string; isOpen: boolean }> = new Map();
+  private serverDoors: Map<
+    string,
+    { rect: Phaser.GameObjects.Rectangle; entityId: string; isOpen: boolean }
+  > = new Map();
   private serverBuildingsCreated = false;
 
   // 寶箱跳窗
@@ -101,19 +128,33 @@ export class CosmicVoidScene extends Phaser.Scene {
   // 道具欄 + 裝備面板
   private equipmentPanel?: EquipmentPanel;
   private equippedItems: EquippedItems = {
-    weapon: null, head: null, body: null, hands: null, feet: null,
-    ring_1: null, ring_2: null, consumable_1: null, consumable_2: null, consumable_3: null,
+    weapon: null,
+    head: null,
+    body: null,
+    hands: null,
+    feet: null,
+    ring_1: null,
+    ring_2: null,
+    consumable_1: null,
+    consumable_2: null,
+    consumable_3: null,
   };
   private inventoryItems: ItemState[] = [];
 
   // Item row grid system (manual hit testing — Phaser input is broken with scrollFactor 0)
-  private itemRows: { screenRect: { x: number; y: number; w: number; h: number }; item: ItemState; label: Phaser.GameObjects.Text; rowBg: Phaser.GameObjects.Graphics; source: 'chest' }[] = [];
+  private itemRows: {
+    screenRect: { x: number; y: number; w: number; h: number };
+    item: ItemState;
+    label: Phaser.GameObjects.Text;
+    rowBg: Phaser.GameObjects.Graphics;
+    source: "chest";
+  }[] = [];
   private hoveredRowIndex = -1;
   private hoveredItemEntityId?: string; // Survives row rebuilds
   private lastPointerX = 0;
   private lastPointerY = 0;
   private itemTooltip?: Phaser.GameObjects.Container;
-  private chestItemFingerprint = '';
+  private chestItemFingerprint = "";
 
   // 當前寶箱的物品（用於 F 鍵取得）
   private currentChestItems: ItemState[] = [];
@@ -155,38 +196,44 @@ export class CosmicVoidScene extends Phaser.Scene {
     bg.strokeRoundedRect(-panelW / 2, -panelH / 2, panelW, panelH, 8);
     children.push(bg);
 
-    const title = this.add.text(0, -panelH / 2 + 16, 'CONTROLS', {
-      fontSize: '16px', color: '#00f0ff', letterSpacing: 5,
+    const title = this.add.text(0, -panelH / 2 + 16, "CONTROLS", {
+      fontSize: "16px",
+      color: "#00f0ff",
+      letterSpacing: 5,
     });
     title.setOrigin(0.5);
     children.push(title);
 
     const controls = [
-      ['WASD', 'Move'],
-      ['E', 'Interact'],
-      ['F', 'Take Item'],
-      ['I', 'Equipment'],
-      ['Q', 'Close Panel'],
-      ['CLICK', 'Attack Enemy'],
-      ['ESC', 'Main Menu'],
-      ['H', 'Toggle Controls'],
+      ["WASD", "Move"],
+      ["E", "Interact"],
+      ["F", "Take Item"],
+      ["I", "Equipment"],
+      ["Q", "Close Panel"],
+      ["CLICK", "Attack Enemy"],
+      ["ESC", "Main Menu"],
+      ["H", "Toggle Controls"],
     ];
 
     let curY = -panelH / 2 + 44;
     for (const [key, action] of controls) {
       const keyText = this.add.text(-panelW / 2 + 20, curY, key, {
-        fontSize: '11px', color: '#00f0ff', letterSpacing: 2,
+        fontSize: "11px",
+        color: "#00f0ff",
+        letterSpacing: 2,
       });
       const actionText = this.add.text(panelW / 2 - 20, curY, action, {
-        fontSize: '11px', color: '#556677',
+        fontSize: "11px",
+        color: "#556677",
       });
       actionText.setOrigin(1, 0);
       children.push(keyText, actionText);
       curY += 20;
     }
 
-    const hint = this.add.text(0, panelH / 2 - 16, 'H to close', {
-      fontSize: '10px', color: '#334455',
+    const hint = this.add.text(0, panelH / 2 - 16, "H to close", {
+      fontSize: "10px",
+      color: "#334455",
     });
     hint.setOrigin(0.5);
     children.push(hint);
@@ -196,11 +243,10 @@ export class CosmicVoidScene extends Phaser.Scene {
     this.controlsPanel.setScrollFactor(0);
   }
 
-  private showGameEndOverlay(position: number): void {
+  private showGameEndOverlay(position: number, result?: string): void {
     if (this.gameEndOverlay) return; // already shown
 
     const cam = this.cameras.main;
-    const isVictory = position === 1;
 
     // full-screen backdrop — eats pointer input from anything beneath
     const backdrop = this.add.rectangle(
@@ -211,8 +257,6 @@ export class CosmicVoidScene extends Phaser.Scene {
       0x0a0a12,
       0.85,
     );
-    backdrop.setInteractive();
-
     // centered card
     const cardW = 460;
     const cardH = 280;
@@ -222,7 +266,24 @@ export class CosmicVoidScene extends Phaser.Scene {
     card.lineStyle(1, 0x00f0ff, 0.5);
     card.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 10);
 
-    const titleStr = isVictory ? "VICTORY!" : `YOU PLACED #${position}`;
+    let titleStr: string;
+    let subtitleStr: string;
+
+    switch (result) {
+      case "escaped":
+        titleStr = "VICTORY!";
+        subtitleStr = "OPERATOR EXTRACTED";
+        break;
+      case "survived":
+        titleStr = "VICTORY!";
+        subtitleStr = "LAST ONE STANDING";
+        break;
+      default: // "eliminated"
+        titleStr = `YOU PLACED #${position}`;
+        subtitleStr = "BETTER LUCK ON YOUR NEXT DEPLOY";
+        break;
+    }
+
     const title = this.add.text(0, -60, titleStr, {
       fontSize: "44px",
       color: "#00f0ff",
@@ -231,9 +292,6 @@ export class CosmicVoidScene extends Phaser.Scene {
     });
     title.setOrigin(0.5);
 
-    const subtitleStr = isVictory
-      ? "OPERATOR EXTRACTED"
-      : "BETTER LUCK ON YOUR NEXT DEPLOY";
     const subtitle = this.add.text(0, 0, subtitleStr, {
       fontSize: "13px",
       color: "#556677",
@@ -250,20 +308,57 @@ export class CosmicVoidScene extends Phaser.Scene {
     // RE-DEPLOY button (re-queue) — cyan fill
     const redeployBtn = this.add.graphics();
     redeployBtn.fillStyle(0x00f0ff, 1);
-    redeployBtn.fillRoundedRect(-btnW / 2 - btnW / 2 - btnGap / 2, btnY - btnH / 2, btnW, btnH, 6);
-    const redeployText = this.add.text(-btnW / 2 - btnGap / 2, btnY, "RE-DEPLOY", {
-      fontSize: "14px",
-      color: "#0a0a12",
-      fontStyle: "bold",
-      letterSpacing: 3,
-    });
+    redeployBtn.fillRoundedRect(
+      -btnW / 2 - btnW / 2 - btnGap / 2,
+      btnY - btnH / 2,
+      btnW,
+      btnH,
+      6,
+    );
+    const redeployText = this.add.text(
+      -btnW / 2 - btnGap / 2,
+      btnY,
+      "RE-DEPLOY",
+      {
+        fontSize: "14px",
+        color: "#0a0a12",
+        fontStyle: "bold",
+        letterSpacing: 3,
+      },
+    );
     redeployText.setOrigin(0.5);
-    const redeployHit = this.add.rectangle(-btnW / 2 - btnGap / 2, btnY, btnW, btnH, 0x000000, 0)
-      .setInteractive({ useHandCursor: true });
-    redeployHit.on("pointerover", () => { redeployBtn.clear(); redeployBtn.fillStyle(0x33f5ff, 1); redeployBtn.fillRoundedRect(-btnW / 2 - btnW / 2 - btnGap / 2, btnY - btnH / 2, btnW, btnH, 6); });
-    redeployHit.on("pointerout", () => { redeployBtn.clear(); redeployBtn.fillStyle(0x00f0ff, 1); redeployBtn.fillRoundedRect(-btnW / 2 - btnW / 2 - btnGap / 2, btnY - btnH / 2, btnW, btnH, 6); });
+    // hit areas live outside containers so pointer events work reliably
+    const cx = cam.width / 2;
+    const cy = cam.height / 2;
+    const redeployHit = this.add
+      .rectangle(cx - btnW / 2 - btnGap / 2, cy + btnY, btnW, btnH, 0x000000, 0)
+      .setInteractive({ useHandCursor: true })
+      .setScrollFactor(0)
+      .setDepth(2001);
+    redeployHit.on("pointerover", () => {
+      redeployBtn.clear();
+      redeployBtn.fillStyle(0x33f5ff, 1);
+      redeployBtn.fillRoundedRect(
+        -btnW / 2 - btnW / 2 - btnGap / 2,
+        btnY - btnH / 2,
+        btnW,
+        btnH,
+        6,
+      );
+    });
+    redeployHit.on("pointerout", () => {
+      redeployBtn.clear();
+      redeployBtn.fillStyle(0x00f0ff, 1);
+      redeployBtn.fillRoundedRect(
+        -btnW / 2 - btnW / 2 - btnGap / 2,
+        btnY - btnH / 2,
+        btnW,
+        btnH,
+        6,
+      );
+    });
     redeployHit.on("pointerdown", () => {
-      this.sound.stopByKey('gameAmbient');
+      this.sound.stopByKey("gameAmbient");
       socketManager.sendMessage(ActionType.Find_Game, { playerId: "1" });
       this.scene.start("MainMenuScene");
     });
@@ -272,18 +367,36 @@ export class CosmicVoidScene extends Phaser.Scene {
     const returnBtn = this.add.graphics();
     returnBtn.lineStyle(1, 0x00f0ff, 0.6);
     returnBtn.strokeRoundedRect(btnGap / 2, btnY - btnH / 2, btnW, btnH, 6);
-    const returnText = this.add.text(btnGap / 2 + btnW / 2, btnY, "RETURN TO BASE", {
-      fontSize: "13px",
-      color: "#00f0ff",
-      letterSpacing: 2,
-    });
+    const returnText = this.add.text(
+      btnGap / 2 + btnW / 2,
+      btnY,
+      "RETURN TO BASE",
+      {
+        fontSize: "13px",
+        color: "#00f0ff",
+        letterSpacing: 2,
+      },
+    );
     returnText.setOrigin(0.5);
-    const returnHit = this.add.rectangle(btnGap / 2 + btnW / 2, btnY, btnW, btnH, 0x000000, 0)
-      .setInteractive({ useHandCursor: true });
-    returnHit.on("pointerover", () => { returnBtn.clear(); returnBtn.fillStyle(0x00f0ff, 0.1); returnBtn.fillRoundedRect(btnGap / 2, btnY - btnH / 2, btnW, btnH, 6); returnBtn.lineStyle(1, 0x00f0ff, 0.8); returnBtn.strokeRoundedRect(btnGap / 2, btnY - btnH / 2, btnW, btnH, 6); });
-    returnHit.on("pointerout", () => { returnBtn.clear(); returnBtn.lineStyle(1, 0x00f0ff, 0.6); returnBtn.strokeRoundedRect(btnGap / 2, btnY - btnH / 2, btnW, btnH, 6); });
+    const returnHit = this.add
+      .rectangle(cx + btnGap / 2 + btnW / 2, cy + btnY, btnW, btnH, 0x000000, 0)
+      .setInteractive({ useHandCursor: true })
+      .setScrollFactor(0)
+      .setDepth(2001);
+    returnHit.on("pointerover", () => {
+      returnBtn.clear();
+      returnBtn.fillStyle(0x00f0ff, 0.1);
+      returnBtn.fillRoundedRect(btnGap / 2, btnY - btnH / 2, btnW, btnH, 6);
+      returnBtn.lineStyle(1, 0x00f0ff, 0.8);
+      returnBtn.strokeRoundedRect(btnGap / 2, btnY - btnH / 2, btnW, btnH, 6);
+    });
+    returnHit.on("pointerout", () => {
+      returnBtn.clear();
+      returnBtn.lineStyle(1, 0x00f0ff, 0.6);
+      returnBtn.strokeRoundedRect(btnGap / 2, btnY - btnH / 2, btnW, btnH, 6);
+    });
     returnHit.on("pointerdown", () => {
-      this.sound.stopByKey('gameAmbient');
+      this.sound.stopByKey("gameAmbient");
       this.scene.start("MainMenuScene");
     });
 
@@ -293,10 +406,8 @@ export class CosmicVoidScene extends Phaser.Scene {
       subtitle,
       redeployBtn,
       redeployText,
-      redeployHit,
       returnBtn,
       returnText,
-      returnHit,
     ]);
 
     this.gameEndOverlay = this.add.container(0, 0, [backdrop, cardContainer]);
@@ -315,8 +426,20 @@ export class CosmicVoidScene extends Phaser.Scene {
     const suitVisor = 0x00f0ff;
     const suitHighlight = 0xbccdd8;
     const suitDark = 0x667788;
-    this.createSoldierTextures('player', suitBody, suitVisor, suitHighlight, suitDark);
-    this.createSoldierTextures('otherPlayer', suitBody, suitVisor, suitHighlight, suitDark);
+    this.createSoldierTextures(
+      "player",
+      suitBody,
+      suitVisor,
+      suitHighlight,
+      suitDark,
+    );
+    this.createSoldierTextures(
+      "otherPlayer",
+      suitBody,
+      suitVisor,
+      suitHighlight,
+      suitDark,
+    );
     this.createChestTextures();
     this.createEscapeDoorTextures();
     this.createSwitchTextures();
@@ -477,22 +600,45 @@ export class CosmicVoidScene extends Phaser.Scene {
     this.textures.addCanvas("metalFloor", canvas);
   }
 
-  private createSoldierTextures(prefix: string, bodyColor: number, visorColor: number, highlightColor: number, _darkColor: number): void {
-    const facings: Array<'down' | 'up' | 'left' | 'right'> = ['down', 'up', 'left', 'right'];
+  private createSoldierTextures(
+    prefix: string,
+    bodyColor: number,
+    visorColor: number,
+    highlightColor: number,
+    _darkColor: number,
+  ): void {
+    const facings: Array<"down" | "up" | "left" | "right"> = [
+      "down",
+      "up",
+      "left",
+      "right",
+    ];
     for (const facing of facings) {
       const g = this.make.graphics({});
-      this.drawSoldierBody(g, 30, 30, facing, bodyColor, visorColor, highlightColor);
+      this.drawSoldierBody(
+        g,
+        30,
+        30,
+        facing,
+        bodyColor,
+        visorColor,
+        highlightColor,
+      );
       g.generateTexture(this.facingTextureKey(prefix, facing), 60, 60);
       g.destroy();
     }
   }
 
   private drawSoldierBody(
-    g: Phaser.GameObjects.Graphics, cx: number, cy: number,
-    facing: 'up' | 'down' | 'left' | 'right',
-    bodyColor: number, visorColor: number, highlightColor: number,
+    g: Phaser.GameObjects.Graphics,
+    cx: number,
+    cy: number,
+    facing: "up" | "down" | "left" | "right",
+    bodyColor: number,
+    visorColor: number,
+    highlightColor: number,
   ): void {
-    if (facing === 'down' || facing === 'up') {
+    if (facing === "down" || facing === "up") {
       // front/back view — wider silhouette
       // shoulders
       g.fillStyle(bodyColor, 1);
@@ -504,7 +650,7 @@ export class CosmicVoidScene extends Phaser.Scene {
       g.fillStyle(highlightColor, 0.4);
       g.fillRoundedRect(cx - 6, cy - 18, 12, 9, 4);
 
-      if (facing === 'down') {
+      if (facing === "down") {
         // visor — two glowing dots
         g.fillStyle(visorColor, 1);
         g.fillCircle(cx - 5, cy - 10, 2.2);
@@ -523,7 +669,7 @@ export class CosmicVoidScene extends Phaser.Scene {
       g.fillRoundedRect(cx - 12, cy + 3, 24, 15, 3);
     } else {
       // side view — narrower profile
-      const dir = facing === 'right' ? 1 : -1;
+      const dir = facing === "right" ? 1 : -1;
       // body
       g.fillStyle(bodyColor, 1);
       g.fillRoundedRect(cx - 6, cy - 6, 12, 24, 4);
@@ -557,7 +703,12 @@ export class CosmicVoidScene extends Phaser.Scene {
 
     const px = this.player.x;
     const py = this.player.y;
-    const angle = Phaser.Math.Angle.Between(px, py, enemySprite.x, enemySprite.y);
+    const angle = Phaser.Math.Angle.Between(
+      px,
+      py,
+      enemySprite.x,
+      enemySprite.y,
+    );
     const radius = 35;
 
     slash.lineStyle(3, 0xffffff, 1);
@@ -582,8 +733,12 @@ export class CosmicVoidScene extends Phaser.Scene {
   }
 
   private drawLegs(
-    graphics: Phaser.GameObjects.Graphics, x: number, y: number,
-    facing: 'up' | 'down' | 'left' | 'right', walkPhase: number, isMoving: boolean,
+    graphics: Phaser.GameObjects.Graphics,
+    x: number,
+    y: number,
+    facing: "up" | "down" | "left" | "right",
+    walkPhase: number,
+    isMoving: boolean,
     darkColor: number,
   ): void {
     graphics.clear();
@@ -594,7 +749,7 @@ export class CosmicVoidScene extends Phaser.Scene {
 
     graphics.fillStyle(darkColor, 1);
 
-    if (facing === 'down' || facing === 'up') {
+    if (facing === "down" || facing === "up") {
       // two legs side by side, offset vertically when walking
       graphics.fillRect(x - 7, y + 18 + swing, legWidth, legHeight);
       graphics.fillRect(x + 1, y + 18 - swing, legWidth, legHeight);
@@ -746,9 +901,12 @@ export class CosmicVoidScene extends Phaser.Scene {
     // 向上箭頭
     unlocked.fillStyle(0xffffff, 1);
     unlocked.fillTriangle(
-      centerX, centerY - 4,
-      centerX - 3, centerY + 2,
-      centerX + 3, centerY + 2
+      centerX,
+      centerY - 4,
+      centerX - 3,
+      centerY + 2,
+      centerX + 3,
+      centerY + 2,
     );
 
     unlocked.generateTexture("escape_door_unlocked", size, size);
@@ -883,7 +1041,7 @@ export class CosmicVoidScene extends Phaser.Scene {
       lifespan: 800,
       quantity: 30,
       emitting: false,
-      tint: [0x00f0ff, 0x4ecca3, 0xFFD700],
+      tint: [0x00f0ff, 0x4ecca3, 0xffd700],
     });
     emitter.setDepth(1000);
     emitter.explode(30);
@@ -893,7 +1051,7 @@ export class CosmicVoidScene extends Phaser.Scene {
   }
 
   private updateContainers(containers: ContainerState[]): void {
-    const activeEntityIds = new Set(containers.map(c => c.entity_id));
+    const activeEntityIds = new Set(containers.map((c) => c.entity_id));
 
     // 移除不存在的寶箱
     this.chests.forEach((chest, entityId) => {
@@ -912,26 +1070,31 @@ export class CosmicVoidScene extends Phaser.Scene {
         const sprite = this.add.sprite(
           container.position.x,
           container.position.y,
-          container.is_open ? "chest_open" : "chest_closed"
+          container.is_open ? "chest_open" : "chest_closed",
         );
         sprite.setDepth(50);
         chest = { sprite, entityId: container.entity_id };
         this.chests.set(container.entity_id, chest);
       } else {
         // 更新寶箱狀態
-        chest.sprite.setTexture(container.is_open ? "chest_open" : "chest_closed");
+        chest.sprite.setTexture(
+          container.is_open ? "chest_open" : "chest_closed",
+        );
         chest.sprite.setPosition(container.position.x, container.position.y);
       }
 
       // 如果是打開的寶箱，更新跳窗內容
-      if (container.is_open && this.openedChestEntityId === container.entity_id) {
+      if (
+        container.is_open &&
+        this.openedChestEntityId === container.entity_id
+      ) {
         this.updatePopupItems(container.items, container.entity_id);
       }
     });
   }
 
   private updateEscapeDoors(escapeDoors: EscapeDoorState[]): void {
-    const activeEntityIds = new Set(escapeDoors.map(d => d.entity_id));
+    const activeEntityIds = new Set(escapeDoors.map((d) => d.entity_id));
 
     // 移除不存在的逃脫門
     this.escapeDoors.forEach((door, entityId) => {
@@ -958,7 +1121,7 @@ export class CosmicVoidScene extends Phaser.Scene {
         const sprite = this.add.sprite(
           door.position.x,
           door.position.y,
-          texture
+          texture,
         );
         sprite.setDepth(55); // 比寶箱稍高一點
         escapeDoor = { sprite, entityId: door.entity_id };
@@ -978,7 +1141,7 @@ export class CosmicVoidScene extends Phaser.Scene {
   }
 
   private updateSwitches(switches: SwitchState[]): void {
-    const activeEntityIds = new Set(switches.map(s => s.entity_id));
+    const activeEntityIds = new Set(switches.map((s) => s.entity_id));
 
     // 移除不存在的開關
     this.switches.forEach((switchObj, entityId) => {
@@ -997,7 +1160,7 @@ export class CosmicVoidScene extends Phaser.Scene {
         const sprite = this.add.sprite(
           switchState.position.x,
           switchState.position.y,
-          switchState.is_activated ? "switch_active" : "switch_inactive"
+          switchState.is_activated ? "switch_active" : "switch_inactive",
         );
         sprite.setDepth(50);
         switchObj = { sprite, entityId: switchState.entity_id };
@@ -1005,15 +1168,18 @@ export class CosmicVoidScene extends Phaser.Scene {
       } else {
         // 更新開關狀態
         switchObj.sprite.setTexture(
-          switchState.is_activated ? "switch_active" : "switch_inactive"
+          switchState.is_activated ? "switch_active" : "switch_inactive",
         );
-        switchObj.sprite.setPosition(switchState.position.x, switchState.position.y);
+        switchObj.sprite.setPosition(
+          switchState.position.x,
+          switchState.position.y,
+        );
       }
     });
   }
 
   private updateWalls(walls: WallState[]): void {
-    const activeEntityIds = new Set(walls.map(w => w.entity_id));
+    const activeEntityIds = new Set(walls.map((w) => w.entity_id));
 
     // 移除不存在的牆壁
     this.walls.forEach((wall, entityId) => {
@@ -1034,14 +1200,14 @@ export class CosmicVoidScene extends Phaser.Scene {
           wallState.position.x,
           wallState.position.y,
           wallState.width,
-          wallState.height
+          wallState.height,
         );
         graphics.lineStyle(1, 0x6b7280, 0.6);
         graphics.strokeRect(
           wallState.position.x,
           wallState.position.y,
           wallState.width,
-          wallState.height
+          wallState.height,
         );
         graphics.setDepth(50);
         wall = { graphics, entityId: wallState.entity_id };
@@ -1065,7 +1231,10 @@ export class CosmicVoidScene extends Phaser.Scene {
       let buildingIndex = 0;
       houseGroups.forEach((houseWalls, houseId) => {
         // 算出這棟房子的 bounding box
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        let minX = Infinity,
+          minY = Infinity,
+          maxX = -Infinity,
+          maxY = -Infinity;
         houseWalls.forEach((w) => {
           minX = Math.min(minX, w.position.x);
           minY = Math.min(minY, w.position.y);
@@ -1105,9 +1274,12 @@ export class CosmicVoidScene extends Phaser.Scene {
         const arrowSize = 10;
         doorMarker.fillStyle(0xffaa44, 1);
         doorMarker.fillTriangle(
-          doorX, doorY - arrowSize,
-          doorX - arrowSize, doorY + arrowSize,
-          doorX + arrowSize, doorY + arrowSize,
+          doorX,
+          doorY - arrowSize,
+          doorX - arrowSize,
+          doorY + arrowSize,
+          doorX + arrowSize,
+          doorY + arrowSize,
         );
         doorMarker.lineStyle(3, 0xffaa44, 0.8);
         doorMarker.strokeCircle(doorX, doorY, 18);
@@ -1150,7 +1322,7 @@ export class CosmicVoidScene extends Phaser.Scene {
   }
 
   private updateDoors(doors: DoorState[]): void {
-    const activeEntityIds = new Set(doors.map(d => d.entity_id));
+    const activeEntityIds = new Set(doors.map((d) => d.entity_id));
 
     // 移除不存在的門
     this.serverDoors.forEach((door, entityId) => {
@@ -1233,7 +1405,9 @@ export class CosmicVoidScene extends Phaser.Scene {
       // If container already has items from server state, populate immediately
       const gameState = this.lastGameState;
       if (gameState) {
-        const container = gameState.containers?.find(c => c.entity_id === entityId);
+        const container = gameState.containers?.find(
+          (c) => c.entity_id === entityId,
+        );
         if (container && container.is_open && container.items?.length > 0) {
           this.updatePopupItems(container.items, entityId);
         }
@@ -1319,10 +1493,15 @@ export class CosmicVoidScene extends Phaser.Scene {
     });
     this.popupItemsText.setOrigin(0.5);
 
-    const hint = this.add.text(0, popupHeight / 2 - 25, "Q Close  //  F Take Item", {
-      fontSize: "12px",
-      color: "#334455",
-    });
+    const hint = this.add.text(
+      0,
+      popupHeight / 2 - 25,
+      "Q Close  //  F Take Item",
+      {
+        fontSize: "12px",
+        color: "#334455",
+      },
+    );
     hint.setOrigin(0.5);
 
     this.chestPopup = this.add.container(centerX, centerY, [
@@ -1346,9 +1525,9 @@ export class CosmicVoidScene extends Phaser.Scene {
     const now = Date.now();
 
     // Filter out items that are still pending pickup (sent interact, awaiting server confirmation)
-    const displayItems = items.filter(item => {
+    const displayItems = items.filter((item) => {
       const lootedAt = this.chestLootedAtMap.get(item.entity_id);
-      if (lootedAt && (now - lootedAt) < this.PENDING_DURATION) {
+      if (lootedAt && now - lootedAt < this.PENDING_DURATION) {
         return false;
       }
       if (lootedAt) {
@@ -1357,14 +1536,14 @@ export class CosmicVoidScene extends Phaser.Scene {
       return true;
     });
 
-    this.currentChestItems = displayItems.map(item => ({ ...item }));
+    this.currentChestItems = displayItems.map((item) => ({ ...item }));
 
     // Skip rebuild if items haven't changed (prevents hover flicker from game loop)
-    const fingerprint = displayItems.map(i => i.entity_id).join(',');
+    const fingerprint = displayItems.map((i) => i.entity_id).join(",");
     if (fingerprint === this.chestItemFingerprint) return;
     this.chestItemFingerprint = fingerprint;
 
-    this.clearItemRows('chest');
+    this.clearItemRows("chest");
 
     if (displayItems.length === 0) {
       if (this.popupItemsText) {
@@ -1373,13 +1552,13 @@ export class CosmicVoidScene extends Phaser.Scene {
       }
     } else {
       if (this.popupItemsText) this.popupItemsText.setVisible(false);
-      this.createItemRows(displayItems, this.chestPopup, -50, 'chest');
+      this.createItemRows(displayItems, this.chestPopup, -50, "chest");
     }
   }
 
   private hideChestPopup(): void {
-    this.clearItemRows('chest');
-    this.chestItemFingerprint = '';
+    this.clearItemRows("chest");
+    this.chestItemFingerprint = "";
     if (this.chestPopup) {
       this.chestPopup.destroy();
       this.chestPopup = undefined;
@@ -1403,12 +1582,12 @@ export class CosmicVoidScene extends Phaser.Scene {
 
   // === Item row grid system with manual hit testing ===
 
-  private clearItemRows(source: 'chest' | 'all'): void {
+  private clearItemRows(source: "chest" | "all"): void {
     this.hideItemTooltip();
     this.hoveredRowIndex = -1;
     const remaining: typeof this.itemRows = [];
     for (const row of this.itemRows) {
-      if (source === 'all' || row.source === source) {
+      if (source === "all" || row.source === source) {
         row.label.destroy();
         row.rowBg.destroy();
       } else {
@@ -1428,10 +1607,15 @@ export class CosmicVoidScene extends Phaser.Scene {
     if (item.defense_rating) return `DEF ${item.defense_rating}`;
     if (item.healing_amount) return `+${item.healing_amount} HP`;
     if (item.mana_amount) return `+${item.mana_amount} MP`;
-    return '';
+    return "";
   }
 
-  private createItemRows(items: ItemState[], container: Phaser.GameObjects.Container, startY: number, source: 'chest'): void {
+  private createItemRows(
+    items: ItemState[],
+    container: Phaser.GameObjects.Container,
+    startY: number,
+    source: "chest",
+  ): void {
     const rowHeight = 28;
     const popupWidth = 320;
     const rowWidth = popupWidth - 16;
@@ -1479,7 +1663,11 @@ export class CosmicVoidScene extends Phaser.Scene {
       if (this.itemRows[i].item.entity_id === this.hoveredItemEntityId) {
         this.hoveredRowIndex = i;
         this.applyRowHover(i);
-        this.showItemTooltip(this.itemRows[i].item, this.lastPointerX, this.lastPointerY);
+        this.showItemTooltip(
+          this.itemRows[i].item,
+          this.lastPointerX,
+          this.lastPointerY,
+        );
         return;
       }
     }
@@ -1488,7 +1676,14 @@ export class CosmicVoidScene extends Phaser.Scene {
     this.hoveredRowIndex = -1;
   }
 
-  private drawRowBg(g: Phaser.GameObjects.Graphics, index: number, rowWidth: number, rowHeight: number, rowTop: number, hovered: boolean): void {
+  private drawRowBg(
+    g: Phaser.GameObjects.Graphics,
+    index: number,
+    rowWidth: number,
+    rowHeight: number,
+    rowTop: number,
+    hovered: boolean,
+  ): void {
     g.clear();
     if (hovered) {
       g.fillStyle(0x00f0ff, 0.08);
@@ -1500,28 +1695,47 @@ export class CosmicVoidScene extends Phaser.Scene {
       g.fillStyle(0x112233, bgAlpha);
       g.fillRoundedRect(-rowWidth / 2, rowTop, rowWidth, rowHeight, 4);
       g.lineStyle(1, 0x00f0ff, 0.06);
-      g.lineBetween(-rowWidth / 2 + 8, rowTop + rowHeight, rowWidth / 2 - 8, rowTop + rowHeight);
+      g.lineBetween(
+        -rowWidth / 2 + 8,
+        rowTop + rowHeight,
+        rowWidth / 2 - 8,
+        rowTop + rowHeight,
+      );
     }
   }
 
-  private getRowLocalTop(row: typeof this.itemRows[0]): number {
+  private getRowLocalTop(row: (typeof this.itemRows)[0]): number {
     return row.screenRect.y - (this.chestPopup?.y ?? 0);
   }
 
-  private getRowWidth(_row: typeof this.itemRows[0]): number {
+  private getRowWidth(_row: (typeof this.itemRows)[0]): number {
     return 320 - 16;
   }
 
   private applyRowHover(index: number): void {
     const row = this.itemRows[index];
     row.label.setColor("#00f0ff");
-    this.drawRowBg(row.rowBg, index, this.getRowWidth(row), row.screenRect.h, this.getRowLocalTop(row), true);
+    this.drawRowBg(
+      row.rowBg,
+      index,
+      this.getRowWidth(row),
+      row.screenRect.h,
+      this.getRowLocalTop(row),
+      true,
+    );
   }
 
   private applyRowUnhover(index: number): void {
     const row = this.itemRows[index];
     row.label.setColor("#ccdde8");
-    this.drawRowBg(row.rowBg, index, this.getRowWidth(row), row.screenRect.h, this.getRowLocalTop(row), false);
+    this.drawRowBg(
+      row.rowBg,
+      index,
+      this.getRowWidth(row),
+      row.screenRect.h,
+      this.getRowLocalTop(row),
+      false,
+    );
   }
 
   private handleItemRowHover(pointerX: number, pointerY: number): void {
@@ -1532,8 +1746,10 @@ export class CosmicVoidScene extends Phaser.Scene {
     for (let i = 0; i < this.itemRows.length; i++) {
       const { screenRect } = this.itemRows[i];
       if (
-        pointerX >= screenRect.x && pointerX <= screenRect.x + screenRect.w &&
-        pointerY >= screenRect.y && pointerY <= screenRect.y + screenRect.h
+        pointerX >= screenRect.x &&
+        pointerX <= screenRect.x + screenRect.w &&
+        pointerY >= screenRect.y &&
+        pointerY <= screenRect.y + screenRect.h
       ) {
         foundIndex = i;
         break;
@@ -1549,13 +1765,17 @@ export class CosmicVoidScene extends Phaser.Scene {
     }
 
     // Unhover previous
-    if (this.hoveredRowIndex !== -1 && this.hoveredRowIndex < this.itemRows.length) {
+    if (
+      this.hoveredRowIndex !== -1 &&
+      this.hoveredRowIndex < this.itemRows.length
+    ) {
       this.applyRowUnhover(this.hoveredRowIndex);
       this.hideItemTooltip();
     }
 
     this.hoveredRowIndex = foundIndex;
-    this.hoveredItemEntityId = foundIndex !== -1 ? this.itemRows[foundIndex].item.entity_id : undefined;
+    this.hoveredItemEntityId =
+      foundIndex !== -1 ? this.itemRows[foundIndex].item.entity_id : undefined;
 
     // Hover new
     if (foundIndex !== -1) {
@@ -1564,43 +1784,88 @@ export class CosmicVoidScene extends Phaser.Scene {
     }
   }
 
-  private getItemType(item: ItemState): 'weapon' | 'armor' | 'consumable' | 'unknown' {
-    if (item.attack_power || item.weapon_type) return 'weapon';
-    if (item.defense_rating || item.armor_slot) return 'armor';
-    if (item.healing_amount || item.mana_amount) return 'consumable';
-    return 'unknown';
+  private getItemType(
+    item: ItemState,
+  ): "weapon" | "armor" | "consumable" | "unknown" {
+    if (item.attack_power || item.weapon_type) return "weapon";
+    if (item.defense_rating || item.armor_slot) return "armor";
+    if (item.healing_amount || item.mana_amount) return "consumable";
+    return "unknown";
   }
 
-  private buildTooltipContent(item: ItemState): { lines: { label: string; value: string; color: string }[]; typeLabel: string; typeColor: string } {
+  private buildTooltipContent(item: ItemState): {
+    lines: { label: string; value: string; color: string }[];
+    typeLabel: string;
+    typeColor: string;
+  } {
     const type = this.getItemType(item);
     const lines: { label: string; value: string; color: string }[] = [];
 
     switch (type) {
-      case 'weapon': {
-        const typeColor = '#ff4466';
-        if (item.weapon_type) lines.push({ label: 'TYPE', value: item.weapon_type.toUpperCase(), color: '#99aabb' });
-        if (item.attack_power) lines.push({ label: 'ATK', value: `${item.attack_power}`, color: typeColor });
-        if (item.critical_rate) lines.push({ label: 'CRIT', value: `${Math.round(item.critical_rate)}%`, color: '#ffaa33' });
-        return { lines, typeLabel: 'WEAPON', typeColor };
+      case "weapon": {
+        const typeColor = "#ff4466";
+        if (item.weapon_type)
+          lines.push({
+            label: "TYPE",
+            value: item.weapon_type.toUpperCase(),
+            color: "#99aabb",
+          });
+        if (item.attack_power)
+          lines.push({
+            label: "ATK",
+            value: `${item.attack_power}`,
+            color: typeColor,
+          });
+        if (item.critical_rate)
+          lines.push({
+            label: "CRIT",
+            value: `${Math.round(item.critical_rate)}%`,
+            color: "#ffaa33",
+          });
+        return { lines, typeLabel: "WEAPON", typeColor };
       }
-      case 'armor': {
-        const typeColor = '#44aaff';
-        if (item.armor_slot) lines.push({ label: 'SLOT', value: item.armor_slot.toUpperCase(), color: '#99aabb' });
-        if (item.defense_rating) lines.push({ label: 'DEF', value: `${item.defense_rating}`, color: typeColor });
-        return { lines, typeLabel: 'ARMOR', typeColor };
+      case "armor": {
+        const typeColor = "#44aaff";
+        if (item.armor_slot)
+          lines.push({
+            label: "SLOT",
+            value: item.armor_slot.toUpperCase(),
+            color: "#99aabb",
+          });
+        if (item.defense_rating)
+          lines.push({
+            label: "DEF",
+            value: `${item.defense_rating}`,
+            color: typeColor,
+          });
+        return { lines, typeLabel: "ARMOR", typeColor };
       }
-      case 'consumable': {
-        const typeColor = '#44ff88';
-        if (item.healing_amount) lines.push({ label: 'HEAL', value: `+${item.healing_amount} HP`, color: typeColor });
-        if (item.mana_amount) lines.push({ label: 'MANA', value: `+${item.mana_amount} MP`, color: '#aa88ff' });
-        return { lines, typeLabel: 'CONSUMABLE', typeColor };
+      case "consumable": {
+        const typeColor = "#44ff88";
+        if (item.healing_amount)
+          lines.push({
+            label: "HEAL",
+            value: `+${item.healing_amount} HP`,
+            color: typeColor,
+          });
+        if (item.mana_amount)
+          lines.push({
+            label: "MANA",
+            value: `+${item.mana_amount} MP`,
+            color: "#aa88ff",
+          });
+        return { lines, typeLabel: "CONSUMABLE", typeColor };
       }
       default:
-        return { lines, typeLabel: 'ITEM', typeColor: '#556677' };
+        return { lines, typeLabel: "ITEM", typeColor: "#556677" };
     }
   }
 
-  private showItemTooltip(item: ItemState, screenX: number, screenY: number): void {
+  private showItemTooltip(
+    item: ItemState,
+    screenX: number,
+    screenY: number,
+  ): void {
     this.hideItemTooltip();
 
     const { lines, typeLabel, typeColor } = this.buildTooltipContent(item);
@@ -1642,10 +1907,15 @@ export class CosmicVoidScene extends Phaser.Scene {
         color: "#556677",
         letterSpacing: 2,
       });
-      const valueText = this.add.text(tooltipWidth - padding, curY, line.value, {
-        fontSize: "13px",
-        color: line.color,
-      });
+      const valueText = this.add.text(
+        tooltipWidth - padding,
+        curY,
+        line.value,
+        {
+          fontSize: "13px",
+          color: line.color,
+        },
+      );
       valueText.setOrigin(1, 0);
       children.push(labelText, valueText);
       curY += 20;
@@ -1672,10 +1942,15 @@ export class CosmicVoidScene extends Phaser.Scene {
     // Quantity (if >1)
     if (item.quantity > 1) {
       curY += 6;
-      const qtyText = this.add.text(tooltipWidth - padding, curY, `x${item.quantity}`, {
-        fontSize: "11px",
-        color: "#556677",
-      });
+      const qtyText = this.add.text(
+        tooltipWidth - padding,
+        curY,
+        `x${item.quantity}`,
+        {
+          fontSize: "11px",
+          color: "#556677",
+        },
+      );
       qtyText.setOrigin(1, 0);
       children.push(qtyText);
       curY += 16;
@@ -1687,7 +1962,11 @@ export class CosmicVoidScene extends Phaser.Scene {
     const bg = this.add.graphics();
     bg.fillStyle(0x080810, 0.95);
     bg.fillRoundedRect(0, 0, tooltipWidth, tooltipHeight, 6);
-    bg.lineStyle(1, typeColor === '#556677' ? 0x00f0ff : parseInt(typeColor.slice(1), 16), 0.4);
+    bg.lineStyle(
+      1,
+      typeColor === "#556677" ? 0x00f0ff : parseInt(typeColor.slice(1), 16),
+      0.4,
+    );
     bg.strokeRoundedRect(0, 0, tooltipWidth, tooltipHeight, 6);
     children.unshift(bg);
 
@@ -1730,7 +2009,8 @@ export class CosmicVoidScene extends Phaser.Scene {
     const newInventory: ItemState[] = [];
 
     for (const localItem of this.inventoryItems) {
-      const isPending = localItem.lootedAt && (now - localItem.lootedAt) < this.PENDING_DURATION;
+      const isPending =
+        localItem.lootedAt && now - localItem.lootedAt < this.PENDING_DURATION;
 
       if (serverItemMap.has(localItem.entity_id)) {
         // 後端有，使用後端資料（清除 pending 狀態）
@@ -1761,7 +2041,11 @@ export class CosmicVoidScene extends Phaser.Scene {
   }
 
   private pickupSingleItemFromChest(): void {
-    if (!this.isPopupOpen || this.currentChestItems.length === 0 || !this.openedChestEntityId) {
+    if (
+      !this.isPopupOpen ||
+      this.currentChestItems.length === 0 ||
+      !this.openedChestEntityId
+    ) {
       return;
     }
 
@@ -1772,7 +2056,9 @@ export class CosmicVoidScene extends Phaser.Scene {
     });
 
     // Optimistic update: remove from chest, add to inventory
-    this.currentChestItems = this.currentChestItems.filter(i => i.entity_id !== item.entity_id);
+    this.currentChestItems = this.currentChestItems.filter(
+      (i) => i.entity_id !== item.entity_id,
+    );
 
     const now = Date.now();
     this.inventoryItems.push({
@@ -1844,7 +2130,7 @@ export class CosmicVoidScene extends Phaser.Scene {
   }
 
   private createPlayer(x: number, y: number, username?: string): void {
-    this.player = this.physics.add.sprite(x, y, 'playerDown');
+    this.player = this.physics.add.sprite(x, y, "playerDown");
     this.player.setCollideWorldBounds(true);
     this.player.setDepth(100);
 
@@ -1854,18 +2140,18 @@ export class CosmicVoidScene extends Phaser.Scene {
     // create legs overlay that will follow player
     this.playerLegs = this.add.graphics();
     this.playerLegs.setDepth(101);
-    this.playerFacing = 'down';
+    this.playerFacing = "down";
     this.walkPhase = 0;
-    this.drawLegs(this.playerLegs, x, y, 'down', 0, false, 0x667788);
+    this.drawLegs(this.playerLegs, x, y, "down", 0, false, 0x667788);
 
     // username label above player
-    this.playerNameText = this.add.text(x, y - 35, username || 'You', {
-      fontSize: '11px',
-      fontFamily: 'Orbitron, monospace',
-      color: '#00f0ff',
-      stroke: '#0a0a12',
+    this.playerNameText = this.add.text(x, y - 35, username || "You", {
+      fontSize: "11px",
+      fontFamily: "Orbitron, monospace",
+      color: "#00f0ff",
+      stroke: "#0a0a12",
       strokeThickness: 3,
-      align: 'center',
+      align: "center",
     });
     this.playerNameText.setOrigin(0.5, 1);
     this.playerNameText.setDepth(102);
@@ -1880,21 +2166,21 @@ export class CosmicVoidScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
   }
 
-  private defaultCursorCSS = '';
-  private crosshairCursorCSS = '';
+  private defaultCursorCSS = "";
+  private crosshairCursorCSS = "";
 
   private setupCustomCursor(): void {
     // --- Default cursor: tech/Deus Ex style pointer ---
     const dSize = 32;
-    const dc = document.createElement('canvas');
+    const dc = document.createElement("canvas");
     dc.width = dSize;
     dc.height = dSize;
-    const dCtx = dc.getContext('2d')!;
+    const dCtx = dc.getContext("2d")!;
 
     // angled pointer — top-left origin
-    dCtx.strokeStyle = 'rgba(0, 240, 255, 0.9)';
+    dCtx.strokeStyle = "rgba(0, 240, 255, 0.9)";
     dCtx.lineWidth = 1.5;
-    dCtx.fillStyle = 'rgba(0, 240, 255, 0.12)';
+    dCtx.fillStyle = "rgba(0, 240, 255, 0.12)";
 
     // pointer triangle
     dCtx.beginPath();
@@ -1910,10 +2196,12 @@ export class CosmicVoidScene extends Phaser.Scene {
     dCtx.stroke();
 
     // small corner brackets — top-left
-    dCtx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+    dCtx.strokeStyle = "rgba(0, 240, 255, 0.4)";
     dCtx.lineWidth = 1;
     dCtx.beginPath();
-    dCtx.moveTo(2, 10); dCtx.lineTo(2, 2); dCtx.lineTo(10, 2);
+    dCtx.moveTo(2, 10);
+    dCtx.lineTo(2, 2);
+    dCtx.lineTo(10, 2);
     dCtx.stroke();
 
     this.defaultCursorCSS = `url(${dc.toDataURL()}) 6 4, default`;
@@ -1922,30 +2210,42 @@ export class CosmicVoidScene extends Phaser.Scene {
     // --- Crosshair cursor: pink, for targeting other players ---
     const cSize = 32;
     const cMid = cSize / 2;
-    const cc = document.createElement('canvas');
+    const cc = document.createElement("canvas");
     cc.width = cSize;
     cc.height = cSize;
-    const cCtx = cc.getContext('2d')!;
+    const cCtx = cc.getContext("2d")!;
 
     // outer ring glow
-    cCtx.strokeStyle = 'rgba(255, 0, 170, 0.3)';
+    cCtx.strokeStyle = "rgba(255, 0, 170, 0.3)";
     cCtx.lineWidth = 2;
     cCtx.beginPath();
     cCtx.arc(cMid, cMid, 10, 0, Math.PI * 2);
     cCtx.stroke();
 
     // crosshair lines
-    cCtx.strokeStyle = 'rgba(255, 0, 170, 0.85)';
+    cCtx.strokeStyle = "rgba(255, 0, 170, 0.85)";
     cCtx.lineWidth = 1.5;
     const gap = 4;
     const len = 6;
-    cCtx.beginPath(); cCtx.moveTo(cMid, cMid - gap - len); cCtx.lineTo(cMid, cMid - gap); cCtx.stroke();
-    cCtx.beginPath(); cCtx.moveTo(cMid, cMid + gap); cCtx.lineTo(cMid, cMid + gap + len); cCtx.stroke();
-    cCtx.beginPath(); cCtx.moveTo(cMid - gap - len, cMid); cCtx.lineTo(cMid - gap, cMid); cCtx.stroke();
-    cCtx.beginPath(); cCtx.moveTo(cMid + gap, cMid); cCtx.lineTo(cMid + gap + len, cMid); cCtx.stroke();
+    cCtx.beginPath();
+    cCtx.moveTo(cMid, cMid - gap - len);
+    cCtx.lineTo(cMid, cMid - gap);
+    cCtx.stroke();
+    cCtx.beginPath();
+    cCtx.moveTo(cMid, cMid + gap);
+    cCtx.lineTo(cMid, cMid + gap + len);
+    cCtx.stroke();
+    cCtx.beginPath();
+    cCtx.moveTo(cMid - gap - len, cMid);
+    cCtx.lineTo(cMid - gap, cMid);
+    cCtx.stroke();
+    cCtx.beginPath();
+    cCtx.moveTo(cMid + gap, cMid);
+    cCtx.lineTo(cMid + gap + len, cMid);
+    cCtx.stroke();
 
     // center dot
-    cCtx.fillStyle = '#ff00aa';
+    cCtx.fillStyle = "#ff00aa";
     cCtx.beginPath();
     cCtx.arc(cMid, cMid, 1.5, 0, Math.PI * 2);
     cCtx.fill();
@@ -1958,9 +2258,9 @@ export class CosmicVoidScene extends Phaser.Scene {
     this.setupCustomCursor();
 
     // Game ambient music — stop menu theme, start game ambient
-    this.sound.stopByKey('menuTheme');
-    if (!this.sound.get('gameAmbient')?.isPlaying) {
-      this.sound.play('gameAmbient', { loop: true, volume: 0.25 });
+    this.sound.stopByKey("menuTheme");
+    if (!this.sound.get("gameAmbient")?.isPlaying) {
+      this.sound.play("gameAmbient", { loop: true, volume: 0.25 });
     }
 
     // Connect via SocketManager
@@ -1980,8 +2280,10 @@ export class CosmicVoidScene extends Phaser.Scene {
     const outerMargin = 200;
     const spaceMargin = 150; // extra space beyond hull visible at edges
     this.cameras.main.setBounds(
-      -outerMargin - spaceMargin, -outerMargin - spaceMargin,
-      this.mapWidth + (outerMargin + spaceMargin) * 2, this.mapHeight + (outerMargin + spaceMargin) * 2
+      -outerMargin - spaceMargin,
+      -outerMargin - spaceMargin,
+      this.mapWidth + (outerMargin + spaceMargin) * 2,
+      this.mapHeight + (outerMargin + spaceMargin) * 2,
     );
 
     // 輸入控制
@@ -1995,7 +2297,7 @@ export class CosmicVoidScene extends Phaser.Scene {
 
     // ESC 返回主選單
     this.input.keyboard?.on("keydown-ESC", () => {
-      this.sound.stopByKey('gameAmbient');
+      this.sound.stopByKey("gameAmbient");
       this.scene.start("MainMenuScene");
     });
 
@@ -2078,7 +2380,9 @@ export class CosmicVoidScene extends Phaser.Scene {
       });
       // Optimistic update
       this.equippedItems[slot] = item;
-      this.inventoryItems = this.inventoryItems.filter(i => i.entity_id !== item.entity_id);
+      this.inventoryItems = this.inventoryItems.filter(
+        (i) => i.entity_id !== item.entity_id,
+      );
     };
     this.equipmentPanel.onUnequip = (item, slot) => {
       // Send to backend
@@ -2177,19 +2481,25 @@ export class CosmicVoidScene extends Phaser.Scene {
     });
 
     // Listen for interact responses (success/error messages)
-    socketManager.on("interact", (payload: { success: boolean; message: string }) => {
-      console.log("Interact response:", payload);
-      if (payload.message) {
-        const color = payload.success ? "#4ecca3" : "#ff4444";
-        this.showNotification(payload.message, color);
-      }
-    });
+    socketManager.on(
+      "interact",
+      (payload: { success: boolean; message: string }) => {
+        console.log("Interact response:", payload);
+        if (payload.message) {
+          const color = payload.success ? "#4ecca3" : "#ff4444";
+          this.showNotification(payload.message, color);
+        }
+      },
+    );
 
     // Listen for end_game — show final position overlay and lock interaction
-    socketManager.on("end_game", (payload: { player_id: string; position: number }) => {
-      console.log("Game ended, final position:", payload);
-      this.showGameEndOverlay(payload.position);
-    });
+    socketManager.on(
+      "end_game",
+      (payload: { player_id: string; position: number; result: string }) => {
+        console.log("Game ended, final position:", payload);
+        this.showGameEndOverlay(payload.position, payload.result);
+      },
+    );
 
     // Reset the logger for new session
     GameStateLogger.reset();
@@ -2214,12 +2524,9 @@ export class CosmicVoidScene extends Phaser.Scene {
       if (state.current_player.inventory) {
         this.syncInventory(state.current_player.inventory);
       }
-
     } else {
       // current_player is null — player has escaped
-      console.log("[ESCAPE DEBUG] current_player is null/undefined. this.player exists:", !!this.player, "visible:", this.player?.visible);
       if (this.player && this.player.visible) {
-        console.log("[ESCAPE DEBUG] Playing escape particles and hiding player");
         this.playEscapeParticles(this.player.x, this.player.y);
         this.player.setVisible(false);
         this.playerLegs?.setVisible(false);
@@ -2304,7 +2611,7 @@ export class CosmicVoidScene extends Phaser.Scene {
         sprite = this.physics.add.sprite(
           playerData.position.x,
           playerData.position.y,
-          'otherPlayerDown',
+          "otherPlayerDown",
         );
         sprite.setDepth(99);
 
@@ -2316,8 +2623,10 @@ export class CosmicVoidScene extends Phaser.Scene {
         sprite.on("pointerdown", () => {
           if (!this.canAttack || !this.player) return;
           const distance = Phaser.Math.Distance.Between(
-            this.player.x, this.player.y,
-            sprite!.x, sprite!.y,
+            this.player.x,
+            this.player.y,
+            sprite!.x,
+            sprite!.y,
           );
           if (distance > 60) return;
           const entityId = this.otherPlayersEntityIds.get(playerData.id);
@@ -2340,21 +2649,30 @@ export class CosmicVoidScene extends Phaser.Scene {
         const legs = this.add.graphics();
         legs.setDepth(100);
         this.otherPlayersLegs.set(playerData.id, legs);
-        this.otherPlayersFacing.set(playerData.id, 'down');
+        this.otherPlayersFacing.set(playerData.id, "down");
         this.otherPlayersWalkPhase.set(playerData.id, 0);
-        this.drawLegs(legs, playerData.position.x, playerData.position.y, 'down', 0, false, 0x667788);
+        this.drawLegs(
+          legs,
+          playerData.position.x,
+          playerData.position.y,
+          "down",
+          0,
+          false,
+          0x667788,
+        );
 
         // create name text (hidden until hover)
         const nameText = this.add.text(
-          playerData.position.x, playerData.position.y - 35,
-          playerData.username || 'Unknown',
+          playerData.position.x,
+          playerData.position.y - 35,
+          playerData.username || "Unknown",
           {
-            fontSize: '11px',
-            fontFamily: 'Orbitron, monospace',
-            color: '#ff00aa',
-            stroke: '#0a0a12',
+            fontSize: "11px",
+            fontFamily: "Orbitron, monospace",
+            color: "#ff00aa",
+            stroke: "#0a0a12",
             strokeThickness: 3,
-            align: 'center',
+            align: "center",
           },
         );
         nameText.setOrigin(0.5, 1);
@@ -2364,11 +2682,11 @@ export class CosmicVoidScene extends Phaser.Scene {
 
         // hover to show name + crosshair cursor
         const pid = playerData.id;
-        sprite.on('pointerover', () => {
+        sprite.on("pointerover", () => {
           this.hoveredPlayerId = pid;
           this.input.setDefaultCursor(this.crosshairCursorCSS);
         });
-        sprite.on('pointerout', () => {
+        sprite.on("pointerout", () => {
           if (this.hoveredPlayerId === pid) {
             this.hoveredPlayerId = undefined;
           }
@@ -2397,8 +2715,10 @@ export class CosmicVoidScene extends Phaser.Scene {
     spaceBg.fillStyle(0x050510, 1);
     // fill the full camera area, then the hull area will be drawn on top at depth -1
     spaceBg.fillRect(
-      -spaceOuter, -spaceOuter,
-      this.mapWidth + spaceOuter * 2, this.mapHeight + spaceOuter * 2,
+      -spaceOuter,
+      -spaceOuter,
+      this.mapWidth + spaceOuter * 2,
+      this.mapHeight + spaceOuter * 2,
     );
     spaceBg.setDepth(-3);
 
@@ -2406,7 +2726,7 @@ export class CosmicVoidScene extends Phaser.Scene {
     for (let i = 0; i < 150; i++) {
       const star = this.add.graphics();
       const size = Phaser.Math.FloatBetween(0.4, 2);
-      const color = i < 90 ? 0xffffff : (i < 120 ? 0xaaddff : 0xffccaa);
+      const color = i < 90 ? 0xffffff : i < 120 ? 0xaaddff : 0xffccaa;
       star.fillStyle(color, Phaser.Math.FloatBetween(0.4, 1));
       star.fillCircle(0, 0, size);
       star.setPosition(
@@ -2421,7 +2741,7 @@ export class CosmicVoidScene extends Phaser.Scene {
           targets: star,
           alpha: 0.1,
           duration: Phaser.Math.Between(1000, 3000),
-          ease: 'Sine.easeInOut',
+          ease: "Sine.easeInOut",
           yoyo: true,
           repeat: -1,
           delay: Phaser.Math.Between(0, 2000),
@@ -2435,32 +2755,80 @@ export class CosmicVoidScene extends Phaser.Scene {
 
     // hull plating with metal texture
     // top
-    const hullTop = this.add.tileSprite(-outerMargin, -outerMargin, hw2 + outerMargin * 2, outerMargin, "hullMetal");
+    const hullTop = this.add.tileSprite(
+      -outerMargin,
+      -outerMargin,
+      hw2 + outerMargin * 2,
+      outerMargin,
+      "hullMetal",
+    );
     hullTop.setOrigin(0, 0);
     hullTop.setDepth(-1);
     // bottom
-    const hullBottom = this.add.tileSprite(-outerMargin, hh2, hw2 + outerMargin * 2, outerMargin, "hullMetal");
+    const hullBottom = this.add.tileSprite(
+      -outerMargin,
+      hh2,
+      hw2 + outerMargin * 2,
+      outerMargin,
+      "hullMetal",
+    );
     hullBottom.setOrigin(0, 0);
     hullBottom.setDepth(-1);
     // left
-    const hullLeft = this.add.tileSprite(-outerMargin, 0, outerMargin, hh2, "hullMetal");
+    const hullLeft = this.add.tileSprite(
+      -outerMargin,
+      0,
+      outerMargin,
+      hh2,
+      "hullMetal",
+    );
     hullLeft.setOrigin(0, 0);
     hullLeft.setDepth(-1);
     // right
-    const hullRight = this.add.tileSprite(hw2, 0, outerMargin, hh2, "hullMetal");
+    const hullRight = this.add.tileSprite(
+      hw2,
+      0,
+      outerMargin,
+      hh2,
+      "hullMetal",
+    );
     hullRight.setOrigin(0, 0);
     hullRight.setDepth(-1);
     // corners
-    const hullTopLeft = this.add.tileSprite(-outerMargin, -outerMargin, outerMargin, outerMargin, "hullMetal");
+    const hullTopLeft = this.add.tileSprite(
+      -outerMargin,
+      -outerMargin,
+      outerMargin,
+      outerMargin,
+      "hullMetal",
+    );
     hullTopLeft.setOrigin(0, 0);
     hullTopLeft.setDepth(-1);
-    const hullTopRight = this.add.tileSprite(hw2, -outerMargin, outerMargin, outerMargin, "hullMetal");
+    const hullTopRight = this.add.tileSprite(
+      hw2,
+      -outerMargin,
+      outerMargin,
+      outerMargin,
+      "hullMetal",
+    );
     hullTopRight.setOrigin(0, 0);
     hullTopRight.setDepth(-1);
-    const hullBottomLeft = this.add.tileSprite(-outerMargin, hh2, outerMargin, outerMargin, "hullMetal");
+    const hullBottomLeft = this.add.tileSprite(
+      -outerMargin,
+      hh2,
+      outerMargin,
+      outerMargin,
+      "hullMetal",
+    );
     hullBottomLeft.setOrigin(0, 0);
     hullBottomLeft.setDepth(-1);
-    const hullBottomRight = this.add.tileSprite(hw2, hh2, outerMargin, outerMargin, "hullMetal");
+    const hullBottomRight = this.add.tileSprite(
+      hw2,
+      hh2,
+      outerMargin,
+      outerMargin,
+      "hullMetal",
+    );
     hullBottomRight.setOrigin(0, 0);
     hullBottomRight.setDepth(-1);
 
@@ -2492,8 +2860,13 @@ export class CosmicVoidScene extends Phaser.Scene {
       viewportGraphics.lineStyle(3, 0x3a4556, 1);
       viewportGraphics.strokeRoundedRect(vp.x, vp.y, vp.w, vp.h, 6);
       viewportGraphics.lineStyle(1, 0x4a5568, 1);
-      viewportGraphics.strokeRoundedRect(vp.x + 3, vp.y + 3, vp.w - 6, vp.h - 6, 4);
-
+      viewportGraphics.strokeRoundedRect(
+        vp.x + 3,
+        vp.y + 3,
+        vp.w - 6,
+        vp.h - 6,
+        4,
+      );
     });
 
     // parallax stars in viewports
@@ -2534,13 +2907,29 @@ export class CosmicVoidScene extends Phaser.Scene {
 
     // outer hull shell - thick border around the ship
     hullGraphics.lineStyle(10, 0x2a3040, 1);
-    hullGraphics.strokeRoundedRect(-hullPad, -hullPad, hw + hullPad * 2, hh + hullPad * 2, 12);
+    hullGraphics.strokeRoundedRect(
+      -hullPad,
+      -hullPad,
+      hw + hullPad * 2,
+      hh + hullPad * 2,
+      12,
+    );
     hullGraphics.lineStyle(3, 0x4a5568, 1);
-    hullGraphics.strokeRoundedRect(-hullPad - 5, -hullPad - 5, hw + hullPad * 2 + 10, hh + hullPad * 2 + 10, 16);
+    hullGraphics.strokeRoundedRect(
+      -hullPad - 5,
+      -hullPad - 5,
+      hw + hullPad * 2 + 10,
+      hh + hullPad * 2 + 10,
+      16,
+    );
     hullGraphics.lineStyle(1, 0x6b7280, 1);
-    hullGraphics.strokeRoundedRect(-hullPad - 8, -hullPad - 8, hw + hullPad * 2 + 16, hh + hullPad * 2 + 16, 18);
-
-
+    hullGraphics.strokeRoundedRect(
+      -hullPad - 8,
+      -hullPad - 8,
+      hw + hullPad * 2 + 16,
+      hh + hullPad * 2 + 16,
+      18,
+    );
 
     // ventilation grilles (top)
     const ventGraphics = this.add.graphics();
@@ -2612,12 +3001,24 @@ export class CosmicVoidScene extends Phaser.Scene {
       engineGraphics.fillStyle(0x1e2530, 1);
       engineGraphics.fillRoundedRect(hw + 10, ey - 30, outerMargin - 25, 60, 6);
       engineGraphics.lineStyle(2, 0x4a5568, 1);
-      engineGraphics.strokeRoundedRect(hw + 10, ey - 30, outerMargin - 25, 60, 6);
+      engineGraphics.strokeRoundedRect(
+        hw + 10,
+        ey - 30,
+        outerMargin - 25,
+        60,
+        6,
+      );
       // inner detail
       engineGraphics.fillStyle(0x2a3040, 1);
       engineGraphics.fillRoundedRect(hw + 20, ey - 20, outerMargin - 45, 40, 4);
       engineGraphics.lineStyle(1, 0x5a6577, 1);
-      engineGraphics.strokeRoundedRect(hw + 20, ey - 20, outerMargin - 45, 40, 4);
+      engineGraphics.strokeRoundedRect(
+        hw + 20,
+        ey - 20,
+        outerMargin - 45,
+        40,
+        4,
+      );
       // exhaust glow layers
       engineGraphics.fillStyle(0x0066cc, 1);
       engineGraphics.fillCircle(engineX, ey, 45);
@@ -2649,19 +3050,44 @@ export class CosmicVoidScene extends Phaser.Scene {
     beamGraphics.lineBetween(-outerMargin + 15, -outerMargin + 5, 0, -10);
     // top-right
     beamGraphics.lineStyle(5, 0x3a4556, 1);
-    beamGraphics.lineBetween(hw + outerMargin - 10, -outerMargin + 10, hw + 5, -5);
+    beamGraphics.lineBetween(
+      hw + outerMargin - 10,
+      -outerMargin + 10,
+      hw + 5,
+      -5,
+    );
     beamGraphics.lineStyle(3, 0x4a5568, 1);
     beamGraphics.lineBetween(hw + outerMargin - 15, -outerMargin + 5, hw, -10);
     // bottom-left
     beamGraphics.lineStyle(5, 0x3a4556, 1);
-    beamGraphics.lineBetween(-outerMargin + 10, hh + outerMargin - 10, -5, hh + 5);
+    beamGraphics.lineBetween(
+      -outerMargin + 10,
+      hh + outerMargin - 10,
+      -5,
+      hh + 5,
+    );
     beamGraphics.lineStyle(3, 0x4a5568, 1);
-    beamGraphics.lineBetween(-outerMargin + 15, hh + outerMargin - 5, 0, hh + 10);
+    beamGraphics.lineBetween(
+      -outerMargin + 15,
+      hh + outerMargin - 5,
+      0,
+      hh + 10,
+    );
     // bottom-right
     beamGraphics.lineStyle(5, 0x3a4556, 1);
-    beamGraphics.lineBetween(hw + outerMargin - 10, hh + outerMargin - 10, hw + 5, hh + 5);
+    beamGraphics.lineBetween(
+      hw + outerMargin - 10,
+      hh + outerMargin - 10,
+      hw + 5,
+      hh + 5,
+    );
     beamGraphics.lineStyle(3, 0x4a5568, 1);
-    beamGraphics.lineBetween(hw + outerMargin - 15, hh + outerMargin - 5, hw, hh + 10);
+    beamGraphics.lineBetween(
+      hw + outerMargin - 15,
+      hh + outerMargin - 5,
+      hw,
+      hh + 10,
+    );
     beamGraphics.setDepth(0);
 
     // hull warning stripes at corners
@@ -2683,7 +3109,13 @@ export class CosmicVoidScene extends Phaser.Scene {
     hullGraphics.setDepth(0);
 
     // spaceship floor - tiled metal texture
-    const floorTile = this.add.tileSprite(0, 0, this.mapWidth, this.mapHeight, "metalFloor");
+    const floorTile = this.add.tileSprite(
+      0,
+      0,
+      this.mapWidth,
+      this.mapHeight,
+      "metalFloor",
+    );
     floorTile.setOrigin(0, 0);
     floorTile.setDepth(-1);
 
@@ -3079,7 +3511,6 @@ export class CosmicVoidScene extends Phaser.Scene {
     // 顯示室內遮罩，遮住建築外面的一切
     this.indoorMask.setVisible(true);
     this.updateIndoorMask(building);
-
   }
 
   private exitBuilding(): void {
@@ -3091,7 +3522,6 @@ export class CosmicVoidScene extends Phaser.Scene {
 
     // 隱藏室內遮罩
     this.indoorMask.setVisible(false);
-
   }
 
   private updateIndoorMask(building: Building): void {
@@ -3232,7 +3662,7 @@ export class CosmicVoidScene extends Phaser.Scene {
         color: "#ffffff",
         backgroundColor: color,
         padding: { x: 20, y: 10 },
-      }
+      },
     );
     notification.setOrigin(0.5);
     notification.setScrollFactor(0);
@@ -3267,19 +3697,13 @@ export class CosmicVoidScene extends Phaser.Scene {
         switchData.is_activated === true &&
         this.previousSwitchActivated !== true
       ) {
-        this.showNotification(
-          "Exit door unlocked! Run to escape!",
-          "#4ecca3"
-        );
+        this.showNotification("Exit door unlocked! Run to escape!", "#4ecca3");
       }
       this.previousSwitchActivated = switchData.is_activated;
     }
 
     // 檢查逃生門是否被打開
-    if (
-      escapeDoor.is_open === true &&
-      this.previousEscapeDoorOpened !== true
-    ) {
+    if (escapeDoor.is_open === true && this.previousEscapeDoorOpened !== true) {
       this.showNotification("Escape door opened!", "#4ecca3");
     }
     this.previousEscapeDoorOpened = escapeDoor.is_open;
@@ -3298,7 +3722,7 @@ export class CosmicVoidScene extends Phaser.Scene {
       if (!this.escapedPlayers.has(state.current_player.id)) {
         this.showNotification(
           `${state.current_player.username} escaped successfully!`,
-          "#FFD700"  // 金色
+          "#FFD700", // 金色
         );
         this.escapedPlayers.add(state.current_player.id);
       }
@@ -3310,7 +3734,7 @@ export class CosmicVoidScene extends Phaser.Scene {
         if (!this.escapedPlayers.has(player.id)) {
           this.showNotification(
             `${player.username} escaped successfully!`,
-            "#FFD700"
+            "#FFD700",
           );
           this.escapedPlayers.add(player.id);
         }
@@ -3363,19 +3787,27 @@ export class CosmicVoidScene extends Phaser.Scene {
       const isMoving = vx !== 0 || vy !== 0;
       if (isMoving) {
         // determine facing from dominant axis
-        let newFacing: 'up' | 'down' | 'left' | 'right';
+        let newFacing: "up" | "down" | "left" | "right";
         if (Math.abs(vy) >= Math.abs(vx)) {
-          newFacing = vy < 0 ? 'up' : 'down';
+          newFacing = vy < 0 ? "up" : "down";
         } else {
-          newFacing = vx < 0 ? 'left' : 'right';
+          newFacing = vx < 0 ? "left" : "right";
         }
         if (newFacing !== this.playerFacing) {
           this.playerFacing = newFacing;
-          this.player.setTexture(this.facingTextureKey('player', newFacing));
+          this.player.setTexture(this.facingTextureKey("player", newFacing));
         }
         this.walkPhase += 0.3;
       }
-      this.drawLegs(this.playerLegs, this.player.x, this.player.y, this.playerFacing, this.walkPhase, isMoving, 0x667788);
+      this.drawLegs(
+        this.playerLegs,
+        this.player.x,
+        this.player.y,
+        this.playerFacing,
+        this.walkPhase,
+        isMoving,
+        0x667788,
+      );
     }
 
     // update player name position
@@ -3438,24 +3870,34 @@ export class CosmicVoidScene extends Phaser.Scene {
           const isMoving = length > 0.5;
 
           if (isMoving) {
-            let newFacing: 'up' | 'down' | 'left' | 'right';
+            let newFacing: "up" | "down" | "left" | "right";
             if (Math.abs(deltaY) >= Math.abs(deltaX)) {
-              newFacing = deltaY < 0 ? 'up' : 'down';
+              newFacing = deltaY < 0 ? "up" : "down";
             } else {
-              newFacing = deltaX < 0 ? 'left' : 'right';
+              newFacing = deltaX < 0 ? "left" : "right";
             }
-            const prevFacing = this.otherPlayersFacing.get(playerId) || 'down';
+            const prevFacing = this.otherPlayersFacing.get(playerId) || "down";
             if (newFacing !== prevFacing) {
               this.otherPlayersFacing.set(playerId, newFacing);
-              sprite.setTexture(this.facingTextureKey('otherPlayer', newFacing));
+              sprite.setTexture(
+                this.facingTextureKey("otherPlayer", newFacing),
+              );
             }
             const phase = (this.otherPlayersWalkPhase.get(playerId) || 0) + 0.3;
             this.otherPlayersWalkPhase.set(playerId, phase);
           }
 
-          const facing = this.otherPlayersFacing.get(playerId) || 'down';
+          const facing = this.otherPlayersFacing.get(playerId) || "down";
           const phase = this.otherPlayersWalkPhase.get(playerId) || 0;
-          this.drawLegs(legs, sprite.x, sprite.y, facing, phase, isMoving, 0x667788);
+          this.drawLegs(
+            legs,
+            sprite.x,
+            sprite.y,
+            facing,
+            phase,
+            isMoving,
+            0x667788,
+          );
         }
 
         // update name text position and hover visibility
