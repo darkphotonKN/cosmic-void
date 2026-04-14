@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
+	"github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/auth"
 	grpcauth "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/auth"
 	grpcitems "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/items"
@@ -21,7 +22,7 @@ import (
 /**
 * Sets up API prefix route and all routers.
 **/
-func SetupRouter(db *sqlx.DB, registry discovery.Registry, ch *amqp.Channel) *gin.Engine {
+func SetupRouter(db *sqlx.DB, registry discovery.Registry, ch *amqp.Channel, cacheService cache.Cache) *gin.Engine {
 	router := gin.Default()
 
 	// NOTE: debugging middleware
@@ -46,7 +47,7 @@ func SetupRouter(db *sqlx.DB, registry discovery.Registry, ch *amqp.Channel) *gi
 	itemsClient := grpcitems.NewClient(registry)
 
 	// --- GAME SERVER SETUP ---
-	queueService := queue.NewQueueService(2)
+	queueService := queue.NewQueueService(2, cacheService)
 
 	// wrap with adapter to allow amqp rabbit mq channel to
 	// conform to our abstraction

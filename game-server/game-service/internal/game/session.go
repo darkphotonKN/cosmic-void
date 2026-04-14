@@ -312,6 +312,11 @@ func (s *Session) manageClientMessages() {
 				}
 
 			case constants.ActionEquip, constants.ActionUnequip:
+				slog.Debug("Before parsing action equip / unequip message payload",
+					"message_action", msg.Message.Action,
+					"message_payload_raw", msg.Message.Payload,
+				)
+
 				parsedPayload, err := msg.Message.ParsePayload()
 
 				if err != nil {
@@ -325,7 +330,19 @@ func (s *Session) manageClientMessages() {
 					continue
 				}
 
-				playerEquipPayload := parsedPayload.(*types.PlayerEquipPayload)
+				playerEquipPayload, ok := parsedPayload.(types.PlayerEquipPayload)
+
+				if !ok {
+					slog.Error("Failed to assert payload to expected type.", "payload", parsedPayload, "expected_type", "types.PlayerEqupPayload")
+					continue
+				}
+
+				slog.Debug("ParsedPayload of item to equip / unequip",
+					"action", msg.Message.Action,
+					"player_id", playerEquipPayload.PlayerID,
+					"session_id", playerEquipPayload.SessionID,
+					"item_entity_id", playerEquipPayload.ItemEntityID,
+				)
 
 				playerID, err := uuid.Parse(playerEquipPayload.PlayerID)
 				if err != nil {
@@ -339,7 +356,15 @@ func (s *Session) manageClientMessages() {
 					continue
 				}
 
-				err = s.handleEquip(constants.Action(msg.Message.Action), playerID, itemEntityID)
+				playerEnittyID, ok := s.playerIDToEntitiesID[playerID]
+
+				if !ok {
+					slog.Error("respective playerEntityID couldnt be found for playerID", "player_entity_id", playerEnittyID)
+					continue
+				}
+
+				err = s.handleEquip(constants.Action(msg.Message.Action), playerEnittyID, itemEntityID)
+
 				if err != nil {
 					slog.Error("Couldnt complete updating player equipment with handleEquip or handleUnquip actions.",
 						"action", msg.Message.Action,
@@ -1110,6 +1135,28 @@ func (s *Session) handleEquip(action constants.Action, playerEntityID uuid.UUID,
 		return ErrComponentCouldNotBeAsserted
 	}
 
+	itemIDListComp, exists := playerEntity.GetComponent(ecs.ComponentTypeItemIDList)
+
+	if !exists {
+		slog.Error("Component not found in entity not found",
+			"component_type", ecs.ComponentTypeItemIDList,
+			"player_entity_id", playerEntityID,
+			"item_entity_id", itemEntityID,
+		)
+		return ErrComponentNotFound
+	}
+
+	itemIDList, ok := itemIDListComp.(*components.ItemIDListComponent)
+
+	if !ok {
+		slog.Error("itemIDList component could not be asserted to expect typed.",
+			"component_type", ecs.ComponentTypeEquipment,
+			"player_entity_id", playerEntityID,
+			"item_entity_id", itemEntityID,
+		)
+		return ErrComponentCouldNotBeAsserted
+	}
+
 	// -- item --
 	itemEntity, itemExists := s.EntityManager.GetEntity(itemEntityID)
 
@@ -1143,21 +1190,26 @@ func (s *Session) handleEquip(action constants.Action, playerEntityID uuid.UUID,
 		return ErrComponentCouldNotBeAsserted
 	}
 
-	// decide equip / unequip
-	itemToUpdateID := &itemEntityID
-
-	if action == constants.ActionUnequip {
-		itemToUpdateID = nil
-	}
-
 	// --- update equipment flow ---
 
 	switch types.ItemType(item.ItemType) {
 
 	// -- weapon --
 	case types.ItemTypeWeapon:
-		// weapon just direct update
-		equipment.WeaponSlot = itemToUpdateID
+		// decide equip / unequip
+		if action == constants.ActionUnequip {
+			// add it back to list of items in inventory
+			itemIDList.ItemIDs = append(itemIDList.ItemIDs, itemEntityID)
+			equipment.WeaponSlot = nil
+		} else {
+			// for weapon just direct update
+			equipment.WeaponSlot = &itemEntityID
+
+			newItemIDlist := s.removeItem(itemIDList.ItemIDs, itemEntityID)
+
+			itemIDList.ItemIDs = newItemIDlist
+		}
+
 		return nil
 
 	// -- armor --
@@ -1166,36 +1218,86 @@ func (s *Session) handleEquip(action constants.Action, playerEntityID uuid.UUID,
 		switch types.ArmorSlot(item.ArmorSlot) {
 
 		case types.ArmorSlotHead:
-			equipment.HeadSlot = itemToUpdateID
+			if action == constants.ActionUnequip {
+				itemIDList.ItemIDs = append(itemIDList.ItemIDs, itemEntityID)
+				equipment.HeadSlot = nil
+			} else {
+				equipment.HeadSlot = &itemEntityID
+				itemIDList.ItemIDs = s.removeItem(itemIDList.ItemIDs, itemEntityID)
+			}
 			return nil
 
 		case types.ArmorSlotChest:
-			equipment.ChestSlot = itemToUpdateID
+			if action == constants.ActionUnequip {
+				itemIDList.ItemIDs = append(itemIDList.ItemIDs, itemEntityID)
+				equipment.ChestSlot = nil
+			} else {
+				equipment.ChestSlot = &itemEntityID
+				itemIDList.ItemIDs = s.removeItem(itemIDList.ItemIDs, itemEntityID)
+			}
 			return nil
 
 		case types.ArmorSlotGloves:
-			equipment.GlovesSlot = itemToUpdateID
+			if action == constants.ActionUnequip {
+				itemIDList.ItemIDs = append(itemIDList.ItemIDs, itemEntityID)
+				equipment.GlovesSlot = nil
+			} else {
+				equipment.GlovesSlot = &itemEntityID
+				itemIDList.ItemIDs = s.removeItem(itemIDList.ItemIDs, itemEntityID)
+			}
 			return nil
 
 		case types.ArmorSlotLegs:
-			equipment.LegsSlot = itemToUpdateID
+			if action == constants.ActionUnequip {
+				itemIDList.ItemIDs = append(itemIDList.ItemIDs, itemEntityID)
+				equipment.LegsSlot = nil
+			} else {
+				equipment.LegsSlot = &itemEntityID
+				itemIDList.ItemIDs = s.removeItem(itemIDList.ItemIDs, itemEntityID)
+			}
 			return nil
 		}
 
 	case types.ItemTypeConsumable:
-		// find available slot
-		if equipment.Consumable1 == nil {
-			equipment.Consumable1 = itemToUpdateID
-		} else if equipment.Consumable2 == nil {
-			equipment.Consumable2 = itemToUpdateID
-		} else if equipment.Consumable3 == nil {
-			equipment.Consumable3 = itemToUpdateID
+		if action == constants.ActionUnequip {
+			// find which consumable slot holds this item and clear it
+			if equipment.Consumable1 != nil && *equipment.Consumable1 == itemEntityID {
+				equipment.Consumable1 = nil
+			} else if equipment.Consumable2 != nil && *equipment.Consumable2 == itemEntityID {
+				equipment.Consumable2 = nil
+			} else if equipment.Consumable3 != nil && *equipment.Consumable3 == itemEntityID {
+				equipment.Consumable3 = nil
+			}
+			itemIDList.ItemIDs = append(itemIDList.ItemIDs, itemEntityID)
 		} else {
-			return fmt.Errorf("All consumable slots full")
+			// find first empty slot
+			if equipment.Consumable1 == nil {
+				equipment.Consumable1 = &itemEntityID
+			} else if equipment.Consumable2 == nil {
+				equipment.Consumable2 = &itemEntityID
+			} else if equipment.Consumable3 == nil {
+				equipment.Consumable3 = &itemEntityID
+			} else {
+				return fmt.Errorf("All consumable slots full")
+			}
+			itemIDList.ItemIDs = s.removeItem(itemIDList.ItemIDs, itemEntityID)
 		}
 	}
 
 	return nil
+}
+
+func (s *Session) removeItem(items []uuid.UUID, targetItemID uuid.UUID) []uuid.UUID {
+	result := make([]uuid.UUID, 0, len(items)-1)
+
+	for _, itemID := range items {
+		if itemID == targetItemID {
+			continue
+		}
+		result = append(result, itemID)
+	}
+
+	return result
 }
 
 func (s *Session) handlePlayerEscape(playerID uuid.UUID) {
@@ -1331,6 +1433,11 @@ func (s *Session) generateItems() ([]uuid.UUID, error) {
 				return nil, err
 			}
 
+			slog.Info("item config beore addItem during itemGeneration call",
+				"item_type", types.ItemTypeWeapon,
+				"item_config", itemConfig,
+			)
+
 			// create entity
 			id := s.AddItem(*itemConfig)
 			newItemEntityIDs = append(newItemEntityIDs, id)
@@ -1344,6 +1451,11 @@ func (s *Session) generateItems() ([]uuid.UUID, error) {
 				return nil, err
 			}
 
+			slog.Info("item config beore addItem during itemGeneration call",
+				"item_type", types.ItemTypeArmor,
+				"item_config", itemConfig,
+			)
+
 			// create entity
 			id := s.AddItem(*itemConfig)
 			newItemEntityIDs = append(newItemEntityIDs, id)
@@ -1356,6 +1468,11 @@ func (s *Session) generateItems() ([]uuid.UUID, error) {
 			if err != nil {
 				return nil, err
 			}
+
+			slog.Info("item config beore addItem during itemGeneration call",
+				"item_type", types.ItemTypeConsumable,
+				"item_config", itemConfig,
+			)
 
 			// create entity
 			id := s.AddItem(*itemConfig)
@@ -1398,7 +1515,7 @@ func (s *Session) findSingleItemBase(itemType types.ItemType) (*types.ItemConfig
 
 /**
 * sendErrorToPlayer sends a structured error message to a specific player.
-* It provides user-friendly messages to the client.
+* It provides user friendly messages to the client.
 **/
 func (s *Session) sendErrorToPlayer(playerID uuid.UUID, action string, userMessage string) {
 	s.sender.SendMessageToPlayer(playerID, types.Message{
@@ -1458,10 +1575,53 @@ func (s *Session) manageEliminations() {
 }
 
 /**
+* notifyPlayersOfGameEnd sends each player an end_game action with their
+* final position. Position 1 = winner; higher numbers = earlier elimination.
+**/
+func (s *Session) notifyPlayersOfGameEnd() {
+	// no concurrent processes here but gather info
+	// during lock to get a consistent copy
+	s.mu.RLock()
+	totalPlayers := len(s.playerIDToEntitiesID)
+	playerIDs := make([]uuid.UUID, 0, totalPlayers)
+	for pid := range s.playerIDToEntitiesID {
+		playerIDs = append(playerIDs, pid)
+	}
+	eliminations := make(map[uuid.UUID]int, len(s.eliminations))
+	for k, v := range s.eliminations {
+		eliminations[k] = v
+	}
+	s.mu.RUnlock()
+
+	// act on it outside without holding lock
+
+	for _, pid := range playerIDs {
+		position := 1
+		if idx, eliminated := eliminations[pid]; eliminated {
+			position = totalPlayers - idx
+		}
+
+		if err := s.sender.SendMessageToPlayer(pid, types.Message{
+			Action: string(constants.ActionEndGame),
+			Payload: map[string]interface{}{
+				"player_id": pid.String(),
+				"position":  position,
+			},
+		}); err != nil {
+			slog.Error("failed to send end_game to player",
+				"sessionID", s.ID, "playerID", pid, "err", err)
+		}
+	}
+}
+
+/**
 * Handles all processes at the end of a match session.
 **/
 func (s *Session) endSession() {
 	slog.Info("Shutting down game session", "sessionID", s.ID)
+
+	// notify each player of their final position before tearing channels down
+	s.notifyPlayersOfGameEnd()
 
 	// remove session from server
 	s.sessionCloser.CloseSession(s.ID)
@@ -1483,7 +1643,26 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 
 	entities := s.EntityManager.GetAllEntities()
 
+	// -- item data --
+
+	itemsMap := make(map[uuid.UUID]*components.ItemComponent)
+	for _, entity := range entities {
+
+		itemComp, isItem := entity.GetComponent(ecs.ComponentTypeItem)
+		if !isItem {
+			continue
+		}
+
+		item, ok := itemComp.(*components.ItemComponent)
+		if !ok {
+			continue
+		}
+
+		itemsMap[entity.ID] = item
+	}
+
 	// --- player data ---
+
 	for _, entity := range entities {
 		playerComponent, isPlayer := entity.GetComponent(ecs.ComponentTypePlayer)
 		// escapeDoorComp, _ := entity.GetComponent(ecs.ComponentTypeEscapeDoor)
@@ -1491,15 +1670,288 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 		if isPlayer {
 			// assert back to component's original type
 			playerState := playerComponent.(*components.PlayerComponent)
-			statsComp, _ := entity.GetComponent(ecs.ComponentTypeStats)
-			stats := statsComp.(*components.StatsComponent)
+			statsComp, hasStats := entity.GetComponent(ecs.ComponentTypeStats)
+			equipmentComp, hasEquipment := entity.GetComponent(ecs.ComponentTypeEquipment)
+			itemIDListComp, hasItemIDList := entity.GetComponent(ecs.ComponentTypeItemIDList)
+
+			// malformed player, just skip
+			if !hasEquipment || !hasStats || !hasItemIDList {
+				slog.Warn("Malformed player state object when rtying to extract raw state at match end.",
+					"player_id", playerState.MemberID)
+				continue
+			}
+
+			// -- stats --
+			stats, statsOk := statsComp.(*components.StatsComponent)
+			if !statsOk {
+				stats = &components.StatsComponent{}
+			}
+
+			// -- equipment --
+			equipment, equipmentOk := equipmentComp.(*components.EquipmentComponent)
+			extractedEquipment := types.ExtractedEquipment{}
+
+			if equipmentOk {
+				if equipment.WeaponSlot != nil {
+					if item, ok := itemsMap[*equipment.WeaponSlot]; ok {
+						extractedEquipment.WeaponSlot = &types.ExtractedItem{
+							TemplateID:      item.TemplateID,
+							ItemType:        string(item.ItemType),
+							Name:            item.Name,
+							AttackPower:     item.AttackPower,
+							CriticalRate:    item.CriticalRate,
+							WeaponType:      item.WeaponType,
+							DefenseRating:   item.DefenseRating,
+							MagicResistance: item.MagicResistance,
+							ArmorSlot:       string(item.ArmorSlot),
+							HealingAmount:   item.HealingAmount,
+							ManaAmount:      item.ManaAmount,
+							BuffDuration:    item.BuffDuration,
+							BuyPrice:        item.BuyPrice,
+							SellPrice:       item.SellPrice,
+							Description:     item.Description,
+						}
+					}
+				}
+
+				if equipment.HeadSlot != nil {
+					if item, ok := itemsMap[*equipment.HeadSlot]; ok {
+						extractedEquipment.HeadSlot = &types.ExtractedItem{
+							TemplateID:      item.TemplateID,
+							ItemType:        string(item.ItemType),
+							Name:            item.Name,
+							AttackPower:     item.AttackPower,
+							CriticalRate:    item.CriticalRate,
+							WeaponType:      item.WeaponType,
+							DefenseRating:   item.DefenseRating,
+							MagicResistance: item.MagicResistance,
+							ArmorSlot:       string(item.ArmorSlot),
+							HealingAmount:   item.HealingAmount,
+							ManaAmount:      item.ManaAmount,
+							BuffDuration:    item.BuffDuration,
+							BuyPrice:        item.BuyPrice,
+							SellPrice:       item.SellPrice,
+							Description:     item.Description,
+						}
+					}
+				}
+
+				if equipment.ChestSlot != nil {
+					if item, ok := itemsMap[*equipment.ChestSlot]; ok {
+						extractedEquipment.ChestSlot = &types.ExtractedItem{
+							TemplateID:      item.TemplateID,
+							ItemType:        string(item.ItemType),
+							Name:            item.Name,
+							AttackPower:     item.AttackPower,
+							CriticalRate:    item.CriticalRate,
+							WeaponType:      item.WeaponType,
+							DefenseRating:   item.DefenseRating,
+							MagicResistance: item.MagicResistance,
+							ArmorSlot:       string(item.ArmorSlot),
+							HealingAmount:   item.HealingAmount,
+							ManaAmount:      item.ManaAmount,
+							BuffDuration:    item.BuffDuration,
+							BuyPrice:        item.BuyPrice,
+							SellPrice:       item.SellPrice,
+							Description:     item.Description,
+						}
+					}
+				}
+
+				if equipment.GlovesSlot != nil {
+					if item, ok := itemsMap[*equipment.GlovesSlot]; ok {
+						extractedEquipment.GlovesSlot = &types.ExtractedItem{
+							TemplateID:      item.TemplateID,
+							ItemType:        string(item.ItemType),
+							Name:            item.Name,
+							AttackPower:     item.AttackPower,
+							CriticalRate:    item.CriticalRate,
+							WeaponType:      item.WeaponType,
+							DefenseRating:   item.DefenseRating,
+							MagicResistance: item.MagicResistance,
+							ArmorSlot:       string(item.ArmorSlot),
+							HealingAmount:   item.HealingAmount,
+							ManaAmount:      item.ManaAmount,
+							BuffDuration:    item.BuffDuration,
+							BuyPrice:        item.BuyPrice,
+							SellPrice:       item.SellPrice,
+							Description:     item.Description,
+						}
+					}
+				}
+
+				if equipment.LegsSlot != nil {
+					if item, ok := itemsMap[*equipment.LegsSlot]; ok {
+						extractedEquipment.LegsSlot = &types.ExtractedItem{
+							TemplateID:      item.TemplateID,
+							ItemType:        string(item.ItemType),
+							Name:            item.Name,
+							AttackPower:     item.AttackPower,
+							CriticalRate:    item.CriticalRate,
+							WeaponType:      item.WeaponType,
+							DefenseRating:   item.DefenseRating,
+							MagicResistance: item.MagicResistance,
+							ArmorSlot:       string(item.ArmorSlot),
+							HealingAmount:   item.HealingAmount,
+							ManaAmount:      item.ManaAmount,
+							BuffDuration:    item.BuffDuration,
+							BuyPrice:        item.BuyPrice,
+							SellPrice:       item.SellPrice,
+							Description:     item.Description,
+						}
+					}
+				}
+
+				if equipment.Ring1Slot != nil {
+					if item, ok := itemsMap[*equipment.Ring1Slot]; ok {
+						extractedEquipment.Ring1Slot = &types.ExtractedItem{
+							TemplateID:      item.TemplateID,
+							ItemType:        string(item.ItemType),
+							Name:            item.Name,
+							AttackPower:     item.AttackPower,
+							CriticalRate:    item.CriticalRate,
+							WeaponType:      item.WeaponType,
+							DefenseRating:   item.DefenseRating,
+							MagicResistance: item.MagicResistance,
+							ArmorSlot:       string(item.ArmorSlot),
+							HealingAmount:   item.HealingAmount,
+							ManaAmount:      item.ManaAmount,
+							BuffDuration:    item.BuffDuration,
+							BuyPrice:        item.BuyPrice,
+							SellPrice:       item.SellPrice,
+							Description:     item.Description,
+						}
+					}
+				}
+
+				if equipment.Ring2Slot != nil {
+					if item, ok := itemsMap[*equipment.Ring2Slot]; ok {
+						extractedEquipment.Ring2Slot = &types.ExtractedItem{
+							TemplateID:      item.TemplateID,
+							ItemType:        string(item.ItemType),
+							Name:            item.Name,
+							AttackPower:     item.AttackPower,
+							CriticalRate:    item.CriticalRate,
+							WeaponType:      item.WeaponType,
+							DefenseRating:   item.DefenseRating,
+							MagicResistance: item.MagicResistance,
+							ArmorSlot:       string(item.ArmorSlot),
+							HealingAmount:   item.HealingAmount,
+							ManaAmount:      item.ManaAmount,
+							BuffDuration:    item.BuffDuration,
+							BuyPrice:        item.BuyPrice,
+							SellPrice:       item.SellPrice,
+							Description:     item.Description,
+						}
+					}
+				}
+
+				if equipment.Consumable1 != nil {
+					if item, ok := itemsMap[*equipment.Consumable1]; ok {
+						extractedEquipment.Consumable1 = &types.ExtractedItem{
+							TemplateID:      item.TemplateID,
+							ItemType:        string(item.ItemType),
+							Name:            item.Name,
+							AttackPower:     item.AttackPower,
+							CriticalRate:    item.CriticalRate,
+							WeaponType:      item.WeaponType,
+							DefenseRating:   item.DefenseRating,
+							MagicResistance: item.MagicResistance,
+							ArmorSlot:       string(item.ArmorSlot),
+							HealingAmount:   item.HealingAmount,
+							ManaAmount:      item.ManaAmount,
+							BuffDuration:    item.BuffDuration,
+							BuyPrice:        item.BuyPrice,
+							SellPrice:       item.SellPrice,
+							Description:     item.Description,
+						}
+					}
+				}
+
+				if equipment.Consumable2 != nil {
+					if item, ok := itemsMap[*equipment.Consumable2]; ok {
+						extractedEquipment.Consumable2 = &types.ExtractedItem{
+							TemplateID:      item.TemplateID,
+							ItemType:        string(item.ItemType),
+							Name:            item.Name,
+							AttackPower:     item.AttackPower,
+							CriticalRate:    item.CriticalRate,
+							WeaponType:      item.WeaponType,
+							DefenseRating:   item.DefenseRating,
+							MagicResistance: item.MagicResistance,
+							ArmorSlot:       string(item.ArmorSlot),
+							HealingAmount:   item.HealingAmount,
+							ManaAmount:      item.ManaAmount,
+							BuffDuration:    item.BuffDuration,
+							BuyPrice:        item.BuyPrice,
+							SellPrice:       item.SellPrice,
+							Description:     item.Description,
+						}
+					}
+				}
+
+				if equipment.Consumable3 != nil {
+					if item, ok := itemsMap[*equipment.Consumable3]; ok {
+						extractedEquipment.Consumable3 = &types.ExtractedItem{
+							TemplateID:      item.TemplateID,
+							ItemType:        string(item.ItemType),
+							Name:            item.Name,
+							AttackPower:     item.AttackPower,
+							CriticalRate:    item.CriticalRate,
+							WeaponType:      item.WeaponType,
+							DefenseRating:   item.DefenseRating,
+							MagicResistance: item.MagicResistance,
+							ArmorSlot:       string(item.ArmorSlot),
+							HealingAmount:   item.HealingAmount,
+							ManaAmount:      item.ManaAmount,
+							BuffDuration:    item.BuffDuration,
+							BuyPrice:        item.BuyPrice,
+							SellPrice:       item.SellPrice,
+							Description:     item.Description,
+						}
+					}
+				}
+			}
+
+			// -- inventory items --
+			inventory := []*types.ExtractedItem{}
+			if itemIDList, itemIDListOk := itemIDListComp.(*components.ItemIDListComponent); itemIDListOk {
+
+				for _, itemID := range itemIDList.ItemIDs {
+					item, ok := itemsMap[itemID]
+					if !ok {
+						continue
+					}
+
+					inventory = append(inventory, &types.ExtractedItem{
+						TemplateID:      item.TemplateID,
+						ItemType:        string(item.ItemType),
+						Name:            item.Name,
+						AttackPower:     item.AttackPower,
+						CriticalRate:    item.CriticalRate,
+						WeaponType:      item.WeaponType,
+						DefenseRating:   item.DefenseRating,
+						MagicResistance: item.MagicResistance,
+						ArmorSlot:       string(item.ArmorSlot),
+						HealingAmount:   item.HealingAmount,
+						ManaAmount:      item.ManaAmount,
+						BuffDuration:    item.BuffDuration,
+						BuyPrice:        item.BuyPrice,
+						SellPrice:       item.SellPrice,
+						Description:     item.Description,
+					})
+				}
+
+			}
 
 			rawPlayers = append(rawPlayers, types.RawPlayerState{
-				MemberID: playerState.MemberID.String(),
-				Username: playerState.Username,
-				Kills:    int32(stats.Kills),
-				Deaths:   int32(stats.Deaths),
-				Escape:   playerState.Escape,
+				MemberID:  playerState.MemberID.String(),
+				Username:  playerState.Username,
+				Kills:     int32(stats.Kills),
+				Deaths:    int32(stats.Deaths),
+				Escape:    playerState.Escape,
+				Equipment: extractedEquipment,
+				Inventory: inventory,
 			})
 		}
 	}
@@ -1575,7 +2027,7 @@ func (s *Session) InitialMapObjects() {
 }
 
 func (s *Session) InitializeItems(ctx context.Context) error {
-	data, err := s.itemsClient.ListItemTemplates(ctx)
+	data, err := s.itemsClient.ListItemTemplates(ctx) // data from items service
 
 	if err != nil {
 		slog.Error("Error when attempting to get list of base armors for game creation.",
@@ -1609,7 +2061,7 @@ func (s *Session) InitializeItems(ctx context.Context) error {
 		)
 
 		switch itemType {
-		case types.ItemTypeWeapon:
+		case types.ItemTypeArmor:
 			newItemConfig = types.ItemConfig{
 				TemplateID:  templateId,
 				ItemType:    itemType,
@@ -1626,7 +2078,7 @@ func (s *Session) InitializeItems(ctx context.Context) error {
 			s.itemPool.Weapons = append(s.itemPool.Weapons, &newItemConfig)
 			s.itemPool.Count++
 
-		case types.ItemTypeArmor:
+		case types.ItemTypeWeapon:
 			newItemConfig = types.ItemConfig{
 				TemplateID:  templateId,
 				ItemType:    itemType,

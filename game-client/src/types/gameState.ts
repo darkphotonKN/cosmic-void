@@ -113,7 +113,8 @@ export function isGameState(data: any): data is ClientGameState {
 // Equipment types
 export type EquipmentSlot = 'weapon' | 'head' | 'body' | 'hands' | 'feet' | 'ring_1' | 'ring_2' | 'consumable_1' | 'consumable_2' | 'consumable_3';
 
-export type ArmorSlot = 'head' | 'chest' | 'hands' | 'legs' | 'feet' | 'ring';
+// Matches backend types.ArmorSlot — game-server/game-service/internal/types/game.go
+export type ArmorSlot = 'head' | 'chest' | 'gloves' | 'legs';
 
 export interface EquippedItems {
   weapon: ItemState | null;
@@ -147,10 +148,8 @@ export function getValidSlotsForItem(item: ItemState): EquipmentSlot[] {
       switch (slot) {
         case 'head': return ['head'];
         case 'chest': return ['body'];
-        case 'hands': return ['hands'];
-        case 'legs':
-        case 'feet': return ['feet'];
-        case 'ring': return ['ring_1', 'ring_2'];
+        case 'gloves': return ['hands'];
+        case 'legs': return ['feet'];
         default: return [];
       }
     }

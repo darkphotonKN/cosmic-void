@@ -76,11 +76,13 @@ type RawMatchState struct {
 }
 
 type RawPlayerState struct {
-	MemberID string
-	Username string
-	Kills    int32
-	Deaths   int32
-	Escape   bool
+	MemberID  string
+	Username  string
+	Kills     int32
+	Deaths    int32
+	Escape    bool
+	Equipment ExtractedEquipment
+	Inventory []*ExtractedItem
 }
 
 type RankedPlayerState struct {
@@ -91,6 +93,59 @@ type RankedPlayerState struct {
 	FinalPosition int32
 	Win           bool
 	Escape        bool
+	Equipment     ExtractedEquipment
+	Inventory     []*ExtractedItem
+}
+
+type ExtractedItem struct {
+	TemplateID uuid.UUID
+	ItemType   string
+	Name       string
+
+	// Weapon stats
+	AttackPower  int
+	CriticalRate float64
+	WeaponType   string
+
+	// Armor stats
+	DefenseRating   int
+	MagicResistance int
+	ArmorSlot       string
+
+	// Consumable stats
+	HealingAmount int
+	ManaAmount    int
+	BuffDuration  int
+
+	// Shared
+	BuyPrice    int
+	SellPrice   int
+	Description string
+}
+
+type ExtractedEquipment struct {
+	// Weapons
+	WeaponSlot *ExtractedItem
+
+	// Armor
+	HeadSlot   *ExtractedItem
+	ChestSlot  *ExtractedItem
+	GlovesSlot *ExtractedItem
+	LegsSlot   *ExtractedItem
+
+	// Accessories
+	Ring1Slot *ExtractedItem
+	Ring2Slot *ExtractedItem
+
+	// Consumablesected events
+	Consumable1 *ExtractedItem
+	Consumable2 *ExtractedItem
+	Consumable3 *ExtractedItem
+}
+
+type FormattedMatchData struct {
+	MatchEndedEvent     []byte
+	ItemsExtractedEvent []byte
 }
 
 type WallState struct {

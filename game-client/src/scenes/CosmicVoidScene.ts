@@ -59,6 +59,9 @@ export class CosmicVoidScene extends Phaser.Scene {
   // In-game controls panel
   private controlsPanel?: Phaser.GameObjects.Container;
 
+  // End-of-game overlay (shown when server sends end_game action)
+  private gameEndOverlay?: Phaser.GameObjects.Container;
+
   // Game state
   private gameStateUnsubscribe?: () => void;
   private targetPosition: { x: number; y: number } | null = null;
@@ -190,6 +193,119 @@ export class CosmicVoidScene extends Phaser.Scene {
     this.controlsPanel = this.add.container(x, y, children);
     this.controlsPanel.setDepth(1200);
     this.controlsPanel.setScrollFactor(0);
+  }
+
+  private showGameEndOverlay(position: number): void {
+    if (this.gameEndOverlay) return; // already shown
+
+    const cam = this.cameras.main;
+    const isVictory = position === 1;
+
+    // full-screen backdrop — eats pointer input from anything beneath
+    const backdrop = this.add.rectangle(
+      cam.width / 2,
+      cam.height / 2,
+      cam.width,
+      cam.height,
+      0x0a0a12,
+      0.85,
+    );
+    backdrop.setInteractive();
+
+    // centered card
+    const cardW = 460;
+    const cardH = 280;
+    const card = this.add.graphics();
+    card.fillStyle(0x0a0a12, 0.95);
+    card.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 10);
+    card.lineStyle(1, 0x00f0ff, 0.5);
+    card.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 10);
+
+    const titleStr = isVictory ? "VICTORY!" : `YOU PLACED #${position}`;
+    const title = this.add.text(0, -60, titleStr, {
+      fontSize: "44px",
+      color: "#00f0ff",
+      fontStyle: "bold",
+      letterSpacing: 6,
+    });
+    title.setOrigin(0.5);
+
+    const subtitleStr = isVictory
+      ? "OPERATOR EXTRACTED"
+      : "BETTER LUCK ON YOUR NEXT DEPLOY";
+    const subtitle = this.add.text(0, 0, subtitleStr, {
+      fontSize: "13px",
+      color: "#556677",
+      letterSpacing: 3,
+    });
+    subtitle.setOrigin(0.5);
+
+    // --- action buttons ---
+    const btnW = 180;
+    const btnH = 38;
+    const btnY = 70;
+    const btnGap = 16;
+
+    // RE-DEPLOY button (re-queue) — cyan fill
+    const redeployBtn = this.add.graphics();
+    redeployBtn.fillStyle(0x00f0ff, 1);
+    redeployBtn.fillRoundedRect(-btnW / 2 - btnW / 2 - btnGap / 2, btnY - btnH / 2, btnW, btnH, 6);
+    const redeployText = this.add.text(-btnW / 2 - btnGap / 2, btnY, "RE-DEPLOY", {
+      fontSize: "14px",
+      color: "#0a0a12",
+      fontStyle: "bold",
+      letterSpacing: 3,
+    });
+    redeployText.setOrigin(0.5);
+    const redeployHit = this.add.rectangle(-btnW / 2 - btnGap / 2, btnY, btnW, btnH, 0x000000, 0)
+      .setInteractive({ useHandCursor: true });
+    redeployHit.on("pointerover", () => { redeployBtn.clear(); redeployBtn.fillStyle(0x33f5ff, 1); redeployBtn.fillRoundedRect(-btnW / 2 - btnW / 2 - btnGap / 2, btnY - btnH / 2, btnW, btnH, 6); });
+    redeployHit.on("pointerout", () => { redeployBtn.clear(); redeployBtn.fillStyle(0x00f0ff, 1); redeployBtn.fillRoundedRect(-btnW / 2 - btnW / 2 - btnGap / 2, btnY - btnH / 2, btnW, btnH, 6); });
+    redeployHit.on("pointerdown", () => {
+      this.sound.stopByKey('gameAmbient');
+      socketManager.sendMessage(ActionType.Find_Game, { playerId: "1" });
+      this.scene.start("MainMenuScene");
+    });
+
+    // RETURN TO BASE button — outlined
+    const returnBtn = this.add.graphics();
+    returnBtn.lineStyle(1, 0x00f0ff, 0.6);
+    returnBtn.strokeRoundedRect(btnGap / 2, btnY - btnH / 2, btnW, btnH, 6);
+    const returnText = this.add.text(btnGap / 2 + btnW / 2, btnY, "RETURN TO BASE", {
+      fontSize: "13px",
+      color: "#00f0ff",
+      letterSpacing: 2,
+    });
+    returnText.setOrigin(0.5);
+    const returnHit = this.add.rectangle(btnGap / 2 + btnW / 2, btnY, btnW, btnH, 0x000000, 0)
+      .setInteractive({ useHandCursor: true });
+    returnHit.on("pointerover", () => { returnBtn.clear(); returnBtn.fillStyle(0x00f0ff, 0.1); returnBtn.fillRoundedRect(btnGap / 2, btnY - btnH / 2, btnW, btnH, 6); returnBtn.lineStyle(1, 0x00f0ff, 0.8); returnBtn.strokeRoundedRect(btnGap / 2, btnY - btnH / 2, btnW, btnH, 6); });
+    returnHit.on("pointerout", () => { returnBtn.clear(); returnBtn.lineStyle(1, 0x00f0ff, 0.6); returnBtn.strokeRoundedRect(btnGap / 2, btnY - btnH / 2, btnW, btnH, 6); });
+    returnHit.on("pointerdown", () => {
+      this.sound.stopByKey('gameAmbient');
+      this.scene.start("MainMenuScene");
+    });
+
+    const cardContainer = this.add.container(cam.width / 2, cam.height / 2, [
+      card,
+      title,
+      subtitle,
+      redeployBtn,
+      redeployText,
+      redeployHit,
+      returnBtn,
+      returnText,
+      returnHit,
+    ]);
+
+    this.gameEndOverlay = this.add.container(0, 0, [backdrop, cardContainer]);
+    this.gameEndOverlay.setDepth(2000);
+    this.gameEndOverlay.setScrollFactor(0);
+
+    // disable game input — keyboard movement, hover, clicks
+    if (this.input.keyboard) {
+      this.input.keyboard.enabled = false;
+    }
   }
 
   preload(): void {
@@ -1858,6 +1974,12 @@ export class CosmicVoidScene extends Phaser.Scene {
 
     // E 鍵互動（門、寶箱、開關、逃脫門）
     this.input.keyboard?.on("keydown-E", () => {
+      // When the equipment panel is open, E equips/unequips the hovered item.
+      if (this.equipmentPanel?.isVisible()) {
+        this.equipmentPanel.handleEquipKey();
+        return;
+      }
+
       // 檢查後端門
       const nearbyDoor = this.getNearbyDoor();
       if (nearbyDoor) {
@@ -1926,7 +2048,6 @@ export class CosmicVoidScene extends Phaser.Scene {
       // Send to backend
       socketManager.sendMessage(ActionType.Equip, {
         item_entity_id: item.entity_id,
-        slot: slot,
       });
       // Optimistic update
       this.equippedItems[slot] = item;
@@ -1936,7 +2057,6 @@ export class CosmicVoidScene extends Phaser.Scene {
       // Send to backend
       socketManager.sendMessage(ActionType.Unequip, {
         item_entity_id: item.entity_id,
-        slot: slot,
       });
       // Optimistic update
       this.equippedItems[slot] = null;
@@ -2036,6 +2156,12 @@ export class CosmicVoidScene extends Phaser.Scene {
         const color = payload.success ? "#4ecca3" : "#ff4444";
         this.showNotification(payload.message, color);
       }
+    });
+
+    // Listen for end_game — show final position overlay and lock interaction
+    socketManager.on("end_game", (payload: { player_id: string; position: number }) => {
+      console.log("Game ended, final position:", payload);
+      this.showGameEndOverlay(payload.position);
     });
 
     // Reset the logger for new session

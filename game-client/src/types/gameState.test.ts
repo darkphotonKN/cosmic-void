@@ -58,20 +58,16 @@ describe('getValidSlotsForItem', () => {
     expect(getValidSlotsForItem(makeItem({ defense_rating: 5, armor_slot: 'chest' }))).toEqual(['body']);
   });
 
-  it('should return [hands] for armor with armor_slot=hands', () => {
-    expect(getValidSlotsForItem(makeItem({ defense_rating: 5, armor_slot: 'hands' }))).toEqual(['hands']);
+  it('should return [hands] for armor with armor_slot=gloves', () => {
+    expect(getValidSlotsForItem(makeItem({ defense_rating: 5, armor_slot: 'gloves' }))).toEqual(['hands']);
   });
 
   it('should return [feet] for armor with armor_slot=legs', () => {
     expect(getValidSlotsForItem(makeItem({ defense_rating: 5, armor_slot: 'legs' }))).toEqual(['feet']);
   });
 
-  it('should return [feet] for armor with armor_slot=feet', () => {
-    expect(getValidSlotsForItem(makeItem({ defense_rating: 5, armor_slot: 'feet' }))).toEqual(['feet']);
-  });
-
-  it('should return [ring_1, ring_2] for armor with armor_slot=ring', () => {
-    expect(getValidSlotsForItem(makeItem({ defense_rating: 5, armor_slot: 'ring' }))).toEqual(['ring_1', 'ring_2']);
+  it('should return empty array for armor with unrecognized armor_slot', () => {
+    expect(getValidSlotsForItem(makeItem({ defense_rating: 5, armor_slot: 'unknown_slot' }))).toEqual([]);
   });
 
   it('should return all consumable slots for consumable items', () => {

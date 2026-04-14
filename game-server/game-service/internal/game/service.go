@@ -44,7 +44,7 @@ func (s *service) PublishMatchComplete(ctx context.Context, data *types.RawMatch
 		commonconstants.GameMatchEnded,
 		commonbroker.Message{
 			ContentType:  "application/protobuf",
-			Body:         protoData,
+			Body:         protoData.MatchEndedEvent,
 			DeliveryMode: amqp.Persistent,
 		})
 
@@ -59,7 +59,7 @@ func (s *service) PublishMatchComplete(ctx context.Context, data *types.RawMatch
 /**
 * Formats from raw game state to match end state.
 **/
-func (s *service) formatMatchData(sessionID uuid.UUID, startedAt time.Time, endedAt time.Time, players []types.RankedPlayerState) ([]byte, error) {
+func (s *service) formatMatchData(sessionID uuid.UUID, startedAt time.Time, endedAt time.Time, players []types.RankedPlayerState) (*types.FormattedMatchData, error) {
 
 	// format data for marshalling as protobuf
 	playerMatchRes := make([]*pb.PlayerMatchResult, len(players))
@@ -77,23 +77,63 @@ func (s *service) formatMatchData(sessionID uuid.UUID, startedAt time.Time, ende
 	}
 
 	// marshal to protobuf
-	protoData, err := proto.Marshal(&pb.MatchEndedEvent{
+	protoData, matchEndedErr := proto.Marshal(&pb.MatchEndedEvent{
 		SessionId:      string(sessionID.String()),
 		MatchStartedAt: timestamppb.New(startedAt),
 		MatchEndedAt:   timestamppb.New(endedAt),
 		Players:        playerMatchRes,
 	})
 
-	if err != nil {
+	if matchEndedErr != nil {
 		slog.Error("could not marshal end match data to MatchEndedEvent proto",
 			"session_id", sessionID,
-			"error", err,
+			"error", matchEndedErr,
 		)
-
-		return nil, err
 	}
 
-	return protoData, nil
+	playerItems := make([]*pb.PlayerItems, len(players))
+
+	for idx, player := range players {
+		playerItems[idx] = &pb.PlayerItems{
+			MemberId: player.MemberID,
+			Equipment: &pb.Equipment{
+				Weapon:       extractedItemToPb(player.Equipment.WeaponSlot),
+				Head:         extractedItemToPb(player.Equipment.HeadSlot),
+				Chest:        extractedItemToPb(player.Equipment.ChestSlot),
+				Gloves:       extractedItemToPb(player.Equipment.GlovesSlot),
+				Legs:         extractedItemToPb(player.Equipment.LegsSlot),
+				Ring_1:       extractedItemToPb(player.Equipment.Ring1Slot),
+				Ring_2:       extractedItemToPb(player.Equipment.Ring2Slot),
+				Consumable_1: extractedItemToPb(player.Equipment.Consumable1),
+				Consumable_2: extractedItemToPb(player.Equipment.Consumable2),
+				Consumable_3: extractedItemToPb(player.Equipment.Consumable3),
+			},
+			Inventory: extractedInventoryToPb(player.Inventory),
+		}
+	}
+
+	itemsExtractedProtoData, itemsExtractErr := proto.Marshal(&pb.ItemsExtractedEvent{
+		SessionId:   string(sessionID.String()),
+		PlayerItems: nil,
+	})
+
+	if itemsExtractErr != nil {
+		slog.Error("could not marshal items extracted event to ItemExtractedEvent proto",
+			"session_id", sessionID,
+			"error", itemsExtractErr,
+		)
+	}
+
+	if matchEndedErr != nil && itemsExtractErr != nil {
+		return nil, matchEndedErr
+	}
+
+	data := &types.FormattedMatchData{
+		MatchEndedEvent:     protoData,
+		ItemsExtractedEvent: itemsExtractedProtoData,
+	}
+
+	return data, nil
 }
 
 /**
@@ -137,4 +177,37 @@ func (s *service) rankPlayers(players []types.RawPlayerState, eliminationOrder m
 	}
 
 	return rankedPlayers
+}
+
+func extractedItemToPb(item *types.ExtractedItem) *pb.Item {
+	if item == nil {
+		return nil
+	}
+	return &pb.Item{
+		TemplateId:      item.TemplateID.String(),
+		ItemType:        item.ItemType,
+		Name:            item.Name,
+		AttackPower:     int32(item.AttackPower),
+		CriticalRate:    item.CriticalRate,
+		WeaponType:      item.WeaponType,
+		DefenseRating:   int32(item.DefenseRating),
+		MagicResistance: int32(item.MagicResistance),
+		ArmorSlot:       item.ArmorSlot,
+		HealingAmount:   int32(item.HealingAmount),
+		ManaAmount:      int32(item.ManaAmount),
+		BuffDuration:    int32(item.BuffDuration),
+		BuyPrice:        int32(item.BuyPrice),
+		SellPrice:       int32(item.SellPrice),
+		Description:     item.Description,
+	}
+}
+
+func extractedInventoryToPb(inventory []*types.ExtractedItem) []*pb.Item {
+	items := make([]*pb.Item, 0, len(inventory))
+	for _, item := range inventory {
+		if pbItem := extractedItemToPb(item); pbItem != nil {
+			items = append(items, pbItem)
+		}
+	}
+	return items
 }

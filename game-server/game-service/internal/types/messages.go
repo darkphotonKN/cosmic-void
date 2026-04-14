@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	"github.com/google/uuid"
@@ -63,7 +64,7 @@ func (m *Message) ParsePayload() (interface{}, error) {
 			Vy: m.Payload["vy"].(float64),
 		}
 
-		fmt.Printf("\n\npayload of action move was: %+v\n", parsedPayload)
+		slog.Debug("payload of action move", "payload", parsedPayload)
 
 		return parsedPayload, nil
 
@@ -76,7 +77,7 @@ func (m *Message) ParsePayload() (interface{}, error) {
 			EntityID: m.Payload["entity_id"].(string),
 		}
 
-		fmt.Printf("\n\npayload of action interact was: %+v\n", parsedPayload)
+		slog.Debug("payload of action interact", "payload", parsedPayload)
 
 		return parsedPayload, nil
 
@@ -89,7 +90,20 @@ func (m *Message) ParsePayload() (interface{}, error) {
 			EnemyEntityID: m.Payload["enemy_entity_id"].(string),
 		}
 
-		fmt.Printf("\n\npayload of action attack was: %+v\n", parsedPayload)
+		slog.Debug("payload of action attack", "payload", parsedPayload)
+
+		return parsedPayload, nil
+
+	case constants.ActionEquip, constants.ActionUnequip:
+		parsedPayload := PlayerEquipPayload{
+			PlayerSessionPayload: PlayerSessionPayload{
+				SessionID: m.Payload["session_id"].(string),
+				PlayerID:  m.Payload["player_id"].(string),
+			},
+			ItemEntityID: m.Payload["item_entity_id"].(string),
+		}
+
+		slog.Debug("payload of action equip / unequip", "payload", parsedPayload)
 
 		return parsedPayload, nil
 	default:
@@ -105,14 +119,14 @@ func (m *Message) GetSessionID() (uuid.UUID, error) {
 	sessionIDStr, ok := m.Payload["session_id"].(string)
 
 	if !ok {
-		fmt.Printf("SessionID does not exist in the payload.")
+		slog.Debug("SessionID does not exist in the payload")
 		return uuid.Nil, fmt.Errorf("SessionID does not exist in the payload.")
 	}
 
 	sessionID, err := uuid.Parse(sessionIDStr)
 
 	if err != nil {
-		fmt.Printf("SessionID in payload is not a UUID.")
+		slog.Debug("SessionID in payload is not a UUID")
 		return uuid.Nil, fmt.Errorf("SessionID in payload is not a UUID.")
 	}
 

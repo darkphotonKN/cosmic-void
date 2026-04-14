@@ -154,13 +154,14 @@ class SocketManager {
         seq: ++this.seq,
       };
 
-      // Debug logging for outgoing messages
-      console.log(
-        `%c[WebSocket Send] Action: ${action}`,
-        'color: #ff69b4; font-weight: bold'
-      );
-      console.log('Payload:', payload);
-      console.log('Full message:', message);
+      // Debug logging for outgoing messages (level 2+ = info)
+      if (GameStateLogger.getLevel() >= 2) {
+        console.log(
+          `%c[WebSocket Send] Action: ${action}`,
+          'color: #ff69b4; font-weight: bold',
+          payload,
+        );
+      }
 
       this.socket.send(JSON.stringify(message));
     } else {

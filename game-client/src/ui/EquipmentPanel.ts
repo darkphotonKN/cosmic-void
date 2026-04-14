@@ -4,7 +4,6 @@ import {
   EquippedItems,
   getItemType,
   getValidSlotsForItem,
-  getSlotDisplayName,
 } from '@/types/gameState';
 
 interface SlotLayout {
@@ -25,20 +24,15 @@ interface InventoryRowHitArea {
   item: ItemState;
 }
 
-interface ContextMenuOption {
-  label: string;
-  action: () => void;
-}
-
 // Panel dimensions
-const EQUIP_W = 380;
-const EQUIP_H = 340;
+const EQUIP_W = 420;
+const EQUIP_H = 400;
 const INV_W = 320;
-const INV_H = 340;
+const INV_H = 400;
 const GAP = 20;
-const SLOT_BOX_W = 110;
-const SLOT_BOX_H = 34;
-const INV_ROW_H = 30;
+const SLOT_BOX_W = 120;
+const SLOT_BOX_H = 44;
+const INV_ROW_H = 32;
 const MAX_VISIBLE_INV = 8;
 const PADDING = 16;
 
@@ -65,19 +59,19 @@ function getSlotColor(slot: EquipmentSlot): number {
 //   [CON 1]   [CON 2]   [CON 3]
 const SLOT_LAYOUT: SlotLayout[] = [
   // Row 1: weapon left, head center
-  { slot: 'weapon', label: 'WEAPON', x: -110, y: 0 },
+  { slot: 'weapon', label: 'WEAPON', x: -125, y: 0 },
   { slot: 'head', label: 'HEAD', x: 0, y: 0 },
   // Row 2: hands left (arms), body center, ring right
-  { slot: 'hands', label: 'HANDS', x: -110, y: 50 },
-  { slot: 'body', label: 'BODY', x: 0, y: 50 },
-  { slot: 'ring_1', label: 'RING 1', x: 110, y: 50 },
+  { slot: 'hands', label: 'HANDS', x: -125, y: 58 },
+  { slot: 'body', label: 'BODY', x: 0, y: 58 },
+  { slot: 'ring_1', label: 'RING 1', x: 125, y: 58 },
   // Row 3: feet center, ring right
-  { slot: 'feet', label: 'FEET', x: 0, y: 100 },
-  { slot: 'ring_2', label: 'RING 2', x: 110, y: 100 },
+  { slot: 'feet', label: 'FEET', x: 0, y: 116 },
+  { slot: 'ring_2', label: 'RING 2', x: 125, y: 116 },
   // Row 4: consumables across bottom
-  { slot: 'consumable_1', label: 'CONS 1', x: -110, y: 160 },
-  { slot: 'consumable_2', label: 'CONS 2', x: 0, y: 160 },
-  { slot: 'consumable_3', label: 'CONS 3', x: 110, y: 160 },
+  { slot: 'consumable_1', label: 'CONS 1', x: -125, y: 186 },
+  { slot: 'consumable_2', label: 'CONS 2', x: 0, y: 186 },
+  { slot: 'consumable_3', label: 'CONS 3', x: 125, y: 186 },
 ];
 
 export class EquipmentPanel {
@@ -102,7 +96,6 @@ export class EquipmentPanel {
   private invRowTexts: Phaser.GameObjects.Text[] = [];
   private invEmptyText?: Phaser.GameObjects.Text;
 
-  private contextMenu?: Phaser.GameObjects.Container;
   private hoveredSlot?: EquipmentSlot;
   private hoveredInvIndex = -1;
   private tooltip?: Phaser.GameObjects.Container;
@@ -111,7 +104,6 @@ export class EquipmentPanel {
   onUnequip?: (item: ItemState, slot: EquipmentSlot) => void;
 
   private pointerMoveHandler?: (p: Phaser.Input.Pointer) => void;
-  private pointerDownHandler?: (p: Phaser.Input.Pointer) => void;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -130,7 +122,6 @@ export class EquipmentPanel {
   hide(): void {
     if (!this.visible) return;
     this.visible = false;
-    this.dismissContextMenu();
     this.hideTooltip();
     this.cleanup();
   }
@@ -140,13 +131,45 @@ export class EquipmentPanel {
   }
 
   updateInventory(items: ItemState[]): void {
+    // Skip rebuild when nothing visible has changed — game state ticks fire
+    // many times per second; rebuilding tears down hover state and any open
+    // context menu, making the panel feel unresponsive.
+    if (this.visible && this.isInventoryEquivalent(items, this.inventory)) {
+      this.inventory = items;
+      return;
+    }
     this.inventory = items;
     if (this.visible) this.rebuildInventoryRows();
   }
 
   updateEquipment(equipped: EquippedItems): void {
+    if (this.visible && this.isEquipmentEquivalent(equipped, this.equipped)) {
+      this.equipped = equipped;
+      return;
+    }
     this.equipped = equipped;
     if (this.visible) this.refreshSlots();
+  }
+
+  private isInventoryEquivalent(a: ItemState[], b: ItemState[]): boolean {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i].entity_id !== b[i].entity_id) return false;
+    }
+    return true;
+  }
+
+  private isEquipmentEquivalent(a: EquippedItems, b: EquippedItems): boolean {
+    const slots: EquipmentSlot[] = [
+      'weapon', 'head', 'body', 'hands', 'feet',
+      'ring_1', 'ring_2', 'consumable_1', 'consumable_2', 'consumable_3',
+    ];
+    for (const slot of slots) {
+      const aId = a[slot]?.entity_id ?? null;
+      const bId = b[slot]?.entity_id ?? null;
+      if (aId !== bId) return false;
+    }
+    return true;
   }
 
   destroy(): void {
@@ -188,7 +211,7 @@ export class EquipmentPanel {
       const slotY = slotsTop + layout.y;
 
       const label = this.scene.add.text(slotX, slotY + 2, layout.label, {
-        fontSize: '9px', color: '#445566', letterSpacing: 2,
+        fontSize: '9px', color: '#00f0ff', letterSpacing: 2,
       });
       label.setOrigin(0.5, 0);
       eqChildren.push(label);
@@ -198,7 +221,7 @@ export class EquipmentPanel {
       this.slotGraphics.set(layout.slot, slotGfx);
 
       const slotText = this.scene.add.text(slotX, slotY + SLOT_BOX_H - 4, '—', {
-        fontSize: '11px', color: '#334455',
+        fontSize: '11px', color: '#00f0ff',
       });
       slotText.setOrigin(0.5);
       eqChildren.push(slotText);
@@ -207,8 +230,8 @@ export class EquipmentPanel {
       this.slotHitAreas.push({ slot: layout.slot, rect: { x: 0, y: 0, w: SLOT_BOX_W, h: SLOT_BOX_H }, item: null });
     }
 
-    const eqHint = this.scene.add.text(0, EQUIP_H / 2 - 16, 'RIGHT-CLICK TO UNEQUIP', {
-      fontSize: '9px', color: '#334455', letterSpacing: 2,
+    const eqHint = this.scene.add.text(0, EQUIP_H / 2 - 16, 'HOVER + E TO UNEQUIP', {
+      fontSize: '9px', color: '#00f0ff', letterSpacing: 2,
     });
     eqHint.setOrigin(0.5);
     eqChildren.push(eqHint);
@@ -232,8 +255,8 @@ export class EquipmentPanel {
     invTitle.setOrigin(0.5);
     invChildren.push(invTitle);
 
-    const invHint = this.scene.add.text(0, INV_H / 2 - 16, 'RIGHT-CLICK TO EQUIP  //  I CLOSE', {
-      fontSize: '9px', color: '#334455', letterSpacing: 2,
+    const invHint = this.scene.add.text(0, INV_H / 2 - 16, 'HOVER + E TO EQUIP  //  I CLOSE', {
+      fontSize: '9px', color: '#00f0ff', letterSpacing: 2,
     });
     invHint.setOrigin(0.5);
     invChildren.push(invHint);
@@ -249,14 +272,11 @@ export class EquipmentPanel {
 
     // Input
     this.pointerMoveHandler = (p: Phaser.Input.Pointer) => this.handlePointerMove(p);
-    this.pointerDownHandler = (p: Phaser.Input.Pointer) => this.handlePointerDown(p);
     this.scene.input.on('pointermove', this.pointerMoveHandler);
-    this.scene.input.on('pointerdown', this.pointerDownHandler);
   }
 
   private cleanup(): void {
     if (this.pointerMoveHandler) { this.scene.input.off('pointermove', this.pointerMoveHandler); this.pointerMoveHandler = undefined; }
-    if (this.pointerDownHandler) { this.scene.input.off('pointerdown', this.pointerDownHandler); this.pointerDownHandler = undefined; }
     this.slotGraphics.clear();
     this.slotTexts.clear();
     this.invRowGraphics = [];
@@ -340,7 +360,7 @@ export class EquipmentPanel {
     const rowWidth = INV_W - PADDING * 2;
 
     if (this.inventory.length === 0) {
-      this.invEmptyText = this.scene.add.text(0, 0, '(Empty)', { fontSize: '13px', color: '#334455' });
+      this.invEmptyText = this.scene.add.text(0, 0, '(Empty)', { fontSize: '13px', color: '#00f0ff' });
       this.invEmptyText.setOrigin(0.5);
       this.invContainer.add(this.invEmptyText);
       return;
@@ -379,7 +399,7 @@ export class EquipmentPanel {
     if (this.inventory.length > MAX_VISIBLE_INV) {
       const moreY = rowsTop + MAX_VISIBLE_INV * INV_ROW_H + 4;
       const moreText = this.scene.add.text(0, moreY, `+${this.inventory.length - MAX_VISIBLE_INV} more...`, {
-        fontSize: '11px', color: '#445566',
+        fontSize: '11px', color: '#00f0ff',
       });
       moreText.setOrigin(0.5);
       this.invContainer.add(moreText);
@@ -404,7 +424,7 @@ export class EquipmentPanel {
   // === INPUT ===
 
   private handlePointerMove(pointer: Phaser.Input.Pointer): void {
-    if (!this.visible || this.contextMenu) return;
+    if (!this.visible) return;
 
     let foundSlot: EquipmentSlot | undefined;
     for (const hit of this.slotHitAreas) {
@@ -442,55 +462,59 @@ export class EquipmentPanel {
     }
   }
 
-  private handlePointerDown(pointer: Phaser.Input.Pointer): void {
+  // === EQUIP KEY HANDLER ===
+
+  /**
+   * Triggered by `keydown-E` while the panel is visible. Equips/unequips
+   * whatever the cursor is currently hovering. Equipped slot under the cursor
+   * takes priority over an inventory row underneath it.
+   */
+  handleEquipKey(): void {
+    console.log('[EquipPanel] handleEquipKey called', {
+      visible: this.visible,
+      hoveredSlot: this.hoveredSlot,
+      hoveredInvIndex: this.hoveredInvIndex,
+      hitAreasLength: this.inventoryHitAreas.length,
+    });
     if (!this.visible) return;
 
-    if (this.contextMenu) {
-      if (this.handleContextMenuClick(pointer)) return;
-      this.dismissContextMenu();
-      return;
+    // Unequip path: hovering an equipped slot.
+    if (this.hoveredSlot) {
+      const item = this.equipped[this.hoveredSlot];
+      console.log('[EquipPanel] unequip path', { slot: this.hoveredSlot, hasItem: !!item });
+      if (item) {
+        this.unequipItem(item, this.hoveredSlot);
+        return;
+      }
     }
 
-    if (pointer.rightButtonDown()) {
-      for (const hit of this.slotHitAreas) {
-        if (this.pointInRect(pointer.x, pointer.y, hit.rect) && hit.item) {
-          this.showUnequipMenu(hit.item, hit.slot, pointer.x, pointer.y);
-          return;
-        }
-      }
-      for (const hitArea of this.inventoryHitAreas) {
-        if (this.pointInRect(pointer.x, pointer.y, hitArea.rect)) {
-          this.showEquipMenu(hitArea.item, pointer.x, pointer.y);
-          return;
-        }
-      }
+    // Equip path: hovering an inventory row.
+    if (this.hoveredInvIndex >= 0 && this.hoveredInvIndex < this.inventoryHitAreas.length) {
+      const item = this.inventoryHitAreas[this.hoveredInvIndex].item;
+      console.log('[EquipPanel] equip path', { index: this.hoveredInvIndex, item });
+      this.equipHoveredItem(item);
     }
   }
 
-  // === CONTEXT MENU ===
-
-  private showEquipMenu(item: ItemState, screenX: number, screenY: number): void {
-    this.dismissContextMenu();
-    this.hideTooltip();
+  private equipHoveredItem(item: ItemState): void {
     const validSlots = getValidSlotsForItem(item);
+    console.log('[EquipPanel] equipHoveredItem', { item: item.name, type: getItemType(item), validSlots });
     if (validSlots.length === 0) return;
 
-    // Consumables auto-equip into the first empty consumable slot — no menu
+    // Consumables: auto-pick first empty consumable slot, or flash if all full.
     if (getItemType(item) === 'consumable') {
       const emptySlot = validSlots.find(slot => this.equipped[slot] === null);
       if (!emptySlot) {
-        this.showFlashMessage('All consumable slots are full', screenX, screenY);
+        const cam = this.scene.cameras.main;
+        this.showFlashMessage('All consumable slots are full', cam.width / 2, cam.height / 2);
         return;
       }
       this.equipItem(item, emptySlot);
       return;
     }
 
-    const options: ContextMenuOption[] = validSlots.map(slot => ({
-      label: `Equip to ${getSlotDisplayName(slot)}`,
-      action: () => { this.equipItem(item, slot); this.dismissContextMenu(); },
-    }));
-    this.buildContextMenu(options, screenX, screenY);
+    // Weapons / armor: only one valid slot — equip there (swapping if occupied).
+    this.equipItem(item, validSlots[0]);
   }
 
   private showFlashMessage(message: string, screenX: number, screenY: number): void {
@@ -518,71 +542,6 @@ export class EquipmentPanel {
     flash.setScrollFactor(0);
 
     this.scene.time.delayedCall(1500, () => flash.destroy());
-  }
-
-  private showUnequipMenu(item: ItemState, slot: EquipmentSlot, screenX: number, screenY: number): void {
-    this.dismissContextMenu();
-    this.hideTooltip();
-    this.buildContextMenu([{
-      label: 'Unequip',
-      action: () => { this.unequipItem(item, slot); this.dismissContextMenu(); },
-    }], screenX, screenY);
-  }
-
-  private buildContextMenu(options: ContextMenuOption[], screenX: number, screenY: number): void {
-    const menuWidth = 200;
-    const rowHeight = 32;
-    const menuHeight = options.length * rowHeight + 8;
-    const children: Phaser.GameObjects.GameObject[] = [];
-
-    const bg = this.scene.add.graphics();
-    bg.fillStyle(0x080810, 0.95);
-    bg.fillRoundedRect(0, 0, menuWidth, menuHeight, 6);
-    bg.lineStyle(1, C_CYAN, 0.4);
-    bg.strokeRoundedRect(0, 0, menuWidth, menuHeight, 6);
-    children.push(bg);
-
-    for (let i = 0; i < options.length; i++) {
-      const optY = 4 + i * rowHeight;
-      const optBg = this.scene.add.graphics();
-      children.push(optBg);
-      const label = this.scene.add.text(14, optY + rowHeight / 2, options[i].label, {
-        fontSize: '13px', color: '#ccdde8',
-      });
-      label.setOrigin(0, 0.5);
-      children.push(label);
-    }
-
-    let x = screenX;
-    let y = screenY;
-    const cam = this.scene.cameras.main;
-    if (x + menuWidth > cam.width) x = cam.width - menuWidth - 4;
-    if (y + menuHeight > cam.height) y = cam.height - menuHeight - 4;
-
-    this.contextMenu = this.scene.add.container(x, y, children);
-    this.contextMenu.setDepth(2100);
-    this.contextMenu.setScrollFactor(0);
-    (this.contextMenu as any)._menuOptions = options;
-    (this.contextMenu as any)._menuRowHeight = rowHeight;
-    (this.contextMenu as any)._menuWidth = menuWidth;
-  }
-
-  private handleContextMenuClick(pointer: Phaser.Input.Pointer): boolean {
-    if (!this.contextMenu) return false;
-    const menu = this.contextMenu;
-    const options = (menu as any)._menuOptions as ContextMenuOption[];
-    const rowHeight = (menu as any)._menuRowHeight as number;
-    const menuWidth = (menu as any)._menuWidth as number;
-    const localX = pointer.x - menu.x;
-    const localY = pointer.y - menu.y;
-    if (localX < 0 || localX > menuWidth || localY < 0 || localY > options.length * rowHeight + 8) return false;
-    const index = Math.floor((localY - 4) / rowHeight);
-    if (index >= 0 && index < options.length) { options[index].action(); return true; }
-    return false;
-  }
-
-  dismissContextMenu(): void {
-    if (this.contextMenu) { this.contextMenu.destroy(); this.contextMenu = undefined; }
   }
 
   // === EQUIP/UNEQUIP ===
@@ -718,7 +677,7 @@ export class EquipmentPanel {
 
   private addStat(children: Phaser.GameObjects.GameObject[], padding: number, y: number, width: number, label: string, value: string, color: string): void {
     children.push(
-      this.scene.add.text(padding, y, label, { fontSize: '11px', color: '#556677', letterSpacing: 2 }),
+      this.scene.add.text(padding, y, label, { fontSize: '11px', color: '#00f0ff', letterSpacing: 2 }),
       this.scene.add.text(width - padding, y, value, { fontSize: '12px', color }).setOrigin(1, 0),
     );
   }
