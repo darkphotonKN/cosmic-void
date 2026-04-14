@@ -47,6 +47,10 @@ func (s *StateSerializer) SerializeBackendState(ctx context.Context, sessionID u
 		if isPlayer {
 			// -- get all player components --
 			player := pc.(*components.PlayerComponent)
+			if player.Escape {
+				backendState.EscapedCount++
+				continue
+			}
 			tc, _ := entity.GetComponent(ecs.ComponentTypeTransform)
 			transform := tc.(*components.TransformComponent)
 			vc, _ := entity.GetComponent(ecs.ComponentTypeVelocity)
@@ -279,6 +283,7 @@ func (s *StateSerializer) FormatStateToClientState(backendState *types.BackendGa
 		OtherPlayers:  otherPlayers,
 		EscapeDoor:    backendState.EscapeDoor,
 		Switch:        backendState.Switch,
+		EscapedCount:  backendState.EscapedCount,
 	}
 
 	return state
@@ -295,6 +300,7 @@ func (s *StateSerializer) RestBackendStatePool(state *types.BackendGameState) {
 	state.EscapeDoor = state.EscapeDoor[:0]
 	state.Switch = state.Switch[:0]
 	state.SessionID = uuid.Nil
+	state.EscapedCount = 0
 }
 
 func (s *StateSerializer) PutBackendState(state *types.BackendGameState) {

@@ -99,6 +99,7 @@ export interface ClientGameState {
   containers: ContainerState[];
   escape_doors: EscapeDoorState[]; // Escape doors with lock state
   switches: SwitchState[]; // Switches/buttons for puzzles
+  escaped_count: number; // Number of players who have escaped
 }
 
 // Type guard to check if a message is a game state update

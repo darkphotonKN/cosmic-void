@@ -711,6 +711,7 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 	// check
 	_, exists := s.containerInteractedCache[targetEntityID]
 	if exists {
+		s.mu.Unlock()
 		slog.Debug("Container entity still cached, not available for interaction", "targetEntityID", targetEntityID)
 		return fmt.Errorf("container targeted entityID %s was still cached and not available to be interacted", targetEntityID)
 	} else {
@@ -1028,7 +1029,13 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 				slog.Info("Exit door unlocked!")
 			}
 		}
-
+		// release container cache so other players can use this escape door
+		go func() {
+			time.Sleep(time.Millisecond * 100)
+			s.mu.Lock()
+			delete(s.containerInteractedCache, targetEntityID)
+			s.mu.Unlock()
+		}()
 		// add player to interacted cache
 		s.mu.Lock()
 		s.playerInteractedCache[playerEntityID] = true
@@ -1071,9 +1078,10 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		}
 
 		lockable := lockableComp.(*components.LockableComponents)
+
 		if lockable.IsLocked {
 			slog.Debug("Escape door is still locked", "targetID", targetEntityID, "playerID", playerID)
-
+			s.sendErrorToPlayer(playerID, string(constants.ActionInteract), "escape door is locked")
 			return fmt.Errorf("escape door is locked")
 		}
 
@@ -1081,13 +1089,35 @@ func (s *Session) handleInteract(playerID uuid.UUID, targetEntityID uuid.UUID) e
 		openableComp, hasOpenable := targetEntity.GetComponent(ecs.ComponentTypeOpenable)
 		if hasOpenable {
 			openable := openableComp.(*components.OpenableComponent)
-			openable.IsOpen = true
-			slog.Info("Escape door opened!", "playerID", playerID)
+			if !openable.IsOpen {
+				openable.IsOpen = true
+				slog.Info("Escape door opened!", "playerID", playerID)
+			}
 		}
 
 		// trigger escape after a short delay to allow door animation
 		slog.Info("Player is escaping through the door!", "playerID", playerID)
 		s.handlePlayerEscape(playerID)
+
+		// release container cache so other players can use this escape door
+		go func() {
+			time.Sleep(time.Millisecond * 100)
+			s.mu.Lock()
+			delete(s.containerInteractedCache, targetEntityID)
+			s.mu.Unlock()
+		}()
+
+		// add player to interacted cache
+		s.mu.Lock()
+		s.playerInteractedCache[playerEntityID] = true
+		s.mu.Unlock()
+
+		go func() {
+			time.Sleep(time.Millisecond * 100)
+			s.mu.Lock()
+			delete(s.playerInteractedCache, playerEntityID)
+			s.mu.Unlock()
+		}()
 	}
 
 	return nil

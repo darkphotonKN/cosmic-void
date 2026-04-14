@@ -127,6 +127,7 @@ export class CosmicVoidScene extends Phaser.Scene {
   private previousEscapeDoorOpened: boolean | null = null;
   private previousSwitchActivated: boolean | null = null;
   private escapedPlayers: Set<string> = new Set();
+  private escapedCountText?: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: "CosmicVoidScene" });
@@ -321,6 +322,7 @@ export class CosmicVoidScene extends Phaser.Scene {
     this.createSwitchTextures();
     this.createMetalFloorTexture();
     this.createHullTexture();
+    this.createEscapeParticleTexture();
   }
 
   private createHullTexture(): void {
@@ -863,6 +865,31 @@ export class CosmicVoidScene extends Phaser.Scene {
     active.strokeRect(0, 0, size, size);
     active.generateTexture("switch_active", size, size);
     active.destroy();
+  }
+
+  private createEscapeParticleTexture(): void {
+    const g = this.add.graphics();
+    g.fillStyle(0x00f0ff, 1);
+    g.fillCircle(4, 4, 4);
+    g.generateTexture("escape_particle", 8, 8);
+    g.destroy();
+  }
+
+  private playEscapeParticles(x: number, y: number): void {
+    const emitter = this.add.particles(x, y, "escape_particle", {
+      speed: { min: 60, max: 180 },
+      scale: { start: 1, end: 0 },
+      alpha: { start: 1, end: 0 },
+      lifespan: 800,
+      quantity: 30,
+      emitting: false,
+      tint: [0x00f0ff, 0x4ecca3, 0xFFD700],
+    });
+    emitter.setDepth(1000);
+    emitter.explode(30);
+
+    // clean up after animation
+    this.time.delayedCall(1000, () => emitter.destroy());
   }
 
   private updateContainers(containers: ContainerState[]): void {
@@ -2188,6 +2215,16 @@ export class CosmicVoidScene extends Phaser.Scene {
         this.syncInventory(state.current_player.inventory);
       }
 
+    } else {
+      // current_player is null — player has escaped
+      console.log("[ESCAPE DEBUG] current_player is null/undefined. this.player exists:", !!this.player, "visible:", this.player?.visible);
+      if (this.player && this.player.visible) {
+        console.log("[ESCAPE DEBUG] Playing escape particles and hiding player");
+        this.playEscapeParticles(this.player.x, this.player.y);
+        this.player.setVisible(false);
+        this.playerLegs?.setVisible(false);
+        this.playerNameText?.setVisible(false);
+      }
     }
 
     // Update other players on screen
@@ -2211,6 +2248,12 @@ export class CosmicVoidScene extends Phaser.Scene {
     // 檢測狀態變化並顯示通知（避免重複）
     this.checkEscapeDoorStateChanges(state);
     this.checkPlayerEscapedState(state);
+
+    // Update escaped count HUD
+    if (this.escapedCountText) {
+      const count = state.escaped_count ?? 0;
+      this.escapedCountText.setText(`Escaped: ${count}`);
+    }
   }
 
   private updateOtherPlayers(
@@ -2226,6 +2269,7 @@ export class CosmicVoidScene extends Phaser.Scene {
     // Remove players who left
     this.otherPlayers.forEach((sprite, playerId) => {
       if (!activePlayerIds.has(playerId)) {
+        this.playEscapeParticles(sprite.x, sprite.y);
         sprite.destroy();
         this.otherPlayers.delete(playerId);
         this.otherPlayersTargets.delete(playerId);
@@ -3148,6 +3192,22 @@ export class CosmicVoidScene extends Phaser.Scene {
     posText.setScrollFactor(0);
     posText.setDepth(1000);
 
+    // Escaped players count (top-right)
+    this.escapedCountText = this.add.text(
+      this.cameras.main.width - 10,
+      10,
+      "Escaped: 0",
+      {
+        fontSize: "14px",
+        color: "#FFD700",
+        backgroundColor: "#16213e",
+        padding: { x: 10, y: 5 },
+      },
+    );
+    this.escapedCountText.setOrigin(1, 0); // right-aligned
+    this.escapedCountText.setScrollFactor(0);
+    this.escapedCountText.setDepth(1000);
+
     // 每幀更新座標
     this.events.on("update", () => {
       if (!this.player) {
@@ -3273,6 +3333,13 @@ export class CosmicVoidScene extends Phaser.Scene {
   }
 
   update(): void {
+    // skip all input/movement if player has escaped
+    if (this.player && !this.player.visible) {
+      // still update other players smoothly
+      this.updateOtherPlayersSmooth();
+      return;
+    }
+
     // handle movement
     let vx = 0;
     let vy = 0;
@@ -3340,7 +3407,19 @@ export class CosmicVoidScene extends Phaser.Scene {
       );
     }
 
-    // smooth movement for other players
+    this.updateOtherPlayersSmooth();
+
+    // 檢查是否進入/離開建築
+    this.checkBuildingStatus();
+
+    // 檢查寶箱距離，太遠自動關閉（只有跳窗開啟時才檢查）
+    if (this.isPopupOpen) {
+      this.checkChestDistance();
+    }
+  }
+
+  private updateOtherPlayersSmooth(): void {
+    const lerpFactor = 0.3;
     this.otherPlayers.forEach((sprite, playerId) => {
       const target = this.otherPlayersTargets.get(playerId);
       if (target) {
@@ -3387,14 +3466,6 @@ export class CosmicVoidScene extends Phaser.Scene {
         }
       }
     });
-
-    // 檢查是否進入/離開建築
-    this.checkBuildingStatus();
-
-    // 檢查寶箱距離，太遠自動關閉（只有跳窗開啟時才檢查）
-    if (this.isPopupOpen) {
-      this.checkChestDistance();
-    }
   }
 
   // private connectWebSocket(): void {
