@@ -54,6 +54,10 @@ func (s *service) PublishMatchComplete(ctx context.Context, data *types.RawMatch
 	}()
 
 	go func() {
+		slog.Debug("Publishing items extracted event with items extracted payload.",
+			"event", commonconstants.ItemsExtracted,
+			"payload", commonconstants.ItemsExtracted,
+		)
 		err := s.publishCh.PublishWithContext(
 			ctx,
 			commonconstants.GameEventsExchange,

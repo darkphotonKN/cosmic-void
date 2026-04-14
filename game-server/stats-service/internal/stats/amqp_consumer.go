@@ -63,7 +63,7 @@ func (c *Consumer) consumeProfileUpdated() {
 			continue
 		}
 
-		slog.Debug("after member profile updated data unmarshal",
+		slog.Info("after member profile updated data unmarshal",
 			"memberUpdated", memberUpdated)
 
 		err := c.service.UpdatePlayerRankings(context.Background(), &memberUpdated)

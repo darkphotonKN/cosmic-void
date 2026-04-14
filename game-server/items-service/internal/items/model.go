@@ -77,7 +77,7 @@ type Consumable struct {
 	UpdatedBy     *uuid.UUID `db:"updated_by" json:"updated_by"`
 }
 
-// ItemTemplate is the write model — mirrors item_templates table columns directly.
+// ItemTemplate is the write model mirrors item_templates table columns directly.
 // For read queries with joins, use ItemTemplateAggregate instead.
 type ItemTemplate struct {
 	ID            uuid.UUID  `db:"id" json:"id"`
@@ -199,12 +199,12 @@ type CreateCompleteWeaponRequest struct {
 	UserId string `json:"user_id" binding:"required"`
 
 	// Template fields (common attributes)
-	ItemName      string  `json:"item_name" binding:"required"`
-	IconURL       *string `json:"icon_url"`
+	ItemName string  `json:"item_name" binding:"required"`
+	IconURL  *string `json:"icon_url"`
 
-	RequiredLevel *int    `json:"required_level"`
-	BaseSellPrice *int    `json:"base_sell_price"`
-	BaseBuyPrice  *int    `json:"base_buy_price"`
+	RequiredLevel *int `json:"required_level"`
+	BaseSellPrice *int `json:"base_sell_price"`
+	BaseBuyPrice  *int `json:"base_buy_price"`
 
 	// Weapon-specific fields
 	RarityID     uuid.UUID `json:"rarity_id" binding:"required"`
@@ -220,12 +220,12 @@ type CreateCompleteArmorRequest struct {
 	UserId string `json:"user_id" binding:"required"`
 
 	// Template fields (common attributes)
-	ItemName      string  `json:"item_name" binding:"required"`
-	IconURL       *string `json:"icon_url"`
+	ItemName string  `json:"item_name" binding:"required"`
+	IconURL  *string `json:"icon_url"`
 
-	RequiredLevel *int    `json:"required_level"`
-	BaseSellPrice *int    `json:"base_sell_price"`
-	BaseBuyPrice  *int    `json:"base_buy_price"`
+	RequiredLevel *int `json:"required_level"`
+	BaseSellPrice *int `json:"base_sell_price"`
+	BaseBuyPrice  *int `json:"base_buy_price"`
 
 	// Armor-specific fields
 	RarityID        uuid.UUID `json:"rarity_id" binding:"required"`
@@ -241,12 +241,12 @@ type CreateCompleteConsumableRequest struct {
 	UserId string `json:"user_id" binding:"required"`
 
 	// Template fields (common attributes)
-	ItemName      string  `json:"item_name" binding:"required"`
-	IconURL       *string `json:"icon_url"`
+	ItemName string  `json:"item_name" binding:"required"`
+	IconURL  *string `json:"icon_url"`
 
-	RequiredLevel *int    `json:"required_level"`
-	BaseSellPrice *int    `json:"base_sell_price"`
-	BaseBuyPrice  *int    `json:"base_buy_price"`
+	RequiredLevel *int `json:"required_level"`
+	BaseSellPrice *int `json:"base_sell_price"`
+	BaseBuyPrice  *int `json:"base_buy_price"`
 
 	// Consumable-specific fields
 	RarityID      uuid.UUID `json:"rarity_id" binding:"required"`

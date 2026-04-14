@@ -65,6 +65,7 @@ const (
 const (
 	StatsGameMatchEndedQueue        = "stats.game.match.ended"
 	StatsAuthProfileUpdatedQueue    = "stats.auth.profile.updated"
+	ItemsGameItemsExtractedQueue    = "items.game.items.extracted"
 	NotificationMemberSignedUpQueue = "notification.auth.member.signedup"
 	NotificationItemCreatedQueue    = "notification.item.created"
 	NotificationGameEndQueue        = "notification.game.match.ended"
