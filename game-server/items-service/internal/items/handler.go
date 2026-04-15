@@ -8,6 +8,7 @@ import (
 	authpb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/items"
 	commontypes "github.com/darkphotonKN/cosmic-void-server/common/constants/types"
+	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/darkphotonKN/cosmic-void-server/items-service/grpc/auth"
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -77,6 +78,8 @@ type Service interface {
 	CreateCompleteWeapon(ctx context.Context, req *CreateCompleteWeaponRequest) (*WeaponWithTemplate, error)
 	CreateCompleteArmor(ctx context.Context, req *CreateCompleteArmorRequest) (*ArmorWithTemplate, error)
 	CreateCompleteConsumable(ctx context.Context, req *CreateCompleteConsumableRequest) (*ConsumableWithTemplate, error)
+
+	GetLoadout(ctx context.Context, req *GetLoadoutRequest) (*Loadout, error)
 }
 
 // checkAdminPermission checks if the user has admin permission
@@ -852,5 +855,38 @@ func (h *Handler) ListItemRarities(ctx context.Context, req *emptypb.Empty) (*pb
 
 	return &pb.ListItemRaritiesResponse{
 		ItemRarities: pbRarities,
+	}, nil
+}
+
+func (h *Handler) GetLoadOut(ctx context.Context, req *pb.GetLoadoutRequest) (*pb.GetLoadoutResponse, error) {
+
+	MemberId, err := uuid.Parse(req.MemberId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
+	}
+	payload := &GetLoadoutRequest{
+		MemberId: MemberId,
+	}
+
+	loadout, err := h.service.GetLoadout(ctx, payload)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get loadout: %v", err)
+	}
+
+	return &pb.GetLoadoutResponse{
+		Id:            commonhelpers.UuidPtrToString(loadout.Id),
+		MemberId:      commonhelpers.UuidPtrToString(loadout.MemberId),
+		WeaponId:      commonhelpers.UuidPtrToString(loadout.WeaponId),
+		HeadId:        commonhelpers.UuidPtrToString(loadout.HeadId),
+		ChestId:       commonhelpers.UuidPtrToString(loadout.ChestId),
+		GlovesId:      commonhelpers.UuidPtrToString(loadout.GlovesId),
+		LegsId:        commonhelpers.UuidPtrToString(loadout.LegsId),
+		Ring1Id:       commonhelpers.UuidPtrToString(loadout.Ring1Id),
+		Ring2Id:       commonhelpers.UuidPtrToString(loadout.Ring2Id),
+		Consumable1Id: commonhelpers.UuidPtrToString(loadout.Consumable1Id),
+		Consumable2Id: commonhelpers.UuidPtrToString(loadout.Consumable2Id),
+		Consumable3Id: commonhelpers.UuidPtrToString(loadout.Consumable3Id),
+		CreatedAt:     timestamppb.New(loadout.CreatedAt),
+		UpdatedAt:     timestamppb.New(loadout.UpdatedAt),
 	}, nil
 }

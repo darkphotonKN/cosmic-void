@@ -47,6 +47,30 @@ func (r *redisClient) Incr(ctx context.Context, key string) (int64, error) {
 	return r.client.Incr(ctx, key).Result()
 }
 
+func (r *redisClient) LPush(ctx context.Context, key string, values ...interface{}) error {
+	return r.client.LPush(ctx, key, values...).Err()
+}
+
+func (r *redisClient) RPush(ctx context.Context, key string, values ...interface{}) error {
+	return r.client.RPush(ctx, key, values...).Err()
+}
+
+func (r *redisClient) LPop(ctx context.Context, key string) (string, error) {
+	return r.client.LPop(ctx, key).Result()
+}
+
+func (r *redisClient) LLen(ctx context.Context, key string) (int64, error) {
+	return r.client.LLen(ctx, key).Result()
+}
+
+func (r *redisClient) LRange(ctx context.Context, key string, start, stop int64) ([]string, error) {
+	return r.client.LRange(ctx, key, start, stop).Result()
+}
+
+func (r *redisClient) LRem(ctx context.Context, key string, count int64, value interface{}) error {
+	return r.client.LRem(ctx, key, count, value).Err()
+}
+
 func (r *redisClient) AcquireLock(ctx context.Context, key string, ttl time.Duration) (string, bool, error) {
 	lockID := uuid.New().String()
 	lockKey := fmt.Sprintf("lock:%s", key)

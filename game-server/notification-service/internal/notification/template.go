@@ -15,20 +15,20 @@ type NotificationTemplate struct {
 
 var NotificationTemplates = map[string]NotificationTemplate{
 	"member.signedup": {
-		Title:            "歡迎加入 Cosmic Void!",
-		MessageTemplate:  "Hi {{.Name}}，歡迎註冊！你的帳號 {{.Email}} 已成功建立。",
+		Title:            "Welcome to Cosmic Void!",
+		MessageTemplate:  "Hi {{.Name}}, welcome! Your account {{.Email}} has been created.",
 		NotificationType: "in_app",
 		DataFields:       []string{"email", "signedUpAt"},
 	},
 	"match.ended": {
-		Title:            "遊戲結束",
-		MessageTemplate:  "你的遊戲已結束！{{.Result}}。擊殺: {{.Kills}}, 死亡: {{.Deaths}}",
+		Title:            "Game Over",
+		MessageTemplate:  "Your game has ended! {{.Result}}. Kills: {{.Kills}}, Deaths: {{.Deaths}}",
 		NotificationType: "in_app",
 		DataFields:       []string{"matchId", "result", "kills", "deaths"},
 	},
 	"item.acquired": {
-		Title:            "獲得新物品",
-		MessageTemplate:  "恭喜！你獲得了 {{.ItemName}}",
+		Title:            "New Item Acquired",
+		MessageTemplate:  "Congratulations! You obtained {{.ItemName}}",
 		NotificationType: "in_app",
 		DataFields:       []string{"itemId", "itemName", "rarity"},
 	},

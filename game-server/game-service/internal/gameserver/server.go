@@ -214,8 +214,8 @@ func (s *Server) GetGameSession(id uuid.UUID) (*game.Session, bool) {
 /**
 * add player to queue (delegates to QueueSystem)
 **/
-func (s *Server) AddPlayerToQueue(player *types.Player) {
-	s.queue.AddPlayerChan(player)
+func (s *Server) AddPlayer(player *types.Player) {
+	s.queue.AddPlayer(player)
 }
 
 /**

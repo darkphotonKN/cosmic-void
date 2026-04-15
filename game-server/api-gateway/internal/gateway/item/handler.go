@@ -538,3 +538,33 @@ func (h *Handler) ListItemRaritiesHandler(c *gin.Context) {
 		"result":     rarities.ItemRarities,
 	})
 }
+
+// get loadout for player
+func (h *Handler) GetLoadoutHandler(c *gin.Context) {
+	userIdStr, exists := c.Get("userIdStr")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"statusCode": http.StatusUnauthorized,
+			"message":    "User ID not found in context",
+		})
+		return
+	}
+
+	grpcReq := &pb.GetLoadoutRequest{
+		MemberId: userIdStr.(string),
+	}
+	result, err := h.client.GetLoadout(c.Request.Context(), grpcReq)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"statusCode": http.StatusInternalServerError,
+			"message":    "Internal server error",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"statusCode": http.StatusOK,
+		"message":    "Loadout retrieved successfully",
+		"result":     result,
+	})
+}

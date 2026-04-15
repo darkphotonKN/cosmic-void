@@ -6,8 +6,7 @@ import (
 
 type QueueService interface {
 	Start()
-	AddPlayerChan(player *types.Player)
-	JoinQueue()
+	AddPlayer(player *types.Player)
 	MatchQueue()
 	PlayerJoinQueue(player *types.Player)
 	PlayerRemoveQueue(player *types.Player)

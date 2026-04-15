@@ -21,6 +21,7 @@ func (s *RulesSystem) Update(deltaTime float64, entities []*ecs.Entity, endSessi
 	var matchProgressFound bool
 	var matchProgressComp ecs.Component
 	deadPlayers := make(map[uuid.UUID]ecs.Component)
+	escapedCount := 0
 
 	for _, entity := range entities {
 		if !matchProgressFound {
@@ -49,6 +50,9 @@ func (s *RulesSystem) Update(deltaTime float64, entities []*ecs.Entity, endSessi
 			// add to the dead players list
 			deadPlayers[player.MemberID] = player
 		}
+		if player.Escape {
+			escapedCount++
+		}
 	}
 
 	// compare totalPlayers with number that is eliminated
@@ -66,9 +70,10 @@ func (s *RulesSystem) Update(deltaTime float64, entities []*ecs.Entity, endSessi
 		}
 	}
 
-	matchProgress.TotalAlivePlayers = matchProgress.TotalAlivePlayers - len(deadPlayers)
+	// matchProgress.TotalAlivePlayers = matchProgress.TotalAlivePlayers - len(deadPlayers)
+	activePlayers := matchProgress.TotalAlivePlayers - len(deadPlayers) - escapedCount
 
-	if matchProgress.TotalAlivePlayers <= 1 {
+	if activePlayers <= 1 {
 		// signal end game
 		endSessionCh <- true
 	}

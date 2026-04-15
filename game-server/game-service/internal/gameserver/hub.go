@@ -31,7 +31,7 @@ type SessionManager interface {
 	CreateGameSession(players []*types.Player) *game.Session
 	GetGameSession(id uuid.UUID) (*game.Session, bool)
 	GetServerChan() chan types.ClientPackage
-	AddPlayerToQueue(*types.Player)
+	AddPlayer(*types.Player)
 	GetPlayerFromConn(conn *websocket.Conn) (*types.Player, bool)
 	GetMatchedChan() chan []*types.Player
 	GetQueueStatusChan() chan queue.QueueStatus
@@ -133,7 +133,7 @@ func (h *messageHub) Run() {
 				}
 
 				// --- queue up player ---
-				h.sessionManager.AddPlayerToQueue(player)
+				h.sessionManager.AddPlayer(player)
 				slog.Info("Player added to matchmaking queue", "player username", player.Username)
 
 				h.sender.SendMessageToConn(clientPackage.Conn, types.Message{

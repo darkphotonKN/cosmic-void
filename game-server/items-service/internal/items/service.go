@@ -78,6 +78,8 @@ type Repository interface {
 	CreateArmorTx(ctx context.Context, tx *sqlx.Tx, armor *Armor) error
 	CreateConsumableTx(ctx context.Context, tx *sqlx.Tx, consumable *Consumable) error
 	CreateItemTemplateTx(ctx context.Context, tx *sqlx.Tx, template *ItemTemplate) error
+
+	GetLoadout(ctx context.Context, req *GetLoadoutRequest) (*Loadout, error)
 }
 
 // ==========================================
@@ -570,4 +572,8 @@ func (s *service) publishItemCreatedEvent(ctx context.Context, userId, itemName,
 	}); err != nil {
 		slog.Error("Failed to publish item created event", "error", err)
 	}
+}
+
+func (h *service) GetLoadout(ctx context.Context, req *GetLoadoutRequest) (*Loadout, error) {
+	return h.repo.GetLoadout(ctx, req)
 }

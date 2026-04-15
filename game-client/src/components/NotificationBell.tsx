@@ -13,8 +13,8 @@ interface Notification {
   event_type: string;
   read: boolean;
   data: Record<string, any>;
-  created_at: string;
-  updated_at: string;
+  created_at: string | { seconds: number; nanos: number };
+  updated_at: string | { seconds: number; nanos: number };
 }
 
 // SVG Bell Icon
@@ -112,16 +112,36 @@ export default function NotificationBell() {
     }
   };
 
-  const getTimeAgo = (timestamp: string) => {
+  const getTimeAgo = (timestamp: string | { seconds: number; nanos: number }) => {
     const now = new Date();
-    const past = new Date(timestamp);
+    // Handle protobuf Timestamp format {seconds, nanos}
+    let past: Date;
+    if (typeof timestamp === 'object' && timestamp?.seconds != null) {
+      past = new Date(Number(timestamp.seconds) * 1000);
+    } else {
+      past = new Date(timestamp as string);
+    }
+
+    // Guard against invalid dates
+    if (isNaN(past.getTime())) return '';
+
     const diffInSeconds = Math.floor((now.getTime() - past.getTime()) / 1000);
 
-    if (diffInSeconds < 60) return 'Just now';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-    return past.toLocaleDateString();
+    if (diffInSeconds < 0) return 'Just now';
+    if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
+
+    const days = Math.floor(diffInSeconds / 86400);
+    const hours = Math.floor((diffInSeconds % 86400) / 3600);
+    const minutes = Math.floor((diffInSeconds % 3600) / 60);
+    const seconds = diffInSeconds % 60;
+
+    const parts: string[] = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (seconds > 0 && days === 0) parts.push(`${seconds}s`); // skip seconds if days shown
+
+    return parts.join(' ') + ' ago';
   };
 
   return (

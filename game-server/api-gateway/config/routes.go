@@ -150,5 +150,7 @@ func SetupRouter(registry discovery.Registry, ch *amqp.Channel) *gin.Engine {
 	itemRoutes.GET("/types", itemHandler.ListItemTypesHandler)
 	itemRoutes.GET("/rarities", itemHandler.ListItemRaritiesHandler)
 
+	itemRoutes.GET("/loadout", itemHandler.GetLoadoutHandler)
+
 	return router
 }
