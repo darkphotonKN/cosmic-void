@@ -86,6 +86,28 @@ type Repository interface {
 // ItemType Service Methods
 // ==========================================
 
+func (s *service) CreateItemInstance(createItemInstanceReq *ItemInstance) (*ItemInstance, error) {
+	return nil, nil
+}
+
+func (s *service) CreatePlayerLoadout(createPlayerLoadoutReq *PlayerLoadout) error {
+	return nil
+}
+
+// TODO: still wip
+func (s *service) ProcessItemsExtracted(req *pb.ItemsExtractedEvent) error {
+	// inventory
+	for _, item := range req.PlayerItems {
+		slog.Debug("item iterated from req.PlayerItems",
+			"item", item,
+		)
+	}
+
+	// player loadout
+
+	return nil
+}
+
 func (s *service) CreateItemType(ctx context.Context, req *CreateItemTypeRequest) (*ItemType, error) {
 	itemType := &ItemType{
 		TypeCode:    req.TypeCode,

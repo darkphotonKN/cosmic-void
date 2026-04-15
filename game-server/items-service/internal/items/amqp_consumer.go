@@ -1,9 +1,13 @@
 package items
 
 import (
+	"errors"
+	"log/slog"
+
+	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"log/slog"
+	"google.golang.org/protobuf/proto"
 )
 
 type Consumer struct {
@@ -12,8 +16,78 @@ type Consumer struct {
 }
 
 type ConsumerService interface {
-	CreatePlayerLoadout() error
-	CreateItemInstance() error
+	ProcessItemsExtracted(req *pb.ItemsExtractedEvent) error
+}
+
+func (c *Consumer) Listen() {
+	go c.consumeItemsExtracted()
+
+	slog.Info("Items consumer listening for events...")
+}
+
+func NewConsumer(service ConsumerService, ch *amqp.Channel) *Consumer {
+	return &Consumer{
+		service: service,
+		channel: ch,
+	}
+}
+
+func (c *Consumer) consumeItemsExtracted() {
+	msgs, err := c.channel.Consume(
+		commonconstants.ItemsGameItemsExtractedQueue,
+		"",
+		false,
+		false,
+		false,
+		false,
+		nil,
+	)
+
+	if err != nil {
+		slog.Error("Failed to register consumer", "error", err)
+		return
+	}
+
+	for msg := range msgs {
+		var itemsExtracted pb.ItemsExtractedEvent
+		slog.Debug("Raw message received",
+			"body_length", len(msg.Body),
+			"content_type", msg.ContentType,
+			"body_preview", string(msg.Body[:min(100, len(msg.Body))]),
+		)
+
+		if err := proto.Unmarshal(msg.Body, &itemsExtracted); err != nil {
+			slog.Error("Failed to parse items extracted event", "error", err)
+			msg.Nack(false, false) // dlq
+			continue
+		}
+
+		slog.Info("after itemsExtractedEvent was emitted, consumed and proto unmarshalled",
+			"items_extracted", itemsExtracted)
+
+		err := c.service.ProcessItemsExtracted(&itemsExtracted)
+
+		if err != nil {
+			if errors.Is(err, commonconstants.ErrTransient) {
+				slog.Error("Items service could not process items extracted due to transient error. Requeuing message",
+					"err", err,
+				)
+				// retry
+				msg.Nack(false, true)
+				continue
+			}
+
+			slog.Error("Items service could not process items extracted.",
+				"items_extracted", itemsExtracted,
+				"err", err,
+			)
+
+			msg.Nack(false, false)
+			continue
+		}
+
+		msg.Ack(false)
+	}
 }
 
 // Helper method to set up AMQP exchange and bindings
