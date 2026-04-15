@@ -135,6 +135,67 @@ type ItemTemplateAggregate struct {
 	UpdatedBy *uuid.UUID `db:"updated_by" json:"updated_by"`
 }
 
+// ItemInstance mirrors the item_instances table — a concrete owned item
+// (rolled from a template) belonging to a member.
+type ItemInstance struct {
+	ID            uuid.UUID  `db:"id" json:"id"`
+	TemplateID    uuid.UUID  `db:"template_id" json:"template_id"`
+	OwnerMemberID uuid.UUID  `db:"owner_member_id" json:"owner_member_id"`
+	Source        string     `db:"source" json:"source"` // 'extracted' | 'starting_gear' | 'reward'
+
+	ItemType string     `db:"item_type" json:"item_type"` // 'weapon' | 'armor' | 'consumable'
+	Name     string     `db:"name" json:"name"`
+	RarityID *uuid.UUID `db:"rarity_id" json:"rarity_id"`
+
+	// Weapon stats (null if not weapon)
+	AttackPower  *int     `db:"attack_power" json:"attack_power"`
+	CriticalRate *float64 `db:"critical_rate" json:"critical_rate"`
+	WeaponType   *string  `db:"weapon_type" json:"weapon_type"`
+
+	// Armor stats (null if not armor)
+	DefenseRating   *int    `db:"defense_rating" json:"defense_rating"`
+	MagicResistance *int    `db:"magic_resistance" json:"magic_resistance"`
+	ArmorSlot       *string `db:"armor_slot" json:"armor_slot"` // 'head' | 'chest' | 'legs' | 'gloves'
+
+	// Consumable stats (null if not consumable)
+	HealingAmount *int `db:"healing_amount" json:"healing_amount"`
+	ManaAmount    *int `db:"mana_amount" json:"mana_amount"`
+	BuffDuration  *int `db:"buff_duration" json:"buff_duration"`
+
+	Durability *int `db:"durability" json:"durability"`
+
+	BuyPrice  *int `db:"buy_price" json:"buy_price"`
+	SellPrice *int `db:"sell_price" json:"sell_price"`
+
+	AcquiredAt time.Time `db:"acquired_at" json:"acquired_at"`
+	CreatedAt  time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt  time.Time `db:"updated_at" json:"updated_at"`
+}
+
+// PlayerLoadout mirrors the player_loadouts table — a member's currently
+// equipped item instances across weapon, armor slots, and consumable slots.
+type PlayerLoadout struct {
+	ID       uuid.UUID `db:"id" json:"id"`
+	MemberID uuid.UUID `db:"member_id" json:"member_id"`
+
+	WeaponInstanceID *uuid.UUID `db:"weapon_instance_id" json:"weapon_instance_id"`
+
+	HeadInstanceID   *uuid.UUID `db:"head_instance_id" json:"head_instance_id"`
+	ChestInstanceID  *uuid.UUID `db:"chest_instance_id" json:"chest_instance_id"`
+	LegsInstanceID   *uuid.UUID `db:"legs_instance_id" json:"legs_instance_id"`
+	GlovesInstanceID *uuid.UUID `db:"gloves_instance_id" json:"gloves_instance_id"`
+
+	Ring1InstanceID *uuid.UUID `db:"ring_1_instance_id" json:"ring_1_instance_id"`
+	Ring2InstanceID *uuid.UUID `db:"ring_2_instance_id" json:"ring_2_instance_id"`
+
+	Consumable1ID *uuid.UUID `db:"consumable_1_id" json:"consumable_1_id"`
+	Consumable2ID *uuid.UUID `db:"consumable_2_id" json:"consumable_2_id"`
+	Consumable3ID *uuid.UUID `db:"consumable_3_id" json:"consumable_3_id"`
+
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+}
+
 // CreateItemTypeRequest represents the request to create an item type
 type CreateItemTypeRequest struct {
 	TypeCode    string  `json:"type_code" binding:"required"`
