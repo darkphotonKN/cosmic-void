@@ -26,6 +26,7 @@ message PlayerMatchResult {
 
 message ItemsExtractedEvent {
   string session_id = 1;
+  string event_id = 2;
   repeated PlayerItems playerItems = 4;
 }
 

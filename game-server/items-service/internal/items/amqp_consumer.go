@@ -65,6 +65,8 @@ func (c *Consumer) consumeItemsExtracted() {
 		slog.Info("after itemsExtractedEvent was emitted, consumed and proto unmarshalled",
 			"items_extracted", itemsExtracted)
 
+		// redis SETNX check if eventID has been processed before
+
 		err := c.service.ProcessItemsExtracted(&itemsExtracted)
 
 		if err != nil {

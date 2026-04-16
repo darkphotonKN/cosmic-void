@@ -95,13 +95,19 @@ func (s *service) formatMatchData(sessionID uuid.UUID, startedAt time.Time, ende
 		}
 	}
 
-	// marshal to protobuf
-	protoData, matchEndedErr := proto.Marshal(&pb.MatchEndedEvent{
+	matchEndedEvent := pb.MatchEndedEvent{
 		SessionId:      string(sessionID.String()),
 		MatchStartedAt: timestamppb.New(startedAt),
 		MatchEndedAt:   timestamppb.New(endedAt),
 		Players:        playerMatchRes,
-	})
+	}
+
+	slog.Debug("matchEndedEvent in formatMatchData before marshalling into protobuf",
+		"match_ended_event", matchEndedEvent,
+	)
+
+	// marshal to protobuf
+	protoData, matchEndedErr := proto.Marshal(&matchEndedEvent)
 
 	if matchEndedErr != nil {
 		slog.Error("could not marshal end match data to MatchEndedEvent proto",
@@ -131,10 +137,19 @@ func (s *service) formatMatchData(sessionID uuid.UUID, startedAt time.Time, ende
 		}
 	}
 
-	itemsExtractedProtoData, itemsExtractErr := proto.Marshal(&pb.ItemsExtractedEvent{
+	// generate eventId for idemptotency deduplication
+	eventId := uuid.NewString()
+
+	itemsExtractedEvent := pb.ItemsExtractedEvent{
 		SessionId:   string(sessionID.String()),
+		EventId:     eventId,
 		PlayerItems: playerItems,
-	})
+	}
+
+	slog.Debug("itemsExtractedEvent in formatMatchData before marshalling into protobuf",
+		"items_extracted_event", itemsExtractedEvent,
+	)
+	itemsExtractedProtoData, itemsExtractErr := proto.Marshal(&itemsExtractedEvent)
 
 	if itemsExtractErr != nil {
 		slog.Error("could not marshal items extracted event to ItemExtractedEvent proto",
