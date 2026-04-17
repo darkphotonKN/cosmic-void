@@ -2156,7 +2156,7 @@ export class CosmicVoidScene extends Phaser.Scene {
     this.player.setDepth(100);
 
     // set circular physics body to match backend collision (radius 20), offset for 60x60 texture
-    this.player.body.setCircle(20, 10, 10);
+    this.player.body?.setCircle(20, 10, 10);
 
     // create legs overlay that will follow player
     this.playerLegs = this.add.graphics();

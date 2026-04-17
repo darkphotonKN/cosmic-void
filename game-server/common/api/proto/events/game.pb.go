@@ -601,10 +601,11 @@ const file_api_proto_events_game_proto_rawDesc = "" +
 	"\x0efinal_position\x18\x04 \x01(\x05R\rfinalPosition\x12\x14\n" +
 	"\x05kills\x18\x05 \x01(\x05R\x05kills\x12\x16\n" +
 	"\x06deaths\x18\x06 \x01(\x05R\x06deaths\x12\x16\n" +
-	"\x06escape\x18\a \x01(\bR\x06escape\"k\n" +
+	"\x06escape\x18\a \x01(\bR\x06escape\"\x86\x01\n" +
 	"\x13ItemsExtractedEvent\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x125\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x19\n" +
+	"\bevent_id\x18\x02 \x01(\tR\aeventId\x125\n" +
 	"\vplayerItems\x18\x04 \x03(\v2\x13.events.PlayerItemsR\vplayerItems\"\x87\x01\n" +
 	"\vPlayerItems\x12\x1b\n" +
 	"\tmember_id\x18\x01 \x01(\tR\bmemberId\x12/\n" +

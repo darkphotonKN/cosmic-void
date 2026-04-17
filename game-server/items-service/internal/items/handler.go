@@ -914,13 +914,13 @@ func (h *Handler) GetLoadoutWithItems(ctx context.Context, req *pb.GetLoadoutWit
 			return nil
 		}
 		pbItem := &pb.ItemInstance{
-			Id:            item.Id.String(),
-			TemplateId:    item.TemplateId.String(),
-			OwnerMemberId: item.OwnerMemberId.String(),
+			Id:            item.ID.String(),
+			TemplateId:    item.TemplateID.String(),
+			OwnerMemberId: item.OwnerMemberID.String(),
 			Source:        item.Source,
 			ItemType:      item.ItemType,
 			Name:          item.Name,
-			RarityId:      commonhelpers.UuidPtrToString(item.RarityId),
+			RarityId:      commonhelpers.UuidPtrToString(item.RarityID),
 		}
 		if item.AttackPower != nil {
 			pbItem.AttackPower = int32(*item.AttackPower)
@@ -993,13 +993,13 @@ func (h *Handler) ListItemInstances(ctx context.Context, req *pb.ListItemInstanc
 	pbItems := make([]*pb.ItemInstance, 0, len(items))
 	for _, item := range items {
 		pbItem := &pb.ItemInstance{
-			Id:            item.Id.String(),
-			TemplateId:    item.TemplateId.String(),
-			OwnerMemberId: item.OwnerMemberId.String(),
+			Id:            item.ID.String(),
+			TemplateId:    item.TemplateID.String(),
+			OwnerMemberId: item.OwnerMemberID.String(),
 			Source:        item.Source,
 			ItemType:      item.ItemType,
 			Name:          item.Name,
-			RarityId:      commonhelpers.UuidPtrToString(item.RarityId),
+			RarityId:      commonhelpers.UuidPtrToString(item.RarityID),
 		}
 		if item.AttackPower != nil {
 			pbItem.AttackPower = int32(*item.AttackPower)

@@ -44,15 +44,16 @@ type ClientGameState struct {
 }
 
 type BackendGameState struct {
-	SessionID  uuid.UUID
-	Players    map[uuid.UUID]*PlayerState
-	Items      []uuid.UUID
-	Doors      []*DoorState
-	Walls      []*WallState
-	Containers []*ContainerState
-	EscapeDoor []*EscapeDoorState
-	Equipment  *EquipmentState
-	Switch     []*SwitchState
+	SessionID    uuid.UUID
+	Players      map[uuid.UUID]*PlayerState
+	Items        []uuid.UUID
+	Doors        []*DoorState
+	Walls        []*WallState
+	Containers   []*ContainerState
+	EscapeDoor   []*EscapeDoorState
+	Equipment    *EquipmentState
+	Switch       []*SwitchState
+	EscapedCount int
 }
 
 func (m *Message) ParsePayload() (interface{}, error) {
