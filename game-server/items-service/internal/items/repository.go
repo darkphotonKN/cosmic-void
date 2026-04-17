@@ -2,6 +2,7 @@ package items
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log/slog"
 
@@ -587,16 +588,107 @@ func (r *repository) GetLoadout(ctx context.Context, req *GetLoadoutRequest) (*L
 
 	loadout := &Loadout{}
 
+	// Explicit columns — table has audit columns (created_by/updated_by)
+	// that Loadout struct doesn't map, so SELECT * would fail sqlx scan with
+	// "missing destination name".
 	query := `
-	 SELECT * 
+	 SELECT id, member_id,
+	        weapon_instance_id, head_instance_id, chest_instance_id,
+	        gloves_instance_id, legs_instance_id,
+	        ring_1_instance_id, ring_2_instance_id,
+	        consumable_1_id, consumable_2_id, consumable_3_id,
+	        created_at, updated_at
 	 FROM player_loadouts
 	 WHERE member_id = $1
 	`
 
-	err := r.DB.GetContext(ctx, &loadout, query, memberId)
+	err := r.DB.GetContext(ctx, loadout, query, memberId)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return loadout, nil
+		}
 		return nil, fmt.Errorf("failed to get loadout: %w", err)
 	}
 
 	return loadout, nil
+}
+
+func (r *repository) GetItemInstanceByID(ctx context.Context, id uuid.UUID) (*ItemInstance, error) {
+	item := &ItemInstance{}
+
+	query := `
+	 SELECT id, template_id, owner_member_id, source, item_type, name, rarity_id,
+	        attack_power, critical_rate, weapon_type, defense_rating, magic_resistance,
+	        armor_slot, healing_amount, mana_amount, buff_duration, buy_price, sell_price,
+	        description, acquired_at, created_at, updated_at
+	 FROM item_instances
+	 WHERE id = $1
+	`
+
+	err := r.DB.GetContext(ctx, item, query, id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get item instance: %w", err)
+	}
+
+	return item, nil
+}
+
+func (r *repository) ListItemInstances(ctx context.Context, req *ListItemInstancesRequest) ([]*ItemInstance, error) {
+	items := []*ItemInstance{}
+
+	query := `
+	 SELECT id, template_id, owner_member_id, source, item_type, name, rarity_id,
+	        attack_power, critical_rate, weapon_type, defense_rating, magic_resistance,
+	        armor_slot, healing_amount, mana_amount, buff_duration, buy_price, sell_price,
+	        description, acquired_at, created_at, updated_at
+	 FROM item_instances
+	 WHERE owner_member_id = $1
+	 ORDER BY created_at DESC
+	`
+
+	err := r.DB.SelectContext(ctx, &items, query, req.MemberId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list item instances: %w", err)
+	}
+
+	return items, nil
+}
+
+func (r *repository) UpdateLoadout(ctx context.Context, req *UpdateLoadoutRequest) error {
+	validSlots := map[string]string{
+		"weapon":       "weapon_instance_id",
+		"head":         "head_instance_id",
+		"chest":        "chest_instance_id",
+		"gloves":       "gloves_instance_id",
+		"legs":         "legs_instance_id",
+		"ring_1":       "ring_1_instance_id",
+		"ring_2":       "ring_2_instance_id",
+		"consumable_1": "consumable_1_id",
+		"consumable_2": "consumable_2_id",
+		"consumable_3": "consumable_3_id",
+	}
+
+	column, ok := validSlots[req.Slot]
+	if !ok {
+		return fmt.Errorf("invalid slot: %s", req.Slot)
+	}
+
+	// Upsert: first-time equippers won't have a player_loadouts row yet,
+	// so a plain UPDATE would silently affect 0 rows.
+	query := fmt.Sprintf(`
+	 INSERT INTO player_loadouts (member_id, %s)
+	 VALUES ($2, $1)
+	 ON CONFLICT (member_id) DO UPDATE
+	 SET %s = EXCLUDED.%s, updated_at = NOW()
+	`, column, column, column)
+
+	_, err := r.DB.ExecContext(ctx, query, req.ItemInstanceId, req.MemberId)
+	if err != nil {
+		return fmt.Errorf("failed to update loadout: %w", err)
+	}
+
+	return nil
 }

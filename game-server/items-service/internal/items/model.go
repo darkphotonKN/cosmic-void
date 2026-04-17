@@ -404,3 +404,51 @@ type Loadout struct {
 	CreatedAt     time.Time  `db:"created_at"`
 	UpdatedAt     time.Time  `db:"updated_at"`
 }
+
+type LoadoutWithItems struct {
+	Weapon      *ItemInstance
+	Head        *ItemInstance
+	Chest       *ItemInstance
+	Gloves      *ItemInstance
+	Legs        *ItemInstance
+	Ring1       *ItemInstance
+	Ring2       *ItemInstance
+	Consumable1 *ItemInstance
+	Consumable2 *ItemInstance
+	Consumable3 *ItemInstance
+}
+
+type ListItemInstancesRequest struct {
+	MemberId uuid.UUID `json:"member_id" binding:"required"`
+}
+
+type ItemInstance struct {
+	Id              uuid.UUID  `db:"id"`
+	TemplateId      uuid.UUID  `db:"template_id"`
+	OwnerMemberId   uuid.UUID  `db:"owner_member_id"`
+	Source          string     `db:"source"`
+	ItemType        string     `db:"item_type"`
+	Name            string     `db:"name"`
+	RarityId        *uuid.UUID `db:"rarity_id"`
+	AttackPower     *int       `db:"attack_power"`
+	CriticalRate    *float64   `db:"critical_rate"`
+	WeaponType      *string    `db:"weapon_type"`
+	DefenseRating   *int       `db:"defense_rating"`
+	MagicResistance *int       `db:"magic_resistance"`
+	ArmorSlot       *string    `db:"armor_slot"`
+	HealingAmount   *int       `db:"healing_amount"`
+	ManaAmount      *int       `db:"mana_amount"`
+	BuffDuration    *int       `db:"buff_duration"`
+	BuyPrice        *int       `db:"buy_price"`
+	SellPrice       *int       `db:"sell_price"`
+	Description     *string    `db:"description"`
+	AcquiredAt      time.Time  `db:"acquired_at"`
+	CreatedAt       time.Time  `db:"created_at"`
+	UpdatedAt       time.Time  `db:"updated_at"`
+}
+
+type UpdateLoadoutRequest struct {
+	MemberId       uuid.UUID  `json:"member_id" binding:"required"`
+	Slot           string     `json:"slot" binding:"required"`
+	ItemInstanceId *uuid.UUID `json:"item_instance_id"`
+}

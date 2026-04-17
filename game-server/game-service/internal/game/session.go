@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	pbitems "github.com/darkphotonKN/cosmic-void-server/common/api/proto/items"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	grpcitems "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/items"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/components"
@@ -469,6 +470,61 @@ func (s *Session) AddPlayer(playerID uuid.UUID, username string) uuid.UUID {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// convert proto ItemInstance to types.ItemConfig
+	protoToItemConfig := func(item *pbitems.ItemInstance) types.ItemConfig {
+		templateID, _ := uuid.Parse(item.TemplateId)
+		return types.ItemConfig{
+			TemplateID:      templateID,
+			ItemType:        types.ItemType(item.ItemType),
+			Name:            item.Name,
+			AttackPower:     int(item.AttackPower),
+			CriticalRate:    float64(item.CriticalRate),
+			WeaponType:      item.WeaponType,
+			DefenseRating:   int(item.DefenseRating),
+			MagicResistance: int(item.MagicResistance),
+			ArmorSlot:       types.ArmorSlot(item.ArmorSlot),
+			HealingAmount:   int(item.HealingAmount),
+			ManaAmount:      int(item.ManaAmount),
+			BuffDuration:    int(item.BuffDuration),
+			BuyPrice:        int(item.BuyPrice),
+			SellPrice:       int(item.SellPrice),
+			Description:     item.Description,
+		}
+	}
+
+	// add item entity and return its UUID pointer
+	addSlotItem := func(item *pbitems.ItemInstance) *uuid.UUID {
+		if item == nil {
+			return nil
+		}
+		config := protoToItemConfig(item)
+		id := s.AddItemWithUnLocked(config)
+		return &id
+	}
+
+	grpcLoadoutRequest := &pbitems.GetLoadoutWithItemsRequest{
+		MemberId: playerID.String(),
+	}
+	loadoutResult, err := s.itemsClient.GetLoadoutWithItems(context.Background(), grpcLoadoutRequest)
+
+	var loadout *components.EquipmentConfig
+	if err != nil {
+		slog.Error("Failed to get loadout", "error", err)
+	} else {
+		loadout = &components.EquipmentConfig{
+			WeaponSlot:  addSlotItem(loadoutResult.Weapon),
+			HeadSlot:    addSlotItem(loadoutResult.Head),
+			ChestSlot:   addSlotItem(loadoutResult.Chest),
+			GlovesSlot:  addSlotItem(loadoutResult.Gloves),
+			LegsSlot:    addSlotItem(loadoutResult.Legs),
+			Ring1Slot:   addSlotItem(loadoutResult.Ring_1),
+			Ring2Slot:   addSlotItem(loadoutResult.Ring_2),
+			Consumable1: addSlotItem(loadoutResult.Consumable_1),
+			Consumable2: addSlotItem(loadoutResult.Consumable_2),
+			Consumable3: addSlotItem(loadoutResult.Consumable_3),
+		}
+	}
+
 	PlayerConfig := PlayerConfig{
 		MemberID:      playerID,
 		Username:      username,
@@ -486,6 +542,7 @@ func (s *Session) AddPlayer(playerID uuid.UUID, username string) uuid.UUID {
 
 		ItemIDList: []uuid.UUID{},
 		Escape:     false,
+		PlayerLoadout: loadout,
 	}
 
 	// create player state entity
@@ -1580,6 +1637,14 @@ func (s *Session) calcWithinDistance(x, y, xTarget, yTarget float64) bool {
 func (s *Session) AddItem(itemConfig types.ItemConfig) uuid.UUID {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	entity := CreateItemEntity(s.EntityManager, itemConfig)
+	return entity.ID
+}
+
+/**
+* AddItemWithUnLocked creates an item entity from config and returns its ID with ulocked
+**/
+func (s *Session) AddItemWithUnLocked(itemConfig types.ItemConfig) uuid.UUID {
 	entity := CreateItemEntity(s.EntityManager, itemConfig)
 	return entity.ID
 }

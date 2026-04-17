@@ -21,7 +21,21 @@ type PlayerState struct {
 	Position  *Position        `json:"position"`
 	Direction *PlayerDirection `json:"direction"`
 	Inventory []*ItemState     `json:"inventory"`
+	Equipment *EquipmentState  `json:"equipment"`
 	Escape    bool             `json:"escape"`
+}
+
+type EquipmentState struct {
+	Weapon      *ItemState `json:"weapon"`
+	Head        *ItemState `json:"head"`
+	Chest       *ItemState `json:"chest"`
+	Gloves      *ItemState `json:"gloves"`
+	Legs        *ItemState `json:"legs"`
+	Ring1       *ItemState `json:"ring_1"`
+	Ring2       *ItemState `json:"ring_2"`
+	Consumable1 *ItemState `json:"consumable_1"`
+	Consumable2 *ItemState `json:"consumable_2"`
+	Consumable3 *ItemState `json:"consumable_3"`
 }
 
 type Position struct {
@@ -211,3 +225,28 @@ const (
 	ArmorSlotLegs   ArmorSlot = "legs"
 	ArmorSlotGloves ArmorSlot = "gloves"
 )
+
+type ItemInstance struct {
+	Id              uuid.UUID  `db:"id"`
+	TemplateId      uuid.UUID  `db:"template_id"`
+	OwnerMemberId   uuid.UUID  `db:"owner_member_id"`
+	Source          string     `db:"source"`
+	ItemType        string     `db:"item_type"`
+	Name            string     `db:"name"`
+	RarityId        *uuid.UUID `db:"rarity_id"`
+	AttackPower     *int       `db:"attack_power"`
+	CriticalRate    *float64   `db:"critical_rate"`
+	WeaponType      *string    `db:"weapon_type"`
+	DefenseRating   *int       `db:"defense_rating"`
+	MagicResistance *int       `db:"magic_resistance"`
+	ArmorSlot       *string    `db:"armor_slot"`
+	HealingAmount   *int       `db:"healing_amount"`
+	ManaAmount      *int       `db:"mana_amount"`
+	BuffDuration    *int       `db:"buff_duration"`
+	BuyPrice        *int       `db:"buy_price"`
+	SellPrice       *int       `db:"sell_price"`
+	Description     *string    `db:"description"`
+	AcquiredAt      time.Time  `db:"acquired_at"`
+	CreatedAt       time.Time  `db:"created_at"`
+	UpdatedAt       time.Time  `db:"updated_at"`
+}

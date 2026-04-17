@@ -15,6 +15,7 @@ import {
   WallState,
   DoorState,
   EquippedItems,
+  EquipmentState,
 } from "@/types/gameState";
 import { EquipmentPanel } from "@/ui/EquipmentPanel";
 import { GameStateLogger } from "@/utils/gameStateLogger";
@@ -2040,6 +2041,26 @@ export class CosmicVoidScene extends Phaser.Scene {
     }
   }
 
+  // Map backend EquipmentState (chest/gloves/legs) → local EquippedItems (body/hands/feet).
+  private syncEquipment(serverEquipment: EquipmentState): void {
+    this.equippedItems = {
+      weapon: serverEquipment.weapon,
+      head: serverEquipment.head,
+      body: serverEquipment.chest,
+      hands: serverEquipment.gloves,
+      feet: serverEquipment.legs,
+      ring_1: serverEquipment.ring_1,
+      ring_2: serverEquipment.ring_2,
+      consumable_1: serverEquipment.consumable_1,
+      consumable_2: serverEquipment.consumable_2,
+      consumable_3: serverEquipment.consumable_3,
+    };
+
+    if (this.equipmentPanel?.isVisible()) {
+      this.equipmentPanel.updateEquipment(this.equippedItems);
+    }
+  }
+
   private pickupSingleItemFromChest(): void {
     if (
       !this.isPopupOpen ||
@@ -2523,6 +2544,10 @@ export class CosmicVoidScene extends Phaser.Scene {
       // 同步玩家背包
       if (state.current_player.inventory) {
         this.syncInventory(state.current_player.inventory);
+      }
+      // 同步玩家裝備
+      if (state.current_player.equipment) {
+        this.syncEquipment(state.current_player.equipment);
       }
     } else {
       // current_player is null — player has escaped

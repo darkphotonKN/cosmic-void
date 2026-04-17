@@ -35,6 +35,9 @@ service ItemsService {
   rpc CreateCompleteConsumable(CreateCompleteConsumableRequest) returns (ConsumableDetail);
 
   rpc GetLoadout(GetLoadoutRequest) returns (GetLoadoutResponse);
+  rpc GetLoadoutWithItems(GetLoadoutWithItemsRequest) returns (GetLoadoutWithItemsResponse);
+  rpc ListItemInstances(ListItemInstancesRequest) returns (ListItemInstancesResponse);
+  rpc UpdateLoadout(UpdateLoadoutRequest) returns (UpdateLoadoutResponse);
 }
 
 // ============ Layered Message Definitions ============
@@ -307,4 +310,61 @@ message GetLoadoutResponse {
   string consumable3Id = 12;
   google.protobuf.Timestamp created_at = 13;
   google.protobuf.Timestamp updated_at = 14;
+}
+
+message ListItemInstancesRequest {
+  string member_id = 1;
+}
+
+message ItemInstance {
+  string id = 1;
+  string template_id = 2;
+  string owner_member_id = 3;
+  string source = 4;
+  string item_type = 5;
+  string name = 6;
+  string rarity_id = 7;
+  int32 attack_power = 8;
+  float critical_rate = 9;
+  string weapon_type = 10;
+  int32 defense_rating = 11;
+  int32 magic_resistance = 12;
+  string armor_slot = 13;
+  int32 healing_amount = 14;
+  int32 mana_amount = 15;
+  int32 buff_duration = 16;
+  int32 buy_price = 17;
+  int32 sell_price = 18;
+  string description = 19;
+}
+
+message ListItemInstancesResponse {
+  repeated ItemInstance items = 1;
+}
+
+message GetLoadoutWithItemsRequest {
+  string member_id = 1;
+}
+
+message GetLoadoutWithItemsResponse {
+  ItemInstance weapon = 1;
+  ItemInstance head = 2;
+  ItemInstance chest = 3;
+  ItemInstance gloves = 4;
+  ItemInstance legs = 5;
+  ItemInstance ring_1 = 6;
+  ItemInstance ring_2 = 7;
+  ItemInstance consumable_1 = 8;
+  ItemInstance consumable_2 = 9;
+  ItemInstance consumable_3 = 10;
+}
+
+message UpdateLoadoutRequest {
+  string member_id = 1;
+  string slot = 2;
+  string item_instance_id = 3;
+}
+
+message UpdateLoadoutResponse {
+  bool success = 1;
 }

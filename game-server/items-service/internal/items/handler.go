@@ -80,6 +80,9 @@ type Service interface {
 	CreateCompleteConsumable(ctx context.Context, req *CreateCompleteConsumableRequest) (*ConsumableWithTemplate, error)
 
 	GetLoadout(ctx context.Context, req *GetLoadoutRequest) (*Loadout, error)
+	GetLoadoutWithItems(ctx context.Context, req *GetLoadoutRequest) (*LoadoutWithItems, error)
+	ListItemInstances(ctx context.Context, req *ListItemInstancesRequest) ([]*ItemInstance, error)
+	UpdateLoadout(ctx context.Context, req *UpdateLoadoutRequest) error
 }
 
 // checkAdminPermission checks if the user has admin permission
@@ -858,7 +861,7 @@ func (h *Handler) ListItemRarities(ctx context.Context, req *emptypb.Empty) (*pb
 	}, nil
 }
 
-func (h *Handler) GetLoadOut(ctx context.Context, req *pb.GetLoadoutRequest) (*pb.GetLoadoutResponse, error) {
+func (h *Handler) GetLoadout(ctx context.Context, req *pb.GetLoadoutRequest) (*pb.GetLoadoutResponse, error) {
 
 	MemberId, err := uuid.Parse(req.MemberId)
 	if err != nil {
@@ -888,5 +891,187 @@ func (h *Handler) GetLoadOut(ctx context.Context, req *pb.GetLoadoutRequest) (*p
 		Consumable3Id: commonhelpers.UuidPtrToString(loadout.Consumable3Id),
 		CreatedAt:     timestamppb.New(loadout.CreatedAt),
 		UpdatedAt:     timestamppb.New(loadout.UpdatedAt),
+	}, nil
+}
+
+func (h *Handler) GetLoadoutWithItems(ctx context.Context, req *pb.GetLoadoutWithItemsRequest) (*pb.GetLoadoutWithItemsResponse, error) {
+	memberId, err := uuid.Parse(req.MemberId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid member_id: %v", err)
+	}
+
+	payload := &GetLoadoutRequest{
+		MemberId: memberId,
+	}
+
+	loadout, err := h.service.GetLoadoutWithItems(ctx, payload)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get loadout with items: %v", err)
+	}
+
+	toProto := func(item *ItemInstance) *pb.ItemInstance {
+		if item == nil {
+			return nil
+		}
+		pbItem := &pb.ItemInstance{
+			Id:            item.Id.String(),
+			TemplateId:    item.TemplateId.String(),
+			OwnerMemberId: item.OwnerMemberId.String(),
+			Source:        item.Source,
+			ItemType:      item.ItemType,
+			Name:          item.Name,
+			RarityId:      commonhelpers.UuidPtrToString(item.RarityId),
+		}
+		if item.AttackPower != nil {
+			pbItem.AttackPower = int32(*item.AttackPower)
+		}
+		if item.CriticalRate != nil {
+			pbItem.CriticalRate = float32(*item.CriticalRate)
+		}
+		if item.WeaponType != nil {
+			pbItem.WeaponType = *item.WeaponType
+		}
+		if item.DefenseRating != nil {
+			pbItem.DefenseRating = int32(*item.DefenseRating)
+		}
+		if item.MagicResistance != nil {
+			pbItem.MagicResistance = int32(*item.MagicResistance)
+		}
+		if item.ArmorSlot != nil {
+			pbItem.ArmorSlot = *item.ArmorSlot
+		}
+		if item.HealingAmount != nil {
+			pbItem.HealingAmount = int32(*item.HealingAmount)
+		}
+		if item.ManaAmount != nil {
+			pbItem.ManaAmount = int32(*item.ManaAmount)
+		}
+		if item.BuffDuration != nil {
+			pbItem.BuffDuration = int32(*item.BuffDuration)
+		}
+		if item.BuyPrice != nil {
+			pbItem.BuyPrice = int32(*item.BuyPrice)
+		}
+		if item.SellPrice != nil {
+			pbItem.SellPrice = int32(*item.SellPrice)
+		}
+		if item.Description != nil {
+			pbItem.Description = *item.Description
+		}
+		return pbItem
+	}
+
+	return &pb.GetLoadoutWithItemsResponse{
+		Weapon:      toProto(loadout.Weapon),
+		Head:        toProto(loadout.Head),
+		Chest:       toProto(loadout.Chest),
+		Gloves:      toProto(loadout.Gloves),
+		Legs:        toProto(loadout.Legs),
+		Ring_1:      toProto(loadout.Ring1),
+		Ring_2:      toProto(loadout.Ring2),
+		Consumable_1: toProto(loadout.Consumable1),
+		Consumable_2: toProto(loadout.Consumable2),
+		Consumable_3: toProto(loadout.Consumable3),
+	}, nil
+}
+
+func (h *Handler) ListItemInstances(ctx context.Context, req *pb.ListItemInstancesRequest) (*pb.ListItemInstancesResponse, error) {
+	memberId, err := uuid.Parse(req.MemberId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid member_id: %v", err)
+	}
+
+	payload := &ListItemInstancesRequest{
+		MemberId: memberId,
+	}
+
+	items, err := h.service.ListItemInstances(ctx, payload)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list item instances: %v", err)
+	}
+
+	pbItems := make([]*pb.ItemInstance, 0, len(items))
+	for _, item := range items {
+		pbItem := &pb.ItemInstance{
+			Id:            item.Id.String(),
+			TemplateId:    item.TemplateId.String(),
+			OwnerMemberId: item.OwnerMemberId.String(),
+			Source:        item.Source,
+			ItemType:      item.ItemType,
+			Name:          item.Name,
+			RarityId:      commonhelpers.UuidPtrToString(item.RarityId),
+		}
+		if item.AttackPower != nil {
+			pbItem.AttackPower = int32(*item.AttackPower)
+		}
+		if item.CriticalRate != nil {
+			pbItem.CriticalRate = float32(*item.CriticalRate)
+		}
+		if item.WeaponType != nil {
+			pbItem.WeaponType = *item.WeaponType
+		}
+		if item.DefenseRating != nil {
+			pbItem.DefenseRating = int32(*item.DefenseRating)
+		}
+		if item.MagicResistance != nil {
+			pbItem.MagicResistance = int32(*item.MagicResistance)
+		}
+		if item.ArmorSlot != nil {
+			pbItem.ArmorSlot = *item.ArmorSlot
+		}
+		if item.HealingAmount != nil {
+			pbItem.HealingAmount = int32(*item.HealingAmount)
+		}
+		if item.ManaAmount != nil {
+			pbItem.ManaAmount = int32(*item.ManaAmount)
+		}
+		if item.BuffDuration != nil {
+			pbItem.BuffDuration = int32(*item.BuffDuration)
+		}
+		if item.BuyPrice != nil {
+			pbItem.BuyPrice = int32(*item.BuyPrice)
+		}
+		if item.SellPrice != nil {
+			pbItem.SellPrice = int32(*item.SellPrice)
+		}
+		if item.Description != nil {
+			pbItem.Description = *item.Description
+		}
+		pbItems = append(pbItems, pbItem)
+	}
+
+	return &pb.ListItemInstancesResponse{
+		Items: pbItems,
+	}, nil
+}
+
+func (h *Handler) UpdateLoadout(ctx context.Context, req *pb.UpdateLoadoutRequest) (*pb.UpdateLoadoutResponse, error) {
+	memberId, err := uuid.Parse(req.MemberId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid member_id: %v", err)
+	}
+
+	var itemInstanceId *uuid.UUID
+	if req.ItemInstanceId != "" {
+		parsed, err := uuid.Parse(req.ItemInstanceId)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid item_instance_id: %v", err)
+		}
+		itemInstanceId = &parsed
+	}
+
+	payload := &UpdateLoadoutRequest{
+		MemberId:       memberId,
+		Slot:           req.Slot,
+		ItemInstanceId: itemInstanceId,
+	}
+
+	err = h.service.UpdateLoadout(ctx, payload)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to update loadout: %v", err)
+	}
+
+	return &pb.UpdateLoadoutResponse{
+		Success: true,
 	}, nil
 }

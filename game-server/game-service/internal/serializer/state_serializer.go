@@ -60,6 +60,71 @@ func (s *StateSerializer) SerializeBackendState(ctx context.Context, sessionID u
 			itemIDListC, _ := entity.GetComponent(ecs.ComponentTypeItemIDList)
 			itemIDList := itemIDListC.(*components.ItemIDListComponent)
 
+			equipmentC, ok := entity.GetComponent(ecs.ComponentTypeEquipment)
+			equipmentState := &types.EquipmentState{}
+			if ok {
+				equipment, _ := equipmentC.(*components.EquipmentComponent)
+
+				loadoutEntityIDs := map[string]*uuid.UUID{
+					"Weapon":      equipment.WeaponSlot,
+					"Head":        equipment.HeadSlot,
+					"Chest":       equipment.ChestSlot,
+					"Legs":        equipment.LegsSlot,
+					"Gloves":      equipment.GlovesSlot,
+					"Ring1":       equipment.Ring1Slot,
+					"Ring2":       equipment.Ring2Slot,
+					"Consumable1": equipment.Consumable1,
+					"Consumable2": equipment.Consumable2,
+					"Consumable3": equipment.Consumable3,
+				}
+
+				loadouts := map[string]*types.ItemState{}
+
+				for key, loadoutID := range loadoutEntityIDs {
+					if loadoutID == nil {
+						continue
+					}
+					itemEntity, exists := s.em.GetEntity(*loadoutID)
+					if !exists {
+						continue
+					}
+					itemC, ok := itemEntity.GetComponent(ecs.ComponentTypeItem)
+					if !ok {
+						continue
+					}
+					item := itemC.(*components.ItemComponent)
+
+					loadouts[key] = &types.ItemState{
+						ItemID:        item.TemplateID,
+						EntityID:      *loadoutID,
+						Name:          item.Name,
+						Quantity:      1, // ItemComponent 無此欄位，依需求 hardcode
+						AttackPower:   int32(item.AttackPower),
+						CriticalRate:  float32(item.CriticalRate),
+						WeaponType:    item.WeaponType,
+						DefenseRating: int32(item.DefenseRating),
+						ArmorSlot:     item.ArmorSlot,
+						HealingAmount: int32(item.HealingAmount),
+						ManaAmount:    int32(item.ManaAmount),
+						Description:   item.Description,
+					}
+
+				}
+				equipmentState = &types.EquipmentState{
+					Weapon:      loadouts["Weapon"],
+					Head:        loadouts["Head"],
+					Chest:       loadouts["Chest"],
+					Gloves:      loadouts["Gloves"],
+					Legs:        loadouts["Legs"],
+					Ring1:       loadouts["Ring1"],
+					Ring2:       loadouts["Ring2"],
+					Consumable1: loadouts["Consumable1"],
+					Consumable2: loadouts["Consumable2"],
+					Consumable3: loadouts["Consumable3"],
+				}
+
+			}
+
 			for _, itemID := range itemIDList.ItemIDs {
 				itemEntity, exists := s.em.GetEntity(itemID)
 				if exists {
@@ -71,7 +136,6 @@ func (s *StateSerializer) SerializeBackendState(ctx context.Context, sessionID u
 					inventory = append(inventory, itemState)
 				}
 			}
-
 			playerState := &types.PlayerState{
 				ID:       player.MemberID,
 				EntityID: entity.ID,
@@ -86,6 +150,7 @@ func (s *StateSerializer) SerializeBackendState(ctx context.Context, sessionID u
 					Speed: velocity.Speed,
 				},
 				Inventory: inventory,
+				Equipment: equipmentState,
 				Escape:    player.Escape,
 			}
 
@@ -282,6 +347,7 @@ func (s *StateSerializer) FormatStateToClientState(backendState *types.BackendGa
 		CurrentPlayer: backendState.Players[playerID],
 		OtherPlayers:  otherPlayers,
 		EscapeDoor:    backendState.EscapeDoor,
+		Equipment:     backendState.Equipment,
 		Switch:        backendState.Switch,
 		EscapedCount:  backendState.EscapedCount,
 	}

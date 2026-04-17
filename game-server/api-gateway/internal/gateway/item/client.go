@@ -129,3 +129,25 @@ func (c *Client) GetLoadout(ctx context.Context, req *pb.GetLoadoutRequest) (*pb
 	loadout, err := client.GetLoadout(ctx, req)
 	return loadout, err
 }
+
+func (c *Client) ListItemInstances(ctx context.Context, req *pb.ListItemInstancesRequest) (*pb.ListItemInstancesResponse, error) {
+	conn, err := discovery.ServiceConnection(ctx, serviceName, c.registry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to items service: %w", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewItemsServiceClient(conn)
+	return client.ListItemInstances(ctx, req)
+}
+
+func (c *Client) UpdateLoadout(ctx context.Context, req *pb.UpdateLoadoutRequest) (*pb.UpdateLoadoutResponse, error) {
+	conn, err := discovery.ServiceConnection(ctx, serviceName, c.registry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to items service: %w", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewItemsServiceClient(conn)
+	return client.UpdateLoadout(ctx, req)
+}

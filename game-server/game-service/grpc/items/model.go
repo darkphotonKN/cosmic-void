@@ -24,4 +24,12 @@ type ItemsClient interface {
 
 	// ListConsumablesWithTemplate lists all consumables with template information
 	ListConsumablesWithTemplate(ctx context.Context) (*pb.ListConsumablesResponse, error)
+
+	// GetLoadout gets the player's equipped loadout
+	GetLoadout(ctx context.Context, req *pb.GetLoadoutRequest) (*pb.GetLoadoutResponse, error)
+
+	GetLoadoutWithItems(ctx context.Context, req *pb.GetLoadoutWithItemsRequest) (*pb.GetLoadoutWithItemsResponse, error)
+
+	// ListItemInstances gets all item instances owned by a player
+	ListItemInstances(ctx context.Context, req *pb.ListItemInstancesRequest) (*pb.ListItemInstancesResponse, error)
 }

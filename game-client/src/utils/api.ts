@@ -1,9 +1,29 @@
+import { useAuthStore } from "@/stores/authStore";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:7001";
 
 interface ApiConfig {
   method?: string;
   headers?: Record<string, string>;
   body?: any;
+}
+
+// Clears auth state and redirects to login. Guarded against duplicate
+// redirects (multiple parallel requests all getting 401 at the same time
+// would otherwise each trigger a navigation).
+let isRedirectingToLogin = false;
+function handleUnauthorized(): void {
+  if (typeof window === "undefined") return;
+  if (isRedirectingToLogin) return;
+  if (window.location.pathname === "/login") return;
+
+  isRedirectingToLogin = true;
+  try {
+    useAuthStore.getState().logout();
+  } catch {
+    // logout is best-effort; proceed with redirect regardless
+  }
+  window.location.href = "/login";
 }
 
 class ApiClient {
@@ -42,7 +62,8 @@ class ApiClient {
     const data = await response.json();
 
     if (response.status === 401) {
-      // Just throw the error, don't automatically redirect
+      // Token expired or invalid → clear auth and bounce to /login.
+      handleUnauthorized();
       throw new Error(data.message || "Unauthorized");
     }
 
@@ -129,6 +150,24 @@ class ApiClient {
   async markAllNotificationsAsRead() {
     return this.request("/api/notification/read-all", {
       method: "PATCH",
+    });
+  }
+
+  // Get player loadout
+  async getLoadout() {
+    return this.request("/api/items/loadout");
+  }
+
+  // Get player item instances (warehouse/stash)
+  async getItemInstances() {
+    return this.request("/api/items/instances");
+  }
+
+  // Update loadout slot
+  async updateLoadout(slot: string, itemInstanceId: string | null) {
+    return this.request("/api/items/loadout", {
+      method: "PUT",
+      body: { slot, item_instance_id: itemInstanceId || "" },
     });
   }
 }
