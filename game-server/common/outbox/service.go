@@ -17,5 +17,5 @@ type Repository interface {
 }
 
 func (s *service) CreateOutbox(ctx context.Context, params OutboxParams) error {
-	return s.repo.CreateOutbox(params)
+	return s.repo.CreateOutbox(ctx, params)
 }

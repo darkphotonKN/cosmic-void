@@ -17,6 +17,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
+	commonoutbox "github.com/darkphotonKN/cosmic-void-server/common/outbox"
 )
 
 /**
@@ -53,7 +54,11 @@ func SetupRouter(statsDB *sqlx.DB, registry discovery.Registry, ch *amqp.Channel
 	// conform to our abstraction
 	publishCh := commonbroker.NewAmqpPublisher(ch)
 
-	gameService := game.NewService(publishCh, statsDB)
+	// -- outbox --
+	outboxRepo := commonoutbox.NewRepo(statsDB)
+	outboxService := commonoutbox.NewService(outboxRepo)
+
+	gameService := game.NewService(publishCh, outboxService)
 	server := gameserver.NewServer(authClient, queueService, gameService, itemsClient)
 
 	// -- routes --

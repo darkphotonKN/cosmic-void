@@ -8,23 +8,23 @@ import (
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
+	commonoutbox "github.com/darkphotonKN/cosmic-void-server/common/outbox"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type service struct {
-	publishCh commonbroker.Publisher
-	statsRepo *sqlx.DB
+	publishCh       commonbroker.Publisher
+	outboxPublisher commonoutbox.OutboxPublisher
 }
 
-func NewService(publishCh commonbroker.Publisher, statsDB *sqlx.DB) *service {
+func NewService(publishCh commonbroker.Publisher, outboxPublisher commonoutbox.OutboxPublisher) *service {
 	return &service{
-		publishCh: publishCh,
-		statsRepo: statsDB,
+		publishCh:       publishCh,
+		outboxPublisher: outboxPublisher,
 	}
 }
 

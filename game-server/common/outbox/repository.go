@@ -12,6 +12,12 @@ type repo struct {
 	db *sqlx.DB
 }
 
+func NewRepo(db *sqlx.DB) *repo {
+	return &repo{
+		db: db,
+	}
+}
+
 func (r *repo) CreateOutbox(ctx context.Context, params OutboxParams) error {
 	query := `
 		INSERT INTO outbox(routing_key, exchange, event_type, payload)

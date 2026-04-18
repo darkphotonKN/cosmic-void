@@ -1,6 +1,7 @@
 package outbox
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -23,4 +24,10 @@ type OutboxEvent struct {
 	CreatedAt  time.Time
 	// nil = pending, not nil = processed
 	PublishedAt *time.Time
+}
+
+// isp interface for all services
+// they all share the same interface in this case
+type OutboxPublisher interface {
+	CreateOutbox(ctx context.Context, params OutboxParams) error
 }
