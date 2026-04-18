@@ -89,7 +89,7 @@ type SessionSender interface {
 }
 
 type EventEmitter interface {
-	PublishMatchComplete(ctx context.Context, data *types.RawMatchState) error
+	PublishMatchComplete(ctx context.Context, data *types.RawMatchState)
 }
 
 type StateSerializer interface {

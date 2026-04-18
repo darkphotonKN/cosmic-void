@@ -22,7 +22,7 @@ import (
 /**
 * Sets up API prefix route and all routers.
 **/
-func SetupRouter(db *sqlx.DB, registry discovery.Registry, ch *amqp.Channel, cacheService cache.Cache) *gin.Engine {
+func SetupRouter(statsDB *sqlx.DB, registry discovery.Registry, ch *amqp.Channel, cacheService cache.Cache) *gin.Engine {
 	router := gin.Default()
 
 	// NOTE: debugging middleware
@@ -53,7 +53,7 @@ func SetupRouter(db *sqlx.DB, registry discovery.Registry, ch *amqp.Channel, cac
 	// conform to our abstraction
 	publishCh := commonbroker.NewAmqpPublisher(ch)
 
-	gameService := game.NewService(publishCh)
+	gameService := game.NewService(publishCh, statsDB)
 	server := gameserver.NewServer(authClient, queueService, gameService, itemsClient)
 
 	// -- routes --

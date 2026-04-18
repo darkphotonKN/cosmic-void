@@ -104,6 +104,20 @@ func main() {
 		http.ListenAndServe(":7013", nil)
 	}()
 
+	// --- redis setup ---
+	err = config.InitRedis(config.RedisConfig{
+		Mode:         commonhelpers.GetEnvString("REDIS_MODE", "standalone"),
+		Addrs:        []string{commonhelpers.GetEnvString("REDIS_ADDR", "localhost:6379")},
+		Password:     commonhelpers.GetEnvString("REDIS_PASSWORD", ""),
+		DB:           0,
+		PoolSize:     10,
+		MinIdleConns: 5,
+	})
+	if err != nil {
+		log.Fatalf("Failed to initialize Redis: %v", err)
+	}
+	defer config.CloseRedis()
+
 	ch, close := broker.Connect(amqpUser, amqpPassword, amqpHost, amqpPort)
 
 	// Declare the items events exchange

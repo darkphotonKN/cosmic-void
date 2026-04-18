@@ -1,9 +1,6 @@
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 -- Player match stats (aggregated stats)
 CREATE TABLE player_match_stats (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     member_id UUID NOT NULL,
 
     -- Match statistics
@@ -116,3 +113,5 @@ CREATE TRIGGER player_ranking_stats_updated_at
     BEFORE UPDATE ON player_ranking_stats
     FOR EACH ROW
     EXECUTE FUNCTION update_stats_updated_at();
+
+

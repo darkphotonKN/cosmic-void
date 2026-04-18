@@ -18,6 +18,9 @@ import (
 /**
 * Sets up the Database connection and provides its access as a singleton to
 * the entire application.
+*
+* Note: game service does not have its own database. Current connection is to
+* items service.
 **/
 func InitDB() *sqlx.DB {
 	// construct the db connection string
@@ -39,11 +42,6 @@ func InitDB() *sqlx.DB {
 	}
 
 	fmt.Printf("\nConnected to the database successfully.\n\n")
-
-	// Run migrations
-	if err := runMigrations(db); err != nil {
-		log.Fatalf("Failed to run migrations: %v", err)
-	}
 
 	return db
 }

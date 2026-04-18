@@ -7,6 +7,7 @@ import (
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/items"
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
+	commoncache "github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
 	"github.com/darkphotonKN/cosmic-void-server/items-service/grpc/auth"
 	"github.com/darkphotonKN/cosmic-void-server/items-service/internal/items"
 	"github.com/jmoiron/sqlx"
@@ -29,14 +30,16 @@ func SetupServices(db *sqlx.DB, amqpChannel *amqp.Channel, registry discovery.Re
 	// Create gRPC handler with service and auth client
 	handler := items.NewHandler(service, authClient)
 
-	// Create AMQP consumer with service
-	consumer := items.NewConsumer(service, amqpChannel)
+	// cache client
+	cache := commoncache.NewRedisCache(GetClient())
 
 	// Set up AMQP infrastructure
 	if err := items.SetupAMQPInfrastructure(amqpChannel); err != nil {
 		slog.Error("Failed to setup AMQP infrastructure", "error", err)
 	}
 
+	// Create AMQP consumer with service
+	consumer := items.NewConsumer(service, amqpChannel, cache)
 	// Start listening for AMQP events
 	consumer.Listen()
 

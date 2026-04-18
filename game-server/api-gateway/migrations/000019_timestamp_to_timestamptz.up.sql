@@ -1,0 +1,49 @@
+-- Convert TIMESTAMP columns to TIMESTAMPTZ for correct timezone handling.
+-- Existing rows are interpreted as the server's local timezone and converted to UTC.
+ALTER TABLE members
+  ALTER COLUMN created_at TYPE TIMESTAMPTZ,
+  ALTER COLUMN updated_at TYPE TIMESTAMPTZ;
+
+ALTER TABLE base_items
+  ALTER COLUMN created_at TYPE TIMESTAMPTZ,
+  ALTER COLUMN updated_at TYPE TIMESTAMPTZ;
+
+ALTER TABLE items
+  ALTER COLUMN created_at TYPE TIMESTAMPTZ,
+  ALTER COLUMN updated_at TYPE TIMESTAMPTZ;
+
+ALTER TABLE item_mods
+  ALTER COLUMN created_at TYPE TIMESTAMPTZ,
+  ALTER COLUMN updated_at TYPE TIMESTAMPTZ;
+
+ALTER TABLE skills
+  ALTER COLUMN created_at TYPE TIMESTAMPTZ,
+  ALTER COLUMN updated_at TYPE TIMESTAMPTZ;
+
+ALTER TABLE classes
+  ALTER COLUMN created_at TYPE TIMESTAMPTZ,
+  ALTER COLUMN updated_at TYPE TIMESTAMPTZ;
+
+ALTER TABLE ascendancies
+  ALTER COLUMN created_at TYPE TIMESTAMPTZ,
+  ALTER COLUMN updated_at TYPE TIMESTAMPTZ;
+
+ALTER TABLE builds
+  ALTER COLUMN created_at TYPE TIMESTAMPTZ,
+  ALTER COLUMN updated_at TYPE TIMESTAMPTZ;
+
+ALTER TABLE tags
+  ALTER COLUMN created_at TYPE TIMESTAMPTZ,
+  ALTER COLUMN updated_at TYPE TIMESTAMPTZ;
+
+ALTER TABLE articles
+  ALTER COLUMN created_at TYPE TIMESTAMPTZ,
+  ALTER COLUMN updated_at TYPE TIMESTAMPTZ;
+
+ALTER TABLE build_item_sets
+  ALTER COLUMN created_at TYPE TIMESTAMPTZ,
+  ALTER COLUMN updated_at TYPE TIMESTAMPTZ;
+
+ALTER TABLE build_skill_links
+  ALTER COLUMN created_at TYPE TIMESTAMPTZ,
+  ALTER COLUMN updated_at TYPE TIMESTAMPTZ;

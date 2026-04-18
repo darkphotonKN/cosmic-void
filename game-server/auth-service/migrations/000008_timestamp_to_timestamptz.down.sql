@@ -1,0 +1,13 @@
+-- Revert TIMESTAMPTZ back to TIMESTAMP
+ALTER TABLE members
+  ALTER COLUMN created_at TYPE TIMESTAMP,
+  ALTER COLUMN updated_at TYPE TIMESTAMP;
+
+ALTER TABLE player_profile
+  ALTER COLUMN created_at TYPE TIMESTAMP,
+  ALTER COLUMN updated_at TYPE TIMESTAMP;
+
+ALTER TABLE avatar_uploads
+  ALTER COLUMN presigned_url_expires_at TYPE TIMESTAMP,
+  ALTER COLUMN created_at TYPE TIMESTAMP,
+  ALTER COLUMN updated_at TYPE TIMESTAMP;

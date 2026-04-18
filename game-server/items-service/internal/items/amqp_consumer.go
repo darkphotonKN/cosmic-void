@@ -1,17 +1,22 @@
 package items
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"log/slog"
+	"time"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
+	commoncache "github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/protobuf/proto"
 )
 
 type Consumer struct {
 	service ConsumerService
+	cache   commoncache.Cache
 	channel *amqp.Channel
 }
 
@@ -25,10 +30,11 @@ func (c *Consumer) Listen() {
 	slog.Info("Items consumer listening for events...")
 }
 
-func NewConsumer(service ConsumerService, ch *amqp.Channel) *Consumer {
+func NewConsumer(service ConsumerService, ch *amqp.Channel, cache commoncache.Cache) *Consumer {
 	return &Consumer{
 		service: service,
 		channel: ch,
+		cache:   cache,
 	}
 }
 
@@ -66,8 +72,25 @@ func (c *Consumer) consumeItemsExtracted() {
 			"items_extracted", itemsExtracted)
 
 		// redis SETNX check if eventID has been processed before
+		key := fmt.Sprintf("%s:%s", "items_extracted", itemsExtracted.EventId)
 
-		err := c.service.ProcessItemsExtracted(&itemsExtracted)
+		_, ok, err := c.cache.AcquireLock(context.Background(), key, time.Hour*24)
+
+		if err != nil {
+			slog.Error("Error when attempting to acquire lock for items_extracted event",
+				"err", err,
+			)
+
+			msg.Ack(false) // already processed, ack to remove from queue, no dlq or requeue
+			continue
+		}
+
+		// skip if already processed
+		if !ok {
+			continue
+		}
+
+		err = c.service.ProcessItemsExtracted(&itemsExtracted)
 
 		if err != nil {
 			if errors.Is(err, commonconstants.ErrTransient) {

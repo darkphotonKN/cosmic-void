@@ -10,6 +10,7 @@ import (
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -17,11 +18,13 @@ import (
 
 type service struct {
 	publishCh commonbroker.Publisher
+	statsRepo *sqlx.DB
 }
 
-func NewService(publishCh commonbroker.Publisher) *service {
+func NewService(publishCh commonbroker.Publisher, statsDB *sqlx.DB) *service {
 	return &service{
 		publishCh: publishCh,
+		statsRepo: statsDB,
 	}
 }
 
@@ -33,9 +36,11 @@ func (s *service) PublishMatchComplete(ctx context.Context, data *types.RawMatch
 	protoData, err := s.formatMatchData(data.SessionID, data.StartedAt, data.EndedAt, rankedPlayers)
 
 	if err != nil {
-		slog.Error("Error publishing game match end event", "error", err)
+		slog.Error("Error formatting game match end event", "error", err)
 		return
 	}
+
+	// send to outbox for publishing
 
 	go func() {
 		err := s.publishCh.PublishWithContext(

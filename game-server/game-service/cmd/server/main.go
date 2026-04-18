@@ -49,6 +49,9 @@ var (
 )
 
 func main() {
+	// --- database setup ---
+	statsDB := config.InitStatsServiceDB()
+
 	ctx := context.Background()
 
 	// --- pprof ---
@@ -79,11 +82,6 @@ func main() {
 	if err != nil {
 		log.Printf("\ncustom metrics setup init errored. Error: %w\n\n", err)
 	}
-
-	// --- database setup ---
-
-	db := config.InitDB()
-	defer db.Close()
 
 	// --- redis setup ---
 	err = config.InitRedis(config.RedisConfig{
@@ -168,7 +166,7 @@ func main() {
 	log.Printf("grpc Game Server started on PORT: %s\n", grpcAddr)
 
 	// routes setup
-	routes := config.SetupRouter(db, registry, ch , cacheService)
+	routes := config.SetupRouter(statsDB, registry, ch, cacheService)
 
 	fmt.Printf("Server listening on port %s.\n", gamePort)
 
