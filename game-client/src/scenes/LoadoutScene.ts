@@ -1,21 +1,26 @@
 import Phaser from 'phaser';
 import { EquipmentPanel } from '@/ui/EquipmentPanel';
-import { ItemState, EquippedItems } from '@/types/gameState';
+import { ItemState, EquippedItems, EquipmentSlot } from '@/types/gameState';
+import { apiClient } from '@/utils/api';
 
-// Placeholder demo items for testing until backend API exists
-const DEMO_ITEMS: ItemState[] = [
-  { item_id: 'tpl-w1', entity_id: 'demo-w1', name: 'Plasma Blade', quantity: 1, attack_power: 24, critical_rate: 12, weapon_type: 'sword', description: 'A superheated edge that cuts through void matter.' },
-  { item_id: 'tpl-w2', entity_id: 'demo-w2', name: 'Arc Repeater', quantity: 1, attack_power: 18, critical_rate: 8, weapon_type: 'rifle', description: 'Rapid-fire energy bolts with modest penetration.' },
-  { item_id: 'tpl-a1', entity_id: 'demo-a1', name: 'Neurohelm', quantity: 1, defense_rating: 10, armor_slot: 'head', description: 'Neural-linked helmet with threat overlay.' },
-  { item_id: 'tpl-a2', entity_id: 'demo-a2', name: 'Voidweave Vest', quantity: 1, defense_rating: 22, armor_slot: 'chest', description: 'Lightweight composite plating.' },
-  { item_id: 'tpl-a3', entity_id: 'demo-a3', name: 'Tac Gauntlets', quantity: 1, defense_rating: 8, armor_slot: 'hands', description: 'Grip-enhanced tactical gloves.' },
-  { item_id: 'tpl-a4', entity_id: 'demo-a4', name: 'Mag Boots', quantity: 1, defense_rating: 12, armor_slot: 'feet', description: 'Magnetic adhesion boots for low-grav ops.' },
-  { item_id: 'tpl-a5', entity_id: 'demo-a5', name: 'Signal Ring', quantity: 1, defense_rating: 4, armor_slot: 'ring', description: 'Encrypted comms relay ring.' },
-  { item_id: 'tpl-a6', entity_id: 'demo-a6', name: 'Null Ring', quantity: 1, defense_rating: 6, armor_slot: 'ring', description: 'Dampens void radiation signatures.' },
-  { item_id: 'tpl-c1', entity_id: 'demo-c1', name: 'Stim Pack', quantity: 3, healing_amount: 40, description: 'Emergency field healing compound.' },
-  { item_id: 'tpl-c2', entity_id: 'demo-c2', name: 'Mana Cell', quantity: 2, mana_amount: 30, description: 'Compressed energy cell for ability recharge.' },
-  { item_id: 'tpl-c3', entity_id: 'demo-c3', name: 'Nano Patch', quantity: 1, healing_amount: 80, description: 'Nanite-infused regeneration patch. Slow but potent.' },
-];
+// Map client-side EquipmentSlot UI names → backend canonical slot names.
+// Client uses body/hands/feet (visual body regions), backend uses
+// chest/gloves/legs (matching armor_slot CHECK constraint).
+const SLOT_TO_BACKEND: Record<EquipmentSlot, string> = {
+  weapon: 'weapon',
+  head: 'head',
+  body: 'chest',
+  hands: 'gloves',
+  feet: 'legs',
+  ring_1: 'ring_1',
+  ring_2: 'ring_2',
+  consumable_1: 'consumable_1',
+  consumable_2: 'consumable_2',
+  consumable_3: 'consumable_3',
+};
+function toBackendSlot(slot: EquipmentSlot): string {
+  return SLOT_TO_BACKEND[slot];
+}
 
 export class LoadoutScene extends Phaser.Scene {
   private equipmentPanel?: EquipmentPanel;
@@ -24,12 +29,25 @@ export class LoadoutScene extends Phaser.Scene {
     ring_1: null, ring_2: null, consumable_1: null, consumable_2: null, consumable_3: null,
   };
   private inventory: ItemState[] = [];
+  private isLoading = false;
+  private loadingOverlay?: Phaser.GameObjects.Container;
 
   constructor() {
     super({ key: 'LoadoutScene' });
   }
 
   create(): void {
+    // Make all text created in this scene sharp on high-DPI displays.
+    // Canvas is 1080x720 but Retina renders at 2x — text normally gets
+    // hardware-upscaled and blurs. setResolution tells Phaser to rasterize
+    // text at devicePixelRatio internally, then display at logical size.
+    const origAddText = this.add.text.bind(this.add);
+    this.add.text = ((x: number, y: number, text: string | string[], style?: Phaser.Types.GameObjects.Text.TextStyle) => {
+      const t = origAddText(x, y, text, style);
+      t.setResolution(window.devicePixelRatio || 1);
+      return t;
+    }) as typeof this.add.text;
+
     const { width, height } = this.cameras.main;
 
     // Background
@@ -112,27 +130,135 @@ export class LoadoutScene extends Phaser.Scene {
     // ESC to return
     this.input.keyboard?.on('keydown-ESC', () => this.returnToMenu());
 
-    // Initialize inventory with demo items
-    this.inventory = DEMO_ITEMS.map(item => ({ ...item }));
+    // E to equip/unequip hovered item
+    this.input.keyboard?.on('keydown-E', () => {
+      if (this.isLoading) return;
+      this.equipmentPanel?.handleEquipKey();
+    });
 
     // Create equipment panel
     this.equipmentPanel = new EquipmentPanel(this);
     this.equipmentPanel.onEquip = (item, slot) => {
+      if (this.isLoading) return;
       this.equipped[slot] = item;
       this.inventory = this.inventory.filter(i => i.entity_id !== item.entity_id);
+      this.withLoading(() => apiClient.updateLoadout(toBackendSlot(slot), item.entity_id));
     };
     this.equipmentPanel.onUnequip = (item, slot) => {
+      if (this.isLoading) return;
       this.equipped[slot] = null;
       this.inventory.push(item);
+      this.withLoading(() => apiClient.updateLoadout(toBackendSlot(slot), null));
     };
 
-    // Show panel with demo data
     this.equipmentPanel.show();
-    this.equipmentPanel.updateInventory(this.inventory);
-    this.equipmentPanel.updateEquipment(this.equipped);
+
+    // Fetch data from backend
+    this.loadData();
 
     // Disable default right-click context menu
     this.input.mouse?.disableContextMenu();
+  }
+
+  private async loadData(): Promise<void> {
+    this.showLoadingOverlay();
+    try {
+      const [instancesRes, loadoutRes] = await Promise.all([
+        apiClient.getItemInstances(),
+        apiClient.getLoadout(),
+      ]);
+
+      // NOTE: proto JSON tags for ItemInstance are snake_case (attack_power,
+      // weapon_type, armor_slot, ...) — NOT camelCase. Do not use item.attackPower.
+      const allItems: ItemState[] = (instancesRes.result?.items || []).map((item: any) => ({
+        item_id: item.template_id || '',
+        entity_id: item.id || '',
+        name: item.name || '',
+        quantity: 1,
+        attack_power: item.attack_power || undefined,
+        critical_rate: item.critical_rate || undefined,
+        weapon_type: item.weapon_type || undefined,
+        defense_rating: item.defense_rating || undefined,
+        armor_slot: item.armor_slot || undefined,
+        healing_amount: item.healing_amount || undefined,
+        mana_amount: item.mana_amount || undefined,
+        description: item.description || undefined,
+      }));
+
+      // Build equipped items from loadout response
+      const loadout = loadoutRes.result || {};
+      const equippedIds = new Set<string>();
+
+      const findAndEquip = (id: string, slot: EquipmentSlot) => {
+        if (!id) return;
+        const item = allItems.find(i => i.entity_id === id);
+        if (item) {
+          this.equipped[slot] = item;
+          equippedIds.add(id);
+        }
+      };
+
+      findAndEquip(loadout.weaponId, 'weapon');
+      findAndEquip(loadout.headId, 'head');
+      findAndEquip(loadout.chestId, 'body');
+      findAndEquip(loadout.glovesId, 'hands');
+      findAndEquip(loadout.legsId, 'feet');
+      findAndEquip(loadout.ring1Id, 'ring_1');
+      findAndEquip(loadout.ring2Id, 'ring_2');
+      findAndEquip(loadout.consumable1Id, 'consumable_1');
+      findAndEquip(loadout.consumable2Id, 'consumable_2');
+      findAndEquip(loadout.consumable3Id, 'consumable_3');
+
+      // Remaining items go to inventory
+      this.inventory = allItems.filter(i => !equippedIds.has(i.entity_id));
+
+      // Update UI
+      if (this.equipmentPanel) {
+        this.equipmentPanel.updateEquipment(this.equipped);
+        this.equipmentPanel.updateInventory(this.inventory);
+      }
+    } catch (err) {
+      console.error('Failed to load loadout data:', err);
+    } finally {
+      this.hideLoadingOverlay();
+    }
+  }
+
+  private async withLoading(fn: () => Promise<any>): Promise<void> {
+    this.showLoadingOverlay();
+    try {
+      await fn();
+    } catch (err) {
+      console.error('Loadout update failed:', err);
+    } finally {
+      this.hideLoadingOverlay();
+    }
+  }
+
+  private showLoadingOverlay(): void {
+    this.isLoading = true;
+    const { width, height } = this.cameras.main;
+
+    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.4);
+    bg.setInteractive(); // blocks clicks through
+
+    const text = this.add.text(width / 2, height / 2, 'UPDATING...', {
+      fontSize: '16px',
+      color: '#00f0ff',
+      letterSpacing: 4,
+    });
+    text.setOrigin(0.5);
+
+    this.loadingOverlay = this.add.container(0, 0, [bg, text]);
+    this.loadingOverlay.setDepth(2000);
+  }
+
+  private hideLoadingOverlay(): void {
+    this.isLoading = false;
+    if (this.loadingOverlay) {
+      this.loadingOverlay.destroy();
+      this.loadingOverlay = undefined;
+    }
   }
 
   private returnToMenu(): void {

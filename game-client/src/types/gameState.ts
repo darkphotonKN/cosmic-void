@@ -24,7 +24,23 @@ export interface PlayerState {
   position: Position;
   direction: PlayerDirection;
   inventory?: ItemState[]; // 玩家背包
+  equipment?: EquipmentState; // 玩家已裝備的 loadout
   escape: boolean;
+}
+
+// Player equipment state from server (matches Go types.EquipmentState JSON tags).
+// Note: backend uses chest/gloves/legs; frontend UI uses body/hands/feet — map when consuming.
+export interface EquipmentState {
+  weapon: ItemState | null;
+  head: ItemState | null;
+  chest: ItemState | null;
+  gloves: ItemState | null;
+  legs: ItemState | null;
+  ring_1: ItemState | null;
+  ring_2: ItemState | null;
+  consumable_1: ItemState | null;
+  consumable_2: ItemState | null;
+  consumable_3: ItemState | null;
 }
 
 // Door/interactable state

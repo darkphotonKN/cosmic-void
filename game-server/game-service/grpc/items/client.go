@@ -103,3 +103,36 @@ func (c *Client) ListConsumablesWithTemplate(ctx context.Context) (*pb.ListConsu
 	consumables, err := client.ListConsumablesWithTemplate(ctx, &emptypb.Empty{})
 	return consumables, err
 }
+
+func (c *Client) GetLoadout(ctx context.Context, req *pb.GetLoadoutRequest) (*pb.GetLoadoutResponse, error) {
+	conn, err := discovery.ServiceConnection(ctx, serviceName, c.registry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to items service: %w", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewItemsServiceClient(conn)
+	return client.GetLoadout(ctx, req)
+}
+
+func (c *Client) GetLoadoutWithItems(ctx context.Context, req *pb.GetLoadoutWithItemsRequest) (*pb.GetLoadoutWithItemsResponse, error) {
+	conn, err := discovery.ServiceConnection(ctx, serviceName, c.registry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to items service: %w", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewItemsServiceClient(conn)
+	return client.GetLoadoutWithItems(ctx, req)
+}
+
+func (c *Client) ListItemInstances(ctx context.Context, req *pb.ListItemInstancesRequest) (*pb.ListItemInstancesResponse, error) {
+	conn, err := discovery.ServiceConnection(ctx, serviceName, c.registry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to items service: %w", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewItemsServiceClient(conn)
+	return client.ListItemInstances(ctx, req)
+}

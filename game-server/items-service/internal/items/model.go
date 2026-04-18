@@ -164,6 +164,8 @@ type ItemInstance struct {
 
 	Durability *int `db:"durability" json:"durability"`
 
+	Description *string `db:"description" json:"description"`
+
 	BuyPrice  *int `db:"buy_price" json:"buy_price"`
 	SellPrice *int `db:"sell_price" json:"sell_price"`
 
@@ -403,4 +405,28 @@ type Loadout struct {
 	Consumable3Id *uuid.UUID `db:"consumable_3_id"`
 	CreatedAt     time.Time  `db:"created_at"`
 	UpdatedAt     time.Time  `db:"updated_at"`
+}
+
+type LoadoutWithItems struct {
+	Weapon      *ItemInstance
+	Head        *ItemInstance
+	Chest       *ItemInstance
+	Gloves      *ItemInstance
+	Legs        *ItemInstance
+	Ring1       *ItemInstance
+	Ring2       *ItemInstance
+	Consumable1 *ItemInstance
+	Consumable2 *ItemInstance
+	Consumable3 *ItemInstance
+}
+
+type ListItemInstancesRequest struct {
+	MemberId uuid.UUID `json:"member_id" binding:"required"`
+}
+
+
+type UpdateLoadoutRequest struct {
+	MemberId       uuid.UUID  `json:"member_id" binding:"required"`
+	Slot           string     `json:"slot" binding:"required"`
+	ItemInstanceId *uuid.UUID `json:"item_instance_id"`
 }

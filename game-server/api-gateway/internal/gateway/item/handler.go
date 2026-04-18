@@ -1,6 +1,7 @@
 package item
 
 import (
+	"log"
 	"net/http"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/items"
@@ -555,6 +556,7 @@ func (h *Handler) GetLoadoutHandler(c *gin.Context) {
 	}
 	result, err := h.client.GetLoadout(c.Request.Context(), grpcReq)
 	if err != nil {
+		log.Printf("GetLoadout error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"statusCode": http.StatusInternalServerError,
 			"message":    "Internal server error",
@@ -565,6 +567,80 @@ func (h *Handler) GetLoadoutHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"statusCode": http.StatusOK,
 		"message":    "Loadout retrieved successfully",
+		"result":     result,
+	})
+}
+
+func (h *Handler) ListItemInstancesHandler(c *gin.Context) {
+	userIdStr, exists := c.Get("userIdStr")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"statusCode": http.StatusUnauthorized,
+			"message":    "User ID not found in context",
+		})
+		return
+	}
+
+	grpcReq := &pb.ListItemInstancesRequest{
+		MemberId: userIdStr.(string),
+	}
+	result, err := h.client.ListItemInstances(c.Request.Context(), grpcReq)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"statusCode": http.StatusInternalServerError,
+			"message":    "Internal server error",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"statusCode": http.StatusOK,
+		"message":    "Item instances retrieved successfully",
+		"result":     result,
+	})
+}
+
+func (h *Handler) UpdateLoadoutHandler(c *gin.Context) {
+	userIdStr, exists := c.Get("userIdStr")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"statusCode": http.StatusUnauthorized,
+			"message":    "User ID not found in context",
+		})
+		return
+	}
+
+	var body struct {
+		Slot           string `json:"slot" binding:"required"`
+		ItemInstanceId string `json:"item_instance_id"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"statusCode": http.StatusBadRequest,
+			"message":    "Invalid request body",
+		})
+		return
+	}
+
+	grpcReq := &pb.UpdateLoadoutRequest{
+		MemberId:       userIdStr.(string),
+		Slot:           body.Slot,
+		ItemInstanceId: body.ItemInstanceId,
+	}
+	log.Printf("UpdateLoadout request: member=%s slot=%s item=%s", grpcReq.MemberId, grpcReq.Slot, grpcReq.ItemInstanceId)
+	result, err := h.client.UpdateLoadout(c.Request.Context(), grpcReq)
+	if err != nil {
+		log.Printf("UpdateLoadout error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"statusCode": http.StatusInternalServerError,
+			"message":    "Internal server error",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"statusCode": http.StatusOK,
+		"message":    "Loadout updated successfully",
 		"result":     result,
 	})
 }

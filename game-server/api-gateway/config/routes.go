@@ -34,7 +34,7 @@ func SetupRouter(registry discovery.Registry, ch *amqp.Channel) *gin.Engine {
 	// TODO: CORS for development, remove in PROD
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"GET", "POST", "PATCH", "OPTIONS"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,
 	}))
@@ -151,6 +151,8 @@ func SetupRouter(registry discovery.Registry, ch *amqp.Channel) *gin.Engine {
 	itemRoutes.GET("/rarities", itemHandler.ListItemRaritiesHandler)
 
 	itemRoutes.GET("/loadout", itemHandler.GetLoadoutHandler)
+	itemRoutes.PUT("/loadout", itemHandler.UpdateLoadoutHandler)
+	itemRoutes.GET("/instances", itemHandler.ListItemInstancesHandler)
 
 	return router
 }

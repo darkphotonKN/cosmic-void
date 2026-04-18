@@ -80,6 +80,9 @@ type Repository interface {
 	CreateItemTemplateTx(ctx context.Context, tx *sqlx.Tx, template *ItemTemplate) error
 
 	GetLoadout(ctx context.Context, req *GetLoadoutRequest) (*Loadout, error)
+	GetItemInstanceByID(ctx context.Context, id uuid.UUID) (*ItemInstance, error)
+	ListItemInstances(ctx context.Context, req *ListItemInstancesRequest) ([]*ItemInstance, error)
+	UpdateLoadout(ctx context.Context, req *UpdateLoadoutRequest) error
 }
 
 // ==========================================
@@ -598,4 +601,45 @@ func (s *service) publishItemCreatedEvent(ctx context.Context, userId, itemName,
 
 func (h *service) GetLoadout(ctx context.Context, req *GetLoadoutRequest) (*Loadout, error) {
 	return h.repo.GetLoadout(ctx, req)
+}
+
+func (h *service) GetLoadoutWithItems(ctx context.Context, req *GetLoadoutRequest) (*LoadoutWithItems, error) {
+	loadout, err := h.repo.GetLoadout(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &LoadoutWithItems{}
+
+	getItem := func(id *uuid.UUID) *ItemInstance {
+		if id == nil {
+			return nil
+		}
+		item, err := h.repo.GetItemInstanceByID(ctx, *id)
+		if err != nil {
+			return nil
+		}
+		return item
+	}
+
+	result.Weapon = getItem(loadout.WeaponId)
+	result.Head = getItem(loadout.HeadId)
+	result.Chest = getItem(loadout.ChestId)
+	result.Gloves = getItem(loadout.GlovesId)
+	result.Legs = getItem(loadout.LegsId)
+	result.Ring1 = getItem(loadout.Ring1Id)
+	result.Ring2 = getItem(loadout.Ring2Id)
+	result.Consumable1 = getItem(loadout.Consumable1Id)
+	result.Consumable2 = getItem(loadout.Consumable2Id)
+	result.Consumable3 = getItem(loadout.Consumable3Id)
+
+	return result, nil
+}
+
+func (h *service) ListItemInstances(ctx context.Context, req *ListItemInstancesRequest) ([]*ItemInstance, error) {
+	return h.repo.ListItemInstances(ctx, req)
+}
+
+func (h *service) UpdateLoadout(ctx context.Context, req *UpdateLoadoutRequest) error {
+	return h.repo.UpdateLoadout(ctx, req)
 }
