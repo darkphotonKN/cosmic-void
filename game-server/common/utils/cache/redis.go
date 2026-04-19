@@ -82,15 +82,17 @@ func (r *redisClient) AcquireLock(ctx context.Context, key string, ttl time.Dura
 	}
 
 	if success {
-		slog.Debug("Lock acquired successfully",
-			"key", key,
-			"lockID", lockID,
-			"ttl", ttl,
-		)
+		// TEST: uncomment if testing only
+		// slog.Debug("Lock acquired successfully",
+		// 	"key", key,
+		// 	"lockID", lockID,
+		// 	"ttl", ttl,
+		// )
 		return lockID, true, nil
 	}
 
-	slog.Debug("Lock already held by another instance", "key", key)
+	// TEST: uncomment if testing only
+	// slog.Debug("Lock already held by another instance", "key", key)
 	return "", false, nil
 
 }
@@ -126,9 +128,10 @@ func (r *redisClient) ReleaseLock(ctx context.Context, key string, lockID string
 		return fmt.Errorf("lock not held or already expired")
 	}
 
-	slog.Debug("Lock released successfully",
-		"key", key,
-		"lockID", lockID,
-	)
+	// TEST: uncomment if testing only
+	// slog.Debug("Lock released successfully",
+	// 	"key", key,
+	// 	"lockID", lockID,
+	// )
 	return nil
 }

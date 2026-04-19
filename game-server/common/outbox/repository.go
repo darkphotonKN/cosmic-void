@@ -4,7 +4,9 @@ import (
 	"context"
 	"log/slog"
 
+	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -30,6 +32,30 @@ func (r *repo) CreateOutbox(ctx context.Context, params OutboxParams) error {
 		slog.Error("Error occured when attempting to create outbox",
 			"err", err)
 		return commonhelpers.AnalyzeDBErr(err)
+	}
+
+	return nil
+}
+
+func (r *repo) UpdateOutboxToPublished(ctx context.Context, id uuid.UUID) error {
+	query := `
+		UPDATE 
+			outbox
+		SET published_at = NOW()
+		WHERE id = $1
+	`
+
+	results, err := r.db.ExecContext(ctx, query, id)
+
+	if err != nil {
+		slog.Error("Error occured when attempting to update published on outbox item",
+			"err", err)
+		return commonhelpers.AnalyzeDBErr(err)
+	}
+
+	rows, _ := results.RowsAffected()
+	if rows == 0 {
+		return commonconstants.ErrOutboxItemNotFound
 	}
 
 	return nil
