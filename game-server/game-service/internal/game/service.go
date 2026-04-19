@@ -11,7 +11,6 @@ import (
 	commonoutbox "github.com/darkphotonKN/cosmic-void-server/common/outbox"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 	"github.com/google/uuid"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -41,43 +40,27 @@ func (s *service) PublishMatchComplete(ctx context.Context, data *types.RawMatch
 	}
 
 	// send to outbox for publishing
+	err = s.outboxPublisher.CreateOutbox(ctx, commonoutbox.OutboxParams{
+		RoutingKey: commonconstants.GameMatchEnded,
+		Exchange:   commonconstants.GameEventsExchange,
+		Payload:    protoData.MatchEndedEvent,
+	})
 
-	go func() {
-		err := s.publishCh.PublishWithContext(
-			ctx,
-			commonconstants.GameEventsExchange,
-			commonconstants.GameMatchEnded,
-			commonbroker.Message{
-				ContentType:  "application/protobuf",
-				Body:         protoData.MatchEndedEvent,
-				DeliveryMode: amqp.Persistent,
-			})
-		if err != nil {
-			slog.Error("Error publishing game match end event", "error", err)
-			return
-		}
-	}()
+	if err != nil {
+		slog.Error("Error publishing game match end event", "error", err)
+		return
+	}
 
-	go func() {
-		slog.Debug("Publishing items extracted event with items extracted payload.",
-			"event", commonconstants.ItemsExtracted,
-			"payload", commonconstants.ItemsExtracted,
-		)
-		err := s.publishCh.PublishWithContext(
-			ctx,
-			commonconstants.GameEventsExchange,
-			commonconstants.ItemsExtracted,
-			commonbroker.Message{
-				ContentType:  "application/protobuf",
-				Body:         protoData.ItemsExtractedEvent,
-				DeliveryMode: amqp.Persistent,
-			})
+	err = s.outboxPublisher.CreateOutbox(ctx, commonoutbox.OutboxParams{
+		RoutingKey: commonconstants.ItemsExtracted,
+		Exchange:   commonconstants.GameEventsExchange,
+		Payload:    protoData.ItemsExtractedEvent,
+	})
 
-		if err != nil {
-			slog.Error("Error publishing items extracted event", "error", err)
-			return
-		}
-	}()
+	if err != nil {
+		slog.Error("Error publishing items extracted event", "error", err)
+		return
+	}
 }
 
 /**

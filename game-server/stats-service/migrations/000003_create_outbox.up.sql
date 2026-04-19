@@ -5,7 +5,6 @@ CREATE TABLE outbox (
     -- Core routing and event metadata
     routing_key VARCHAR(255) NOT NULL,
     exchange VARCHAR(255) NOT NULL,
-    event_type VARCHAR(255) NOT NULL,
     payload BYTEA NOT NULL,
 
     -- Timestamps

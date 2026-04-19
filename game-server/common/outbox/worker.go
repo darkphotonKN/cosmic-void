@@ -6,4 +6,11 @@ package outbox
 **/
 
 type OutboxWorker struct {
+	outboxRepo WorkerOutboxGetter
+}
+
+type WorkerOutboxGetter interface {
+}
+
+func (w *OutboxWorker) PublishOutboxEvent() error {
 }

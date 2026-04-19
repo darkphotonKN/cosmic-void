@@ -14,8 +14,13 @@ func NewService(repo Repository) *service {
 
 type Repository interface {
 	CreateOutbox(ctx context.Context, params OutboxParams) error
+	GetOldestUnpublishedOutboxItem(ctx context.Context) (*OutboxEvent, error)
 }
 
 func (s *service) CreateOutbox(ctx context.Context, params OutboxParams) error {
 	return s.repo.CreateOutbox(ctx, params)
+}
+
+func (s *service) GetOldestUnpublishedOutboxItem(ctx context.Context) (*OutboxEvent, error) {
+	return s.repo.GetOldestUnpublishedOutboxItem(ctx)
 }

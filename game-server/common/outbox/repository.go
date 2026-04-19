@@ -20,8 +20,8 @@ func NewRepo(db *sqlx.DB) *repo {
 
 func (r *repo) CreateOutbox(ctx context.Context, params OutboxParams) error {
 	query := `
-		INSERT INTO outbox(routing_key, exchange, event_type, payload)
-		VALUES(:routing_key, :exchange, event_type, :payload)
+		INSERT INTO outbox(routing_key, exchange, payload)
+		VALUES(:routing_key, :exchange, :payload)
 	`
 
 	_, err := r.db.NamedExecContext(ctx, query, params)
@@ -33,4 +33,31 @@ func (r *repo) CreateOutbox(ctx context.Context, params OutboxParams) error {
 	}
 
 	return nil
+}
+
+func (r *repo) GetOldestUnpublishedOutboxItem(ctx context.Context) (*OutboxEvent, error) {
+	var outboxItem OutboxEvent
+
+	query := `
+	SELECT 
+		id,
+		routing_key,
+		exchange,
+		payload,
+		created_at
+	FROM outbox
+	WHERE published_at IS NULL
+	ORDER BY created_at ASC
+	LIMIT 1
+	`
+
+	err := r.db.GetContext(ctx, &outboxItem, query)
+
+	if err != nil {
+		slog.Error("Error occured when attempting to retrive from outbox table",
+			"err", err)
+		return nil, commonhelpers.AnalyzeDBErr(err)
+	}
+
+	return &outboxItem, nil
 }
