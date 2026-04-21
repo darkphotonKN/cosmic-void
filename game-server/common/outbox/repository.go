@@ -44,7 +44,6 @@ func (r *repo) UpdateOutboxToPublished(ctx context.Context, id uuid.UUID) error 
 		SET published_at = NOW()
 		WHERE id = $1
 	`
-
 	results, err := r.db.ExecContext(ctx, query, id)
 
 	if err != nil {
@@ -61,8 +60,14 @@ func (r *repo) UpdateOutboxToPublished(ctx context.Context, id uuid.UUID) error 
 	return nil
 }
 
-func (r *repo) GetOldestUnpublishedOutboxItem(ctx context.Context) (*OutboxEvent, error) {
-	var outboxItem OutboxEvent
+func (r *repo) GetUnpublishedOutboxItems(ctx context.Context, limit *int) ([]*OutboxEvent, error) {
+
+	defaultLimit := 20
+	if limit == nil {
+		limit = &defaultLimit
+	}
+
+	var outboxItem []*OutboxEvent
 
 	query := `
 	SELECT 
@@ -74,10 +79,9 @@ func (r *repo) GetOldestUnpublishedOutboxItem(ctx context.Context) (*OutboxEvent
 	FROM outbox
 	WHERE published_at IS NULL
 	ORDER BY created_at ASC
-	LIMIT 1
 	`
 
-	err := r.db.GetContext(ctx, &outboxItem, query)
+	err := r.db.SelectContext(ctx, &outboxItem, query)
 
 	if err != nil {
 		slog.Error("Error occured when attempting to retrive from outbox table",
@@ -85,5 +89,5 @@ func (r *repo) GetOldestUnpublishedOutboxItem(ctx context.Context) (*OutboxEvent
 		return nil, commonhelpers.AnalyzeDBErr(err)
 	}
 
-	return &outboxItem, nil
+	return outboxItem, nil
 }

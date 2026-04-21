@@ -18,7 +18,7 @@ func NewService(repo Repository) *service {
 
 type Repository interface {
 	CreateOutbox(ctx context.Context, params OutboxParams) error
-	GetOldestUnpublishedOutboxItem(ctx context.Context) (*OutboxEvent, error)
+	GetUnpublishedOutboxItems(ctx context.Context, limit *int) ([]*OutboxEvent, error)
 	UpdateOutboxToPublished(ctx context.Context, id uuid.UUID) error
 }
 
@@ -30,6 +30,6 @@ func (s *service) UpdateOutboxToPublished(ctx context.Context, id uuid.UUID) err
 	return s.repo.UpdateOutboxToPublished(ctx, id)
 }
 
-func (s *service) GetOldestUnpublishedOutboxItem(ctx context.Context) (*OutboxEvent, error) {
-	return s.repo.GetOldestUnpublishedOutboxItem(ctx)
+func (s *service) GetPendingOutboxItems(ctx context.Context, limit *int) ([]*OutboxEvent, error) {
+	return s.repo.GetUnpublishedOutboxItems(ctx, limit)
 }

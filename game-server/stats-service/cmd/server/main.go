@@ -9,8 +9,10 @@ import (
 	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/common/broker"
+	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
+	commonoutbox "github.com/darkphotonKN/cosmic-void-server/common/outbox"
 	commontelemetry "github.com/darkphotonKN/cosmic-void-server/common/telemetry"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/darkphotonKN/cosmic-void-server/stats-service/config"
@@ -130,6 +132,21 @@ func main() {
 	defer func() {
 		close()
 		ch.Close()
+	}()
+
+	// --- outbox workers ---
+	outboxRepo := commonoutbox.NewRepo(db)
+	outboxServ := commonoutbox.NewService(outboxRepo)
+	publisher := commonbroker.NewAmqpPublisher(ch)
+	outboxWorker := commonoutbox.NewOutboxWorker(time.Minute*60, 20, outboxServ, publisher)
+
+	workerCtx, cancel := context.WithCancel(ctx)
+
+	go func() {
+		defer cancel()
+
+		outboxWorker.InitiateWork(workerCtx)
+
 	}()
 
 	// use the new config setup to initialize all services
