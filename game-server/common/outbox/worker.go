@@ -50,7 +50,7 @@ func (w *OutboxWorker) InitiateWork(ctx context.Context) {
 		for {
 			select {
 			case <-timer.C:
-				w.PublishOutboxEvent(ctx)
+				w.PublishOutboxEvents(ctx)
 
 				// cancelled
 			case <-ctx.Done():
@@ -64,7 +64,7 @@ func (w *OutboxWorker) InitiateWork(ctx context.Context) {
 /**
 * Publishes a single event from an outbox item pulled from the outbox table.
 **/
-func (w *OutboxWorker) PublishOutboxEvent(ctx context.Context) error {
+func (w *OutboxWorker) PublishOutboxEvents(ctx context.Context) error {
 	outboxEvts, err := w.outboxRetriever.GetPendingOutboxItems(ctx, w.batchCount)
 
 	if err != nil {
@@ -86,24 +86,25 @@ func (w *OutboxWorker) PublishOutboxEvent(ctx context.Context) error {
 
 		if err != nil {
 			slog.Error("Error occured when attempting to publish event from outbox item.",
+				"outbox_id", evt.ID,
 				"err", err)
-			return err
+			continue
 		}
 
 		// no error, rabbitmq acknowledged, recieved, update status.
-		go func() {
-			for {
-				var offsetTime time.Duration = 60
-				var retries = 0
+		go func(evtId uuid.UUID) {
+			var offsetTime = time.Second * 10
+			var retries = 0
 
-				err = w.outboxRetriever.UpdateOutboxToPublished(ctx, evt.ID)
+			for {
+				err := w.outboxRetriever.UpdateOutboxToPublished(ctx, evtId)
 
 				if err != nil {
 					if commonhelpers.IsTransientError(err) && retries < 5 {
 						slog.Error("Transient error when attempting to update outbox to published.",
 							"err", err)
 
-						time.Sleep(time.Second * offsetTime)
+						time.Sleep(offsetTime)
 
 						// exponential backoff
 						offsetTime = offsetTime * 2
@@ -120,7 +121,7 @@ func (w *OutboxWorker) PublishOutboxEvent(ctx context.Context) error {
 				// update worked, exit goroutine
 				return
 			}
-		}()
+		}(evt.ID)
 	}
 
 	return nil
