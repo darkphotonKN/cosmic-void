@@ -40,6 +40,24 @@ func (r *repository) Create(ctx context.Context, name, email, password string) (
 	return memberId, nil
 }
 
+func (r *repository) CreateTx(ctx context.Context, tx *sqlx.Tx, name, email, password string) (uuid.UUID, error) {
+	ctx, span := repoTracer.Start(ctx, "repository.CreateTx")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("email", email))
+
+	memberId := uuid.New()
+	query := `INSERT INTO members (id, name, email, password) VALUES ($1, $2, $3, $4)`
+
+	_, err := tx.ExecContext(ctx, query, memberId, name, email, password)
+	if err != nil {
+		slog.Error("Error creating member in tx", "error", err)
+		return uuid.Nil, commonhelpers.AnalyzeDBErr(err)
+	}
+
+	return memberId, nil
+}
+
 func (r *repository) UpdatePassword(ctx context.Context, params MemberUpdatePasswordParams) error {
 	query := `UPDATE members SET password = :password WHERE id = :id`
 

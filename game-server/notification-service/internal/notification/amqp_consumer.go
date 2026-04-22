@@ -253,6 +253,17 @@ func (c *Consumer) handleResult(msg amqp.Delivery, err error, retryCount int, ev
 		return
 	}
 
+	// Duplicate delivery: the inbox already recorded this event_id.
+	// Ack so it leaves the queue — do NOT retry or DLQ.
+	if errors.Is(err, commonconstants.ErrAlreadyProcessed) {
+		msg.Ack(false)
+		slog.Info("Event already processed (duplicate), acking",
+			"event_type", eventType,
+			"identifier", identifier,
+		)
+		return
+	}
+
 	if errors.Is(err, commonconstants.ErrTransient) {
 		if retryCount < MaxRetries {
 			slog.Warn("Transient error, requeueing with delay",

@@ -14,23 +14,26 @@ import (
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
+	commonoutbox "github.com/darkphotonKN/cosmic-void-server/common/outbox"
 	"github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"go.opentelemetry.io/otel/codes"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type service struct {
-	Repo      Repository
-	publishCh commonbroker.Publisher
-	cache     cache.Cache
+	db              *sqlx.DB
+	Repo            Repository
+	publishCh       commonbroker.Publisher
+	cache           cache.Cache
+	outboxPublisher commonoutbox.OutboxPublisher
 }
 
 type Repository interface {
 	Create(ctx context.Context, name, email, password string) (uuid.UUID, error)
+	CreateTx(ctx context.Context, tx *sqlx.Tx, name, email, password string) (uuid.UUID, error)
 	UpdatePassword(ctx context.Context, params MemberUpdatePasswordParams) error
 	UpdateMemberInfo(ctx context.Context, id uuid.UUID, name, status string) error
 	GetByIdWithPassword(ctx context.Context, id uuid.UUID) (*models.Member, error)
@@ -44,11 +47,13 @@ type Repository interface {
 	UpdateSubscriptionStatus(ctx context.Context, memberID uuid.UUID, productID, status string) error
 }
 
-func NewService(repo Repository, publishCh commonbroker.Publisher, cacheService cache.Cache) *service {
+func NewService(db *sqlx.DB, repo Repository, publishCh commonbroker.Publisher, cacheService cache.Cache, outboxPublisher commonoutbox.OutboxPublisher) *service {
 	return &service{
-		Repo:      repo,
-		publishCh: publishCh,
-		cache:     cacheService,
+		db:              db,
+		Repo:            repo,
+		publishCh:       publishCh,
+		cache:           cacheService,
+		outboxPublisher: outboxPublisher,
 	}
 }
 
@@ -116,38 +121,56 @@ func (s *service) CreateMember(ctx context.Context, req *pb.CreateMemberRequest)
 		return nil, fmt.Errorf("error hashing password: %w", err)
 	}
 
-	// Create the member
-	memberId, err := s.Repo.Create(ctx, req.Name, req.Email, hashedPw)
-	if err != nil {
-		return nil, err
-	}
-
-	// publish to message broker
+	// Build the outbox payload up-front so a marshal failure aborts before
+	// we open a transaction.
 	payload := commonconstants.MemberSignedUpEventPayload{
-		UserID:     memberId.String(),
+		EventID:    uuid.NewString(),
+		UserID:     "", // filled in after member row is created
 		Name:       req.Name,
 		Email:      req.Email,
 		SignedUpAt: "", // TODO: update this to legit date
 	}
 
-	marshalledPayload, err := json.Marshal(payload)
+	// Atomic write: member row + outbox row share a single transaction so
+	// either both are visible or neither is. This is the core guarantee of
+	// the transactional outbox pattern — without it, an RPC can succeed
+	// while the event is lost (or vice versa).
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("begin tx: %w", err)
+	}
+	// Safety net: if we return before Commit, roll back. Commit below
+	// makes this a no-op.
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
+	memberId, err := s.Repo.CreateTx(ctx, tx, req.Name, req.Email, hashedPw)
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.publishCh.PublishWithContext(
-		ctx,
-		commonconstants.AuthEventsExchange,
-		commonconstants.MemberSignedUpEvent,
-		commonbroker.Message{
-			ContentType: "application/json",
-			Body:        marshalledPayload,
-			// persist message
-			DeliveryMode: amqp.Persistent,
-		})
+	payload.UserID = memberId.String()
+	marshalledPayload, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
 
-	// Get the created member
+	if err = s.outboxPublisher.CreateOutboxTx(ctx, tx, commonoutbox.OutboxParams{
+		RoutingKey: commonconstants.MemberSignedUpEvent,
+		Exchange:   commonconstants.AuthEventsExchange,
+		Payload:    marshalledPayload,
+	}); err != nil {
+		return nil, fmt.Errorf("write outbox: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit member+outbox: %w", err)
+	}
+
+	// Post-commit read: member is guaranteed to exist. A failure here
+	// does not affect the event — the outbox row is already durable and
+	// the worker will publish it.
 	member, err := s.Repo.GetById(ctx, memberId)
 	if err != nil {
 		return nil, err

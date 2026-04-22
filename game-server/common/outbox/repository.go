@@ -20,16 +20,28 @@ func NewRepo(db *sqlx.DB) *repo {
 	}
 }
 
-func (r *repo) CreateOutbox(ctx context.Context, params OutboxParams) error {
-	query := `
-		INSERT INTO outbox(routing_key, exchange, payload)
-		VALUES(:routing_key, :exchange, :payload)
-	`
+const createOutboxQuery = `
+	INSERT INTO outbox(routing_key, exchange, payload)
+	VALUES(:routing_key, :exchange, :payload)
+`
 
-	_, err := r.db.NamedExecContext(ctx, query, params)
+func (r *repo) CreateOutbox(ctx context.Context, params OutboxParams) error {
+	_, err := r.db.NamedExecContext(ctx, createOutboxQuery, params)
 
 	if err != nil {
 		slog.Error("Error occured when attempting to create outbox",
+			"err", err)
+		return commonhelpers.AnalyzeDBErr(err)
+	}
+
+	return nil
+}
+
+func (r *repo) CreateOutboxTx(ctx context.Context, tx *sqlx.Tx, params OutboxParams) error {
+	_, err := tx.NamedExecContext(ctx, createOutboxQuery, params)
+
+	if err != nil {
+		slog.Error("Error occured when attempting to create outbox in tx",
 			"err", err)
 		return commonhelpers.AnalyzeDBErr(err)
 	}

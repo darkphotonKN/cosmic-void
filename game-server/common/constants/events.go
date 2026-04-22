@@ -86,6 +86,7 @@ const (
 * - analytics-service
 **/
 type MemberSignedUpEventPayload struct {
+	EventID    string `json:"eventId"`
 	UserID     string `json:"userId"`
 	Name       string `json:"name"`
 	Email      string `json:"email"`

@@ -7,6 +7,7 @@ import (
 
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,6 +31,12 @@ func (m *mockRepository) Create(ctx context.Context, createNotification *CreateN
 	return m.createReturn, m.createErr
 }
 
+func (m *mockRepository) CreateTx(ctx context.Context, tx *sqlx.Tx, createNotification *CreateNotification) (*Notification, error) {
+	m.createCalled = true
+	m.createParams = createNotification
+	return m.createReturn, m.createErr
+}
+
 func (m *mockRepository) GetByUserID(ctx context.Context, request *QueryNotifications) ([]Notification, error) {
 	m.getByUserIDCalled = true
 	m.getByUserIDParams = request
@@ -40,6 +47,19 @@ func (m *mockRepository) Update(ctx context.Context, request *UpdateNotification
 	m.updateCalled = true
 	m.updateParams = request
 	return m.updateErr
+}
+
+func (m *mockRepository) MarkAllAsReadByUserID(ctx context.Context, userID uuid.UUID) (int64, error) {
+	return 0, nil
+}
+
+type mockInboxRepository struct {
+	inserted bool
+	err      error
+}
+
+func (m *mockInboxRepository) MarkEventProcessed(ctx context.Context, tx *sqlx.Tx, eventID uuid.UUID, eventType string) (bool, error) {
+	return m.inserted, m.err
 }
 
 func (m *mockRepository) TestProcessMemberSignedUp_Success(t *testing.T) {
@@ -62,7 +82,7 @@ func (m *mockRepository) TestProcessMemberSignedUp_Success(t *testing.T) {
 			UpdatedAt: time.Now(),
 		},
 	}
-	service := NewService(mockRepo)
+	service := NewService(nil, mockRepo, &mockInboxRepository{inserted: true})
 
 	payload := &commonconstants.MemberSignedUpEventPayload{
 		UserID: "550e8400-e29b-41d4-a716-446655440001",
@@ -86,7 +106,7 @@ func (m *mockRepository) TestProcessMemberSignedUp_Success(t *testing.T) {
 func (m *mockRepository) TestProcessMemberSignedUp_InvalidUUID(t *testing.T) {
 	// ===== Arrange =====
 	mockRepo := &mockRepository{}
-	service := NewService(mockRepo)
+	service := NewService(nil, mockRepo, &mockInboxRepository{inserted: true})
 	payload := &commonconstants.MemberSignedUpEventPayload{
 		UserID: "invalid-uuid",
 		Name:   "kiki_test",

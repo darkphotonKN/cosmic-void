@@ -20,4 +20,7 @@ var (
 
 	// outbox
 	ErrOutboxItemNotFound = errors.New("outbox item not found")
+
+	// inbox (consumer-side idempotency)
+	ErrAlreadyProcessed = errors.New("event already processed")
 )

@@ -8,6 +8,7 @@ import (
 
 	"github.com/darkphotonKN/cosmic-void-server/auth-service/internal/constants"
 	"github.com/darkphotonKN/cosmic-void-server/auth-service/internal/member"
+	commonoutbox "github.com/darkphotonKN/cosmic-void-server/common/outbox"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -75,7 +76,9 @@ func runMigrations(db *sqlx.DB) error {
 func SeedDefaults(db *sqlx.DB) {
 	// --- default members ---
 	memberRepo := member.NewRepository(db)
-	memberService := member.NewService(memberRepo, nil, nil)
+	outboxRepo := commonoutbox.NewRepo(db)
+	outboxService := commonoutbox.NewService(outboxRepo)
+	memberService := member.NewService(db, memberRepo, nil, nil, outboxService)
 
 	err := memberService.CreateDefaultMembers(constants.DefaultMembers)
 

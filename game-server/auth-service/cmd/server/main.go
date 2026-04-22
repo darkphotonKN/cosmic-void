@@ -16,6 +16,7 @@ import (
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
+	commonoutbox "github.com/darkphotonKN/cosmic-void-server/common/outbox"
 	commontelemetry "github.com/darkphotonKN/cosmic-void-server/common/telemetry"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
@@ -161,8 +162,26 @@ func main() {
 	// --- member service setup ---
 	publishCh := commonbroker.NewAmqpPublisher(ch)
 	memberRepo := member.NewRepository(db)
-	memberService := member.NewService(memberRepo, publishCh, cacheService)
+
+	// --- outbox workers ---
+	// The worker drains the outbox table and publishes events to RabbitMQ.
+	// Without it, rows written by CreateMember would sit in the DB forever
+	// and downstream services (notification, etc.) would never see the
+	// event. 5s cycle keeps sign-up → notification latency small while
+	// staying cheap for a low-traffic auth DB.
+	outboxRepo := commonoutbox.NewRepo(db)
+	outboxService := commonoutbox.NewService(outboxRepo)
+
+	memberService := member.NewService(db, memberRepo, publishCh, cacheService, outboxService)
 	memberHandler := member.NewHandler(memberService)
+
+	outboxWorker := commonoutbox.NewOutboxWorker(time.Second*5, 20, outboxService, publishCh)
+	workerCtx, workerCancel := context.WithCancel(ctx)
+	defer workerCancel()
+	// InitiateWork spawns its own goroutine and returns immediately — do
+	// not wrap it in another goroutine, that would cancel the context as
+	// soon as the wrapper returned and kill the worker.
+	outboxWorker.InitiateWork(workerCtx)
 
 	// --- upload service setup ---
 	if s3Client != nil {

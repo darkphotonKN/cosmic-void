@@ -13,12 +13,12 @@ import (
 
 // SetupServices initializes all services and their dependencies
 func SetupServices(db *sqlx.DB, amqpChannel *amqp.Channel) *grpc.Server {
-	// Create repository
+	// Create repositories
 	repo := notification.NewRepository(db)
+	inboxRepo := notification.NewInboxRepository(db)
 
-	// Create service with repository and AMQP channel
-	// publishCh := commonbroker.NewAmqpPublisher(amqpChannel)
-	service := notification.NewService(repo)
+	// Create service with repositories and DB handle (for tx-wrapped inbox pattern)
+	service := notification.NewService(db, repo, inboxRepo)
 
 	// Create gRPC handler with service
 	handler := notification.NewHandler(service)

@@ -22,6 +22,19 @@ func NewRepository(db *sqlx.DB) *repository {
 }
 
 func (r *repository) Create(ctx context.Context, createNotification *CreateNotification) (*Notification, error) {
+	return insertNotification(ctx, r.db, createNotification)
+}
+
+func (r *repository) CreateTx(ctx context.Context, tx *sqlx.Tx, createNotification *CreateNotification) (*Notification, error) {
+	return insertNotification(ctx, tx, createNotification)
+}
+
+// sqlxQuerier is the subset of sqlx.DB / sqlx.Tx we need for QueryRowx.
+type sqlxQuerier interface {
+	QueryRowx(query string, args ...any) *sqlx.Row
+}
+
+func insertNotification(ctx context.Context, q sqlxQuerier, createNotification *CreateNotification) (*Notification, error) {
 	now := time.Now()
 	data, _ := json.Marshal(createNotification.Data)
 
@@ -47,7 +60,7 @@ func (r *repository) Create(ctx context.Context, createNotification *CreateNotif
 
 	`
 
-	err := r.db.QueryRowx(
+	err := q.QueryRowx(
 		query,
 		notificationModel.ID,
 		notificationModel.UserID,

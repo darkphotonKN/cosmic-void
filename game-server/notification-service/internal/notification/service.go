@@ -2,32 +2,49 @@ package notification
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
 )
 
 type Repository interface {
 	Create(ctx context.Context, createNotification *CreateNotification) (*Notification, error)
+	CreateTx(ctx context.Context, tx *sqlx.Tx, createNotification *CreateNotification) (*Notification, error)
 	GetByUserID(ctx context.Context, request *QueryNotifications) ([]Notification, error)
 	Update(ctx context.Context, request *UpdateNotification) error
 	MarkAllAsReadByUserID(ctx context.Context, userID uuid.UUID) (int64, error)
 }
 
 type service struct {
-	repo Repository
+	db        *sqlx.DB
+	repo      Repository
+	inboxRepo InboxRepository
 }
 
-func NewService(repo Repository) *service {
+func NewService(db *sqlx.DB, repo Repository, inboxRepo InboxRepository) *service {
 	return &service{
-		repo: repo,
+		db:        db,
+		repo:      repo,
+		inboxRepo: inboxRepo,
 	}
 }
 
 func (s *service) ProcessMemberSignedUp(ctx context.Context, payload *commonconstants.MemberSignedUpEventPayload) error {
+	eventID, err := uuid.Parse(payload.EventID)
+	if err != nil {
+		slog.Warn("invalid event UUID format",
+			"event_id", payload.EventID,
+			"err", err,
+		)
+		return err
+	}
+
 	id, err := uuid.Parse(payload.UserID)
 	if err != nil {
 		slog.Warn("invalid member UUID format",
@@ -36,12 +53,12 @@ func (s *service) ProcessMemberSignedUp(ctx context.Context, payload *commoncons
 		)
 		return err
 	}
+
 	templateData := map[string]any{
 		"Name":  payload.Name,
 		"Email": payload.Email,
 	}
 	title, message, notificationType, err := RenderTemplate("member.signedup", templateData)
-
 	if err != nil {
 		slog.Error("Failed to render template", "error", err)
 		return err
@@ -50,20 +67,60 @@ func (s *service) ProcessMemberSignedUp(ctx context.Context, payload *commoncons
 	createNotification := &CreateNotification{
 		UserID:           id,
 		NotificationType: notificationType,
-		EventType:        "member.signedup",
+		EventType:        commonconstants.MemberSignedUpEvent,
 		Title:            title,
 		Message:          message,
 		Data:             templateData,
 	}
 
-	_, err = s.repo.Create(ctx, createNotification)
+	return s.runInTx(ctx, eventID, commonconstants.MemberSignedUpEvent, func(tx *sqlx.Tx) error {
+		_, err := s.repo.CreateTx(ctx, tx, createNotification)
+		if err != nil {
+			slog.Warn("Error occurred when creating new notification",
+				"user_id", payload.UserID,
+				"err", err,
+			)
+		}
+		return err
+	})
+}
+
+// runInTx opens a tx, records the event in the inbox, runs fn, and commits.
+// If the event was already processed, it returns ErrAlreadyProcessed without running fn.
+func (s *service) runInTx(ctx context.Context, eventID uuid.UUID, eventType string, fn func(tx *sqlx.Tx) error) (err error) {
+	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
-		slog.Warn("Error occurred when creating new notification",
-			"user_id", payload.UserID,
-			"err", err,
-		)
+		return fmt.Errorf("begin tx: %w", err)
 	}
-	return err
+	defer func() {
+		if err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil && !errors.Is(rbErr, sql.ErrTxDone) {
+				slog.Warn("rollback failed", "err", rbErr)
+			}
+		}
+	}()
+
+	inserted, err := s.inboxRepo.MarkEventProcessed(ctx, tx, eventID, eventType)
+	if err != nil {
+		return fmt.Errorf("mark event processed: %w", err)
+	}
+	if !inserted {
+		slog.Info("event already processed, skipping",
+			"event_id", eventID,
+			"event_type", eventType,
+		)
+		err = commonconstants.ErrAlreadyProcessed
+		return err
+	}
+
+	if err = fn(tx); err != nil {
+		return err
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit tx: %w", err)
+	}
+	return nil
 }
 
 func (s *service) ProcessItemCreated(ctx context.Context, payload *pb.ItemCreatedEvent) error {

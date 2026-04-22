@@ -68,3 +68,27 @@ func runMigrations(db *sqlx.DB) error {
 	fmt.Printf("Successfully ran all migrations.\n\n")
 	return nil
 }
+
+func InitStatsServiceDB() *sqlx.DB {
+	// construct the db connection string
+	dsn := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		os.Getenv("STATS_DB_USER"),
+		os.Getenv("STATS_DB_PASSWORD"),
+		os.Getenv("STATS_DB_HOST"),
+		os.Getenv("STATS_DB_PORT"),
+		os.Getenv("STATS_DB_NAME"),
+	)
+
+	fmt.Printf("Attempting to connect to database with dsn: %s\n", dsn)
+
+	// pass the db connection string to connect to our database
+	db, err := sqlx.Connect("postgres", dsn)
+	if err != nil {
+		log.Fatalf("Failed to connect to the database: %v", err)
+	}
+
+	fmt.Printf("\nConnected to the database successfully.\n\n")
+
+	return db
+}
