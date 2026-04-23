@@ -72,21 +72,26 @@ func (c *Consumer) consumeItemsExtracted() {
 			"items_extracted", itemsExtracted)
 
 		// redis SETNX check if eventID has been processed before
-		key := fmt.Sprintf("%s:%s", "items_extracted", itemsExtracted.EventId)
-
+		// if ok it means SETNX worked, a new key was set and hence event was
+		// was never consumed before
+		key := fmt.Sprintf("items:dedup:%s", itemsExtracted.EventId)
 		_, ok, err := c.cache.AcquireLock(context.Background(), key, time.Hour*24)
 
 		if err != nil {
-			slog.Error("Error when attempting to acquire lock for items_extracted event",
+			slog.Error("Redis dedup check failed",
+				"event_id", itemsExtracted.EventId,
 				"err", err,
 			)
-
-			msg.Ack(false) // already processed, ack to remove from queue, no dlq or requeue
+			msg.Nack(false, true) // retry when redis errored
 			continue
 		}
 
 		// skip if already processed
 		if !ok {
+			slog.Debug("Duplicate event, skipping",
+				"event_id", itemsExtracted.EventId,
+			)
+			msg.Ack(false)
 			continue
 		}
 

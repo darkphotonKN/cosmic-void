@@ -146,7 +146,6 @@ func main() {
 		defer cancel()
 
 		outboxWorker.InitiateWork(workerCtx)
-
 	}()
 
 	// use the new config setup to initialize all services

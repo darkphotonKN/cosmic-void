@@ -41,10 +41,11 @@ func NewOutboxWorker(workCycle time.Duration, batchCount int, outboxRetriever Ou
 * Goroutine wrapper that initiates the workers
 **/
 func (w *OutboxWorker) InitiateWork(ctx context.Context) {
-
 	timer := time.NewTicker(w.workCycle)
 
 	go func() {
+		slog.Info("Initiating outbox workers..")
+
 		defer timer.Stop()
 
 		for {
@@ -118,10 +119,16 @@ func (w *OutboxWorker) PublishOutboxEvents(ctx context.Context) error {
 					return
 				}
 
-				// update worked, exit goroutine
 				return
 			}
 		}(evt.ID)
+
+		// update worked, exit goroutine
+		slog.Debug("successfully published outbox event",
+			"event_id", evt.ID,
+			"event", evt.RoutingKey,
+			"event_exchange", evt.Exchange,
+		)
 	}
 
 	return nil
