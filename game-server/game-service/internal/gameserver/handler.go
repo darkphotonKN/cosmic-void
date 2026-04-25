@@ -52,20 +52,21 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 		return
 	}
 
+	// check if player is reconnecting by checking if they already exist in the players map
 	s.mu.RLock()
-	existingPlayer, playerExists := s.players[memberId]
+	reconnectingPlayer, playerIsReconnecting := s.players[memberId]
 	s.mu.RUnlock()
 
 	var player *types.Player
 	isReconnection := false
 
-	if playerExists {
-		fmt.Printf("Player %s is reconnecting! (Session: %s, State: %v)\n",
-			existingPlayer.Username,
-			existingPlayer.CurrentGameSessionId,
-			existingPlayer.ConnectState)
+	if playerIsReconnecting {
+		slog.Debug("Player is reconnecting",
+			"username", reconnectingPlayer.Username,
+			"game_session_id", reconnectingPlayer.CurrentGameSessionId,
+			"connect_state", reconnectingPlayer.ConnectState)
 
-		player = existingPlayer
+		player = reconnectingPlayer
 		isReconnection = true
 
 		// mark as connected
@@ -74,10 +75,11 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 
 		// update username (may have changed name)
 		player.Username = data.Name
-
 	} else {
 		// new player connecting for the first time
-		fmt.Printf("New player connecting: %s\n", data.Name)
+		slog.Debug("Player connecting fresh.",
+			"username", data.Name,
+		)
 
 		connected := constants.Connected
 		player = &types.Player{
@@ -96,7 +98,9 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 	// establish websocket connection
 	conn, err := s.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		fmt.Println("Error establishing websocket connection.")
+		slog.Error("Error establishing websocket connection.",
+			"error", err,
+		)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to upgrade connection"})
 		return
 	}
@@ -108,8 +112,10 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 	s.setupClientWriter(conn)
 
 	if isReconnection && player.CurrentGameSessionId != uuid.Nil {
-		fmt.Printf("📤 Sending reconnection success message to %s (Session: %s)\n",
-			player.Username, player.CurrentGameSessionId)
+		slog.Debug("Sending reconnection success message.",
+			"player_username", player.Username,
+			"player_current_game_session_id", player.CurrentGameSessionId,
+		)
 
 		s.mu.RLock()
 		msgChan, exists := s.msgChan[conn]
@@ -127,7 +133,7 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 			}
 
 			// important! send game_found message to let frontend enter game
-			fmt.Println("Sending game_found message after reconnection...")
+			slog.Info("Sending game_found message after reconnection")
 			msgChan <- types.Message{
 				Action: "game_found",
 				Payload: map[string]interface{}{
@@ -142,16 +148,15 @@ func (s *Server) HandleWebSocketConnection(c *gin.Context) {
 }
 
 /**
-* Serves each individual connected player.
+* Serves each individually connected player.
 **/
 func (s *Server) ServeConnectedPlayer(conn *websocket.Conn) {
 	for {
-		fmt.Println("Listening for user messages...")
+		slog.Debug("Listening for player messages")
 		_, message, err := conn.ReadMessage()
 
 		// --- Handle WebSocket Errors ---
 		if err != nil {
-			// Get player info for logging
 			player, exists := s.GetPlayerFromConn(conn)
 			playerInfo := "Unknown"
 			playerID := uuid.Nil
@@ -160,10 +165,14 @@ func (s *Server) ServeConnectedPlayer(conn *websocket.Conn) {
 				playerID = player.ID
 			}
 
-			fmt.Printf("\n[WebSocket Error] Player: %s, Error: %v\n", playerInfo, err)
+			slog.Error("\nWebSocket Connection Error\n",
+				"player_info", playerInfo,
+				"error", err,
+			)
 
 			if websocket.IsCloseError(err, websocket.CloseAbnormalClosure) {
-				fmt.Printf("Network disconnection for %s. Keeping state for reconnection...\n", playerInfo)
+				slog.Error("Network disconnection for player. Keeping state for reconnection...",
+					"player_info", playerInfo)
 
 				if exists {
 					// mark as reconnecting state
@@ -183,13 +192,13 @@ func (s *Server) ServeConnectedPlayer(conn *websocket.Conn) {
 			}
 
 			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-				fmt.Printf("Player %s closed connection normally (intentional leave)\n", playerInfo)
+				slog.Info("Player closed connection normally (intentional leave)", "player_info", playerInfo)
 				s.cleanUpClient(conn)
 				return // exit this goroutine
 			}
 
 			if websocket.IsCloseError(err, websocket.CloseGoingAway) {
-				fmt.Printf("Player %s navigated away. Keeping state for 10s...\n", playerInfo)
+				slog.Info("Player navigated away, keeping state for 10s", "player_info", playerInfo)
 
 				if exists {
 					s.markPlayerAsReconnecting(player)
@@ -203,7 +212,7 @@ func (s *Server) ServeConnectedPlayer(conn *websocket.Conn) {
 			}
 
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				fmt.Printf("Unexpected disconnection for %s. Keeping state...\n", playerInfo)
+				slog.Warn("Unexpected disconnection, keeping state", "player_info", playerInfo)
 
 				if exists {
 					s.markPlayerAsReconnecting(player)
@@ -216,15 +225,15 @@ func (s *Server) ServeConnectedPlayer(conn *websocket.Conn) {
 				return
 			}
 
-			fmt.Printf("Unknown error for %s: %v. Cleaning up completely.\n", playerInfo, err)
+			slog.Error("Unknown websocket error, cleaning up completely", "player_info", playerInfo, "error", err)
 			s.cleanUpClient(conn)
 			return
 		}
 
 		// --- Normal Message Processing ---
-		fmt.Printf("\nMessage received from connected user: %s\n\n", string(message))
+		slog.Debug("Message received from connected user", "message", string(message))
 
-		fmt.Println("before decoding received message")
+		slog.Debug("before decoding received message")
 
 		// --- Client Connection Handling ---
 		// Decodes Incoming client message and serves their unique connection its own goroutine
@@ -235,7 +244,7 @@ func (s *Server) ServeConnectedPlayer(conn *websocket.Conn) {
 		err = json.Unmarshal(message, &decodedMsg)
 
 		if err != nil {
-			fmt.Println("Error when decoding payload.")
+			slog.Error("Error when decoding payload", "error", err)
 
 			conn.WriteJSON(types.Message{Action: "Error", Payload: map[string]interface{}{"error": "Your message to server was the incorrect format and could not be decoded as JSON."}})
 			continue
@@ -246,7 +255,7 @@ func (s *Server) ServeConnectedPlayer(conn *websocket.Conn) {
 
 		clientPackage := types.ClientPackage{Message: decodedMsg, Conn: conn}
 
-		fmt.Println("Sending clientPackage to message hub.")
+		slog.Debug("Sending clientPackage to message hub")
 
 		// send message to MessageHub via an *unbuffered channel* for handling based on the type field.
 		s.serverChan <- clientPackage
@@ -265,15 +274,16 @@ func (s *Server) ServeConnectedPlayer(conn *websocket.Conn) {
 func (s *Server) setupClientWriter(conn *websocket.Conn) {
 	isNew := s.createMsgChan(conn)
 	if !isNew {
-		return // channel 已存在，不需要重複設置
+		return
 	}
 
 	// get the message channel for this connection
 	msgChan, err := s.getGameMsgChan(conn)
 
 	if err != nil {
-		fmt.Printf("Error getting message channel: %s\n", err)
-		// This shouldn't happen since we just created it, but log and return if it does
+		slog.Error("Error getting message channel",
+			"error", err,
+		)
 		return
 	}
 
@@ -283,25 +293,24 @@ func (s *Server) setupClientWriter(conn *websocket.Conn) {
 		defer func() {
 			// ensure we recover from any panics in the writer goroutine
 			if r := recover(); r != nil {
-				// fmt.Printf("clientWriter panic recovered: %v\n", r)
+				slog.Info("clientWriter panic recovered",
+					"r", r,
+				)
 			}
 		}()
 
 		for msg := range msgChan {
-			// TEST: remove after testing
-			// fmt.Printf("\nclientWriter writing back to client message:\n\n%+v\n\n", msg)
-
 			err := conn.WriteJSON(msg)
 
 			if err != nil {
-				fmt.Printf("Error writing to client, connection likely closed: %s\n", err)
+				slog.Error("Error writing to client, connection likely closed",
+					"error", err,
+				)
 				// channel will be closed by cleanUpClient, which will exit this goroutine
 				return
 			}
 		}
-		// fmt.Println("clientWriter goroutine exiting (channel closed)")
 	}()
-
 }
 
 /**
@@ -349,8 +358,6 @@ func (s *Server) markPlayerAsReconnecting(player *types.Player) {
 	if existingPlayer, exists := s.players[player.ID]; exists {
 		existingPlayer.ConnectState = &reconnecting
 	}
-
-	fmt.Printf("Player %s marked as reconnecting\n", player.Username)
 }
 
 func (s *Server) cleanUpConnectionOnly(conn *websocket.Conn) {
@@ -359,12 +366,16 @@ func (s *Server) cleanUpConnectionOnly(conn *websocket.Conn) {
 	player, exists := s.connToPlayer[conn]
 	if !exists {
 		s.mu.Unlock()
-		fmt.Println("cleanUpConnectionOnly: connection not found")
+		slog.Error("cleanUpConnectionOnly: connection not found",
+			"conn", conn,
+		)
 		conn.Close()
 		return
 	}
 
-	fmt.Printf("Cleaning up connection only for player: %s (keeping game state)\n", player.Username)
+	slog.Info("Cleaning up connection only for player - keeping game state",
+		"player_username", player.Username,
+	)
 
 	if ch, exists := s.msgChan[conn]; exists {
 		close(ch)
@@ -374,9 +385,9 @@ func (s *Server) cleanUpConnectionOnly(conn *websocket.Conn) {
 	// delete conn to player mapping (but don't delete player itself)
 	delete(s.connToPlayer, conn)
 
-	// note: don't delete s.players[player.ID] <- keep player data
-	// note: don't remove from queue <- keep queue state
-	// note: don't remove from session <- keep game state
+	// Note: don't delete s.players[player.ID], keep player data
+	// Note: don't remove from queue, keep queue state
+	// Note: don't remove from session, keep game state
 
 	s.mu.Unlock()
 
@@ -384,7 +395,10 @@ func (s *Server) cleanUpConnectionOnly(conn *websocket.Conn) {
 }
 
 func (s *Server) handleReconnectionTimeout(playerID uuid.UUID, timeout time.Duration) {
-	fmt.Printf("Reconnection timer started for player %s (timeout: %v)\n", playerID, timeout)
+	slog.Debug("Reconnection timer started",
+		"player_id", playerID,
+		"timeout", timeout,
+	)
 
 	time.Sleep(timeout)
 
@@ -393,16 +407,20 @@ func (s *Server) handleReconnectionTimeout(playerID uuid.UUID, timeout time.Dura
 	s.mu.RUnlock()
 
 	if !exists {
-		fmt.Printf("Player %s already cleaned up\n", playerID)
+		slog.Debug("Player already cleaned up", "player_id", playerID)
 		return
 	}
 
 	// check player state
 	if player.ConnectState != nil && *player.ConnectState == constants.Reconnecting {
-		fmt.Printf("Player %s failed to reconnect within %v. Cleaning up...\n", player.Username, timeout)
+		slog.Debug("Player failed to reconnect within timeout limit.",
+			"player_username", player.Username,
+			"timeout", timeout,
+		)
 		s.cleanUpPlayerCompletely(playerID)
 	} else {
-		fmt.Printf("Player %s already reconnected\n", player.Username)
+		slog.Debug("Player already reconnected",
+			"player_username", player.Username)
 	}
 }
 
@@ -415,7 +433,7 @@ func (s *Server) cleanUpPlayerCompletely(playerID uuid.UUID) {
 		return
 	}
 
-	fmt.Printf("🗑️  Completely cleaning up player: %s\n", player.Username)
+	slog.Info("Completely cleaning up player", "username", player.Username)
 
 	// 從 queue 移除
 	s.queue.PlayerRemoveQueue(player)
@@ -440,13 +458,13 @@ func (s *Server) cleanUpClient(conn *websocket.Conn) {
 	player, exists := s.connToPlayer[conn]
 
 	if exists {
-		fmt.Printf("Cleaning up client: %s\n", player.Username)
+		slog.Info("Cleaning up client", "username", player.Username)
 		// 從 queue 中移除玩家
 		s.queue.PlayerRemoveQueue(player)
 		return
 	}
 
-	fmt.Printf("Cleaning up client: %s (ID: %s)\n", player.Username, player.ID)
+	slog.Info("Cleaning up client", "username", player.Username, "player_id", player.ID)
 
 	// 從 queue 中移除玩家
 	s.queue.PlayerRemoveQueue(player)
@@ -455,7 +473,7 @@ func (s *Server) cleanUpClient(conn *websocket.Conn) {
 	if ch, exists := s.msgChan[conn]; exists {
 		close(ch)
 		delete(s.msgChan, conn)
-		fmt.Printf("Closed message channel for player %s\n", player.Username)
+		slog.Info("Closed message channel for player", "username", player.Username)
 	}
 
 	// delete conn to player mapping
@@ -479,12 +497,12 @@ func (s *Server) cleanUpClient(conn *websocket.Conn) {
 **/
 func (s *Server) cleanUpPlayerFromSession(player *types.Player) {
 	if player == nil {
-		fmt.Println("cleanUpPlayerFromSession: player is nil, skipping")
+		slog.Warn("cleanUpPlayerFromSession: player is nil, skipping")
 		return
 	}
 
 	if player.CurrentGameSessionId == uuid.Nil {
-		fmt.Printf("Player %s is not in any session, skipping session cleanup\n", player.Username)
+		slog.Debug("Player is not in any session, skipping session cleanup", "username", player.Username)
 		return
 	}
 
@@ -493,11 +511,11 @@ func (s *Server) cleanUpPlayerFromSession(player *types.Player) {
 	s.mu.RUnlock()
 
 	if !exists {
-		fmt.Printf("Session %s not found for player %s\n", player.CurrentGameSessionId, player.Username)
+		slog.Warn("Session not found for player", "session_id", player.CurrentGameSessionId, "username", player.Username)
 		return
 	}
 
-	fmt.Printf("Removing player %s from session %s\n", player.Username, playerSession.ID)
+	slog.Info("Removing player from session", "username", player.Username, "session_id", playerSession.ID)
 
 	// remove player from session
 	playerSession.RemovePlayer(player.ID.String())
@@ -505,7 +523,7 @@ func (s *Server) cleanUpPlayerFromSession(player *types.Player) {
 	// check if session still has players
 	remainingPlayers := playerSession.GetPlayerIDs()
 	if len(remainingPlayers) == 0 {
-		fmt.Printf("Session %s has no remaining players, shutting down...\n", playerSession.ID)
+		slog.Info("Session has no remaining players, shutting down", "session_id", playerSession.ID)
 
 		// shutdown session
 		playerSession.Shutdown()
@@ -515,8 +533,8 @@ func (s *Server) cleanUpPlayerFromSession(player *types.Player) {
 		delete(s.sessions, playerSession.ID)
 		s.mu.Unlock()
 
-		fmt.Printf("Session %s successfully shut down and removed\n", playerSession.ID)
+		slog.Info("Session shut down and removed", "session_id", playerSession.ID)
 	} else {
-		fmt.Printf("Session %s still has %d player(s) remaining\n", playerSession.ID, len(remainingPlayers))
+		slog.Info("Session still has remaining players", "session_id", playerSession.ID, "remaining", len(remainingPlayers))
 	}
 }

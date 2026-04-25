@@ -9,10 +9,9 @@ import (
 )
 
 type OutboxParams struct {
-	RoutingKey  string    `db:"routing_key"`
-	Exchange    string    `db:"exchange"`
-	Payload     []byte    `db:"payload"`
-	PublishedAt time.Time `db:"published_at"`
+	RoutingKey string `db:"routing_key"`
+	Exchange   string `db:"exchange"`
+	Payload    []byte `db:"payload"`
 }
 
 type OutboxEvent struct {
@@ -26,11 +25,7 @@ type OutboxEvent struct {
 }
 
 // isp interface for all services
-// they all share the same interface in this case
 type OutboxPublisher interface {
 	CreateOutbox(ctx context.Context, params OutboxParams) error
-	// CreateOutboxTx writes an outbox row inside an existing transaction.
-	// Use this so the business write and the outbox write commit or roll
-	// back together — this is the whole point of the outbox pattern.
 	CreateOutboxTx(ctx context.Context, tx *sqlx.Tx, params OutboxParams) error
 }

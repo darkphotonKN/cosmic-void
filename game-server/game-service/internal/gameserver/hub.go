@@ -124,15 +124,19 @@ func (h *messageHub) Run() {
 					continue
 				}
 
-				// --- player already exists in an old game ---
+				// -- player already exists in an old game --
 				err := h.handlePlayerExistingGame(player, clientPackage)
 
 				// no error, so player exists, skip queue
 				if err == nil {
+					slog.Debug("player exists alreayd, skipping queue",
+						"player_id", player.ID,
+						"player_username", player.Username,
+					)
 					continue
 				}
 
-				// --- queue up player ---
+				// -- queue up player --
 				h.sessionManager.AddPlayer(player)
 				slog.Info("Player added to matchmaking queue", "player username", player.Username)
 
@@ -155,12 +159,16 @@ func (h *messageHub) Run() {
 							"player_id": player.ID.String(),
 						},
 					})
-					fmt.Println("Player not found for connection")
+					slog.Error("Player not found for connection",
+						"player_id", player.ID,
+					)
 					continue
 				}
 
 				// h.sessionManager.RemovePlayerFromQueue(player)
-				fmt.Println("Leave game...")
+				slog.Debug("Player leaving game",
+					"player_id", player.ID,
+				)
 
 				h.sender.SendMessageToPlayer(player.ID, types.Message{
 					Action: clientPackage.Message.Action,
@@ -239,8 +247,8 @@ func (h *messageHub) handlePlayerExistingGame(player *types.Player, clientPackag
 		slog.Debug("Resuamble session found", "sessionId", session.ID)
 
 		slog.Info("Player already in session, sending game_found",
-			"playerId", player.ID,
-			"sessionId", player.CurrentGameSessionId)
+			"player_id", player.ID,
+			"current_game_session_id", player.CurrentGameSessionId)
 
 		h.sender.SendMessageToConn(clientPackage.Conn, types.Message{
 			Action: "game_found",

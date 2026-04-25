@@ -28,6 +28,7 @@ func NewService(publishCh commonbroker.Publisher, outboxPublisher commonoutbox.O
 }
 
 func (s *service) PublishMatchComplete(ctx context.Context, data *types.RawMatchState) {
+	slog.Debug("service publishingMatchComplete")
 	// calculate winner and determine final positions
 	rankedPlayers := s.rankPlayers(data.Players, data.EliminationOrder)
 

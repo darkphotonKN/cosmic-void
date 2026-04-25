@@ -29,7 +29,8 @@ type Server struct {
 	upgrader   websocket.Upgrader
 	serverChan chan types.ClientPackage
 
-	// active game message channels
+	// NOTE: primary use client to hub, hub to others
+	// [player connection] to dynamic client payload
 	msgChan map[*websocket.Conn]chan interface{}
 
 	// active sessions
@@ -46,7 +47,7 @@ type Server struct {
 
 	mu sync.RWMutex
 
-	queue queue.QueueService
+	queue QueueManger
 	// auth client for gRPC calls
 	authClient grpcauth.AuthClient
 
@@ -60,7 +61,10 @@ type MessageSender interface {
 	BroadcastToPlayerList(players []*types.Player, msg types.Message) error
 }
 
-func NewServer(authClient grpcauth.AuthClient, queueService queue.QueueService, eventEmitter game.EventEmitter, itemsClient grpcitems.ItemsClient) *Server {
+type QueueManager interface {
+}
+
+func NewServer(authClient grpcauth.AuthClient, queueService QueueManager, eventEmitter game.EventEmitter, itemsClient grpcitems.ItemsClient) *Server {
 	upgrader := websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
 			// TODO: Allow all connections by default for simplicity; can add more logic here
@@ -113,7 +117,10 @@ func (s *Server) MapConnToPlayer(conn *websocket.Conn, player types.Player) {
 	// check if there's an old connection with same player ID, if so clean it up
 	for oldConn, existingPlayer := range s.connToPlayer {
 		if existingPlayer.ID == player.ID && oldConn != conn {
-			fmt.Printf("Player %s reconnected, cleaning up old connection\n", player.Username)
+			slog.Info("Player reconnected, cleaning up old connection",
+				"player_id", player.ID,
+				"player_username", player.Username,
+			)
 			// close old msgChan
 			if ch, exists := s.msgChan[oldConn]; exists {
 				close(ch)
@@ -291,7 +298,7 @@ func (s *Server) PushMessageToConn(conn *websocket.Conn, msg interface{}) error 
 		return fmt.Errorf("invalid message type")
 	}
 	if conn == nil {
-		fmt.Println("Warning: nil connection, skipping send")
+		slog.Warn("nil connection, skipping send")
 		return nil
 	}
 	s.mu.RLock()
@@ -299,7 +306,7 @@ func (s *Server) PushMessageToConn(conn *websocket.Conn, msg interface{}) error 
 	s.mu.RUnlock()
 
 	if !ok {
-		fmt.Println("Warning: message channel not found for connection")
+		slog.Warn("message channel not found for connection")
 		return nil
 	}
 
@@ -309,7 +316,6 @@ func (s *Server) PushMessageToConn(conn *websocket.Conn, msg interface{}) error 
 	default:
 		return fmt.Errorf("message channel full for connection")
 	}
-
 }
 
 /**

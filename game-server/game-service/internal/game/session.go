@@ -540,8 +540,8 @@ func (s *Session) AddPlayer(playerID uuid.UUID, username string) uuid.UUID {
 		Vx: 0,
 		Vy: 0,
 
-		ItemIDList: []uuid.UUID{},
-		Escape:     false,
+		ItemIDList:    []uuid.UUID{},
+		Escape:        false,
 		PlayerLoadout: loadout,
 	}
 
@@ -1749,6 +1749,7 @@ func (s *Session) endSession() {
 /**
 * Converts game specific entities into raw data for processing.
 **/
+// none of this matters
 func (s *Session) getRawMatchState() *types.RawMatchState {
 	// TODO: update this to fixed player count once player count is fixed
 	rawPlayers := make([]types.RawPlayerState, 0)

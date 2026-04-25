@@ -1,13 +1,12 @@
 package queue
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
-	"github.com/darkphotonKN/cosmic-void-server/common/utils/cache"
+	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/game"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 )
 
@@ -27,17 +26,17 @@ type queueService struct {
 	matchSize       int
 	MatchedChan     chan []*types.Player
 	QueueStatusChan chan QueueStatus
-	cacheService    cache.Cache
+
+	mu      sync.Mutex
+	players []*types.Player
 }
 
-const queueKey = "game:matchmaking:queue"
-
-func NewQueueService(matchSize int, cacheService cache.Cache) QueueService {
+func NewQueueService(matchSize int) *queueService {
 	return &queueService{
 		matchSize:       matchSize,
 		MatchedChan:     make(chan []*types.Player),
 		QueueStatusChan: make(chan QueueStatus),
-		cacheService:    cacheService,
+		players:         make([]*types.Player, 0, matchSize),
 	}
 }
 
@@ -63,122 +62,70 @@ func (q *queueService) MatchQueue() {
 		// send value from chan once per second
 		case <-ticker.C:
 			{
-				ctx := context.Background()
-				lockID, acquired, err := q.cacheService.AcquireLock(ctx, "matchmaking", 3*time.Second)
-				if err != nil {
-					slog.Error("failed to acquire lock", "error", err)
-					continue
-				}
-				if !acquired {
-					continue // 其他 instance 正在處理
-				}
-
-				// check queue
-				queueLen, err := q.cacheService.LLen(ctx, queueKey)
-				if err != nil {
-					slog.Error("failed to get queue length", "error", err)
-					q.cacheService.ReleaseLock(ctx, "matchmaking", lockID)
-					continue
-				}
+				q.mu.Lock()
 
 				// player enough
-				if int(queueLen) >= q.matchSize {
-					matched := make([]*types.Player, 0, q.matchSize)
-					for i := 0; i < q.matchSize; i++ {
-						data, err := q.cacheService.LPop(ctx, queueKey)
-						if err != nil {
-							slog.Error("failed to pop player from queue", "error", err)
-							break
-						}
-						var p types.Player
-						if err := json.Unmarshal([]byte(data), &p); err != nil {
-							slog.Error("failed to unmarshal player", "error", err)
-							continue
-						}
-						matched = append(matched, &p)
-					}
+				if len(q.players) >= q.matchSize {
+					matched := make([]*types.Player, q.matchSize)
+					copy(matched, q.players[:q.matchSize])
+					q.players = q.players[q.matchSize:]
 
-					q.cacheService.ReleaseLock(ctx, "matchmaking", lockID)
+					q.mu.Unlock()
 
-					if len(matched) == q.matchSize {
-						fmt.Println("Match found!")
-						q.MatchedChan <- matched
-					}
+					fmt.Println("Match found!")
+					q.MatchedChan <- matched
 					continue
 				}
 				// player not enough
-				if queueLen > 0 {
-					items, err := q.cacheService.LRange(ctx, queueKey, 0, -1)
-					if err == nil {
-						players := make([]*types.Player, 0, len(items))
-						for _, item := range items {
-							var p types.Player
-							if err := json.Unmarshal([]byte(item), &p); err != nil {
-								continue
-							}
-							players = append(players, &p)
+				if len(q.players) > 0 {
+					players := make([]*types.Player, len(q.players))
+					copy(players, q.players)
+
+					q.mu.Unlock()
+
+					fmt.Printf("Waiting: %d/%d\n", len(players), q.matchSize)
+					go func() {
+						q.QueueStatusChan <- QueueStatus{
+							Players: players,
+							Current: len(players),
+							Total:   q.matchSize,
 						}
-						fmt.Printf("Waiting: %d/%d\n", len(players), q.matchSize)
-						go func() {
-							q.QueueStatusChan <- QueueStatus{
-								Players: players,
-								Current: len(players),
-								Total:   q.matchSize,
-							}
-						}()
-					}
+					}()
+					continue
 				}
-				q.cacheService.ReleaseLock(ctx, "matchmaking", lockID)
+
+				q.mu.Unlock()
 			}
 		}
 	}
 }
 
 // handlePlayerJoinQueue handles logic for player joining queue
-func (q *queueService) PlayerJoinQueue(player *types.Player) {
-	ctx := context.Background()
-	items, err := q.cacheService.LRange(ctx, queueKey, 0, -1)
-	if err != nil {
-		slog.Error("failed to check queue", "error", err)
-		return
-	}
+func (q *queueService) PlayerJoinQueue(player *types.Player) error {
+	q.mu.Lock()
+	defer q.mu.Unlock()
 
-	for _, item := range items {
-		var p types.Player
-		if err := json.Unmarshal([]byte(item), &p); err != nil {
-			continue
-		}
+	for _, p := range q.players {
 		if p.ID == player.ID {
-			fmt.Println("player already exists", player.ID)
-			return
+			slog.Error("player already exists", player.ID)
+			return game.ErrPlayerAlreadyInQueue
 		}
 	}
-	data, err := json.Marshal(player)
-	if err != nil {
-		slog.Error("failed to marshal player", "error", err)
-		return
-	}
-	q.cacheService.RPush(ctx, queueKey, data)
-	fmt.Printf("Player %s joined queue.\n", player.Username)
+	q.players = append(q.players, player)
+	slog.Debug("Player joined queue.",
+		"player_username", player.Username,
+	)
+	return nil
 }
 
 // TODO: disconnect remove player
 func (q *queueService) PlayerRemoveQueue(player *types.Player) {
-	ctx := context.Background()
+	q.mu.Lock()
+	defer q.mu.Unlock()
 
-	items, err := q.cacheService.LRange(ctx, queueKey, 0, -1)
-	if err != nil {
-		slog.Error("failed to get queue", "error", err)
-		return
-	}
-
-	for _, item := range items {
-		var p types.Player
-		if err := json.Unmarshal([]byte(item), &p); err != nil {
-			continue
-		}
+	for i, p := range q.players {
 		if p.ID == player.ID {
-			q.cacheService.LRem(ctx, queueKey, 1, item)
+			q.players = append(q.players[:i], q.players[i+1:]...)
 			return
 		}
 	}

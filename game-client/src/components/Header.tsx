@@ -22,6 +22,7 @@ export default function Header() {
           <Link href="/portal" className="header-logo">
             <span className="logo-text">COSMIC</span>
             <span className="logo-accent">VOID</span>
+            <span className="logo-beta">BETA</span>
           </Link>
 
           <nav className="header-nav">

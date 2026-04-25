@@ -48,7 +48,7 @@ func SetupRouter(statsDB *sqlx.DB, registry discovery.Registry, ch *amqp.Channel
 	itemsClient := grpcitems.NewClient(registry)
 
 	// --- GAME SERVER SETUP ---
-	queueService := queue.NewQueueService(2, cacheService)
+	queueService := queue.NewQueueService(2)
 
 	// wrap with adapter to allow amqp rabbit mq channel to
 	// conform to our abstraction
