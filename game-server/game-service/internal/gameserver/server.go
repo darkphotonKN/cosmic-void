@@ -29,7 +29,7 @@ type Server struct {
 	upgrader   websocket.Upgrader
 	serverChan chan types.ClientPackage
 
-	// NOTE: primary use client to hub, hub to others
+	// NOTE: primary use for client messages to the message hub
 	// [player connection] to dynamic client payload
 	msgChan map[*websocket.Conn]chan interface{}
 
@@ -47,7 +47,7 @@ type Server struct {
 
 	mu sync.RWMutex
 
-	queue QueueManger
+	queue QueueManager
 	// auth client for gRPC calls
 	authClient grpcauth.AuthClient
 
@@ -61,7 +61,13 @@ type MessageSender interface {
 	BroadcastToPlayerList(players []*types.Player, msg types.Message) error
 }
 
+// QueueManager is the subset of queue operations the gameserver consumes.
 type QueueManager interface {
+	Start()
+	AddPlayer(player *types.Player)
+	PlayerRemoveQueue(player *types.Player)
+	GetMatchedChan() chan []*types.Player
+	GetQueueStatusChan() chan queue.QueueStatus
 }
 
 func NewServer(authClient grpcauth.AuthClient, queueService QueueManager, eventEmitter game.EventEmitter, itemsClient grpcitems.ItemsClient) *Server {

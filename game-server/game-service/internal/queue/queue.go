@@ -1,7 +1,6 @@
 package queue
 
 import (
-	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -43,7 +42,7 @@ func NewQueueService(matchSize int) *queueService {
 // Start launches queue listening
 func (q *queueService) Start() {
 	go q.MatchQueue()
-	fmt.Println("QueueSystem started, listening for players...")
+	slog.Info("Queue service started, waiting for players to join...")
 }
 
 // AddPlayer adds player to matchmaking queue (via channel)
@@ -53,7 +52,6 @@ func (q *queueService) AddPlayer(player *types.Player) {
 
 // matchQueue checks queue once per second
 func (q *queueService) MatchQueue() {
-	fmt.Println("Listening for queue...")
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
@@ -64,7 +62,7 @@ func (q *queueService) MatchQueue() {
 			{
 				q.mu.Lock()
 
-				// player enough
+				// players enough
 				if len(q.players) >= q.matchSize {
 					matched := make([]*types.Player, q.matchSize)
 					copy(matched, q.players[:q.matchSize])
@@ -72,7 +70,7 @@ func (q *queueService) MatchQueue() {
 
 					q.mu.Unlock()
 
-					fmt.Println("Match found!")
+					slog.Debug("Match found.")
 					q.MatchedChan <- matched
 					continue
 				}
@@ -83,7 +81,11 @@ func (q *queueService) MatchQueue() {
 
 					q.mu.Unlock()
 
-					fmt.Printf("Waiting: %d/%d\n", len(players), q.matchSize)
+					slog.Debug("Waiting",
+						"total_players", len(players),
+						"match_size", q.matchSize,
+					)
+
 					go func() {
 						q.QueueStatusChan <- QueueStatus{
 							Players: players,
