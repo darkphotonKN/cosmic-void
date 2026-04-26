@@ -9,16 +9,9 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
 )
 
-/*
-Player queue system - uses channel to listen for players joining matchmaking
-*/
-
-// QueueStatus used to notify queue status
-type QueueStatus struct {
-	Players []*types.Player
-	Current int
-	Total   int
-}
+/**
+* Player queue system - uses channel to listen for players joining matchmaking
+**/
 
 type queueService struct {
 	// how many people needed to start game
@@ -28,6 +21,13 @@ type queueService struct {
 
 	mu      sync.Mutex
 	players []*types.Player
+}
+
+// QueueStatus used to notify queue status
+type QueueStatus struct {
+	Players []*types.Player
+	Current int
+	Total   int
 }
 
 func NewQueueService(matchSize int) *queueService {

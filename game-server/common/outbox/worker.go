@@ -38,28 +38,26 @@ func NewOutboxWorker(workCycle time.Duration, batchCount int, outboxRetriever Ou
 }
 
 /**
-* Goroutine wrapper that initiates the workers
+* Sets up the cancel and publish for select which initiates the workers
 **/
-func (w *OutboxWorker) InitiateWork(ctx context.Context) {
+func (w *OutboxWorker) Run(ctx context.Context) {
 	timer := time.NewTicker(w.workCycle)
 
-	go func() {
-		slog.Info("Initiating outbox workers..")
+	slog.Info("Initiating outbox workers..")
 
-		defer timer.Stop()
+	defer timer.Stop()
 
-		for {
-			select {
-			case <-timer.C:
-				w.PublishOutboxEvents(ctx)
+	for {
+		select {
+		case <-timer.C:
+			w.PublishOutboxEvents(ctx)
 
-				// cancelled
-			case <-ctx.Done():
+			// cancelled
+		case <-ctx.Done():
 
-				return
-			}
+			return
 		}
-	}()
+	}
 }
 
 /**

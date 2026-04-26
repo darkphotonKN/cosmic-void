@@ -62,6 +62,11 @@ func (s *service) PublishMatchComplete(ctx context.Context, data *types.RawMatch
 		slog.Error("Error publishing items extracted event", "error", err)
 		return
 	}
+
+	slog.Debug("Successfully created outbox item for two events",
+		"event_one_name", commonconstants.GameMatchEnded,
+		"event_two_name", commonconstants.ItemsExtracted,
+	)
 }
 
 /**

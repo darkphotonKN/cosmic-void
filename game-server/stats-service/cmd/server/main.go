@@ -138,15 +138,15 @@ func main() {
 	outboxRepo := commonoutbox.NewRepo(db)
 	outboxServ := commonoutbox.NewService(outboxRepo)
 	publisher := commonbroker.NewAmqpPublisher(ch)
-	outboxWorker := commonoutbox.NewOutboxWorker(time.Minute*60, 20, outboxServ, publisher)
+	// TODO: update in prod
+	workcycyleTime := time.Minute * 1
+	outboxWorker := commonoutbox.NewOutboxWorker(workcycyleTime, 20, outboxServ, publisher)
 
 	workerCtx, cancel := context.WithCancel(ctx)
 
-	go func() {
-		defer cancel()
+	defer cancel()
 
-		outboxWorker.InitiateWork(workerCtx)
-	}()
+	go outboxWorker.Run(workerCtx)
 
 	// use the new config setup to initialize all services
 	grpcServer = config.SetupServices(db, ch)
