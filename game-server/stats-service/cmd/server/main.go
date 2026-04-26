@@ -143,7 +143,6 @@ func main() {
 	outboxWorker := commonoutbox.NewOutboxWorker(workcycyleTime, 20, outboxServ, publisher)
 
 	workerCtx, cancel := context.WithCancel(ctx)
-
 	defer cancel()
 
 	go outboxWorker.Run(workerCtx)

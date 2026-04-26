@@ -64,7 +64,7 @@ type MessageSender interface {
 // QueueManager is the subset of queue operations the gameserver consumes.
 type QueueManager interface {
 	Start()
-	AddPlayer(player *types.Player)
+	AddPlayer(player *types.Player) error
 	PlayerRemoveQueue(player *types.Player)
 	GetMatchedChan() chan []*types.Player
 	GetQueueStatusChan() chan queue.QueueStatus
@@ -227,8 +227,14 @@ func (s *Server) GetGameSession(id uuid.UUID) (*game.Session, bool) {
 /**
 * add player to queue (delegates to QueueSystem)
 **/
-func (s *Server) AddPlayer(player *types.Player) {
-	s.queue.AddPlayer(player)
+func (s *Server) AddPlayer(player *types.Player) error {
+	err := s.queue.AddPlayer(player)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 /**

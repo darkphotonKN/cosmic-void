@@ -46,8 +46,14 @@ func (q *queueService) Start() {
 }
 
 // AddPlayer adds player to matchmaking queue (via channel)
-func (q *queueService) AddPlayer(player *types.Player) {
-	q.PlayerJoinQueue(player)
+func (q *queueService) AddPlayer(player *types.Player) error {
+	err := q.PlayerJoinQueue(player)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // matchQueue checks queue once per second
@@ -109,7 +115,7 @@ func (q *queueService) PlayerJoinQueue(player *types.Player) error {
 
 	for _, p := range q.players {
 		if p.ID == player.ID {
-			slog.Error("player already exists", player.ID)
+			slog.Error("player already exists", "player_id", player.ID)
 			return game.ErrPlayerAlreadyInQueue
 		}
 	}

@@ -1,6 +1,7 @@
 package gameserver
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -31,7 +32,7 @@ type SessionManager interface {
 	CreateGameSession(players []*types.Player) *game.Session
 	GetGameSession(id uuid.UUID) (*game.Session, bool)
 	GetServerChan() chan types.ClientPackage
-	AddPlayer(*types.Player)
+	AddPlayer(*types.Player) error
 	GetPlayerFromConn(conn *websocket.Conn) (*types.Player, bool)
 	GetMatchedChan() chan []*types.Player
 	GetQueueStatusChan() chan queue.QueueStatus
@@ -137,7 +138,29 @@ func (h *messageHub) Run() {
 				}
 
 				// -- queue up player --
-				h.sessionManager.AddPlayer(player)
+				err = h.sessionManager.AddPlayer(player)
+				if err != nil {
+					queueErr := err.Error()
+					message := "Error occured when attempting to queue player"
+
+					// broadcast error back to client attempting to queue
+
+					if errors.Is(err, game.ErrPlayerAlreadyInQueue) {
+						message = "Player attempted to queue twice."
+					}
+
+					h.sender.SendMessageToConn(clientPackage.Conn, types.Message{
+						Action: clientPackage.Message.Action,
+						Payload: map[string]interface{}{
+							"message":   message,
+							"player_id": player.ID.String(),
+							"username":  player.Username,
+						},
+						Error: &queueErr,
+					})
+					continue
+				}
+
 				slog.Info("Player added to matchmaking queue", "player username", player.Username)
 
 				h.sender.SendMessageToConn(clientPackage.Conn, types.Message{
