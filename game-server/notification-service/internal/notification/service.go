@@ -2,13 +2,12 @@ package notification
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 	"log/slog"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
+	commonutils "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
@@ -88,39 +87,20 @@ func (s *service) ProcessMemberSignedUp(ctx context.Context, payload *commoncons
 // runInTx opens a tx, records the event in the inbox, runs fn, and commits.
 // If the event was already processed, it returns ErrAlreadyProcessed without running fn.
 func (s *service) runInTx(ctx context.Context, eventID uuid.UUID, eventType string, fn func(tx *sqlx.Tx) error) (err error) {
-	tx, err := s.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
-	}
-	defer func() {
+	return commonutils.ExecTx(ctx, s.db, func(tx *sqlx.Tx) error {
+		inserted, err := s.inboxRepo.MarkEventProcessed(ctx, tx, eventID, eventType)
 		if err != nil {
-			if rbErr := tx.Rollback(); rbErr != nil && !errors.Is(rbErr, sql.ErrTxDone) {
-				slog.Warn("rollback failed", "err", rbErr)
-			}
+			return fmt.Errorf("mark event processed: %w", err)
 		}
-	}()
-
-	inserted, err := s.inboxRepo.MarkEventProcessed(ctx, tx, eventID, eventType)
-	if err != nil {
-		return fmt.Errorf("mark event processed: %w", err)
-	}
-	if !inserted {
-		slog.Info("event already processed, skipping",
-			"event_id", eventID,
-			"event_type", eventType,
-		)
-		err = commonconstants.ErrAlreadyProcessed
-		return err
-	}
-
-	if err = fn(tx); err != nil {
-		return err
-	}
-
-	if err = tx.Commit(); err != nil {
-		return fmt.Errorf("commit tx: %w", err)
-	}
-	return nil
+		if !inserted {
+			slog.Info("event already processed, skipping",
+				"event_id", eventID,
+				"event_type", eventType,
+			)
+			return commonconstants.ErrAlreadyProcessed
+		}
+		return fn(tx)
+	})
 }
 
 func (s *service) ProcessItemCreated(ctx context.Context, payload *pb.ItemCreatedEvent) error {

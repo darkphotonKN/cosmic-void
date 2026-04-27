@@ -181,7 +181,7 @@ func main() {
 	// InitiateWork spawns its own goroutine and returns immediately — do
 	// not wrap it in another goroutine, that would cancel the context as
 	// soon as the wrapper returned and kill the worker.
-	outboxWorker.InitiateWork(workerCtx)
+	go outboxWorker.Run(workerCtx)
 
 	// --- upload service setup ---
 	if s3Client != nil {
