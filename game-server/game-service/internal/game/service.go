@@ -6,7 +6,6 @@ import (
 	"time"
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/events"
-	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	commonoutbox "github.com/darkphotonKN/cosmic-void-server/common/outbox"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/internal/types"
@@ -16,13 +15,11 @@ import (
 )
 
 type service struct {
-	publishCh       commonbroker.Publisher
 	outboxPublisher commonoutbox.OutboxPublisher
 }
 
-func NewService(publishCh commonbroker.Publisher, outboxPublisher commonoutbox.OutboxPublisher) *service {
+func NewService(outboxPublisher commonoutbox.OutboxPublisher) *service {
 	return &service{
-		publishCh:       publishCh,
 		outboxPublisher: outboxPublisher,
 	}
 }

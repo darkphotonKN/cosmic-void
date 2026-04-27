@@ -38,6 +38,19 @@ export class BootScene extends Phaser.Scene {
       window.location.href = "/login";
     });
 
+    // Handle generic server-side message errors. Most are fatal session issues
+    // (e.g. operator already queued from another tab/session) — kick out and force re-auth.
+    socketManager.setOnMessageError(({ message, error }) => {
+      const reason =
+        message ||
+        error ||
+        "Operator session conflict detected. You have been disconnected.";
+      sessionStorage.setItem("auth-error-message", reason);
+      socketManager.disconnect();
+      localStorage.removeItem("auth-storage");
+      window.location.href = "/login";
+    });
+
     console.log("token: ", token);
     console.log("name: ", name);
     socketManager.connect(

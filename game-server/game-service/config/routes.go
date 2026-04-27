@@ -16,7 +16,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	amqp "github.com/rabbitmq/amqp091-go"
 
-	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonoutbox "github.com/darkphotonKN/cosmic-void-server/common/outbox"
 )
 
@@ -50,15 +49,11 @@ func SetupRouter(statsDB *sqlx.DB, registry discovery.Registry, ch *amqp.Channel
 	// --- GAME SERVER SETUP ---
 	queueService := queue.NewQueueService(2)
 
-	// wrap with adapter to allow amqp rabbit mq channel to
-	// conform to our abstraction
-	publishCh := commonbroker.NewAmqpPublisher(ch)
-
 	// -- outbox --
 	outboxRepo := commonoutbox.NewRepo(statsDB)
 	outboxService := commonoutbox.NewService(outboxRepo)
 
-	gameService := game.NewService(publishCh, outboxService)
+	gameService := game.NewService(outboxService)
 	server := gameserver.NewServer(authClient, queueService, gameService, itemsClient)
 
 	// -- routes --

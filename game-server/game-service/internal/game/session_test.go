@@ -713,6 +713,18 @@ func (c *mockItemsClient) ListConsumablesWithTemplate(ctx context.Context) (*pb.
 	return nil, nil
 }
 
+func (c *mockItemsClient) GetLoadout(ctx context.Context, req *pb.GetLoadoutRequest) (*pb.GetLoadoutResponse, error) {
+	return nil, nil
+}
+
+func (c *mockItemsClient) GetLoadoutWithItems(ctx context.Context, req *pb.GetLoadoutWithItemsRequest) (*pb.GetLoadoutWithItemsResponse, error) {
+	return nil, nil
+}
+
+func (c *mockItemsClient) ListItemInstances(ctx context.Context, req *pb.ListItemInstancesRequest) (*pb.ListItemInstancesResponse, error) {
+	return nil, nil
+}
+
 type mockStateSerializer struct {
 }
 

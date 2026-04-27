@@ -18,6 +18,12 @@ class SocketManager {
   private onStatusChange?: (status: string, color: string) => void;
   // Auth error callback
   private onAuthError?: () => void;
+  // Generic server-side message error callback (top-level `error` field)
+  private onMessageError?: (info: {
+    action: string;
+    error: string;
+    message?: string;
+  }) => void;
   // Connection status
   private connectionStatus: ConnectionStatus = "disconnected";
   private connectionStatusListeners: Set<(status: ConnectionStatus) => void> =
@@ -60,6 +66,20 @@ class SocketManager {
     this.onAuthError = callback;
   }
 
+  setOnMessageError(
+    callback: (info: { action: string; error: string; message?: string }) => void,
+  ) {
+    this.onMessageError = callback;
+  }
+
+  disconnect() {
+    if (this.socket) {
+      this.socket.close(1000, "client_disconnect");
+      this.socket = null;
+    }
+    this.setConnectionStatus("disconnected");
+  }
+
   connect(url: string) {
     if (this.socket) return; // 避免重複連接
 
@@ -98,6 +118,19 @@ class SocketManager {
     this.socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+
+        // Top-level server error (e.g. duplicate queue, invalid action). Surface to a global handler.
+        if (data.error) {
+          console.warn("Server error message received:", data);
+          if (this.onMessageError) {
+            this.onMessageError({
+              action: data.action ?? "",
+              error: String(data.error),
+              message: data.payload?.message,
+            });
+          }
+          return;
+        }
 
         // Check if it's a game state update
         if (isGameState(data)) {

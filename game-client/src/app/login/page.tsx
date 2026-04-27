@@ -31,6 +31,15 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Surface auth errors from a forced disconnect (e.g. duplicate queue / session conflict).
+  useEffect(() => {
+    const reason = sessionStorage.getItem("auth-error-message");
+    if (reason) {
+      setError(reason);
+      sessionStorage.removeItem("auth-error-message");
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");

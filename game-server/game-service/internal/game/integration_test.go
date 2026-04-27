@@ -46,8 +46,7 @@ func (m *MessageSender) PushMessageToConn(
 // Mock EventEmitter for testing
 type mockEventEmitter struct{}
 
-func (m *mockEventEmitter) PublishMatchComplete(ctx context.Context, data *types.RawMatchState) error {
-	return nil
+func (m *mockEventEmitter) PublishMatchComplete(ctx context.Context, data *types.RawMatchState) {
 }
 
 func TestSession_GameLoopAppliesMovement_Integration(t *testing.T) {
@@ -306,8 +305,8 @@ func TestPublishMatchCompleteIntegration(t *testing.T) {
 	}
 
 	// service setup
-	publishCh := commonbroker.NewAmqpPublisher(ch) // use adapter
-	service := NewService(publishCh)
+	_ = commonbroker.NewAmqpPublisher(ch) // adapter kept for parity with previous test setup; unused with outbox API
+	service := NewService(&mockOutboxPublisher{})
 
 	// Publish all 3 match scenarios
 	for i, matchData := range matchScenarios {
@@ -323,11 +322,7 @@ func TestPublishMatchCompleteIntegration(t *testing.T) {
 
 		slog.Info("Match raw data", "matchNumber", i+1, "data", matchData.rawMatchState)
 
-		err := service.PublishMatchComplete(context.Background(), matchData.rawMatchState)
-		if err != nil {
-			slog.Error("Failed to publish match complete", "error", err, "matchNumber", i+1)
-			assert.NoError(t, err)
-		}
+		service.PublishMatchComplete(context.Background(), matchData.rawMatchState)
 
 		// Small delay between publishes to ensure proper processing
 		time.Sleep(100 * time.Millisecond)
