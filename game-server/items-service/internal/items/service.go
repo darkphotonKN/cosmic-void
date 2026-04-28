@@ -82,7 +82,7 @@ type Repository interface {
 	GetLoadout(ctx context.Context, req *GetLoadoutRequest) (*Loadout, error)
 	GetItemInstanceByID(ctx context.Context, id uuid.UUID) (*ItemInstance, error)
 	ListItemInstances(ctx context.Context, req *ListItemInstancesRequest) ([]*ItemInstance, error)
-	UpdateLoadout(ctx context.Context, req *UpdateLoadoutRequest) error
+	UpsertLoadoutSlot(ctx context.Context, req *UpdateLoadoutRequest) error
 }
 
 // ==========================================
@@ -97,12 +97,13 @@ func (s *service) CreatePlayerLoadout(createPlayerLoadoutReq *PlayerLoadout) err
 	return nil
 }
 
-// TODO: still wip
 func (s *service) ProcessItemsExtracted(req *pb.ItemsExtractedEvent) error {
-	// inventory
+	// loop through each player
 	for _, item := range req.PlayerItems {
-		slog.Debug("item iterated from req.PlayerItems",
-			"item", item,
+		slog.Debug("single player iterated from req.PlayerItems",
+			"member_id", item.MemberId,
+			"equipment", item.Equipment,
+			"inventory", item.Inventory,
 		)
 	}
 
@@ -641,5 +642,5 @@ func (h *service) ListItemInstances(ctx context.Context, req *ListItemInstancesR
 }
 
 func (h *service) UpdateLoadout(ctx context.Context, req *UpdateLoadoutRequest) error {
-	return h.repo.UpdateLoadout(ctx, req)
+	return h.repo.UpsertLoadoutSlot(ctx, req)
 }

@@ -37,6 +37,17 @@ func (s *service) PublishMatchComplete(ctx context.Context, data *types.RawMatch
 		return
 	}
 
+	err = s.outboxPublisher.CreateOutbox(ctx, commonoutbox.OutboxParams{
+		RoutingKey: commonconstants.ItemsExtracted,
+		Exchange:   commonconstants.GameEventsExchange,
+		Payload:    protoData.ItemsExtractedEvent,
+	})
+
+	if err != nil {
+		slog.Error("Error publishing items extracted event", "error", err)
+		return
+	}
+
 	// send to outbox for publishing
 	err = s.outboxPublisher.CreateOutbox(ctx, commonoutbox.OutboxParams{
 		RoutingKey: commonconstants.GameMatchEnded,
@@ -46,17 +57,6 @@ func (s *service) PublishMatchComplete(ctx context.Context, data *types.RawMatch
 
 	if err != nil {
 		slog.Error("Error publishing game match end event", "error", err)
-		return
-	}
-
-	err = s.outboxPublisher.CreateOutbox(ctx, commonoutbox.OutboxParams{
-		RoutingKey: commonconstants.ItemsExtracted,
-		Exchange:   commonconstants.GameEventsExchange,
-		Payload:    protoData.ItemsExtractedEvent,
-	})
-
-	if err != nil {
-		slog.Error("Error publishing items extracted event", "error", err)
 		return
 	}
 
@@ -140,6 +140,7 @@ func (s *service) formatMatchData(sessionID uuid.UUID, startedAt time.Time, ende
 	slog.Debug("itemsExtractedEvent in formatMatchData before marshalling into protobuf",
 		"items_extracted_event", itemsExtractedEvent,
 	)
+
 	itemsExtractedProtoData, itemsExtractErr := proto.Marshal(&itemsExtractedEvent)
 
 	if itemsExtractErr != nil {

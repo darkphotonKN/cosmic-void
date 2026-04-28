@@ -583,6 +583,67 @@ func (r *repository) CreateItemTemplateTx(ctx context.Context, tx *sqlx.Tx, temp
 	return nil
 }
 
+// UpsertItemInstanceTx inserts a new item_instances row or updates the existing
+// one when an id collision occurs. Used for at-least-once delivery of match-end
+// item-extraction events: the same instance may arrive more than once, and the
+// caller cannot know up front whether the player is bringing back a freshly
+// rolled item or one they already owned.
+//
+// Acquisition history (acquired_at, created_at, created_by) is preserved on
+// conflict; mutable fields and updated_by are overwritten from the new row.
+func (r *repository) UpsertItemInstanceTx(ctx context.Context, tx *sqlx.Tx, instance *ItemInstance) error {
+	if instance.ID == uuid.Nil {
+		instance.ID = uuid.New()
+	}
+
+	query := `
+		INSERT INTO item_instances (
+			id, template_id, owner_member_id, source,
+			item_type, name, rarity_id,
+			attack_power, critical_rate, weapon_type,
+			defense_rating, magic_resistance, armor_slot,
+			healing_amount, mana_amount, buff_duration,
+			durability, description, buy_price, sell_price,
+			created_by, updated_by
+		) VALUES (
+			:id, :template_id, :owner_member_id, :source,
+			:item_type, :name, :rarity_id,
+			:attack_power, :critical_rate, :weapon_type,
+			:defense_rating, :magic_resistance, :armor_slot,
+			:healing_amount, :mana_amount, :buff_duration,
+			:durability, :description, :buy_price, :sell_price,
+			:created_by, :updated_by
+		)
+		ON CONFLICT (id) DO UPDATE SET
+			template_id      = EXCLUDED.template_id,
+			owner_member_id  = EXCLUDED.owner_member_id,
+			source           = EXCLUDED.source,
+			item_type        = EXCLUDED.item_type,
+			name             = EXCLUDED.name,
+			rarity_id        = EXCLUDED.rarity_id,
+			attack_power     = EXCLUDED.attack_power,
+			critical_rate    = EXCLUDED.critical_rate,
+			weapon_type      = EXCLUDED.weapon_type,
+			defense_rating   = EXCLUDED.defense_rating,
+			magic_resistance = EXCLUDED.magic_resistance,
+			armor_slot       = EXCLUDED.armor_slot,
+			healing_amount   = EXCLUDED.healing_amount,
+			mana_amount      = EXCLUDED.mana_amount,
+			buff_duration    = EXCLUDED.buff_duration,
+			durability       = EXCLUDED.durability,
+			description      = EXCLUDED.description,
+			buy_price        = EXCLUDED.buy_price,
+			sell_price       = EXCLUDED.sell_price,
+			updated_by       = EXCLUDED.updated_by`
+
+	_, err := tx.NamedExecContext(ctx, query, instance)
+	if err != nil {
+		return fmt.Errorf("failed to upsert item instance (tx): %w", err)
+	}
+
+	return nil
+}
+
 func (r *repository) GetLoadout(ctx context.Context, req *GetLoadoutRequest) (*Loadout, error) {
 	memberId := req.MemberId
 
@@ -657,7 +718,7 @@ func (r *repository) ListItemInstances(ctx context.Context, req *ListItemInstanc
 	return items, nil
 }
 
-func (r *repository) UpdateLoadout(ctx context.Context, req *UpdateLoadoutRequest) error {
+func (r *repository) UpsertLoadoutSlot(ctx context.Context, req *UpdateLoadoutRequest) error {
 	validSlots := map[string]string{
 		"weapon":       "weapon_instance_id",
 		"head":         "head_instance_id",
@@ -680,12 +741,12 @@ func (r *repository) UpdateLoadout(ctx context.Context, req *UpdateLoadoutReques
 	// so a plain UPDATE would silently affect 0 rows.
 	query := fmt.Sprintf(`
 	 INSERT INTO player_loadouts (member_id, %s)
-	 VALUES ($2, $1)
+	 VALUES ($1, $2)
 	 ON CONFLICT (member_id) DO UPDATE
 	 SET %s = EXCLUDED.%s, updated_at = NOW()
 	`, column, column, column)
 
-	_, err := r.DB.ExecContext(ctx, query, req.ItemInstanceId, req.MemberId)
+	_, err := r.DB.ExecContext(ctx, query, req.MemberId, req.ItemInstanceId)
 	if err != nil {
 		return fmt.Errorf("failed to update loadout: %w", err)
 	}
