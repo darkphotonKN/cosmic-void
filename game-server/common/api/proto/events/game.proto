@@ -77,5 +77,10 @@ message Item {
   int32 buy_price = 13;
   int32 sell_price = 14;
   string description = 15;
+
+  // Instance identity for at-extraction upsert. Empty for items rolled in-match
+  // (chests/drops) so the items-service consumer creates a new row; populated
+  // for items brought in via loadout so the consumer upserts the existing row.
+  string instance_id = 16;
 }
 

@@ -133,6 +133,7 @@ func CreateItemEntity(em *ecs.EntityManager, itemconfig types.ItemConfig) *ecs.E
 	itemComp.BuyPrice = itemconfig.BuyPrice
 	itemComp.SellPrice = itemconfig.SellPrice
 	itemComp.Description = itemconfig.Description
+	itemComp.InstanceID = itemconfig.InstanceID
 
 	entity.AddComponent(itemComp)
 

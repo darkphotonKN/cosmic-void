@@ -83,11 +83,10 @@ type Repository interface {
 	GetItemInstanceByID(ctx context.Context, id uuid.UUID) (*ItemInstance, error)
 	ListItemInstances(ctx context.Context, req *ListItemInstancesRequest) ([]*ItemInstance, error)
 	UpsertLoadoutSlot(ctx context.Context, req *UpdateLoadoutRequest) error
+	UpsertLoadoutSlotTx(ctx context.Context, tx *sqlx.Tx, req *UpdateLoadoutRequest) error
+	UpsertItemInstanceTx(ctx context.Context, tx *sqlx.Tx, instance *ItemInstance) error
+	BatchUpsertItemInstances(ctx context.Context, tx *sqlx.Tx, instances []*ItemInstance) error
 }
-
-// ==========================================
-// ItemType Service Methods
-// ==========================================
 
 func (s *service) CreateItemInstance(createItemInstanceReq *ItemInstance) (*ItemInstance, error) {
 	return nil, nil

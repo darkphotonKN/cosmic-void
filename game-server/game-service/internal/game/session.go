@@ -473,8 +473,13 @@ func (s *Session) AddPlayer(playerID uuid.UUID, username string) uuid.UUID {
 	// convert proto ItemInstance to types.ItemConfig
 	protoToItemConfig := func(item *pbitems.ItemInstance) types.ItemConfig {
 		templateID, _ := uuid.Parse(item.TemplateId)
+		var instanceID *uuid.UUID
+		if id, err := uuid.Parse(item.Id); err == nil && id != uuid.Nil {
+			instanceID = &id
+		}
 		return types.ItemConfig{
 			TemplateID:      templateID,
+			InstanceID:      instanceID,
 			ItemType:        types.ItemType(item.ItemType),
 			Name:            item.Name,
 			AttackPower:     int(item.AttackPower),
@@ -1823,6 +1828,7 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 							BuyPrice:        item.BuyPrice,
 							SellPrice:       item.SellPrice,
 							Description:     item.Description,
+							InstanceID:      item.InstanceID,
 						}
 					}
 				}
@@ -1845,6 +1851,7 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 							BuyPrice:        item.BuyPrice,
 							SellPrice:       item.SellPrice,
 							Description:     item.Description,
+							InstanceID:      item.InstanceID,
 						}
 					}
 				}
@@ -1867,6 +1874,7 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 							BuyPrice:        item.BuyPrice,
 							SellPrice:       item.SellPrice,
 							Description:     item.Description,
+							InstanceID:      item.InstanceID,
 						}
 					}
 				}
@@ -1889,6 +1897,7 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 							BuyPrice:        item.BuyPrice,
 							SellPrice:       item.SellPrice,
 							Description:     item.Description,
+							InstanceID:      item.InstanceID,
 						}
 					}
 				}
@@ -1911,6 +1920,7 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 							BuyPrice:        item.BuyPrice,
 							SellPrice:       item.SellPrice,
 							Description:     item.Description,
+							InstanceID:      item.InstanceID,
 						}
 					}
 				}
@@ -1933,6 +1943,7 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 							BuyPrice:        item.BuyPrice,
 							SellPrice:       item.SellPrice,
 							Description:     item.Description,
+							InstanceID:      item.InstanceID,
 						}
 					}
 				}
@@ -1955,6 +1966,7 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 							BuyPrice:        item.BuyPrice,
 							SellPrice:       item.SellPrice,
 							Description:     item.Description,
+							InstanceID:      item.InstanceID,
 						}
 					}
 				}
@@ -1977,6 +1989,7 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 							BuyPrice:        item.BuyPrice,
 							SellPrice:       item.SellPrice,
 							Description:     item.Description,
+							InstanceID:      item.InstanceID,
 						}
 					}
 				}
@@ -1999,6 +2012,7 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 							BuyPrice:        item.BuyPrice,
 							SellPrice:       item.SellPrice,
 							Description:     item.Description,
+							InstanceID:      item.InstanceID,
 						}
 					}
 				}
@@ -2021,6 +2035,7 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 							BuyPrice:        item.BuyPrice,
 							SellPrice:       item.SellPrice,
 							Description:     item.Description,
+							InstanceID:      item.InstanceID,
 						}
 					}
 				}
@@ -2053,6 +2068,7 @@ func (s *Session) getRawMatchState() *types.RawMatchState {
 						BuyPrice:        item.BuyPrice,
 						SellPrice:       item.SellPrice,
 						Description:     item.Description,
+						InstanceID:      item.InstanceID,
 					})
 				}
 

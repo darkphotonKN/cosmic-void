@@ -135,6 +135,8 @@ type ExtractedItem struct {
 	BuyPrice    int
 	SellPrice   int
 	Description string
+
+	InstanceID *uuid.UUID
 }
 
 type ExtractedEquipment struct {
@@ -207,6 +209,8 @@ type ItemConfig struct {
 	BuyPrice        int
 	SellPrice       int
 	Description     string
+
+	InstanceID *uuid.UUID
 }
 
 type ItemType string

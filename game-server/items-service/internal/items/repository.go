@@ -583,14 +583,6 @@ func (r *repository) CreateItemTemplateTx(ctx context.Context, tx *sqlx.Tx, temp
 	return nil
 }
 
-// UpsertItemInstanceTx inserts a new item_instances row or updates the existing
-// one when an id collision occurs. Used for at-least-once delivery of match-end
-// item-extraction events: the same instance may arrive more than once, and the
-// caller cannot know up front whether the player is bringing back a freshly
-// rolled item or one they already owned.
-//
-// Acquisition history (acquired_at, created_at, created_by) is preserved on
-// conflict; mutable fields and updated_by are overwritten from the new row.
 func (r *repository) UpsertItemInstanceTx(ctx context.Context, tx *sqlx.Tx, instance *ItemInstance) error {
 	if instance.ID == uuid.Nil {
 		instance.ID = uuid.New()
@@ -752,4 +744,41 @@ func (r *repository) UpsertLoadoutSlot(ctx context.Context, req *UpdateLoadoutRe
 	}
 
 	return nil
+}
+
+func (r *repository) UpsertLoadoutSlotTx(ctx context.Context, tx *sqlx.Tx, req *UpdateLoadoutRequest) error {
+	validSlots := map[string]string{
+		"weapon":       "weapon_instance_id",
+		"head":         "head_instance_id",
+		"chest":        "chest_instance_id",
+		"gloves":       "gloves_instance_id",
+		"legs":         "legs_instance_id",
+		"ring_1":       "ring_1_instance_id",
+		"ring_2":       "ring_2_instance_id",
+		"consumable_1": "consumable_1_id",
+		"consumable_2": "consumable_2_id",
+		"consumable_3": "consumable_3_id",
+	}
+
+	column, ok := validSlots[req.Slot]
+	if !ok {
+		return fmt.Errorf("invalid slot: %s", req.Slot)
+	}
+
+	query := fmt.Sprintf(`
+	 INSERT INTO player_loadouts (member_id, %s)
+	 VALUES ($1, $2)
+	 ON CONFLICT (member_id) DO UPDATE
+	 SET %s = EXCLUDED.%s, updated_at = NOW()
+	`, column, column, column)
+
+	_, err := tx.ExecContext(ctx, query, req.MemberId, req.ItemInstanceId)
+	if err != nil {
+		return fmt.Errorf("failed to update loadout (tx): %w", err)
+	}
+
+	return nil
+}
+
+func (r *repository) BatchUpsertItemInstances(ctx context.Context, tx *sqlx.Tx, instances []*ItemInstance) error {
 }

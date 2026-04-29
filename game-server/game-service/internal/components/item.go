@@ -30,6 +30,10 @@ type ItemComponent struct {
 	BuyPrice    int
 	SellPrice   int
 	Description string
+
+	// InstanceID is the item_instances.id this component was hydrated from.
+	// nil for world items (chests / in-match drops) that have no DB row yet.
+	InstanceID *uuid.UUID
 }
 
 func (i *ItemComponent) Type() ecs.ComponentType {

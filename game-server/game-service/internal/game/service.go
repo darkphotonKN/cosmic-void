@@ -210,6 +210,7 @@ func extractedItemToPb(item *types.ExtractedItem) *pb.Item {
 		return nil
 	}
 	return &pb.Item{
+		InstanceId:      instanceIDToString(item.InstanceID),
 		TemplateId:      item.TemplateID.String(),
 		ItemType:        item.ItemType,
 		Name:            item.Name,
@@ -226,6 +227,15 @@ func extractedItemToPb(item *types.ExtractedItem) *pb.Item {
 		SellPrice:       int32(item.SellPrice),
 		Description:     item.Description,
 	}
+}
+
+// instanceIDToString returns the canonical UUID string for a known instance
+// or "" for items rolled inmatch. The consumer treats empty as "create new".
+func instanceIDToString(id *uuid.UUID) string {
+	if id == nil {
+		return ""
+	}
+	return id.String()
 }
 
 func extractedInventoryToPb(inventory []*types.ExtractedItem) []*pb.Item {
