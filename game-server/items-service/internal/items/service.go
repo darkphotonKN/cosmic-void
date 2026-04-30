@@ -96,20 +96,52 @@ func (s *service) CreatePlayerLoadout(createPlayerLoadoutReq *PlayerLoadout) err
 	return nil
 }
 
-func (s *service) ProcessItemsExtracted(req *pb.ItemsExtractedEvent) error {
-	// loop through each player
-	for _, item := range req.PlayerItems {
+func (s *service) ProcessItemsExtracted(ctx context.Context, req *pb.ItemsExtractedEvent) error {
+	// transaction to wrap inventory upserts and player_loadout upserts
+	for _, playerItems := range req.PlayerItems {
+		// loop through each player
 		slog.Debug("single player iterated from req.PlayerItems",
-			"member_id", item.MemberId,
-			"equipment", item.Equipment,
-			"inventory", item.Inventory,
+			"member_id", playerItems.MemberId,
+			"equipment", playerItems.Equipment,
+			"inventory", playerItems.Inventory,
 		)
+
+		// only holds one connection a time, released when committed or rolled back
+		commonutils.ExecTx(ctx, s.db, func(tx *sqlx.Tx) error {
+			// batch update items
+			s.repo.BatchUpsertItemInstances(ctx, tx, playerItems.Inventory)
+
+			// player loadout
+
+			return nil
+		})
+
 	}
-
-	// player loadout
-
 	return nil
 }
+
+func (s *service) MapProtoItemToItemInstances(itemsProto []*pb.Item) ([]*ItemInstance, error) {
+	itemInstances := make([]*ItemInstance, 0, len(itemsProto))
+
+	for _, protoItem := range itemsProto {
+		item := &ItemInstance{
+			// ID: protoItem.
+		}
+	}
+	return nil, nil
+}
+
+// sem := make(chan struct{}, 3) // max 3 concurrent
+//
+// for _, player := range players {
+//     sem <- struct{}{} // acquire slot
+//     go func(p Player) {
+//         defer func() { <-sem }() // release slot
+//         tx, _ := db.BeginTx(ctx, nil)
+//         // batch update
+//         tx.Commit()
+//     }(player)
+// }
 
 func (s *service) CreateItemType(ctx context.Context, req *CreateItemTypeRequest) (*ItemType, error) {
 	itemType := &ItemType{

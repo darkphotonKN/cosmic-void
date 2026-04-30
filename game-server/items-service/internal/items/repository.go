@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/google/uuid"
@@ -780,5 +781,92 @@ func (r *repository) UpsertLoadoutSlotTx(ctx context.Context, tx *sqlx.Tx, req *
 	return nil
 }
 
-func (r *repository) BatchUpsertItemInstances(ctx context.Context, tx *sqlx.Tx, instances []*ItemInstance) error {
+func (r *repository) BatchUpsertItemInstances(ctx context.Context, tx *sqlx.Tx, items []*ItemInstance) error {
+	if len(items) == 0 {
+		return nil
+	}
+
+	const colsPerRow = 20
+
+	var b strings.Builder
+	b.WriteString(`
+		INSERT INTO item_instances (
+			id, template_id, owner_member_id, source,
+			item_type, name, rarity_id,
+			attack_power, critical_rate, weapon_type,
+			defense_rating, magic_resistance, armor_slot,
+			healing_amount, mana_amount, buff_duration,
+			durability, description, buy_price, sell_price
+		) VALUES `)
+
+	args := make([]any, 0, len(items)*colsPerRow)
+
+	for i, item := range items {
+		if item.ID == uuid.Nil {
+			item.ID = uuid.New()
+		}
+
+		if i > 0 {
+			b.WriteString(", ")
+		}
+
+		base := i * colsPerRow
+		fmt.Fprintf(&b,
+			"($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)",
+			base+1, base+2, base+3, base+4, base+5, base+6, base+7, base+8, base+9, base+10,
+			base+11, base+12, base+13, base+14, base+15, base+16, base+17, base+18, base+19, base+20,
+		)
+
+		args = append(args,
+			item.ID,
+			item.TemplateID,
+			item.OwnerMemberID,
+			item.Source,
+			item.ItemType,
+			item.Name,
+			item.RarityID,
+			item.AttackPower,
+			item.CriticalRate,
+			item.WeaponType,
+			item.DefenseRating,
+			item.MagicResistance,
+			item.ArmorSlot,
+			item.HealingAmount,
+			item.ManaAmount,
+			item.BuffDuration,
+			item.Durability,
+			item.Description,
+			item.BuyPrice,
+			item.SellPrice,
+		)
+	}
+
+	b.WriteString(`
+		ON CONFLICT (id) DO UPDATE SET
+			template_id      = EXCLUDED.template_id,
+			owner_member_id  = EXCLUDED.owner_member_id,
+			source           = EXCLUDED.source,
+			item_type        = EXCLUDED.item_type,
+			name             = EXCLUDED.name,
+			rarity_id        = EXCLUDED.rarity_id,
+			attack_power     = EXCLUDED.attack_power,
+			critical_rate    = EXCLUDED.critical_rate,
+			weapon_type      = EXCLUDED.weapon_type,
+			defense_rating   = EXCLUDED.defense_rating,
+			magic_resistance = EXCLUDED.magic_resistance,
+			armor_slot       = EXCLUDED.armor_slot,
+			healing_amount   = EXCLUDED.healing_amount,
+			mana_amount      = EXCLUDED.mana_amount,
+			buff_duration    = EXCLUDED.buff_duration,
+			durability       = EXCLUDED.durability,
+			description      = EXCLUDED.description,
+			buy_price        = EXCLUDED.buy_price,
+			sell_price       = EXCLUDED.sell_price`)
+
+	_, err := tx.ExecContext(ctx, b.String(), args...)
+	if err != nil {
+		return fmt.Errorf("failed to batch upsert item instances (tx): %w", err)
+	}
+
+	return nil
 }
