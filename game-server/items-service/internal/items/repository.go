@@ -781,6 +781,44 @@ func (r *repository) UpsertLoadoutSlotTx(ctx context.Context, tx *sqlx.Tx, req *
 	return nil
 }
 
+// UpsertPlayerLoadoutTx writes the full loadout snapshot for a member.
+// Nil slot pointers in req become NULL (slot cleared); non-nil values are set.
+// updated_at is left to the BEFORE UPDATE trigger.
+func (r *repository) UpsertPlayerLoadoutTx(ctx context.Context, tx *sqlx.Tx, req *UpsertPlayerLoadoutRequest) error {
+	query := `
+		INSERT INTO player_loadouts (
+			member_id,
+			weapon_instance_id,
+			head_instance_id, chest_instance_id, legs_instance_id, gloves_instance_id,
+			ring_1_instance_id, ring_2_instance_id,
+			consumable_1_id, consumable_2_id, consumable_3_id
+		) VALUES (
+			:member_id,
+			:weapon_instance_id,
+			:head_instance_id, :chest_instance_id, :legs_instance_id, :gloves_instance_id,
+			:ring_1_instance_id, :ring_2_instance_id,
+			:consumable_1_id, :consumable_2_id, :consumable_3_id
+		)
+		ON CONFLICT (member_id) DO UPDATE SET
+			weapon_instance_id = EXCLUDED.weapon_instance_id,
+			head_instance_id   = EXCLUDED.head_instance_id,
+			chest_instance_id  = EXCLUDED.chest_instance_id,
+			legs_instance_id   = EXCLUDED.legs_instance_id,
+			gloves_instance_id = EXCLUDED.gloves_instance_id,
+			ring_1_instance_id = EXCLUDED.ring_1_instance_id,
+			ring_2_instance_id = EXCLUDED.ring_2_instance_id,
+			consumable_1_id    = EXCLUDED.consumable_1_id,
+			consumable_2_id    = EXCLUDED.consumable_2_id,
+			consumable_3_id    = EXCLUDED.consumable_3_id`
+
+	_, err := tx.NamedExecContext(ctx, query, req)
+	if err != nil {
+		return fmt.Errorf("failed to upsert player loadout (tx): %w", err)
+	}
+
+	return nil
+}
+
 func (r *repository) BatchUpsertItemInstances(ctx context.Context, tx *sqlx.Tx, items []*ItemInstance) error {
 	if len(items) == 0 {
 		return nil

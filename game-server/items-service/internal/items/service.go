@@ -2,6 +2,7 @@ package items
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -83,7 +84,7 @@ type Repository interface {
 	GetItemInstanceByID(ctx context.Context, id uuid.UUID) (*ItemInstance, error)
 	ListItemInstances(ctx context.Context, req *ListItemInstancesRequest) ([]*ItemInstance, error)
 	UpsertLoadoutSlot(ctx context.Context, req *UpdateLoadoutRequest) error
-	UpsertLoadoutSlotTx(ctx context.Context, tx *sqlx.Tx, req *UpdateLoadoutRequest) error
+	UpsertPlayerLoadoutTx(ctx context.Context, tx *sqlx.Tx, req *UpsertPlayerLoadoutRequest) error
 	UpsertItemInstanceTx(ctx context.Context, tx *sqlx.Tx, instance *ItemInstance) error
 	BatchUpsertItemInstances(ctx context.Context, tx *sqlx.Tx, instances []*ItemInstance) error
 }
@@ -108,13 +109,54 @@ func (s *service) ProcessItemsExtracted(ctx context.Context, req *pb.ItemsExtrac
 
 		// only holds one connection a time, released when committed or rolled back
 		commonutils.ExecTx(ctx, s.db, func(tx *sqlx.Tx) error {
+
 			// convert inventory and equipment into item instances
+			invItemInstances, err := s.MapProtoItemToItemInstances(playerItems.Inventory)
+			if err != nil {
+				slog.Error("Unexpected error converting inventory from pb.Item to InventoryInstance",
+					"err", err,
+				)
+			}
+
+			memberId, err := uuid.Parse(playerItems.MemberId)
+			if err != nil {
+				slog.Error("error parsing member id when processing items extracted",
+					"member_id", playerItems.MemberId,
+					"err", err,
+				)
+				return err
+			}
+
+			equipItemInstances, upsertParams, err := s.MapProtoEquipmentToItemInstances(memberId, playerItems.Equipment)
+			if err != nil {
+				slog.Error("Error when attempting to map pb equipped items to item instances and create upsert player loadout params",
+					"member_id", memberId,
+					"err", err,
+					"player_items_equipment", playerItems.Equipment,
+				)
+			}
+
+			allItemIntances := append(equipItemInstances, invItemInstances...)
 
 			// batch update items
-			s.repo.BatchUpsertItemInstances(ctx, tx, playerItems.Equ)
+			err = s.repo.BatchUpsertItemInstances(ctx, tx, allItemIntances)
+			if err != nil {
+				slog.Error("Error when attempting to batch upsert item instances",
+					"item_instances", allItemIntances,
+				)
+				return err
+			}
 
 			// upsert player loadout with equipment ids
-
+			err = s.repo.UpsertPlayerLoadoutTx(ctx, tx, upsertParams)
+			if err != nil {
+				slog.Error("Error when attempting to upsert equipment into player_loadouts",
+					"member_id", memberId,
+					"err", err,
+					"upsert_params", upsertParams,
+				)
+				return err
+			}
 			return nil
 		})
 	}
@@ -140,6 +182,9 @@ func (s *service) MapProtoEquipmentToItemInstances(memberID uuid.UUID, equipment
 		playerLoadoutParam.ChestInstanceID = &chestInstanceItem.ID
 		itemInstances = append(itemInstances, chestInstanceItem)
 	} else {
+		if errors.Is(err, commonconstants.ErrUUIDCouldNotBeParsed) {
+			return nil, nil, err
+		}
 		slog.Warn("Couldn't convert chest item to instanceItem.",
 			"error", err,
 		)
@@ -150,6 +195,9 @@ func (s *service) MapProtoEquipmentToItemInstances(memberID uuid.UUID, equipment
 		playerLoadoutParam.WeaponInstanceID = &weaponInstanceItem.ID
 		itemInstances = append(itemInstances, weaponInstanceItem)
 	} else {
+		if errors.Is(err, commonconstants.ErrUUIDCouldNotBeParsed) {
+			return nil, nil, err
+		}
 		slog.Warn("Couldn't convert weapon item to instanceItem.",
 			"error", err,
 		)
@@ -160,6 +208,9 @@ func (s *service) MapProtoEquipmentToItemInstances(memberID uuid.UUID, equipment
 		playerLoadoutParam.HeadInstanceID = &headInstanceItem.ID
 		itemInstances = append(itemInstances, headInstanceItem)
 	} else {
+		if errors.Is(err, commonconstants.ErrUUIDCouldNotBeParsed) {
+			return nil, nil, err
+		}
 		slog.Warn("Couldn't convert head item to instanceItem.",
 			"error", err,
 		)
@@ -170,6 +221,9 @@ func (s *service) MapProtoEquipmentToItemInstances(memberID uuid.UUID, equipment
 		playerLoadoutParam.GlovesInstanceID = &glovesInstanceItem.ID
 		itemInstances = append(itemInstances, glovesInstanceItem)
 	} else {
+		if errors.Is(err, commonconstants.ErrUUIDCouldNotBeParsed) {
+			return nil, nil, err
+		}
 		slog.Warn("Couldn't convert gloves item to instanceItem.",
 			"error", err,
 		)
@@ -180,6 +234,9 @@ func (s *service) MapProtoEquipmentToItemInstances(memberID uuid.UUID, equipment
 		playerLoadoutParam.LegsInstanceID = &legsInstanceItem.ID
 		itemInstances = append(itemInstances, legsInstanceItem)
 	} else {
+		if errors.Is(err, commonconstants.ErrUUIDCouldNotBeParsed) {
+			return nil, nil, err
+		}
 		slog.Warn("Couldn't convert legs item to instanceItem.",
 			"error", err,
 		)
@@ -190,6 +247,9 @@ func (s *service) MapProtoEquipmentToItemInstances(memberID uuid.UUID, equipment
 		playerLoadoutParam.Ring1InstanceID = &ring1InstanceItem.ID
 		itemInstances = append(itemInstances, ring1InstanceItem)
 	} else {
+		if errors.Is(err, commonconstants.ErrUUIDCouldNotBeParsed) {
+			return nil, nil, err
+		}
 		slog.Warn("Couldn't convert ring_1 item to instanceItem.",
 			"error", err,
 		)
@@ -200,6 +260,9 @@ func (s *service) MapProtoEquipmentToItemInstances(memberID uuid.UUID, equipment
 		playerLoadoutParam.Ring2InstanceID = &ring2InstanceItem.ID
 		itemInstances = append(itemInstances, ring2InstanceItem)
 	} else {
+		if errors.Is(err, commonconstants.ErrUUIDCouldNotBeParsed) {
+			return nil, nil, err
+		}
 		slog.Warn("Couldn't convert ring_2 item to instanceItem.",
 			"error", err,
 		)
@@ -210,6 +273,9 @@ func (s *service) MapProtoEquipmentToItemInstances(memberID uuid.UUID, equipment
 		playerLoadoutParam.Consumable1ID = &consumable1InstanceItem.ID
 		itemInstances = append(itemInstances, consumable1InstanceItem)
 	} else {
+		if errors.Is(err, commonconstants.ErrUUIDCouldNotBeParsed) {
+			return nil, nil, err
+		}
 		slog.Warn("Couldn't convert consumable_1 item to instanceItem.",
 			"error", err,
 		)
@@ -220,6 +286,9 @@ func (s *service) MapProtoEquipmentToItemInstances(memberID uuid.UUID, equipment
 		playerLoadoutParam.Consumable2ID = &consumable2InstanceItem.ID
 		itemInstances = append(itemInstances, consumable2InstanceItem)
 	} else {
+		if errors.Is(err, commonconstants.ErrUUIDCouldNotBeParsed) {
+			return nil, nil, err
+		}
 		slog.Warn("Couldn't convert consumable_2 item to instanceItem.",
 			"error", err,
 		)
@@ -230,6 +299,9 @@ func (s *service) MapProtoEquipmentToItemInstances(memberID uuid.UUID, equipment
 		playerLoadoutParam.Consumable3ID = &consumable3InstanceItem.ID
 		itemInstances = append(itemInstances, consumable3InstanceItem)
 	} else {
+		if errors.Is(err, commonconstants.ErrUUIDCouldNotBeParsed) {
+			return nil, nil, err
+		}
 		slog.Warn("Couldn't convert consumable_3 item to instanceItem.",
 			"error", err,
 		)
@@ -245,6 +317,7 @@ func (s *service) MapProtoEquipmentToItemInstances(memberID uuid.UUID, equipment
 
 func (s *service) ConvertSingleProtoItemtoItemInstance(protoItem *pb.Item) (*ItemInstance, error) {
 	if protoItem == nil {
+		slog.Debug("Nothing to convert, protoItem was nil")
 		return nil, fmt.Errorf("nil pb.Item cant be converted into ItemInstance.")
 	}
 
@@ -258,7 +331,7 @@ func (s *service) ConvertSingleProtoItemtoItemInstance(protoItem *pb.Item) (*Ite
 			slog.Error("error parsing protoItem's instanceID",
 				"instance_id", protoItem.InstanceId,
 			)
-			return nil, err
+			return nil, commonconstants.ErrUUIDCouldNotBeParsed
 		}
 	}
 
@@ -301,62 +374,28 @@ func (s *service) ConvertSingleProtoItemtoItemInstance(protoItem *pb.Item) (*Ite
 * updating the item instance table.
 **/
 func (s *service) MapProtoItemToItemInstances(itemsProto []*pb.Item) ([]*ItemInstance, error) {
+	// no items from user
 	if len(itemsProto) == 0 {
 		slog.Error("No itemProtos to map to ItemInstances.")
-		return nil, fmt.Errorf("itemsProto is empty")
+		return []*ItemInstance{}, nil
 	}
 
-	itemInstances := make([]*ItemInstance, 0, len(itemsProto))
+	// items exist, update
 
-	var itemID uuid.UUID
-	var err error
+	itemInstances := make([]*ItemInstance, 0)
 
 	for _, protoItem := range itemsProto {
-		itemID, err = uuid.Parse(protoItem.InstanceId)
+		item, err := s.ConvertSingleProtoItemtoItemInstance(protoItem)
 		if err != nil {
-			if protoItem.InstanceId != "" {
-				slog.Warn("Item id from protobuf couldnt be parsed into uuid",
-					"item_instance_id", protoItem.InstanceId,
-				)
-
-				// generate fresh id
-				itemID = uuid.New()
-			}
-		}
-
-		attackPower := int(protoItem.AttackPower)
-		criticalRate := protoItem.CriticalRate
-		weaponType := protoItem.WeaponType
-		defenseRating := int(protoItem.DefenseRating)
-		magicResistance := int(protoItem.MagicResistance)
-		armorSlot := protoItem.ArmorSlot
-		healingAmount := int(protoItem.HealingAmount)
-		manaAmount := int(protoItem.ManaAmount)
-		buffDuration := int(protoItem.BuffDuration)
-		buyPrice := int(protoItem.BuyPrice)
-		sellPrice := int(protoItem.SellPrice)
-		description := protoItem.Description
-
-		item := &ItemInstance{
-			ID:              itemID,
-			ItemType:        protoItem.ItemType,
-			Name:            protoItem.Name,
-			AttackPower:     &attackPower,
-			CriticalRate:    &criticalRate,
-			WeaponType:      &weaponType,
-			DefenseRating:   &defenseRating,
-			MagicResistance: &magicResistance,
-			ArmorSlot:       &armorSlot,
-			HealingAmount:   &healingAmount,
-			ManaAmount:      &manaAmount,
-			BuffDuration:    &buffDuration,
-			BuyPrice:        &buyPrice,
-			SellPrice:       &sellPrice,
-			Description:     &description,
+			slog.Warn("item couldnt be mapped into ItemInstance",
+				"proto_item_instance_id", protoItem.InstanceId,
+			)
+			continue
 		}
 
 		itemInstances = append(itemInstances, item)
 	}
+
 	return itemInstances, nil
 }
 
