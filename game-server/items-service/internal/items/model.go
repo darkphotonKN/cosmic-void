@@ -138,10 +138,10 @@ type ItemTemplateAggregate struct {
 // ItemInstance mirrors the item_instances table — a concrete owned item
 // (rolled from a template) belonging to a member.
 type ItemInstance struct {
-	ID            uuid.UUID  `db:"id" json:"id"`
-	TemplateID    uuid.UUID  `db:"template_id" json:"template_id"`
-	OwnerMemberID uuid.UUID  `db:"owner_member_id" json:"owner_member_id"`
-	Source        string     `db:"source" json:"source"` // 'extracted' | 'starting_gear' | 'reward'
+	ID            uuid.UUID `db:"id" json:"id"`
+	TemplateID    uuid.UUID `db:"template_id" json:"template_id"`
+	OwnerMemberID uuid.UUID `db:"owner_member_id" json:"owner_member_id"`
+	Source        string    `db:"source" json:"source"` // 'extracted' | 'starting_gear' | 'reward'
 
 	ItemType string     `db:"item_type" json:"item_type"` // 'weapon' | 'armor' | 'consumable'
 	Name     string     `db:"name" json:"name"`
@@ -196,6 +196,27 @@ type PlayerLoadout struct {
 
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+}
+
+// UpsertPlayerLoadoutRequest is the param shape for upserting a player's full
+// loadout in one call. MemberID is the conflict / WHERE key. Each slot pointer
+// is nullable: nil means "clear this slot", a value means "set to this instance".
+type UpsertPlayerLoadoutRequest struct {
+	MemberID uuid.UUID `db:"member_id" json:"member_id"`
+
+	WeaponInstanceID *uuid.UUID `db:"weapon_instance_id" json:"weapon_instance_id"`
+
+	HeadInstanceID   *uuid.UUID `db:"head_instance_id" json:"head_instance_id"`
+	ChestInstanceID  *uuid.UUID `db:"chest_instance_id" json:"chest_instance_id"`
+	LegsInstanceID   *uuid.UUID `db:"legs_instance_id" json:"legs_instance_id"`
+	GlovesInstanceID *uuid.UUID `db:"gloves_instance_id" json:"gloves_instance_id"`
+
+	Ring1InstanceID *uuid.UUID `db:"ring_1_instance_id" json:"ring_1_instance_id"`
+	Ring2InstanceID *uuid.UUID `db:"ring_2_instance_id" json:"ring_2_instance_id"`
+
+	Consumable1ID *uuid.UUID `db:"consumable_1_id" json:"consumable_1_id"`
+	Consumable2ID *uuid.UUID `db:"consumable_2_id" json:"consumable_2_id"`
+	Consumable3ID *uuid.UUID `db:"consumable_3_id" json:"consumable_3_id"`
 }
 
 // CreateItemTypeRequest represents the request to create an item type
@@ -423,7 +444,6 @@ type LoadoutWithItems struct {
 type ListItemInstancesRequest struct {
 	MemberId uuid.UUID `json:"member_id" binding:"required"`
 }
-
 
 type UpdateLoadoutRequest struct {
 	MemberId       uuid.UUID  `json:"member_id" binding:"required"`

@@ -108,27 +108,256 @@ func (s *service) ProcessItemsExtracted(ctx context.Context, req *pb.ItemsExtrac
 
 		// only holds one connection a time, released when committed or rolled back
 		commonutils.ExecTx(ctx, s.db, func(tx *sqlx.Tx) error {
-			// batch update items
-			s.repo.BatchUpsertItemInstances(ctx, tx, playerItems.Inventory)
+			// convert inventory and equipment into item instances
 
-			// player loadout
+			// batch update items
+			s.repo.BatchUpsertItemInstances(ctx, tx, playerItems.Equ)
+
+			// upsert player loadout with equipment ids
 
 			return nil
 		})
-
 	}
 	return nil
 }
 
-func (s *service) MapProtoItemToItemInstances(itemsProto []*pb.Item) ([]*ItemInstance, error) {
-	itemInstances := make([]*ItemInstance, 0, len(itemsProto))
+/**
+* Converts the equipped items, equipment, extracted from items.extracted event into ItemInstance entities for
+* updating the item instance table and formatted into PlayerLoadout for updating player_loadouts table.
+**/
+func (s *service) MapProtoEquipmentToItemInstances(memberID uuid.UUID, equipmentProto *pb.Equipment) ([]*ItemInstance, *UpsertPlayerLoadoutRequest, error) {
+	// holds both existing ids and new ids
+	playerLoadoutParam := &UpsertPlayerLoadoutRequest{
+		MemberID: memberID,
+	}
 
-	for _, protoItem := range itemsProto {
-		item := &ItemInstance{
-			// ID: protoItem.
+	itemInstances := make([]*ItemInstance, 0)
+
+	// convert each item invidually to maintain mapping
+	chestInstanceItem, err := s.ConvertSingleProtoItemtoItemInstance(equipmentProto.Chest)
+	if err == nil {
+		// update
+		playerLoadoutParam.ChestInstanceID = &chestInstanceItem.ID
+		itemInstances = append(itemInstances, chestInstanceItem)
+	} else {
+		slog.Warn("Couldn't convert chest item to instanceItem.",
+			"error", err,
+		)
+	}
+
+	weaponInstanceItem, err := s.ConvertSingleProtoItemtoItemInstance(equipmentProto.Weapon)
+	if err == nil {
+		playerLoadoutParam.WeaponInstanceID = &weaponInstanceItem.ID
+		itemInstances = append(itemInstances, weaponInstanceItem)
+	} else {
+		slog.Warn("Couldn't convert weapon item to instanceItem.",
+			"error", err,
+		)
+	}
+
+	headInstanceItem, err := s.ConvertSingleProtoItemtoItemInstance(equipmentProto.Head)
+	if err == nil {
+		playerLoadoutParam.HeadInstanceID = &headInstanceItem.ID
+		itemInstances = append(itemInstances, headInstanceItem)
+	} else {
+		slog.Warn("Couldn't convert head item to instanceItem.",
+			"error", err,
+		)
+	}
+
+	glovesInstanceItem, err := s.ConvertSingleProtoItemtoItemInstance(equipmentProto.Gloves)
+	if err == nil {
+		playerLoadoutParam.GlovesInstanceID = &glovesInstanceItem.ID
+		itemInstances = append(itemInstances, glovesInstanceItem)
+	} else {
+		slog.Warn("Couldn't convert gloves item to instanceItem.",
+			"error", err,
+		)
+	}
+
+	legsInstanceItem, err := s.ConvertSingleProtoItemtoItemInstance(equipmentProto.Legs)
+	if err == nil {
+		playerLoadoutParam.LegsInstanceID = &legsInstanceItem.ID
+		itemInstances = append(itemInstances, legsInstanceItem)
+	} else {
+		slog.Warn("Couldn't convert legs item to instanceItem.",
+			"error", err,
+		)
+	}
+
+	ring1InstanceItem, err := s.ConvertSingleProtoItemtoItemInstance(equipmentProto.Ring_1)
+	if err == nil {
+		playerLoadoutParam.Ring1InstanceID = &ring1InstanceItem.ID
+		itemInstances = append(itemInstances, ring1InstanceItem)
+	} else {
+		slog.Warn("Couldn't convert ring_1 item to instanceItem.",
+			"error", err,
+		)
+	}
+
+	ring2InstanceItem, err := s.ConvertSingleProtoItemtoItemInstance(equipmentProto.Ring_2)
+	if err == nil {
+		playerLoadoutParam.Ring2InstanceID = &ring2InstanceItem.ID
+		itemInstances = append(itemInstances, ring2InstanceItem)
+	} else {
+		slog.Warn("Couldn't convert ring_2 item to instanceItem.",
+			"error", err,
+		)
+	}
+
+	consumable1InstanceItem, err := s.ConvertSingleProtoItemtoItemInstance(equipmentProto.Consumable_1)
+	if err == nil {
+		playerLoadoutParam.Consumable1ID = &consumable1InstanceItem.ID
+		itemInstances = append(itemInstances, consumable1InstanceItem)
+	} else {
+		slog.Warn("Couldn't convert consumable_1 item to instanceItem.",
+			"error", err,
+		)
+	}
+
+	consumable2InstanceItem, err := s.ConvertSingleProtoItemtoItemInstance(equipmentProto.Consumable_2)
+	if err == nil {
+		playerLoadoutParam.Consumable2ID = &consumable2InstanceItem.ID
+		itemInstances = append(itemInstances, consumable2InstanceItem)
+	} else {
+		slog.Warn("Couldn't convert consumable_2 item to instanceItem.",
+			"error", err,
+		)
+	}
+
+	consumable3InstanceItem, err := s.ConvertSingleProtoItemtoItemInstance(equipmentProto.Consumable_3)
+	if err == nil {
+		playerLoadoutParam.Consumable3ID = &consumable3InstanceItem.ID
+		itemInstances = append(itemInstances, consumable3InstanceItem)
+	} else {
+		slog.Warn("Couldn't convert consumable_3 item to instanceItem.",
+			"error", err,
+		)
+	}
+
+	slog.Debug("Completed building playerloadoutParam and itemInstances",
+		"item_instances", itemInstances,
+		"player_loadout_param", playerLoadoutParam,
+	)
+
+	return itemInstances, playerLoadoutParam, nil
+}
+
+func (s *service) ConvertSingleProtoItemtoItemInstance(protoItem *pb.Item) (*ItemInstance, error) {
+	if protoItem == nil {
+		return nil, fmt.Errorf("nil pb.Item cant be converted into ItemInstance.")
+	}
+
+	var itemId uuid.UUID
+	var err error
+	if protoItem.InstanceId == "" {
+		itemId = uuid.New()
+	} else {
+		itemId, err = uuid.Parse(protoItem.InstanceId)
+		if err != nil {
+			slog.Error("error parsing protoItem's instanceID",
+				"instance_id", protoItem.InstanceId,
+			)
+			return nil, err
 		}
 	}
-	return nil, nil
+
+	attackPower := int(protoItem.AttackPower)
+	criticalRate := protoItem.CriticalRate
+	weaponType := protoItem.WeaponType
+	defenseRating := int(protoItem.DefenseRating)
+	magicResistance := int(protoItem.MagicResistance)
+	armorSlot := protoItem.ArmorSlot
+	healingAmount := int(protoItem.HealingAmount)
+	manaAmount := int(protoItem.ManaAmount)
+	buffDuration := int(protoItem.BuffDuration)
+	buyPrice := int(protoItem.BuyPrice)
+	sellPrice := int(protoItem.SellPrice)
+	description := protoItem.Description
+
+	item := &ItemInstance{
+		ID:              itemId,
+		ItemType:        protoItem.ItemType,
+		Name:            protoItem.Name,
+		AttackPower:     &attackPower,
+		CriticalRate:    &criticalRate,
+		WeaponType:      &weaponType,
+		DefenseRating:   &defenseRating,
+		MagicResistance: &magicResistance,
+		ArmorSlot:       &armorSlot,
+		HealingAmount:   &healingAmount,
+		ManaAmount:      &manaAmount,
+		BuffDuration:    &buffDuration,
+		BuyPrice:        &buyPrice,
+		SellPrice:       &sellPrice,
+		Description:     &description,
+	}
+
+	return item, nil
+}
+
+/**
+* Converts the non equipped slice of items extracted from items.extracted event into ItemInstance entities for
+* updating the item instance table.
+**/
+func (s *service) MapProtoItemToItemInstances(itemsProto []*pb.Item) ([]*ItemInstance, error) {
+	if len(itemsProto) == 0 {
+		slog.Error("No itemProtos to map to ItemInstances.")
+		return nil, fmt.Errorf("itemsProto is empty")
+	}
+
+	itemInstances := make([]*ItemInstance, 0, len(itemsProto))
+
+	var itemID uuid.UUID
+	var err error
+
+	for _, protoItem := range itemsProto {
+		itemID, err = uuid.Parse(protoItem.InstanceId)
+		if err != nil {
+			if protoItem.InstanceId != "" {
+				slog.Warn("Item id from protobuf couldnt be parsed into uuid",
+					"item_instance_id", protoItem.InstanceId,
+				)
+
+				// generate fresh id
+				itemID = uuid.New()
+			}
+		}
+
+		attackPower := int(protoItem.AttackPower)
+		criticalRate := protoItem.CriticalRate
+		weaponType := protoItem.WeaponType
+		defenseRating := int(protoItem.DefenseRating)
+		magicResistance := int(protoItem.MagicResistance)
+		armorSlot := protoItem.ArmorSlot
+		healingAmount := int(protoItem.HealingAmount)
+		manaAmount := int(protoItem.ManaAmount)
+		buffDuration := int(protoItem.BuffDuration)
+		buyPrice := int(protoItem.BuyPrice)
+		sellPrice := int(protoItem.SellPrice)
+		description := protoItem.Description
+
+		item := &ItemInstance{
+			ID:              itemID,
+			ItemType:        protoItem.ItemType,
+			Name:            protoItem.Name,
+			AttackPower:     &attackPower,
+			CriticalRate:    &criticalRate,
+			WeaponType:      &weaponType,
+			DefenseRating:   &defenseRating,
+			MagicResistance: &magicResistance,
+			ArmorSlot:       &armorSlot,
+			HealingAmount:   &healingAmount,
+			ManaAmount:      &manaAmount,
+			BuffDuration:    &buffDuration,
+			BuyPrice:        &buyPrice,
+			SellPrice:       &sellPrice,
+			Description:     &description,
+		}
+
+		itemInstances = append(itemInstances, item)
+	}
+	return itemInstances, nil
 }
 
 // sem := make(chan struct{}, 3) // max 3 concurrent
