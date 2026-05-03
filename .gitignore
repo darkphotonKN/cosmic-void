@@ -266,3 +266,6 @@ CLAUDE.md
 # Root-level docs and Postman collections
 /docs/
 /*.postman_collection.json
+
+.skills/
+*.md
