@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
+	"time"
 
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -33,6 +34,11 @@ func InitDB() *sqlx.DB {
 	if err != nil {
 		panic(fmt.Errorf("failed to connect to database: %w", err))
 	}
+
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(10)
+	db.SetConnMaxLifetime(5 * time.Minute)
+	db.SetConnMaxIdleTime(5 * time.Minute)
 
 	if err = db.Ping(); err != nil {
 		panic(fmt.Errorf("failed to ping database: %w", err))

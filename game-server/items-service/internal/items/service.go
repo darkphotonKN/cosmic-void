@@ -191,6 +191,7 @@ func (s *service) MapProtoEquipmentToItemInstances(memberID uuid.UUID, equipment
 	}
 
 	weaponInstanceItem, err := s.ConvertSingleProtoItemtoItemInstance(equipmentProto.Weapon)
+
 	if err == nil {
 		playerLoadoutParam.WeaponInstanceID = &weaponInstanceItem.ID
 		itemInstances = append(itemInstances, weaponInstanceItem)

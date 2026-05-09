@@ -5,6 +5,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/darkphotonKN/cosmic-void-server/auth-service/internal/constants"
 	"github.com/darkphotonKN/cosmic-void-server/auth-service/internal/member"
@@ -39,6 +40,11 @@ func InitDB() *sqlx.DB {
 	if err != nil {
 		log.Fatalf("Failed to connect to the database: %v", err)
 	}
+
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(10)
+	db.SetConnMaxLifetime(5 * time.Minute)
+	db.SetConnMaxIdleTime(5 * time.Minute)
 
 	slog.Info("Connected to the database successfully")
 
