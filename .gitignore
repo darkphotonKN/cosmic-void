@@ -263,9 +263,19 @@ temp/
 .claude/
 CLAUDE.md
 
-# Root-level docs and Postman collections
-/docs/
+# Root-level postman collections
 /*.postman_collection.json
 
+# Skills 定義（個人配置不進 git）
 .skills/
-*.md
+
+# Learning notes（個人學習筆記不進 git，靠 vault backup）
+docs/learning/**/*.md
+
+# =============================================================================
+# K8s real secrets (only .example versions go to git)
+# =============================================================================
+**/k8s/secret.yml
+**/k8s/secret.yaml
+**/k8s/*-secret.yml
+**/k8s/*-secret.yaml

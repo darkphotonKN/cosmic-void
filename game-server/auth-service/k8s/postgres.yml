@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service-db          # ← 必須對齊 configmap.yml 裡的 DB_HOST
+  namespace: default
+  labels:
+    app: cosmic-void
+    component: auth-service-db
+spec:
+  clusterIP: None                # ← headless
+  selector:
+    app: cosmic-void
+    component: auth-service-db       # ← 填這裡
+  ports:
+  - name: postgres
+    port: 5432                   # Service 對外 port
+    targetPort: 5432             # 進到 pod 的 port（postgres 預設 5432）
+    protocol: TCP
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: auth-service-db
+  namespace: default
+  labels:
+    app: cosmic-void
+    component: auth-service-db
+spec:
+  serviceName: auth-service-db   # ← 必須對齊上面 Service 的 name（StatefulSet 規定）
+  replicas: 1                    # 學習階段一個就好
+  selector:
+    matchLabels:
+      app: cosmic-void
+      component: auth-service-db
+
+  template:
+    metadata:
+      labels:
+        app: cosmic-void
+        component: auth-service-db       # ← 填這裡（三個地方要相同）
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:17
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_USER
+          value: "user"          # ← 對齊 configmap.yml 的 DB_USER
+        - name: POSTGRES_DB
+          value: "cosmic_void_auth_service_db"  # ← 對齊 configmap.yml 的 DB_NAME
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: auth-service-secrets   # ← 填這裡
+              key: DB_PASSWORD    # ← 填這裡
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+          subPath: pgdata
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        readinessProbe:
+          exec:
+            command: ["pg_isready", "-U", "user", "-d", "cosmic_void_auth_service_db"]
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        livenessProbe:
+          exec:
+            command: ["pg_isready", "-U", "user"]
+          initialDelaySeconds: 30  # liveness 寬鬆一點，避免 DB 壓力大時被殺
+          periodSeconds: 10
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-data
+    spec:
+      accessModes: ["ReadWriteOnce"]   
+      resources:
+        requests:
+          storage: 1Gi

@@ -1,0 +1,98 @@
+# =============================================================================
+# RabbitMQ (in-cluster, dev/learning purposes)
+#
+# 對齊 docker-compose：
+#   image: rabbitmq:3-management
+#   RABBITMQ_DEFAULT_USER=cosmicvoid
+#   RABBITMQ_DEFAULT_PASS=cosmicvoid
+#
+# 帳密從 Secret 拿（auth-service-secrets 的 RABBITMQ_PASS）
+# 帳號可以放 ConfigMap，但這份直接用環境變數寫死 = 對齊 docker-compose 簡單路線
+# =============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  namespace: default
+  labels:
+    app: cosmic-void
+    component: rabbitmq
+spec:
+  type: ClusterIP
+  selector:
+    app: cosmic-void
+    component: rabbitmq
+  ports:
+  - name: amqp
+    port: 5672
+    targetPort: 5672
+    protocol: TCP
+  - name: management
+    port: 15672
+    targetPort: 15672
+    protocol: TCP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  namespace: default
+  labels:
+    app: cosmic-void
+    component: rabbitmq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cosmic-void
+      component: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: cosmic-void
+        component: rabbitmq
+    spec:
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:3-management
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          value: "cosmicvoid"
+        - name: RABBITMQ_DEFAULT_PASS
+          valueFrom:
+            secretKeyRef:
+              name: auth-service-secrets
+              key: RABBITMQ_PASS
+        ports:
+        - containerPort: 5672
+          name: amqp
+        - containerPort: 15672
+          name: management
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        readinessProbe:
+          exec:
+            command: ["rabbitmq-diagnostics", "ping"]
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 10
+        livenessProbe:
+          exec:
+            command: ["rabbitmq-diagnostics", "status"]
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 15
+        volumeMounts:
+        - name: rabbitmq-data
+          mountPath: /var/lib/rabbitmq
+      volumes:
+      - name: rabbitmq-data
+        emptyDir: {}

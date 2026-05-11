@@ -1,0 +1,33 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: auth-service-config
+  namespace: default
+  labels:
+    app: cosmic-void
+    component: auth-service
+data:
+  # ─── 服務本身 ───  
+  SERVICE_VERSION: "1.0.0"
+  ENVIRONMENT: "PRODUCTION"
+  GRPC_AUTH_ADDR: "7003"
+
+  # ─── Database Connect (no password) ───
+  DB_HOST: "auth-service-db"
+  DB_PORT: "5432"
+  DB_NAME: "cosmic_void_auth_service_db"
+  DB_USER: "user"
+
+  # ─── RabbitMQ Connect ( no password ) ───
+  RABBITMQ_HOST: "rabbitmq"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_USER: "cosmicvoid"
+
+  # ─── Redis Connect ───
+  REDIS_MODE: "standalone"
+  REDIS_ADDR: "redis:6379"
+
+  # ─── 其他依賴 ───
+  CONSUL_ADDR: "consul:8500"
+  COLLECTOR_ENDPOINT: "otel-collector:4317"
+

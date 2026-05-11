@@ -1,0 +1,154 @@
+# =============================================================================
+# Postgres for auth-service (in-cluster, learning purposes)
+#
+# 這是一份「半完成」的範本，幾個 TODO 留給你自己填。
+# 寫完後存成 postgres.yml（不要覆蓋這個 .template）。
+#
+# 三個物件：
+#   1. Service       — 讓 auth-service 用 DNS name "auth-service-db" 連得到 DB
+#   2. StatefulSet   — Postgres pod 本體
+#   3. (PVC 由 StatefulSet 的 volumeClaimTemplates 自動建，不用自己寫)
+#
+# 為什麼 Postgres 用 StatefulSet 而不是 Deployment？
+#   - StatefulSet 給 pod 穩定名稱（postgres-0, postgres-1...）
+#   - StatefulSet 可以搭配 volumeClaimTemplates 自動配 PVC，每個 pod 一份儲存
+#   - DB 是 stateful（重啟後資料要在），所以選 StatefulSet
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# 1. Service
+# ---------------------------------------------------------------------------
+# 為什麼要 headless（clusterIP: None）？
+#   普通 Service 會給一個虛擬 IP，DNS 解析回那個 IP（負載平衡）。
+#   StatefulSet 配 headless Service 時，DNS 會直接回 pod IP，
+#   且每個 pod 有獨立 DNS：postgres-0.auth-service-db.default.svc.cluster.local
+#   單副本 Postgres 其實兩種都行，但 StatefulSet 慣例配 headless。
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service-db          # ← 必須對齊 configmap.yml 裡的 DB_HOST
+  namespace: default
+  labels:
+    app: cosmic-void
+    component: auth-service-db
+spec:
+  clusterIP: None                # ← headless
+  selector:
+    # TODO 1: 填 selector，要對齊下面 StatefulSet template.metadata.labels
+    # 提示：參考 auth-service 的 service.yml 怎麼寫
+    app: cosmic-void
+    component: ___________       # ← 填這裡
+  ports:
+  - name: postgres
+    port: 5432                   # Service 對外 port
+    targetPort: 5432             # 進到 pod 的 port（postgres 預設 5432）
+    protocol: TCP
+
+---
+# ---------------------------------------------------------------------------
+# 2. StatefulSet
+# ---------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: auth-service-db
+  namespace: default
+  labels:
+    app: cosmic-void
+    component: auth-service-db
+spec:
+  serviceName: auth-service-db   # ← 必須對齊上面 Service 的 name（StatefulSet 規定）
+  replicas: 1                    # 學習階段一個就好
+  selector:
+    matchLabels:
+      app: cosmic-void
+      component: auth-service-db
+
+  template:
+    metadata:
+      labels:
+        # TODO 2: labels 要和上面 selector.matchLabels 一模一樣，也要和 Service 的 selector 對齊
+        app: cosmic-void
+        component: ___________       # ← 填這裡（三個地方要相同）
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:17
+        ports:
+        - containerPort: 5432
+          name: postgres
+
+        # ─── 環境變數：兩種來源混用 ───
+        # 為什麼不全用 envFrom？
+        #   POSTGRES_USER / POSTGRES_DB 是「設定」（不機密）→ 可以寫死或從 ConfigMap
+        #   POSTGRES_PASSWORD 是「機密」→ 從 Secret 拿
+        #
+        # 為什麼這裡不用 envFrom: configMapRef: auth-service-config？
+        #   因為那份 ConfigMap 是 auth-service 應用程式用的（DB_HOST、DB_USER...），
+        #   key 名稱不是 Postgres image 認得的（POSTGRES_USER vs DB_USER）。
+        env:
+        - name: POSTGRES_USER
+          value: "user"          # ← 對齊 configmap.yml 的 DB_USER
+        - name: POSTGRES_DB
+          value: "cosmic_void_auth_service_db"  # ← 對齊 configmap.yml 的 DB_NAME
+        - name: POSTGRES_PASSWORD
+          # TODO 3: 從 Secret 取 DB_PASSWORD
+          # 提示：用 valueFrom.secretKeyRef
+          # 結構：
+          #   valueFrom:
+          #     secretKeyRef:
+          #       name: <Secret 名字>
+          #       key: <Secret 裡的 key>
+          # 你的 Secret 叫什麼？key 叫什麼？去看 secret.yml.example
+          valueFrom:
+            secretKeyRef:
+              name: ___________   # ← 填這裡
+              key: ___________    # ← 填這裡
+
+        # ─── 把 PVC 掛進 pod ───
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+          subPath: pgdata        # 重要：postgres image 預設 PGDATA=/var/lib/postgresql/data，
+                                 # 但有時掛 PV 會出現 "data directory has wrong ownership" 錯誤，
+                                 # 用 subPath 讓 postgres 寫進 volume 的子目錄可以避開這問題。
+
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+
+        # ─── Probe ───
+        # 為什麼 Postgres 用 exec 而不是 tcpSocket？
+        #   tcpSocket 只測 port 開了沒，但 Postgres 啟動時 port 開很早，DB 還沒 ready 就會誤判 OK。
+        #   pg_isready 是 Postgres 自己的健康檢查指令，比較準。
+        readinessProbe:
+          exec:
+            command: ["pg_isready", "-U", "user", "-d", "cosmic_void_auth_service_db"]
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        livenessProbe:
+          exec:
+            command: ["pg_isready", "-U", "user"]
+          initialDelaySeconds: 30  # liveness 寬鬆一點，避免 DB 壓力大時被殺
+          periodSeconds: 10
+
+  # ─── PVC 模板 ───
+  # 這是 StatefulSet 的核心特色：每個 replica 自動有自己的 PVC
+  # 副本數 1 → 自動建一個 PVC 叫 postgres-data-auth-service-db-0
+  # （命名規則：<volumeName>-<statefulsetName>-<index>）
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-data
+    spec:
+      accessModes: ["ReadWriteOnce"]   # 單一 node 讀寫，Postgres 用這個
+      # TODO 4: storage 要多大？學習階段 1Gi 就夠
+      # 提示：resources.requests.storage
+      resources:
+        requests:
+          storage: ___________   # ← 填這裡（例如 1Gi）
+      # 不寫 storageClassName 就用 cluster 預設的
+      # Docker Desktop 預設 storageClass 是 "hostpath"，會把資料存在 VM 裡

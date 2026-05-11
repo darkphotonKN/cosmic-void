@@ -1,0 +1,177 @@
+# =============================================================================
+# K8s Deployment 教學範本（learning reference, 不是真實部署設定）
+# =============================================================================
+# 這份檔案的用途：
+#   - 學習用範本，每個欄位旁邊有教學註解
+#   - 之後寫真實服務的 deployment.yml 時可以拿來對照
+#   - 真實部署設定請放到各 service 自己的 k8s/ 資料夾
+#
+# 來源：原本是 game-server/deployment.yml（學習途中的練習版），
+#       2026-04-30 修正所有問題後搬到這裡當乾淨範本
+#
+# 對應筆記：docs/learning/k8s/deployment.md
+# =============================================================================
+
+apiVersion: apps/v1
+# kind 決定後面 YAML 的結構規則
+# 常見：Deployment / Service / ConfigMap / Secret / Ingress
+kind: Deployment
+
+metadata:
+  # name 規則：只能小寫字母 + 數字 + 連字號 -
+  # 不能大寫、底線、空格、中文（會被拿去當 DNS 名稱用）
+  name: cosmic-void
+
+  # namespace 是「資料夾/部門」，省略時用 default
+  # 同 namespace 內 name 不能重複，跨 namespace 可以重複
+  namespace: default
+
+  # metadata.labels 是貼在「Deployment 物件本身」的標籤
+  # ⚠️ 跟 Pod 沒關係（Pod 的標籤在下面 spec.template.metadata.labels）
+  # 用途：用 kubectl 篩選多個 Deployment（kubectl get deploy -l app=cosmic-void）
+  labels:
+    app: cosmic-void
+
+spec:
+  # selector 是 Deployment「找 Pod」的條件
+  # ⚠️ 必須跟下面 spec.template.metadata.labels 對得上，否則 K8s 拒絕 apply
+  # 規則是「子集匹配」：Pod 標籤可以多，但必須包含 selector 要求的
+  selector:
+    matchLabels:
+      app: cosmic-void
+
+  # 我要幾個 Pod
+  # ⚠️ 生產環境至少 2，replicas: 1 換版本必中斷
+  # 學習用 1 沒問題，上線前要改
+  replicas: 1
+
+  # 換版本的策略
+  strategy:
+    # RollingUpdate（預設）：邊開新邊關舊，不中斷
+    # Recreate：先全關再全開（會中斷，只在 Pod 不能並存時用）
+    type: RollingUpdate
+    rollingUpdate:
+      # maxSurge：最多可以「超過」replicas 多少（暫時開更多新 Pod）
+      # maxUnavailable：最多可以「少於」replicas 多少（暫時砍掉幾個舊 Pod）
+      #
+      # ⚠️ replicas 小（< 4）建議用絕對數字，百分比會被取整為 0
+      #    例：25% × 1 = 0.25 → K8s 取 0，等於沒設
+      #
+      # 三種常見組合：
+      #   maxSurge: 1, maxUnavailable: 0     ← 最安全（先擴後縮，要多資源）
+      #   maxSurge: 25%, maxUnavailable: 25% ← 預設權衡
+      #   maxSurge: 0, maxUnavailable: 25%   ← 最省資源（先縮後擴，會降載）
+      maxSurge: 1
+      maxUnavailable: 0
+
+  # template 以下整段是「Pod 的設計圖」
+  # K8s 拿這份設計圖複製貼上 N 個 Pod
+  template:
+    metadata:
+      # ⚠️ 這裡的 labels 必須跟上面 spec.selector.matchLabels 對得上
+      # 不然 Deployment 認不得自己生的 Pod
+      labels:
+        app: cosmic-void
+
+    spec:
+      # initContainers（按需使用）：主容器啟動前先跑的容器
+      # 每個必須成功退出才會跑下一個，全部跑完才啟動主 containers
+      # 經典用途：等 DB ready、跑 migration、下載資源
+      # initContainers:
+      # - name: wait-for-db
+      #   image: busybox
+      #   command: ["sh", "-c", "until nc -z postgres 5432; do sleep 1; done"]
+
+      containers:
+      # 一個 Pod 通常一個 container（少數情況才會多個）
+      - name: cosmic-void
+
+        # ⚠️ 不要用 :latest，重啟時會偷偷拉到新版本
+        # 用具體 tag (v1.2.3) 或 commit hash
+        image: myregistry/cosmic-void:v1.0.0
+
+        resources:
+          # requests：保證給你的最少資源（K8s 用來排程到 Node）
+          requests:
+            cpu: 100m       # 100m = 0.1 核（1000m = 1 核）
+            memory: 256Mi   # Mi = MebiByte (1024×1024 bytes)
+
+          # limits：絕對不能超過的上限
+          # ⚠️ CPU 超過 → 被限速（變慢，Pod 不死）
+          # ⚠️ 記憶體超過 → OOMKilled（Pod 被殺）
+          limits:
+            cpu: 500m       # 給尖峰彈性
+            memory: 512Mi   # 設 requests < limits = Burstable QoS
+
+        # livenessProbe：Pod 還活著嗎？失敗 → 殺 Pod 重生
+        # ⚠️ endpoint 只檢查「程式本身」（HTTP server 還活著）
+        # 不要檢查 DB / cache，否則 DB 一掛全部 Pod CrashLoopBackOff
+        livenessProbe:
+          httpGet:
+            path: /healthz       # 只檢查程式自己活著
+            port: 80
+          initialDelaySeconds: 10  # Pod 啟動後等 10 秒才開始檢查
+          periodSeconds: 10        # 每 10 秒檢查一次
+          timeoutSeconds: 5        # 5 秒沒回應算失敗
+          failureThreshold: 3      # 連續失敗 3 次才殺
+          successThreshold: 1
+
+        # readinessProbe：Pod 準備好接流量嗎？失敗 → 從 Service 移除（不殺）
+        # ⚠️ endpoint 檢查「所有依賴」（DB、cache、external API）
+        # 跟 liveness 必須是不同 endpoint
+        readinessProbe:
+          httpGet:
+            path: /readiness     # 檢查所有依賴都通
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 3
+          successThreshold: 1
+
+        # 環境變數注入容器
+        # 三種寫法：
+        #   1. value: "..."          ← 寫死值（密碼絕對不要這樣）
+        #   2. configMapKeyRef       ← 從 ConfigMap 讀（一般設定）
+        #   3. secretKeyRef          ← 從 Secret 讀（密碼、token）
+        env:
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: cosmic-void     # 對應的 ConfigMap 名字
+              key: DB_HOST          # ConfigMap 內的 key
+        # 偷懶寫法：envFrom 整批匯入整個 ConfigMap / Secret
+        # envFrom:
+        # - configMapRef:
+        #     name: cosmic-void-config
+        # - secretRef:
+        #     name: cosmic-void-secrets
+
+        # ports 是「文件 + 別名」，不影響容器實際監聽哪個 port
+        # 容器監聽哪個 port 由你的程式決定（ListenAndServe(":80")）
+        # 寫上去的好處：Service 可以用 name 引用，未來改 port 數字不用動 Service
+        ports:
+        - containerPort: 80
+          name: http              # 取個有意義的名字（之後 Service 可用 targetPort: http）
+
+        # 把 volume 掛載到容器內的某個路徑
+        volumeMounts:
+        - name: localtime         # 對應下面 volumes 的 name
+          mountPath: /etc/localtime
+          readOnly: true          # 系統檔案唯讀更安全
+
+      # volumes 是 Pod 級別宣告（containers 共用）
+      # 常見類型：
+      #   emptyDir          ← Pod 生命週期內的暫存（Pod 重建會消失）
+      #   hostPath          ← 掛 Node 上的目錄（謹慎使用）
+      #   configMap         ← ConfigMap 變成檔案
+      #   secret            ← Secret 變成檔案
+      #   persistentVolumeClaim ← 持久化儲存（Pod 死也不消失）
+      volumes:
+      - name: localtime
+        hostPath:
+          path: /usr/share/zoneinfo/Asia/Taipei  # 台灣時間
+
+      # restartPolicy：Deployment 只能 Always，寫其他值會錯
+      # 這行其實可省略（預設就是 Always）
+      restartPolicy: Always
