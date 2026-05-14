@@ -91,6 +91,7 @@ func (s *service) formatMatchData(sessionID uuid.UUID, startedAt time.Time, ende
 		MatchStartedAt: timestamppb.New(startedAt),
 		MatchEndedAt:   timestamppb.New(endedAt),
 		Players:        playerMatchRes,
+		EventId:        uuid.NewString(),
 	}
 
 	slog.Debug("matchEndedEvent in formatMatchData before marshalling into protobuf",

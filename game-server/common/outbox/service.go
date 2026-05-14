@@ -20,8 +20,8 @@ func NewService(repo Repository) *service {
 type Repository interface {
 	CreateOutbox(ctx context.Context, params OutboxParams) error
 	CreateOutboxTx(ctx context.Context, tx *sqlx.Tx, params OutboxParams) error
-	GetUnpublishedOutboxItems(ctx context.Context, limit *int) ([]*OutboxEvent, error)
-	UpdateOutboxToPublished(ctx context.Context, id uuid.UUID) error
+	GetUnpublishedOutboxItems(ctx context.Context, tx *sqlx.Tx, limit int) ([]*OutboxEvent, error)
+	UpdateOutboxToPublished(ctx context.Context, tx *sqlx.Tx, id uuid.UUID) error
 }
 
 func (s *service) CreateOutbox(ctx context.Context, params OutboxParams) error {
@@ -32,10 +32,10 @@ func (s *service) CreateOutboxTx(ctx context.Context, tx *sqlx.Tx, params Outbox
 	return s.repo.CreateOutboxTx(ctx, tx, params)
 }
 
-func (s *service) UpdateOutboxToPublished(ctx context.Context, id uuid.UUID) error {
-	return s.repo.UpdateOutboxToPublished(ctx, id)
+func (s *service) UpdateOutboxToPublished(ctx context.Context, tx *sqlx.Tx, id uuid.UUID) error {
+	return s.repo.UpdateOutboxToPublished(ctx, tx, id)
 }
 
-func (s *service) GetPendingOutboxItems(ctx context.Context, limit *int) ([]*OutboxEvent, error) {
-	return s.repo.GetUnpublishedOutboxItems(ctx, limit)
+func (s *service) GetPendingOutboxItems(ctx context.Context, tx *sqlx.Tx, limit int) ([]*OutboxEvent, error) {
+	return s.repo.GetUnpublishedOutboxItems(ctx, tx, limit)
 }

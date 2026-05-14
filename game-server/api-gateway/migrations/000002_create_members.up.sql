@@ -27,4 +27,5 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER set_members_updated_at
 BEFORE UPDATE ON members
 FOR EACH ROW
-EXECUTE FUNCTION update_members_updated_at(); 
+EXECUTE FUNCTION update_members_updated_at();
+

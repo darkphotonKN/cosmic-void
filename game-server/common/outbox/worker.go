@@ -6,8 +6,8 @@ import (
 	"time"
 
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
-	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -18,20 +18,22 @@ import (
 
 type OutboxWorker struct {
 	workCycle       time.Duration
-	batchCount      *int
+	batchCount      int
+	db              *sqlx.DB
 	outboxRetriever OutboxRetriever
 	publishCh       commonbroker.Publisher
 }
 
 type OutboxRetriever interface {
-	GetPendingOutboxItems(ctx context.Context, limit *int) ([]*OutboxEvent, error)
-	UpdateOutboxToPublished(ctx context.Context, id uuid.UUID) error
+	GetPendingOutboxItems(ctx context.Context, tx *sqlx.Tx, limit int) ([]*OutboxEvent, error)
+	UpdateOutboxToPublished(ctx context.Context, tx *sqlx.Tx, id uuid.UUID) error
 }
 
-func NewOutboxWorker(workCycle time.Duration, batchCount int, outboxRetriever OutboxRetriever, publishCh commonbroker.Publisher) *OutboxWorker {
+func NewOutboxWorker(workCycle time.Duration, batchCount int, db *sqlx.DB, outboxRetriever OutboxRetriever, publishCh commonbroker.Publisher) *OutboxWorker {
 	return &OutboxWorker{
 		workCycle:       workCycle,
-		batchCount:      &batchCount,
+		batchCount:      batchCount,
+		db:              db,
 		outboxRetriever: outboxRetriever,
 		publishCh:       publishCh,
 	}
@@ -64,12 +66,22 @@ func (w *OutboxWorker) Run(ctx context.Context) {
 * Publishes a single event from an outbox item pulled from the outbox table.
 **/
 func (w *OutboxWorker) PublishOutboxEvents(ctx context.Context) error {
-	outboxEvts, err := w.outboxRetriever.GetPendingOutboxItems(ctx, w.batchCount)
+	tx, err := w.db.BeginTxx(ctx, nil)
+	if err != nil {
+		slog.Error("Failed to begin outbox tx", "err", err)
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
 
+	outboxEvts, err := w.outboxRetriever.GetPendingOutboxItems(ctx, tx, w.batchCount)
 	if err != nil {
 		slog.Error("Error when attempting to retrieve latest outbox event.",
 			"err", err)
 		return err
+	}
+
+	if len(outboxEvts) == 0 {
+		return nil
 	}
 
 	for _, evt := range outboxEvts {
@@ -90,43 +102,23 @@ func (w *OutboxWorker) PublishOutboxEvents(ctx context.Context) error {
 			continue
 		}
 
-		// no error, rabbitmq acknowledged, recieved, update status.
-		go func(evtId uuid.UUID) {
-			var offsetTime = time.Second * 10
-			var retries = 0
+		if err := w.outboxRetriever.UpdateOutboxToPublished(ctx, tx, evt.ID); err != nil {
+			slog.Error("Error when updating outbox to published.",
+				"outbox_id", evt.ID,
+				"err", err)
+			continue
+		}
 
-			for {
-				err := w.outboxRetriever.UpdateOutboxToPublished(ctx, evtId)
-
-				if err != nil {
-					if commonhelpers.IsTransientError(err) && retries < 5 {
-						slog.Error("Transient error when attempting to update outbox to published.",
-							"err", err)
-
-						time.Sleep(offsetTime)
-
-						// exponential backoff
-						offsetTime = offsetTime * 2
-						retries += 1
-						continue
-					}
-
-					slog.Error("Error when attempting to update outbox to published.",
-						"err", err)
-
-					return
-				}
-
-				return
-			}
-		}(evt.ID)
-
-		// update worked, exit goroutine
 		slog.Debug("successfully published outbox event",
 			"event_id", evt.ID,
 			"event", evt.RoutingKey,
 			"event_exchange", evt.Exchange,
 		)
+	}
+
+	if err := tx.Commit(); err != nil {
+		slog.Error("Failed to commit outbox tx", "err", err)
+		return err
 	}
 
 	return nil

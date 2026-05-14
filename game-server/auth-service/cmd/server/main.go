@@ -175,7 +175,7 @@ func main() {
 	memberService := member.NewService(db, memberRepo, publishCh, cacheService, outboxService)
 	memberHandler := member.NewHandler(memberService)
 
-	outboxWorker := commonoutbox.NewOutboxWorker(time.Second*5, 20, outboxService, publishCh)
+	outboxWorker := commonoutbox.NewOutboxWorker(time.Second*5, 20, db, outboxService, publishCh)
 	workerCtx, workerCancel := context.WithCancel(ctx)
 	defer workerCancel()
 	// InitiateWork spawns its own goroutine and returns immediately — do

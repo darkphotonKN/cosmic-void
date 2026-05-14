@@ -140,7 +140,7 @@ func main() {
 	publisher := commonbroker.NewAmqpPublisher(ch)
 	// TODO: update in prod
 	workcycyleTime := time.Minute * 1
-	outboxWorker := commonoutbox.NewOutboxWorker(workcycyleTime, 20, outboxServ, publisher)
+	outboxWorker := commonoutbox.NewOutboxWorker(workcycyleTime, 20, db, outboxServ, publisher)
 
 	workerCtx, cancel := context.WithCancel(ctx)
 	defer cancel()

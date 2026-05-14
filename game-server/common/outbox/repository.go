@@ -49,14 +49,14 @@ func (r *repo) CreateOutboxTx(ctx context.Context, tx *sqlx.Tx, params OutboxPar
 	return nil
 }
 
-func (r *repo) UpdateOutboxToPublished(ctx context.Context, id uuid.UUID) error {
+func (r *repo) UpdateOutboxToPublished(ctx context.Context, tx *sqlx.Tx, id uuid.UUID) error {
 	query := `
 		UPDATE 
 			outbox
 		SET published_at = NOW()
 		WHERE id = $1
 	`
-	results, err := r.db.ExecContext(ctx, query, id)
+	results, err := tx.ExecContext(ctx, query, id)
 
 	if err != nil {
 		slog.Error("Error occured when attempting to update published on outbox item",
@@ -72,13 +72,7 @@ func (r *repo) UpdateOutboxToPublished(ctx context.Context, id uuid.UUID) error 
 	return nil
 }
 
-func (r *repo) GetUnpublishedOutboxItems(ctx context.Context, limit *int) ([]*OutboxEvent, error) {
-
-	defaultLimit := 20
-	if limit == nil {
-		limit = &defaultLimit
-	}
-
+func (r *repo) GetUnpublishedOutboxItems(ctx context.Context, tx *sqlx.Tx, limit int) ([]*OutboxEvent, error) {
 	var outboxItem []*OutboxEvent
 
 	query := `
@@ -91,9 +85,11 @@ func (r *repo) GetUnpublishedOutboxItems(ctx context.Context, limit *int) ([]*Ou
 	FROM outbox
 	WHERE published_at IS NULL
 	ORDER BY created_at ASC
+	LIMIT $1
+  FOR UPDATE SKIP LOCKED
 	`
 
-	err := r.db.SelectContext(ctx, &outboxItem, query)
+	err := tx.SelectContext(ctx, &outboxItem, query, limit)
 
 	if err != nil {
 		slog.Error("Error occured when attempting to retrive from outbox table",

@@ -606,6 +606,7 @@ func (s *service) CreateItemTemplate(ctx context.Context, req *CreateItemTemplat
 		UserId:   req.UserId,
 		Name:     req.ItemName,
 		ItemType: req.ItemType,
+		EventId:  uuid.NewString(),
 	})
 
 	if err != nil {
@@ -885,6 +886,7 @@ func (s *service) publishItemCreatedEvent(ctx context.Context, userId, itemName,
 		UserId:   userId,
 		Name:     itemName,
 		ItemType: itemType,
+		EventId:  uuid.NewString(),
 	})
 	if err != nil {
 		slog.Error("Failed to marshal item created event", "error", err)
