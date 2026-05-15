@@ -1,0 +1,16 @@
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: api-gateway-backend-config
+spec:
+  # GCE Ingress uses this for the LB's backend health check.
+  # Without it, the LB defaults to "GET /" → 404 from api-gateway →
+  # backend marked UNHEALTHY → 502 to all clients.
+  healthCheck:
+    type: HTTP
+    requestPath: /healthz
+    port: 7001
+    checkIntervalSec: 10
+    timeoutSec: 5
+    healthyThreshold: 1
+    unhealthyThreshold: 3

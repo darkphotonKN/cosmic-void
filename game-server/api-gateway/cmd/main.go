@@ -10,7 +10,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
-	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
+	"github.com/darkphotonKN/cosmic-void-server/common/discovery/k8s"
 	commontelemetry "github.com/darkphotonKN/cosmic-void-server/common/telemetry"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	_ "github.com/joho/godotenv/autoload"
@@ -26,8 +26,8 @@ var (
 	serviceName = "api-gateway"
 
 	// grpc
-	httpAddr   = commonhelpers.GetEnvString("PORT", "7001")
-	consulAddr = commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
+	httpAddr     = commonhelpers.GetEnvString("PORT", "7001")
+	k8sNamespace = commonhelpers.GetEnvString("K8S_NAMESPACE", "default")
 
 	// rabbitmq
 	amqpUser     = commonhelpers.GetEnvString("RABBITMQ_USER", "guest")
@@ -61,10 +61,10 @@ func main() {
 
 	// --- service discovery setup ---
 
-	// -- consul client --
-	registry, err := consul.NewRegistry(consulAddr, serviceName)
+	// -- k8s registry --
+	registry, err := k8s.NewRegistry(k8sNamespace)
 	if err != nil {
-		log.Fatal("Failed to create Consul registry")
+		log.Fatal("Failed to create k8s registry")
 	}
 
 	instanceID := discovery.GenerateInstanceID(serviceName)

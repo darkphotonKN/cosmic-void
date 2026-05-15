@@ -1,0 +1,25 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: payment-service-config
+  labels:
+    app: cosmic-void
+    component: payment-service
+data:
+  SERVICE_VERSION: "1.0.0"
+  ENVIRONMENT: "PRODUCTION"
+  GRPC_PAYMENT_ADDR: "7021"
+
+  DB_HOST: "auth-service-db"
+  DB_PORT: "5432"
+  DB_NAME: "cosmic_void_payment_service_db"
+  DB_USER: "user"
+
+  RABBITMQ_HOST: "rabbitmq"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_USER: "cosmicvoid"
+
+  REDIS_ADDR: "redis:6379"
+
+  K8S_NAMESPACE: "cosmic-void"
+  COLLECTOR_ENDPOINT: "otel-collector:4317"

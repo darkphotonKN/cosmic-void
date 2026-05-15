@@ -15,7 +15,7 @@ import (
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonconstants "github.com/darkphotonKN/cosmic-void-server/common/constants"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
-	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
+	"github.com/darkphotonKN/cosmic-void-server/common/discovery/k8s"
 	commonoutbox "github.com/darkphotonKN/cosmic-void-server/common/outbox"
 	commontelemetry "github.com/darkphotonKN/cosmic-void-server/common/telemetry"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
@@ -38,8 +38,8 @@ var (
 
 	// grpc
 	serviceName = "auth"
-	grpcAddr    = commonhelpers.GetEnvString("GRPC_AUTH_ADDR", "7003")
-	consulAddr  = commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
+	grpcAddr     = commonhelpers.GetEnvString("GRPC_AUTH_ADDR", "7003")
+	k8sNamespace = commonhelpers.GetEnvString("K8S_NAMESPACE", "default")
 
 	// rabbit mq
 	amqpUser     = commonhelpers.GetEnvString("RABBITMQ_USER", "guest")
@@ -100,10 +100,12 @@ func main() {
 
 	// --- service discovery setup ---
 
-	// -- consul client --
-	registry, err := consul.NewRegistry(consulAddr, serviceName)
+	// -- k8s registry --
+	// In-cluster DNS handles discovery; Register/Deregister/HealthCheck are
+	// no-ops kept only to satisfy the discovery.Registry interface.
+	registry, err := k8s.NewRegistry(k8sNamespace)
 	if err != nil {
-		log.Fatal("Failed to create Consul registry")
+		log.Fatal("Failed to create k8s registry")
 	}
 
 	instanceID := discovery.GenerateInstanceID(serviceName)
@@ -132,7 +134,7 @@ func main() {
 	)
 
 	// create a network listener to this service
-	listener, err := net.Listen("tcp", "localhost:"+grpcAddr)
+	listener, err := net.Listen("tcp", ":"+grpcAddr)
 
 	if err != nil {
 		log.Fatalf(

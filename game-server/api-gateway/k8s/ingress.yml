@@ -2,24 +2,21 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: cosmic-void-ingress
-  namespace: default
   labels:
     app: cosmic-void
     component: api-gateway
   annotations:
-    # cert-manager 自動發 Let's Encrypt 證書（先用 staging 測試流程）
-    cert-manager.io/cluster-issuer: letsencrypt-staging
-    # 強制 HTTPS：HTTP 請求自動 301 redirect 到 HTTPS
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # GCP-native HTTP(S) Load Balancer.
+    kubernetes.io/ingress.class: "gce"
+    # Bind to the global static IP reserved as `cosmic-void-ingress`.
+    kubernetes.io/ingress.global-static-ip-name: "cosmic-void-ingress"
+    # TLS is handled by Cloudflare in front of this LB (orange-cloud proxy,
+    # SSL mode = Flexible). LB serves plain HTTP on port 80; no ManagedCert
+    # / FrontendConfig needed here.
 spec:
-  ingressClassName: nginx
-  tls:
-  - hosts:
-    - api.cosmicvoid.com
-    secretName: cosmic-void-tls       # cert-manager 會自動建立這個 Secret
   rules:
-  - host: api.cosmicvoid.com
+  # Backend API
+  - host: api.cosmicvoid.uk
     http:
       paths:
       - path: /
@@ -28,4 +25,44 @@ spec:
           service:
             name: api-gateway
             port:
-              name: http              # 用 name 引用 Service 的 ports.name
+              name: http
+
+  # Root domain + www
+  #   - /game/ws  → game-service:5555 (WebSocket upgrade)
+  #   - /        → game-client (Next.js frontend)
+  # GCE LB URL Map does longest-prefix-match, so /game/ws wins over / regardless
+  # of order, but listing the specific path first keeps intent clear.
+  - host: cosmicvoid.uk
+    http:
+      paths:
+      - path: /game/ws
+        pathType: Prefix
+        backend:
+          service:
+            name: game-service-ws
+            port:
+              name: http
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: game-client
+            port:
+              name: http
+  - host: www.cosmicvoid.uk
+    http:
+      paths:
+      - path: /game/ws
+        pathType: Prefix
+        backend:
+          service:
+            name: game-service-ws
+            port:
+              name: http
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: game-client
+            port:
+              name: http

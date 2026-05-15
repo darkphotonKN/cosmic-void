@@ -2,7 +2,6 @@ kind: ConfigMap
 apiVersion: v1
 metadata:
   name: auth-service-config
-  namespace: default
   labels:
     app: cosmic-void
     component: auth-service
@@ -28,6 +27,6 @@ data:
   REDIS_ADDR: "redis:6379"
 
   # ─── 其他依賴 ───
-  CONSUL_ADDR: "consul:8500"
+  K8S_NAMESPACE: "cosmic-void"
   COLLECTOR_ENDPOINT: "otel-collector:4317"
 

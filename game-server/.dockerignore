@@ -1,0 +1,44 @@
+# Build context filter for all Dockerfiles (build context = game-server/)
+
+# Air hot-reload + binary outputs (Air can create tmp/ anywhere)
+**/tmp/
+**/bin/
+**/dist/
+**/build/
+
+# k8s manifests at service top level (NOT recursive - common/discovery/k8s is Go code!)
+api-gateway/k8s/
+auth-service/k8s/
+example-service/k8s/
+game-service/k8s/
+items-service/k8s/
+notification-service/k8s/
+payment-service/k8s/
+stats-service/k8s/
+
+# Docs at service / repo top level
+docs/
+*/docs/
+**/*.md
+
+# Observability stack (run separately on cluster)
+observability/
+
+# Local dev tools / scripts
+tools/
+
+# VCS / OS / IDE
+.git/
+.gitignore
+**/.DS_Store
+**/.idea/
+**/.vscode/
+
+# Backup / temp files
+**/*.bak
+**/*.orig
+**/*.swp
+
+# Dockerfiles themselves (already in context, harmless if copied; just slimming)
+**/Dockerfile
+**/.dockerignore

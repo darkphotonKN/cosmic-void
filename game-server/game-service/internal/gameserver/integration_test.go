@@ -10,7 +10,7 @@ import (
 
 	pb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/auth"
 	itemspb "github.com/darkphotonKN/cosmic-void-server/common/api/proto/items"
-	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
+	"github.com/darkphotonKN/cosmic-void-server/common/discovery/k8s"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
 	"github.com/darkphotonKN/cosmic-void-server/game-service/common/constants"
 	grpcauth "github.com/darkphotonKN/cosmic-void-server/game-service/grpc/auth"
@@ -399,9 +399,8 @@ func TestSenderToBroadcastToPlayerList(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			serviceName := "game"
-			consulAddr := commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
-			registry, _ := consul.NewRegistry(consulAddr, serviceName)
+			k8sNamespace := commonhelpers.GetEnvString("K8S_NAMESPACE", "default")
+			registry, _ := k8s.NewRegistry(k8sNamespace)
 			authClient := grpcauth.NewClient(registry)
 			mockQueue := NewMockQueueService()
 			mockEventEmitter := &MockEventEmitter{}

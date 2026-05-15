@@ -1,0 +1,118 @@
+# =============================================================================
+# Minimal OTEL Collector — receives OTLP gRPC traces/metrics from services
+# and drops them (debug exporter, basic verbosity = summary only).
+#
+# Purpose: stop log spam "exporter export timeout: name resolver error:
+# produced zero addresses" from every service trying to reach otel-collector.
+#
+# When you want real observability later, swap the `debug` exporter for
+# `otlphttp` pointing to Grafana Cloud / Honeycomb / Datadog / etc.
+# =============================================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  labels:
+    app: cosmic-void
+    component: otel-collector
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+
+    processors:
+      batch:
+        timeout: 10s
+        send_batch_size: 1024
+
+    exporters:
+      debug:
+        verbosity: basic        # only counts, not every span/metric
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [debug]
+        metrics:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [debug]
+        logs:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [debug]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  labels:
+    app: cosmic-void
+    component: otel-collector
+spec:
+  type: ClusterIP
+  selector:
+    app: cosmic-void
+    component: otel-collector
+  ports:
+  - name: otlp-grpc
+    port: 4317
+    targetPort: 4317
+    protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  labels:
+    app: cosmic-void
+    component: otel-collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cosmic-void
+      component: otel-collector
+  template:
+    metadata:
+      labels:
+        app: cosmic-void
+        component: otel-collector
+    spec:
+      containers:
+      - name: otel-collector
+        image: otel/opentelemetry-collector-contrib:0.115.1
+        args: ["--config=/etc/otel/config.yaml"]
+        ports:
+        - containerPort: 4317
+          name: otlp-grpc
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        readinessProbe:
+          tcpSocket:
+            port: 4317
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 4317
+          initialDelaySeconds: 15
+          periodSeconds: 30
+        volumeMounts:
+        - name: config
+          mountPath: /etc/otel
+      volumes:
+      - name: config
+        configMap:
+          name: otel-collector-config

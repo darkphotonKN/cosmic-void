@@ -11,7 +11,7 @@ import (
 	"github.com/darkphotonKN/cosmic-void-server/common/broker"
 	commonbroker "github.com/darkphotonKN/cosmic-void-server/common/broker"
 	"github.com/darkphotonKN/cosmic-void-server/common/discovery"
-	"github.com/darkphotonKN/cosmic-void-server/common/discovery/consul"
+	"github.com/darkphotonKN/cosmic-void-server/common/discovery/k8s"
 	commonoutbox "github.com/darkphotonKN/cosmic-void-server/common/outbox"
 	commontelemetry "github.com/darkphotonKN/cosmic-void-server/common/telemetry"
 	commonhelpers "github.com/darkphotonKN/cosmic-void-server/common/utils"
@@ -30,8 +30,8 @@ var (
 	serviceVersion    = commonhelpers.GetEnvString("SERVICE_VERSION", "1.0.0")
 
 	serviceName = "stats"
-	grpcAddr    = commonhelpers.GetEnvString("GRPC_STATS_ADDR", "7011")
-	consulAddr  = commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
+	grpcAddr     = commonhelpers.GetEnvString("GRPC_STATS_ADDR", "7011")
+	k8sNamespace = commonhelpers.GetEnvString("K8S_NAMESPACE", "default")
 
 	amqpUser     = commonhelpers.GetEnvString("RABBITMQ_USER", "guest")
 	amqpPassword = commonhelpers.GetEnvString("RABBITMQ_PASS", "guest")
@@ -85,9 +85,9 @@ func main() {
 	}
 	defer config.CloseRedis()
 
-	registry, err := consul.NewRegistry(consulAddr, serviceName)
+	registry, err := k8s.NewRegistry(k8sNamespace)
 	if err != nil {
-		log.Fatal("Failed to create Consul registry")
+		log.Fatal("Failed to create k8s registry")
 	}
 
 	instanceID := discovery.GenerateInstanceID(serviceName)
@@ -110,7 +110,7 @@ func main() {
 
 	grpcServer := grpc.NewServer()
 
-	listener, err := net.Listen("tcp", "localhost:"+grpcAddr)
+	listener, err := net.Listen("tcp", ":"+grpcAddr)
 	if err != nil {
 		log.Fatalf(
 			"Failed to listen at port: %s\nError: %s\n", grpcAddr, err,

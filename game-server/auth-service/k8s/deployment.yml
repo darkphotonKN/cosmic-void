@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: auth-service
-  namespace: default
   labels:
     app: cosmic-void
     component: auth-service
@@ -29,7 +28,7 @@ spec:
           # - Each init container must complete successfully before the next one starts.
       containers:
       - name: auth-service
-        image: cosmic-void/auth-service:dev
+        image: us-central1-docker.pkg.dev/project-b6e8596f-fe1e-4dca-a7a/cosmic-void/auth-service:v1
         imagePullPolicy: IfNotPresent 
         resources:
           requests:

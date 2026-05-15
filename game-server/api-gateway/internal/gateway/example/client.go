@@ -25,7 +25,7 @@ Each method follows a consistent pattern:
 4. Return the result or error
 
 Usage:
-    registry := consul.NewRegistry(...)
+    registry := k8s.NewRegistry(...)
     exampleGateway := gateway.NewExampleGateway(registry)
     example, err := exampleGateway.GetExample(ctx, &pb.GetExampleRequest{Id: "123"})
 

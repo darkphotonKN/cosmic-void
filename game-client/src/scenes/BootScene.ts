@@ -1,4 +1,5 @@
 import { socketManager } from "@/utils/class/SocketManager";
+import { getWsBaseUrl } from "@/utils/wsUrl";
 import Phaser from "phaser";
 
 export class BootScene extends Phaser.Scene {
@@ -54,7 +55,7 @@ export class BootScene extends Phaser.Scene {
     console.log("token: ", token);
     console.log("name: ", name);
     socketManager.connect(
-      `ws://localhost:5555/game/ws?token=${token}&name=${name}`,
+      `${getWsBaseUrl()}/game/ws?token=${token}&name=${name}`,
     );
     this.scene.start("PreloadScene");
   }

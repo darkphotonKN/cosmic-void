@@ -1,0 +1,40 @@
+# Build context filter for game-client/
+
+# Node / Next build artifacts (regenerated inside container)
+node_modules/
+.next/
+out/
+dist/
+build/
+
+# Tests / coverage
+coverage/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+vitest.config.ts
+
+# Docs / README
+docs/
+**/*.md
+
+# VCS / OS / IDE
+.git/
+.gitignore
+**/.DS_Store
+**/.idea/
+**/.vscode/
+
+# Local env files (Don't bake secrets into image; ARG/ENV instead)
+.env
+.env.local
+.env.*.local
+
+# Backup / temp
+**/*.bak
+**/*.orig
+**/*.swp
+
+# Docker self
+Dockerfile
+.dockerignore

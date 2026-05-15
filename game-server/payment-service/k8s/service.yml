@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  labels:
+    app: cosmic-void
+    component: payment-service
+spec:
+  type: ClusterIP
+  selector:
+    app: cosmic-void
+    component: payment-service
+  ports:
+  - name: grpc
+    port: 7021
+    targetPort: grpc
+    protocol: TCP

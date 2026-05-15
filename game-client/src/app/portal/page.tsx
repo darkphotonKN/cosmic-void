@@ -6,7 +6,11 @@ import ParticleText from "@/components/ParticleText";
 
 export default function PortalPage() {
   const router = useRouter();
-  const [showHint, setShowHint] = useState(true);
+  // showHint state value is currently unused in JSX (hint UI not yet
+  // implemented). Destructure with `_` to satisfy TypeScript's
+  // noUnusedLocals while keeping the timer side-effect intact for the
+  // day the hint UI is added.
+  const [, setShowHint] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowHint(false), 4000);

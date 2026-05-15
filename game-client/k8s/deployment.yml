@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: game-client
+  labels:
+    app: cosmic-void
+    component: game-client
+spec:
+  selector:
+    matchLabels:
+      app: cosmic-void
+      component: game-client
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: cosmic-void
+        component: game-client
+    spec:
+      containers:
+      - name: game-client
+        image: us-central1-docker.pkg.dev/project-b6e8596f-fe1e-4dca-a7a/cosmic-void/game-client:v2
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          tcpSocket:
+            port: 3000
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3
+        # GCE Ingress will use this as the LB backend health check
+        # (in conjunction with BackendConfig below if more granular config is needed).
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 5
+          timeoutSeconds: 3
+          periodSeconds: 10
+          failureThreshold: 3
+        env:
+        - name: TZ
+          value: "Asia/Taipei"
+        ports:
+        - containerPort: 3000
+          name: http
+      restartPolicy: Always

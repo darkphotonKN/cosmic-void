@@ -1,0 +1,12 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: cosmic-void-cert
+spec:
+  # Google provisions an SSL certificate for these domains via Google CA.
+  # Provisioning succeeds only once every domain's DNS A record resolves
+  # to the LB's external IP (the reserved static IP `cosmic-void-ingress`).
+  # Frontend domains (cosmicvoid.uk, www.cosmicvoid.uk) are added in Phase 8
+  # when game-client is deployed.
+  domains:
+    - api.cosmicvoid.uk

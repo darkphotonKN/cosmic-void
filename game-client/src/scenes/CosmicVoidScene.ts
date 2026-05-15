@@ -1,4 +1,5 @@
 /**
+import { getWsBaseUrl } from "@/utils/wsUrl";
  * CosmicVoidScene - 簡化版遊戲場景
  * 移動邏輯 + WebSocket + 建築（進入後看不到外面）
  */
@@ -2453,7 +2454,7 @@ export class CosmicVoidScene extends Phaser.Scene {
   private connectToServer(): void {
     // Connect if not already connected
     if (!socketManager.isConnected()) {
-      socketManager.connect("ws://localhost:5555/game/ws");
+      socketManager.connect(`${getWsBaseUrl()}/game/ws`);
       GameStateLogger.logConnectionStatus(
         "Connecting to game server...",
         "#ffcc00",

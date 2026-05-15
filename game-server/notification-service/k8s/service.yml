@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  labels:
+    app: cosmic-void
+    component: notification-service
+spec:
+  type: ClusterIP
+  selector:
+    app: cosmic-void
+    component: notification-service
+  ports:
+  - name: grpc
+    port: 7077
+    targetPort: grpc
+    protocol: TCP

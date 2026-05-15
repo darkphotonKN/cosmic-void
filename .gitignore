@@ -270,7 +270,7 @@ CLAUDE.md
 .skills/
 
 # Learning notes（個人學習筆記不進 git，靠 vault backup）
-docs/learning/**/*.md
+# docs/learning/**/*.md
 
 # =============================================================================
 # K8s real secrets (only .example versions go to git)

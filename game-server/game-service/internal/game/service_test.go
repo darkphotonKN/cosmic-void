@@ -197,7 +197,6 @@ func TestFormatMatchData(t *testing.T) {
 var (
 	serviceName = "stats"
 	grpcAddr    = commonhelpers.GetEnvString("GRPC_STATS_ADDR", "7011")
-	consulAddr  = commonhelpers.GetEnvString("CONSUL_ADDR", "localhost:8510")
 
 	amqpUser     = commonhelpers.GetEnvString("RABBITMQ_USER", "guest")
 	amqpPassword = commonhelpers.GetEnvString("RABBITMQ_PASS", "guest")

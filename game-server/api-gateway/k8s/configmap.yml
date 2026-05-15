@@ -1,0 +1,18 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: api-gateway-config
+  labels:
+    app: cosmic-void
+    component: api-gateway
+data:
+  SERVICE_VERSION: "1.0.0"
+  ENVIRONMENT: "PRODUCTION"
+  PORT: "7001"
+
+  RABBITMQ_HOST: "rabbitmq"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_USER: "cosmicvoid"
+
+  K8S_NAMESPACE: "cosmic-void"
+  COLLECTOR_ENDPOINT: "otel-collector:4317"

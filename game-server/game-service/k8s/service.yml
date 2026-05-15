@@ -1,0 +1,53 @@
+# Two Services for the same game-service Pod:
+#
+# 1. `game-service` (gRPC port 7004) — intra-cluster only, no NEG.
+#    Used by service discovery in common/discovery/k8s/k8s.go
+#    (serviceMap entry "game": {"game-service", 7004}).
+#
+# 2. `game-service-ws` (HTTP/WebSocket port 5555) — exposed via GCE Ingress
+#    behind cosmicvoid.uk/game/ws. NEG + BackendConfig for long-running WS.
+#
+# Splitting them keeps the GCE Ingress controller from complaining about
+# multi-port ClusterIP services with partial NEG coverage:
+#   "Translation failed: service is type ClusterIP, expected NodePort or
+#    LoadBalancer when not using NEGs"
+# That check fires when a Service has any port without NEG even though the
+# Ingress-referenced port does have one.
+apiVersion: v1
+kind: Service
+metadata:
+  name: game-service
+  labels:
+    app: cosmic-void
+    component: game-service
+spec:
+  type: ClusterIP
+  selector:
+    app: cosmic-void
+    component: game-service
+  ports:
+  - name: grpc
+    port: 7004
+    targetPort: grpc
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: game-service-ws
+  labels:
+    app: cosmic-void
+    component: game-service
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
+    cloud.google.com/backend-config: '{"default": "game-service-ws-backend-config"}'
+spec:
+  type: ClusterIP
+  selector:
+    app: cosmic-void
+    component: game-service
+  ports:
+  - name: http
+    port: 5555
+    targetPort: http
+    protocol: TCP

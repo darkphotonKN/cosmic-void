@@ -1,0 +1,22 @@
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: game-service-ws-backend-config
+spec:
+  # WebSocket-friendly settings for the GCE LB backend service.
+  # Default backend timeout is 30s; that kills any idle WS connection.
+  # 86400s = 24h, the GCP LB maximum.
+  timeoutSec: 86400
+  connectionDraining:
+    drainingTimeoutSec: 60
+  # Health check on /healthz — game-service main.go exposes /api/health,
+  # but for first deployment a TCP probe is sufficient. (TCP type is the
+  # default when type is unset and only port is given.)
+  healthCheck:
+    type: HTTP
+    requestPath: /api/health
+    port: 5555
+    checkIntervalSec: 10
+    timeoutSec: 5
+    healthyThreshold: 1
+    unhealthyThreshold: 3

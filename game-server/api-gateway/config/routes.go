@@ -41,6 +41,13 @@ func SetupRouter(registry discovery.Registry, ch *amqp.Channel) *gin.Engine {
 
 	router.Use(otelgin.Middleware("api-gateway"))
 
+	// Lightweight liveness/readiness endpoint for the GCE Ingress LB
+	// health check. Must be registered before the /api group so it stays
+	// outside any auth middleware and always returns 200.
+	router.GET("/healthz", func(c *gin.Context) {
+		c.String(200, "ok")
+	})
+
 	// base route
 	api := router.Group("/api")
 

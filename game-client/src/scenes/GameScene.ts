@@ -1,4 +1,5 @@
 import { createStarfield } from "@/utils/Background";
+import { getWsBaseUrl } from "@/utils/wsUrl";
 import { Player } from "@/utils/class/Player";
 import { ActionMap, ActionType, ClientMessage } from "@/assets/types/client";
 import Phaser from "phaser";
@@ -47,7 +48,7 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     // connect websocket (原生 WebSocket)
-    this.socket = new WebSocket("ws://localhost:5555/game/ws");
+    this.socket = new WebSocket(`${getWsBaseUrl()}/game/ws`);
 
     this.socket.onopen = () => {
       console.log("WebSocket 連線成功");

@@ -1,0 +1,23 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: example-service-config
+  labels:
+    app: cosmic-void
+    component: example-service
+data:
+  SERVICE_VERSION: "1.0.0"
+  ENVIRONMENT: "PRODUCTION"
+  GRPC_EXAMPLE_ADDR: "7010"
+
+  DB_HOST: "auth-service-db"
+  DB_PORT: "5432"
+  DB_NAME: "cosmic_void_example_service_db"
+  DB_USER: "user"
+
+  RABBITMQ_HOST: "rabbitmq"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_USER: "cosmicvoid"
+
+  K8S_NAMESPACE: "cosmic-void"
+  COLLECTOR_ENDPOINT: "otel-collector:4317"

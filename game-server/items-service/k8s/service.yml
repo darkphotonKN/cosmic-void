@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: items-service
+  labels:
+    app: cosmic-void
+    component: items-service
+spec:
+  type: ClusterIP
+  selector:
+    app: cosmic-void
+    component: items-service
+  ports:
+  - name: grpc
+    port: 7013
+    targetPort: grpc
+    protocol: TCP
